@@ -1,6 +1,6 @@
 {
-  "versionCode": 234,
-  "versionName": "2.3.4",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.3.4/app-debug.apk",
-  "changelog": "- Standardized Light-White Menu Icons: Single uniform #E2E8F0 finish across all navigation and feature menu actions.\n- Instant Native Browser Menu: Zero-delay BottomSheetDialog integration directly accessible from home essentials and 3-dots command.\n- Authentic Publisher Brand Badges: Real vector logos for BBC News, ABC News, CNN, Reuters, The Guardian, NPR, NDTV, The Hindu, TOI, CBC, Der Spiegel, DW, and SMH with 'all' badge removed.\n- Regional News Engine: Multi-source curated feeds for UK, India, Canada, Germany, Australia, and Global with quality filters and fair interleaving.\n- Home Trending Feed: Compact on/off toggle beside country select and smooth horizontal trending article cards on home page."
+  "versionCode": 235,
+  "versionName": "2.3.5",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.3.5/app-debug.apk",
+  "changelog": "- Visuals & Wallpapers Hub: Directly accessible via browser menu with unlimited 4K visuals, sailboats, and custom image upload from device.\n- Streamlined Pulse Top Bar: Tight country selector spacing and clean, non-overlapping home trending toggle button.\n- Enhanced Article Cards: Taller 16:9 cinematic imagery and expanded editorial content with zero dead blank space."
 }
