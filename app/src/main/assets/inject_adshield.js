@@ -1733,16 +1733,9 @@
             if (document.documentElement) document.documentElement.style.overflow = 'auto';
             if (document.body) document.body.style.overflow = 'auto';
         } else if (host.includes('x.com') || host.includes('twitter.com')) {
-            document.querySelectorAll('div[data-testid="cellInnerDiv"]:has([data-testid="placementTracking"]), div[data-testid="placementTracking"], .promoted-account, .promotion').forEach(function(el) {
-                try {
-                    el.style.setProperty('display', 'none', 'important');
-                    el.style.setProperty('height', '0px', 'important');
-                    el.style.setProperty('min-height', '0px', 'important');
-                    el.style.setProperty('max-height', '0px', 'important');
-                    el.style.setProperty('padding', '0px', 'important');
-                    el.style.setProperty('margin', '0px', 'important');
-                    el.style.setProperty('overflow', 'hidden', 'important');
-                } catch (e) {}
+            // Strictly safe: NEVER mutate cellInnerDiv style or height, preventing React Virtualizer crash
+            document.querySelectorAll('[data-testid="placementTracking"], .promoted-account, .promotion').forEach(function(el) {
+                try { el.remove(); } catch (e) {}
             });
         } else if (host.includes('instagram.com')) {
             document.querySelectorAll('article:has(a[href*="/about/ads"]), div[role="article"]:has(a[href*="/about/ads"]), div:has(> [aria-label*="Sponsored"])').forEach(function(el) {
@@ -1953,14 +1946,35 @@
 
     function defuseAntiAdblockModals() {
         try {
-            const adblockKeywords = ['ad blocker', 'adblock', 'disable your ad', 'turn off your ad', 'whitelist us', 'disable adblocker', 'bloqueur de publicité'];
-            const modals = document.querySelectorAll('div[role="dialog"], div[class*="modal"], div[class*="dialog"], div[class*="popup"], div[class*="overlay"], div[id*="modal"], div[id*="popup"]');
+            const adblockKeywords = [
+                'ad blocker', 'adblock', 'disable your ad', 'turn off your ad',
+                'whitelist us', 'disable adblocker', 'bloqueur de publicité',
+                'welcome to fox news', 'consider disabling your ad blocker',
+                'journalism is supported through advertising', 'error: make sure filterlist is'
+            ];
+            const modals = document.querySelectorAll(
+                'div[role="dialog"], div[class*="modal"], div[class*="dialog"], div[class*="popup"], ' +
+                'div[class*="overlay"], div[id*="modal"], div[id*="popup"], div[class*="adblock"], ' +
+                'div[id*="adblock"], .fnc-alert-overlay, [class*="fnc-modal"]'
+            );
             modals.forEach(function(modal) {
+                // Safeguard against hiding main content or media
+                if (modal.querySelector && modal.querySelector('video, audio, [class*="player"]')) return;
                 const text = (modal.innerText || modal.textContent || '').toLowerCase();
                 if (adblockKeywords.some(function(k) { return text.includes(k); })) {
                     modal.style.setProperty('display', 'none', 'important');
                     modal.remove();
                     unlockPageScrolling();
+                }
+            });
+            // Clean modal backdrops that freeze the screen
+            document.querySelectorAll('.modal-backdrop, .overlay-backdrop, [class*="backdrop"], div[style*="position: fixed"][style*="z-index"]').forEach(function(b) {
+                if (!b.querySelector('video, audio, iframe, main, article, [class*="player"]')) {
+                    const st = window.getComputedStyle(b);
+                    if (st.position === 'fixed' && (parseInt(st.zIndex, 10) > 100 || b.className.includes('backdrop'))) {
+                        b.style.setProperty('display', 'none', 'important');
+                        try { b.remove(); } catch(e) {}
+                    }
                 }
             });
         } catch(e) {}

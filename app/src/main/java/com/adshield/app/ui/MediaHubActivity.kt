@@ -726,7 +726,16 @@ open class MediaHubActivity : AppCompatActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val rssUrl = when (norm) {
+                // High-quality public Media RSS feeds with genuine HD article photographs
+                val primaryRssUrl = when (norm) {
+                    "tech" -> "https://feeds.bbci.co.uk/news/technology/rss.xml"
+                    "business", "markets" -> "https://feeds.bbci.co.uk/news/business/rss.xml"
+                    "science" -> "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml"
+                    "world" -> "https://feeds.bbci.co.uk/news/world/rss.xml"
+                    "culture", "entertainment" -> "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml"
+                    else -> "https://feeds.bbci.co.uk/news/rss.xml"
+                }
+                val fallbackRssUrl = when (norm) {
                     "tech" -> "https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en"
                     "business", "markets" -> "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en"
                     "science" -> "https://news.google.com/rss/headlines/section/topic/SCIENCE?hl=en-US&gl=US&ceid=US:en"
@@ -735,45 +744,55 @@ open class MediaHubActivity : AppCompatActivity() {
                     else -> "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en"
                 }
 
-                var currentRssUrl = rssUrl
-                var conn: HttpURLConnection
-                var redirects = 0
-                while (true) {
-                    val url = URL(currentRssUrl)
-                    conn = url.openConnection() as HttpURLConnection
-                    conn.connectTimeout = 5000
-                    conn.readTimeout = 5000
-                    conn.instanceFollowRedirects = true
-                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36")
-                    val code = conn.responseCode
-                    if ((code == 301 || code == 302 || code == 307 || code == 308) && redirects < 5) {
-                        val loc = conn.getHeaderField("Location")
-                        if (!loc.isNullOrBlank()) {
-                            currentRssUrl = loc
-                            redirects++
-                            continue
+                fun fetchXml(urlStr: String): String? {
+                    var currentUrl = urlStr
+                    var redirects = 0
+                    while (redirects < 4) {
+                        val conn = URL(currentUrl).openConnection() as HttpURLConnection
+                        conn.connectTimeout = 4000
+                        conn.readTimeout = 4000
+                        conn.instanceFollowRedirects = true
+                        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36")
+                        val code = conn.responseCode
+                        if (code in 301..308) {
+                            val loc = conn.getHeaderField("Location")
+                            if (!loc.isNullOrBlank()) {
+                                currentUrl = loc
+                                redirects++
+                                continue
+                            }
                         }
+                        if (code == 200) {
+                            return conn.inputStream.bufferedReader().use { it.readText() }
+                        }
+                        break
                     }
-                    break
+                    return null
                 }
 
-                if (conn.responseCode == 200) {
-                    val xml = conn.inputStream.bufferedReader().use { it.readText() }
+                val xml = fetchXml(primaryRssUrl) ?: fetchXml(fallbackRssUrl)
+                if (!xml.isNullOrBlank()) {
                     val itemRegex = Regex("<item>(.*?)</item>", RegexOption.DOT_MATCHES_ALL)
                     val titleRegex = Regex("<title><!\\[CDATA\\[(.*?)\\]\\]></title>|<title>(.*?)</title>")
                     val sourceRegex = Regex("<source[^>]*>(.*?)</source>")
                     val linkRegex = Regex("<link>(.*?)</link>")
-                    val mediaRegex = Regex("""<media:content[^>]+url=["']([^"']+)["']|<enclosure[^>]+url=["']([^"']+)["']|<img[^>]+src=["']([^"']+)["']""")
+                    val mediaRegex = Regex("""<media:thumbnail[^>]+url=["']([^"']+)["']|<media:content[^>]+url=["']([^"']+)["']|<enclosure[^>]+url=["']([^"']+)["']|<img[^>]+src=["']([^"']+)["']""")
 
                     val jsonArr = JSONArray()
-                    itemRegex.findAll(xml).take(12).forEach { itemMatch ->
+                    itemRegex.findAll(xml).take(15).forEach { itemMatch ->
                         val content = itemMatch.groupValues[1]
                         val rawTitle = titleRegex.find(content)?.let { it.groupValues[1].ifEmpty { it.groupValues[2] } } ?: return@forEach
-                        if (rawTitle.contains("Google News", ignoreCase = true)) return@forEach
-                        val titleClean = rawTitle.replace("&amp;", "&").replace("&quot;", "\"").replace("&#39;", "'").trim()
-                        val source = sourceRegex.find(content)?.groupValues?.get(1)?.replace("&amp;", "&") ?: "News"
+                        if (rawTitle.contains("Google News", ignoreCase = true) || rawTitle.equals("BBC News", ignoreCase = true)) return@forEach
+                        val titleClean = rawTitle.replace("&amp;", "&").replace("&quot;", "\"").replace("&#39;", "'").replace("<![CDATA[", "").replace("]]>", "").trim()
+                        val source = sourceRegex.find(content)?.groupValues?.get(1)?.replace("&amp;", "&") ?: if (xml.contains("BBC", ignoreCase = true)) "BBC News" else "News"
                         val link = linkRegex.find(content)?.groupValues?.get(1) ?: ""
-                        val mediaUrl = mediaRegex.find(content)?.let { it.groupValues[1].ifEmpty { it.groupValues[2].ifEmpty { it.groupValues[3] } } } ?: ""
+                        var mediaUrl = mediaRegex.find(content)?.let {
+                            it.groupValues[1].ifEmpty { it.groupValues[2].ifEmpty { it.groupValues[3].ifEmpty { it.groupValues[4] } } }
+                        } ?: ""
+                        // Automatically upscale BBC and standard news thumbnails to crisp HD
+                        if (mediaUrl.contains("ichef.bbci.co.uk")) {
+                            mediaUrl = mediaUrl.replace("/240/", "/800/").replace("/134/", "/450/").replace("/135/", "/450/")
+                        }
                         val query = titleClean.substringBefore(" - ")
 
                         val obj = JSONObject().apply {
@@ -1308,8 +1327,8 @@ open class MediaHubActivity : AppCompatActivity() {
                 val conn = URL(targetUrl).openConnection() as HttpURLConnection
                 conn.requestMethod = "GET"
                 conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) FokkShield/1.0")
-                conn.connectTimeout = 7000
-                conn.readTimeout = 7000
+                conn.connectTimeout = 3500
+                conn.readTimeout = 3500
                 if (conn.responseCode == 200) {
                     conn.inputStream.bufferedReader().use { it.readText() }
                 } else {
@@ -2733,7 +2752,7 @@ open class MediaHubActivity : AppCompatActivity() {
                     val isAdOrTracker = isDedicatedAdOrTrackerHost(host) ||
                         isThirdPartyAd ||
                         isGenericAdPath ||
-                        AdShieldApp.instance.blocklistEngine.isUrlBlocked(requestUrl ?: "")
+                        (!isSocialInfrastructureHost(host) && AdShieldApp.instance.blocklistEngine.isUrlBlocked(requestUrl ?: ""))
                     if (isAdOrTracker && !isMediaRequest) {
                         recordFilteredRequest(view, host)
                         return createBlockedResourceResponse(urlStr)
@@ -3507,6 +3526,7 @@ open class MediaHubActivity : AppCompatActivity() {
             urlStr.contains("cookielaw") || urlStr.contains("onetrust") -> "(function(){window.OneTrust=window.OneTrust||{IsAlertBoxClosed:function(){return true;},Close:function(){}};})();"
             urlStr.contains("cookiebot") -> "(function(){window.Cookiebot=window.Cookiebot||{consent:{necessary:true,preferences:false,statistics:false,marketing:false},hasResponse:true};})();"
             urlStr.contains("fundingchoices") -> "(function(){window.googlefc=window.googlefc||{callbackQueue:[],controlledMessagingFunction:function(){},getAdBlockerStatus:function(cb){if(typeof cb==='function')setTimeout(function(){cb(0);},5);return 0;},showRevocationMessage:function(){}};})();"
+            urlStr.contains("fncstatic.com") || urlStr.contains("foxnews") -> "(function(){window.canRunAds=true;window.isAdBlockActive=false;window.isAdBlocked=false;window.adBlock=false;window.adblock=false;window.adblockDetected=false;window.FNC=window.FNC||{};})();"
             urlStr.contains("/ads.js") || urlStr.contains("advertisement.js") || urlStr.contains("adframe.js") || urlStr.contains("/advert.js") || urlStr.contains("adserver.js") || urlStr.contains("ad-zone.js") -> "(function(){window.canRunAds=true;window.isAdBlockActive=false;window.isAdBlocked=false;window.adBlock=false;window.adblock=false;window.adblockDetected=false;window.google_ad_client='ca-pub-0000000000000000';})();"
             isJs -> "/* blocked by fokk brave-shield */"
             else -> ""
@@ -3527,9 +3547,9 @@ open class MediaHubActivity : AppCompatActivity() {
         val pageHost = runCatching { Uri.parse(pageUrl).host?.lowercase(Locale.ROOT) }.getOrNull()
         val isSocial = isSocialAppHost(pageHost)
 
-        // Inject Brave adblock-rust cosmetic CSS element hiding (all pages except YouTube)
+        // Inject Brave adblock-rust cosmetic CSS element hiding (all pages except YouTube and fragile SPAs like X / Twitter)
         val isYt = pageUrl?.contains("youtube.com") == true || pageUrl?.contains("youtu.be") == true
-        if (pageUrl != null && !isYt && !pageUrl.startsWith("file:///android_asset/")) {
+        if (pageUrl != null && !isYt && !isSocial && !pageUrl.startsWith("file:///android_asset/")) {
             val cosmetic = AdShieldApp.instance.braveEngine.getCosmeticResources(pageUrl)
             if (cosmetic != null) {
                 if (cosmetic.selectors.isNotEmpty()) {
@@ -3547,7 +3567,7 @@ open class MediaHubActivity : AppCompatActivity() {
                     """.trimIndent()
                     webView.evaluateJavascript(cosmeticJs, null)
                 }
-                if (cosmetic.js.isNotEmpty() && !isSocial) {
+                if (cosmetic.js.isNotEmpty()) {
                     webView.evaluateJavascript(cosmetic.js, null)
                 }
             }

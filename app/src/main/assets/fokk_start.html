@@ -2050,10 +2050,13 @@
         .visual-card img {
             width: 100%;
             height: auto;
-            min-height: 120px;
+            aspect-ratio: 9 / 14;
+            min-height: 140px;
+            background: #1e2436;
             border-radius: 16px 16px 0 0;
             object-fit: cover;
             display: block;
+            transition: opacity 0.2s ease;
         }
         .visual-card-footer {
             display: flex;
@@ -2356,12 +2359,12 @@
         /* LIVE PLAYING MUSIC CARD ON HOME SCREEN */
         .home-live-music-card {
             display: flex;
-            align-items: center;
-            gap: 12px;
-            background: rgba(18, 18, 18, 0.92);
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(18, 18, 18, 0.94);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 16px;
             padding: 10px 14px;
             margin: 12px auto 0 auto;
@@ -2375,6 +2378,12 @@
         @keyframes fadeInCard {
             from { opacity: 0; transform: translateY(-8px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+        .live-music-top-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
         }
         .live-music-art {
             width: 44px;
@@ -2441,11 +2450,51 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .live-music-actions {
+        .live-music-progress-row {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .live-music-time-row {
+            display: flex;
+            justify-content: flex-end;
+            width: 100%;
+        }
+        .audio-time-label {
+            font-size: 10px;
+            color: #94A3B8;
+            font-variant-numeric: tabular-nums;
+            font-family: ui-monospace, monospace;
+        }
+        .audio-progress-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+            margin: 2px 0;
+            accent-color: #1DB954;
+        }
+        .audio-progress-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #1DB954;
+            cursor: pointer;
+            box-shadow: 0 0 6px rgba(29, 185, 84, 0.6);
+        }
+        .live-music-controls-row {
             display: flex;
             align-items: center;
-            gap: 6px;
-            flex-shrink: 0;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
         }
         .live-music-btn {
             width: 32px;
@@ -2463,6 +2512,13 @@
         .live-music-btn:active {
             transform: scale(0.92);
             background: rgba(255, 255, 255, 0.2);
+        }
+        .live-music-btn.primary {
+            background: #1DB954;
+            color: #000000;
+            border-color: #1DB954;
+            width: 36px;
+            height: 36px;
         }
         .live-music-btn.close {
             color: #94A3B8;
@@ -2627,19 +2683,34 @@
             bottom: 0;
             left: 0;
             right: 0;
-            height: 62px;
+            height: 68px;
             background: #181818;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
-            padding: 0 16px;
-            gap: 12px;
+            padding: 0 12px;
+            gap: 10px;
             z-index: 10001;
             box-shadow: 0 -4px 16px rgba(0,0,0,0.5);
         }
+        .audio-mini-progress-wrap {
+            position: absolute;
+            top: -3px;
+            left: 0;
+            right: 0;
+            height: 6px;
+            cursor: pointer;
+        }
+        .audio-mini-progress-wrap .audio-progress-slider {
+            width: 100%;
+            margin: 0;
+            height: 3px;
+            border-radius: 0;
+            background: rgba(255, 255, 255, 0.2);
+        }
         .mini-player-artwork {
-            width: 42px;
-            height: 42px;
+            width: 44px;
+            height: 44px;
             border-radius: 6px;
             object-fit: cover;
             background: #282828;
@@ -2651,6 +2722,7 @@
             display: flex;
             flex-direction: column;
             gap: 2px;
+            cursor: pointer;
         }
         .mini-player-title {
             font-size: 12.5px;
@@ -2660,17 +2732,46 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .mini-player-artist {
+        .mini-player-sub-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
             font-size: 11px;
+        }
+        .mini-player-artist {
             color: #1DB954;
             font-weight: 600;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        .mini-player-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .mini-ctrl-btn {
+            background: transparent;
+            border: none;
+            color: #CBD5E1;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .mini-ctrl-btn:active {
+            transform: scale(0.9);
+            color: #1DB954;
+        }
         .mini-player-play-btn {
-            width: 38px;
-            height: 38px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             background: #FFFFFF;
             color: #000000;
@@ -3171,28 +3272,45 @@
 
         <!-- LIVE PLAYING MUSIC CARD ON HOME SCREEN -->
         <div class="home-live-music-card" id="homeLiveMusicCard" style="display:none;">
-            <img class="live-music-art" id="homeLiveMusicArt" src="" alt="Album Art">
-            <div class="live-music-meta" onclick="openAudioHub()">
-                <div class="live-music-header">
-                    <span class="live-music-tag">NOW PLAYING</span>
-                    <div class="equalizer-bars paused" id="homeEqualizerBars">
-                        <div class="eq-bar"></div>
-                        <div class="eq-bar"></div>
-                        <div class="eq-bar"></div>
+            <div class="live-music-top-row">
+                <img class="live-music-art" id="homeLiveMusicArt" src="" alt="Album Art">
+                <div class="live-music-meta" onclick="openAudioHub()">
+                    <div class="live-music-header">
+                        <span class="live-music-tag">NOW PLAYING</span>
+                        <div class="equalizer-bars paused" id="homeEqualizerBars">
+                            <div class="eq-bar"></div>
+                            <div class="eq-bar"></div>
+                            <div class="eq-bar"></div>
+                        </div>
                     </div>
+                    <span class="live-music-title" id="homeLiveMusicTitle">Track Title</span>
+                    <span class="live-music-artist" id="homeLiveMusicArtist">Artist Name</span>
                 </div>
-                <span class="live-music-title" id="homeLiveMusicTitle">Track Title</span>
-                <span class="live-music-artist" id="homeLiveMusicArtist">Artist Name</span>
-            </div>
-            <div class="live-music-actions">
-                <button class="live-music-btn" id="homeLivePlayBtn" onclick="toggleAudioPlayState(event)" title="Play / Pause">
-                    <svg id="homeLivePlayIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                </button>
-                <button class="live-music-btn" onclick="stopAudioPlayback(event)" title="Stop">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
-                </button>
                 <button class="live-music-btn close" onclick="dismissLiveMusicCard(event)" title="Close">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="live-music-progress-row">
+                <input type="range" class="audio-progress-slider" id="homeProgressSlider" min="0" max="100" value="0" step="0.1" oninput="seekAudioToPercent(this.value)" onclick="event.stopPropagation()">
+                <div class="live-music-time-row">
+                    <span class="audio-time-label" id="homeTimeLabel">00:00 / 00:00</span>
+                </div>
+            </div>
+            <div class="live-music-controls-row">
+                <button class="live-music-btn" onclick="playPreviousTrack(event)" title="Previous Track">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                </button>
+                <button class="live-music-btn" onclick="seekAudioRelative(-10, event)" title="Rewind 10s">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><text x="12" y="15" font-size="8" font-family="sans-serif" font-weight="900" fill="currentColor" stroke="none" text-anchor="middle">10</text></svg>
+                </button>
+                <button class="live-music-btn primary" id="homeLivePlayBtn" onclick="toggleAudioPlayState(event)" title="Play / Pause">
+                    <svg id="homeLivePlayIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </button>
+                <button class="live-music-btn" onclick="seekAudioRelative(10, event)" title="Forward 10s">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><text x="12" y="15" font-size="8" font-family="sans-serif" font-weight="900" fill="currentColor" stroke="none" text-anchor="middle">10</text></svg>
+                </button>
+                <button class="live-music-btn" onclick="playNextTrack(event)" title="Next Track">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
                 </button>
             </div>
         </div>
@@ -3389,15 +3507,35 @@
         </div>
 
         <!-- Sticky Spotify-Style Bottom Mini Player Bar -->
-        <div class="audio-mini-player" id="audioMiniPlayer" style="display:none;" onclick="toggleAudioPlayState()">
-            <img class="mini-player-artwork" id="miniPlayerArtwork" src="" alt="Album Art">
-            <div class="mini-player-meta">
-                <div class="mini-player-title" id="miniPlayerTitle">Track Title</div>
-                <div class="mini-player-artist" id="miniPlayerArtist">Artist Name</div>
+        <div class="audio-mini-player" id="audioMiniPlayer" style="display:none;">
+            <div class="audio-mini-progress-wrap">
+                <input type="range" class="audio-progress-slider" id="miniProgressSlider" min="0" max="100" value="0" step="0.1" oninput="seekAudioToPercent(this.value)" onclick="event.stopPropagation()">
             </div>
-            <button class="mini-player-play-btn" id="miniPlayerPlayBtn" onclick="toggleAudioPlayState(event)" aria-label="Play/Pause">
-                <svg id="miniPlayerPlayIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            </button>
+            <img class="mini-player-artwork" id="miniPlayerArtwork" src="" alt="Album Art">
+            <div class="mini-player-meta" onclick="toggleAudioPlayState(event)">
+                <div class="mini-player-title" id="miniPlayerTitle">Track Title</div>
+                <div class="mini-player-sub-row">
+                    <span class="mini-player-artist" id="miniPlayerArtist">Artist Name</span>
+                    <span class="audio-time-label" id="miniTimeLabel">00:00 / 00:00</span>
+                </div>
+            </div>
+            <div class="mini-player-controls">
+                <button class="mini-ctrl-btn" onclick="playPreviousTrack(event)" title="Previous Track">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                </button>
+                <button class="mini-ctrl-btn" onclick="seekAudioRelative(-10, event)" title="Rewind 10s">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><text x="12" y="15" font-size="8" font-family="sans-serif" font-weight="900" fill="currentColor" stroke="none" text-anchor="middle">10</text></svg>
+                </button>
+                <button class="mini-player-play-btn" id="miniPlayerPlayBtn" onclick="toggleAudioPlayState(event)" aria-label="Play/Pause">
+                    <svg id="miniPlayerPlayIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </button>
+                <button class="mini-ctrl-btn" onclick="seekAudioRelative(10, event)" title="Forward 10s">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><text x="12" y="15" font-size="8" font-family="sans-serif" font-weight="900" fill="currentColor" stroke="none" text-anchor="middle">10</text></svg>
+                </button>
+                <button class="mini-ctrl-btn" onclick="playNextTrack(event)" title="Next Track">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -5362,24 +5500,13 @@
                 ]
             };
 
-            const usedPhotoUrls = new Set();
             function getDynamicArticlePhoto(item, idx) {
-                if (item.img && typeof item.img === 'string' && item.img.startsWith('http') && !usedPhotoUrls.has(item.img)) {
-                    usedPhotoUrls.add(item.img);
+                if (item.img && typeof item.img === 'string' && item.img.startsWith('http')) {
                     return item.img;
                 }
                 const cat = (item.category || currentNewsCategory || 'all').toLowerCase();
                 const pool = editorialPhotoPool[cat] || editorialPhotoPool.all;
-                for (let i = 0; i < pool.length; i++) {
-                    const candidate = pool[(idx + i) % pool.length];
-                    if (!usedPhotoUrls.has(candidate)) {
-                        usedPhotoUrls.add(candidate);
-                        return candidate;
-                    }
-                }
-                const uniqueFallback = `https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=640&q=80&sig=${idx}`;
-                usedPhotoUrls.add(uniqueFallback);
-                return uniqueFallback;
+                return pool[idx % pool.length];
             }
 
             items.forEach((item, index) => {
@@ -5860,7 +5987,8 @@
                     title: p.title,
                     category: p.cat,
                     sub: p.sub,
-                    img: `https://picsum.photos/id/${p.id}/1080/1920`,
+                    img: `https://picsum.photos/id/${p.id}/540/810`,
+                    fullImg: `https://picsum.photos/id/${p.id}/1080/1920`,
                     ratio: "1.3"
                 });
             });
@@ -5883,58 +6011,8 @@
             return results;
         }
 
-        async function renderVisualGrid(cat, query = '', reset = false) {
-            const grid = document.getElementById('visualGridContainer');
-            if (!grid) return;
-            if (reset) {
-                grid.innerHTML = '';
-                visualPage = 1;
-                seenVisualUrls.clear();
-            }
-
-            let items = [];
-            // 1. Fetch live unlimited 4K wallpapers via Native Bridge or direct fetch
-            try {
-                const searchQuery = query || (cat === 'all' ? 'wallpapers' : cat);
-                let raw = '';
-                if (window.FokkShieldBridge && typeof window.FokkShieldBridge.fetchOnlineWallpapers === 'function') {
-                    raw = window.FokkShieldBridge.fetchOnlineWallpapers(searchQuery, visualPage);
-                }
-                if (!raw) {
-                    const res = await fetch(`https://wallhaven.cc/api/v1/search?q=${encodeURIComponent(searchQuery)}&page=${visualPage}&purity=100&sorting=toplist`);
-                    if (res.ok) raw = await res.text();
-                }
-                if (raw) {
-                    const json = JSON.parse(raw);
-                    if (json && json.data && json.data.length > 0) {
-                        items = json.data.map(item => ({
-                            title: `${(item.category || cat).toUpperCase()} • ${item.resolution || '4K UHD'}`,
-                            category: item.category || cat,
-                            sub: `Wallhaven • ${item.resolution || 'Ultra 4K'}`,
-                            img: (item.thumbs && item.thumbs.large) ? item.thumbs.large : item.path,
-                            fullImg: item.path,
-                            ratio: item.ratio || "1.3"
-                        }));
-                    }
-                }
-            } catch (err) {
-                console.log("[VisualHub] Network fetch notice:", err);
-            }
-
-            // Filter out any already seen URLs to eliminate duplicates completely
-            items = items.filter(it => !seenVisualUrls.has(it.fullImg || it.img));
-
-            // 2. Fallback or augment with procedural batch if needed
-            if (items.length < 6) {
-                const fallbackItems = getUnlimitedVisualBatch(cat, visualPage, query);
-                items.push(...fallbackItems);
-            }
-
-            if (items.length === 0 && reset) {
-                grid.innerHTML = '<div style="column-span: all; text-align: center; color: var(--text-secondary); padding: 30px 0; font-size: 13px;">No visuals found. Try another search term.</div>';
-                return;
-            }
-
+        function appendVisualCards(items, grid) {
+            if (!items || !grid) return;
             items.forEach(item => {
                 const dlUrl = item.fullImg || item.img;
                 if (seenVisualUrls.has(dlUrl)) return;
@@ -5960,6 +6038,52 @@
                 `;
                 grid.appendChild(card);
             });
+        }
+
+        async function renderVisualGrid(cat, query = '', reset = false) {
+            const grid = document.getElementById('visualGridContainer');
+            if (!grid) return;
+            if (reset) {
+                grid.innerHTML = '';
+                visualPage = 1;
+                seenVisualUrls.clear();
+                // Render initial batch instantly for smooth 0ms instant display
+                const instantBatch = getUnlimitedVisualBatch(cat, visualPage, query);
+                appendVisualCards(instantBatch, grid);
+            }
+
+            // Asynchronously fetch online wallpapers in background without UI thread freeze
+            setTimeout(async () => {
+                try {
+                    const searchQuery = query || (cat === 'all' ? 'wallpapers' : cat);
+                    let raw = '';
+                    if (window.FokkShieldBridge && typeof window.FokkShieldBridge.fetchOnlineWallpapers === 'function') {
+                        raw = window.FokkShieldBridge.fetchOnlineWallpapers(searchQuery, visualPage);
+                    }
+                    if (!raw) {
+                        const res = await fetch(`https://wallhaven.cc/api/v1/search?q=${encodeURIComponent(searchQuery)}&page=${visualPage}&purity=100&sorting=toplist`);
+                        if (res.ok) raw = await res.text();
+                    }
+                    if (raw) {
+                        const json = JSON.parse(raw);
+                        if (json && json.data && json.data.length > 0) {
+                            const onlineItems = json.data.map(item => ({
+                                title: `${(item.category || cat).toUpperCase()} • ${item.resolution || '4K UHD'}`,
+                                category: item.category || cat,
+                                sub: `Wallhaven • ${item.resolution || 'Ultra 4K'}`,
+                                img: (item.thumbs && item.thumbs.large) ? item.thumbs.large : item.path,
+                                fullImg: item.path,
+                                ratio: item.ratio || "1.3"
+                            })).filter(it => !seenVisualUrls.has(it.fullImg || it.img));
+                            if (onlineItems.length > 0) {
+                                appendVisualCards(onlineItems, grid);
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.log("[VisualHub] Network fetch notice:", err);
+                }
+            }, 60);
         }
 
         // FULLSCREEN PINTEREST LIGHTBOX CONTROLLER
@@ -7110,11 +7234,71 @@
             if (card) card.style.display = 'none';
         }
 
-        function playNextTrack() {
+        function playPreviousTrack(e) {
+            if (e) e.stopPropagation();
+            if (!currentPlaylist || currentPlaylist.length === 0) return;
+            const currentIndex = currentPlaylist.findIndex(t => t.id === (currentPlayingTrack ? currentPlayingTrack.id : null));
+            const prevIndex = (currentIndex - 1 + currentPlaylist.length) % currentPlaylist.length;
+            playAudioTrack(currentPlaylist[prevIndex]);
+        }
+
+        function playNextTrack(e) {
+            if (e) e.stopPropagation();
             if (!currentPlaylist || currentPlaylist.length === 0) return;
             const currentIndex = currentPlaylist.findIndex(t => t.id === (currentPlayingTrack ? currentPlayingTrack.id : null));
             const nextIndex = (currentIndex + 1) % currentPlaylist.length;
             playAudioTrack(currentPlaylist[nextIndex]);
+        }
+
+        function seekAudioRelative(seconds, e) {
+            if (e) e.stopPropagation();
+            const player = document.getElementById('fokkGlobalAudioPlayer');
+            if (!player) return;
+            const dur = player.duration || (currentPlayingTrack ? currentPlayingTrack.duration : 0) || 0;
+            const cur = player.currentTime || 0;
+            const target = Math.max(0, Math.min(dur || 99999, cur + seconds));
+            player.currentTime = target;
+            updateAudioProgressUI();
+        }
+
+        function seekAudioToPercent(percent) {
+            const player = document.getElementById('fokkGlobalAudioPlayer');
+            if (!player) return;
+            const dur = player.duration || (currentPlayingTrack ? currentPlayingTrack.duration : 0) || 0;
+            if (dur > 0) {
+                player.currentTime = (percent / 100) * dur;
+                updateAudioProgressUI();
+            }
+        }
+
+        function formatAudioTime(seconds) {
+            if (isNaN(seconds) || seconds < 0) return "00:00";
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function updateAudioProgressUI() {
+            const player = document.getElementById('fokkGlobalAudioPlayer');
+            if (!player) return;
+            const cur = player.currentTime || 0;
+            const dur = player.duration || (currentPlayingTrack ? currentPlayingTrack.duration : 0) || 0;
+            const pct = dur > 0 ? (cur / dur) * 100 : 0;
+
+            const miniSlider = document.getElementById('miniProgressSlider');
+            if (miniSlider && !miniSlider.__is_dragging) {
+                miniSlider.value = pct;
+            }
+            const homeSlider = document.getElementById('homeProgressSlider');
+            if (homeSlider && !homeSlider.__is_dragging) {
+                homeSlider.value = pct;
+            }
+
+            const timeStr = `${formatAudioTime(cur)} / ${formatAudioTime(dur)}`;
+            const miniTime = document.getElementById('miniTimeLabel');
+            if (miniTime) miniTime.textContent = timeStr;
+            const homeTime = document.getElementById('homeTimeLabel');
+            if (homeTime) homeTime.textContent = timeStr;
         }
 
         function initAudioPlayerListeners() {
@@ -7125,6 +7309,7 @@
             player.addEventListener('play', () => {
                 updatePlayIcons(true);
                 updateHomeLiveMusicCard(currentPlayingTrack, true);
+                updateAudioProgressUI();
             });
             player.addEventListener('pause', () => {
                 if (!isUserExplicitPaused && currentPlayingTrack) {
@@ -7138,7 +7323,10 @@
                 }
                 updatePlayIcons(false);
                 updateHomeLiveMusicCard(currentPlayingTrack, false);
+                updateAudioProgressUI();
             });
+            player.addEventListener('timeupdate', updateAudioProgressUI);
+            player.addEventListener('loadedmetadata', updateAudioProgressUI);
             player.addEventListener('ended', () => {
                 updatePlayIcons(false);
                 playNextTrack();
