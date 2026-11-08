@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Tab - Fokk Browser</title>
+    <link rel="stylesheet" href="start.css">
+</head>
+<body>
+    <!-- Full-bleed Dynamic Wallpaper Background -->
+    <div id="wallpaperBg" class="wallpaper-bg"></div>
+    <div class="wallpaper-overlay"></div>
+
+    <!-- Main Desktop Layout Container -->
+    <div class="desktop-start-container">
+        <!-- Top Utility Bar -->
+        <header class="top-nav-bar">
+            <div class="top-left-status">
+                <span id="liveClock" class="live-clock">12:00</span>
+                <span id="liveGreeting" class="live-greeting">Good evening</span>
+            </div>
+            <div class="top-right-actions">
+                <button id="btnOpenVisuals" class="btn-top-util" title="Customize Wallpaper">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                    </svg>
+                    <span>Customize</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Brand Centerpiece -->
+        <section class="brand-section">
+            <div class="brand-logo-wrap">
+                <div class="brand-shield-icon">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm0 2.18l6 2.25v4.66c0 4.14-2.73 8.01-6 9.07-3.27-1.06-6-4.93-6-9.07V6.43l6-2.25z"/>
+                        <path d="M10 12.5l-2-2-1.41 1.41L10 15.33l6-6-1.41-1.41z"/>
+                    </svg>
+                </div>
+                <h1 class="brand-title">FOKK</h1>
+            </div>
+            <p class="brand-subtitle">Ultra-Fast, Zero-Ad Privacy Browser</p>
+        </section>
+
+        <!-- Search Bar Section (Firefox / Brave style) -->
+        <section class="search-section">
+            <form id="desktopSearchForm" class="desktop-search-form">
+                <div class="search-engine-selector" id="searchEngineSelector" title="Select Search Engine">
+                    <span id="currentEngineIcon" class="engine-icon">
+                        <!-- Google default SVG -->
+                        <svg width="20" height="20" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.04h3.88c2.27-2.09 3.66-5.17 3.66-9.14z"/>
+                            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.04c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.27 21.43 7.35 24 12 24z"/>
+                            <path fill="#FBBC05" d="M5.28 14.28c-.24-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28V6.59H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.41l4.03-3.13z"/>
+                            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.27 2.57 1.25 6.59l4.03 3.13c.95-2.83 3.6-4.97 6.72-4.97z"/>
+                        </svg>
+                    </span>
+                    <svg class="engine-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                    <!-- Dropdown for engine selection -->
+                    <div id="engineDropdown" class="engine-dropdown hidden">
+                        <div class="engine-opt selected" data-engine="google">
+                            <span>Google</span>
+                        </div>
+                        <div class="engine-opt" data-engine="brave">
+                            <span>Brave Search</span>
+                        </div>
+                        <div class="engine-opt" data-engine="duckduckgo">
+                            <span>DuckDuckGo</span>
+                        </div>
+                        <div class="engine-opt" data-engine="bing">
+                            <span>Bing</span>
+                        </div>
+                    </div>
+                </div>
+
+                <input type="text" id="desktopSearchInput" class="desktop-search-input" placeholder="Search the web privately or type a URL..." autocomplete="off" spellcheck="false" autofocus>
+
+                <button type="submit" class="search-submit-btn" title="Search">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                </button>
+            </form>
+        </section>
+
+        <!-- Top Shortcuts Row (Firefox style) -->
+        <section class="shortcuts-section">
+            <div id="shortcutsContainer" class="shortcuts-row">
+                <!-- Injected via start.js -->
+            </div>
+        </section>
+
+        <!-- Shield Protection Stats Strip (Brave style) -->
+        <section class="protection-strip">
+            <div class="stat-card">
+                <div class="stat-icon-wrap shield-pulse">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+                    </svg>
+                </div>
+                <div class="stat-meta">
+                    <div id="statAdsBlocked" class="stat-value">1,428</div>
+                    <div class="stat-label">Trackers & Ads Blocked</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon-wrap band-pulse">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    </svg>
+                </div>
+                <div class="stat-meta">
+                    <div id="statBandwidth" class="stat-value">38.4 MB</div>
+                    <div class="stat-label">Data Saved</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon-wrap time-pulse">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                </div>
+                <div class="stat-meta">
+                    <div id="statTimeSaved" class="stat-value">2.4 min</div>
+                    <div class="stat-label">Time Saved</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Thought-Provoking Stories & Live Briefings (Firefox style) -->
+        <section class="stories-section">
+            <div class="stories-header">
+                <div class="stories-title-wrap">
+                    <h2 class="stories-heading">Thought-Provoking Stories</h2>
+                    <span class="stories-badge">Live Editorial</span>
+                </div>
+
+                <div class="stories-controls">
+                    <!-- Category Tabs -->
+                    <div class="stories-categories" id="storiesCategoryList">
+                        <button class="cat-pill active" data-cat="all">Top</button>
+                        <button class="cat-pill" data-cat="tech">Tech</button>
+                        <button class="cat-pill" data-cat="business">Business</button>
+                        <button class="cat-pill" data-cat="science">Science</button>
+                        <button class="cat-pill" data-cat="world">World</button>
+                    </div>
+
+                    <!-- Region Selector -->
+                    <div class="region-select-wrap">
+                        <select id="storiesRegionSelect" class="region-select">
+                            <option value="global">Global (US)</option>
+                            <option value="in">India</option>
+                            <option value="uk">United Kingdom</option>
+                            <option value="ca">Canada</option>
+                            <option value="au">Australia</option>
+                            <option value="de">Germany</option>
+                        </select>
+                        <svg class="region-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4x2 Rich Editorial Grid -->
+            <div id="storiesGrid" class="stories-grid">
+                <!-- Dynamically populated via start.js with 8 rich cards -->
+            </div>
+        </section>
+    </div>
+
+    <!-- Floating Wallpaper Studio Modal -->
+    <div id="wallpaperModal" class="modal-backdrop hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <h3>Visual Studio & 4K Wallpapers</h3>
+                    <p>Curated photography and custom backgrounds for your workspace</p>
+                </div>
+                <button id="btnCloseModal" class="btn-modal-close">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="upload-banner">
+                    <div class="upload-banner-info">
+                        <strong>Custom Wallpaper</strong>
+                        <span>Upload any high-res image from your PC</span>
+                    </div>
+                    <button id="btnUploadDeviceImage" class="btn-upload">Upload from Device</button>
+                    <input type="file" id="deviceFileInput" accept="image/*" style="display:none;">
+                </div>
+
+                <div class="curated-wallpapers-heading">Curated 4K Collections</div>
+                <div class="wallpapers-grid" id="wallpapersGrid">
+                    <!-- Rendered by start.js: Sailboats, Alpine, Cyberpunk, Horizons, Minimalist -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="start.js"></script>
+</body>
+</html>

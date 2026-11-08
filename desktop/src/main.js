@@ -8,7 +8,7 @@ const newsService = require('./news');
 const devAssetsDir = path.resolve(__dirname, '..', '..', 'app', 'src', 'main', 'assets');
 const packagedAssetsDir = path.join(process.resourcesPath || '', 'assets');
 const ASSETS_DIR = fs.existsSync(packagedAssetsDir) ? packagedAssetsDir : devAssetsDir;
-const START_PAGE_URL = `file://${path.join(ASSETS_DIR, 'fokk_start.html')}`;
+const START_PAGE_URL = `file://${path.join(__dirname, 'ui', 'start.html')}`;
 const PRELOAD_PATH = path.join(__dirname, 'preload.js');
 const ICON_PATH = path.join(__dirname, '..', 'assets', 'icon.png');
 
