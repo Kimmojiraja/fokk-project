@@ -1304,13 +1304,16 @@
         .pulse-app-bar {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            padding: 12px 16px;
+            justify-content: flex-start;
+            gap: 8px;
+            padding: 10px 14px;
             background: rgba(11, 16, 25, 0.96);
             border-bottom: 1px solid rgba(148, 163, 184, 0.16);
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
             flex-shrink: 0;
+            box-sizing: border-box;
+            width: 100%;
+            overflow: visible;
         }
 
         .pulse-back-btn {
@@ -1320,13 +1323,14 @@
             background: transparent !important;
             border: none !important;
             box-shadow: none !important;
-            padding: 6px 10px;
+            padding: 6px 8px;
             color: var(--text-primary);
             font-size: 14px;
             font-weight: 700;
             cursor: pointer;
             border-radius: 9999px;
             transition: background 0.15s ease;
+            flex-shrink: 0;
         }
         .pulse-back-btn:active {
             background: rgba(255, 255, 255, 0.08) !important;
@@ -1341,7 +1345,7 @@
         .pulse-context {
             display: inline-flex;
             align-items: center;
-            gap: 7px;
+            gap: 6px;
             margin-right: auto;
             color: #CBD5E1;
             font-size: 10px;
@@ -1349,18 +1353,43 @@
             letter-spacing: 0.12em;
             text-transform: uppercase;
             white-space: nowrap;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pulse-country-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            position: relative;
+            cursor: pointer;
+            flex-shrink: 0;
         }
 
         .pulse-country-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
             background: transparent !important;
             border: none !important;
             box-shadow: none !important;
             color: var(--fokk-cyan) !important;
             font-size: 12.5px;
             font-weight: 700;
-            padding: 6px 8px;
+            padding: 4px 1px 4px 4px;
+            margin: 0;
             outline: none;
             cursor: pointer;
+            width: auto;
+        }
+
+        .pulse-country-arrow {
+            color: var(--fokk-cyan);
+            flex-shrink: 0;
+            pointer-events: none;
+            margin-left: 1px;
+            opacity: 0.9;
         }
 
         .pulse-scroll-content {
@@ -1925,25 +1954,34 @@
         .hero-livepulse-btn { order: 1; }
         .hero-privacy-btn { order: 2; }
 
-        .pulse-news-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .pulse-news-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
         .pulse-news-card {
             display: flex !important;
             flex-direction: column !important;
             min-width: 0;
             overflow: hidden;
-            border-radius: 14px;
+            border-radius: 16px;
             background: #171b27 !important;
             border: 1px solid rgba(148, 163, 184, 0.18) !important;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
             transition: transform 0.15s ease, border-color 0.15s ease;
         }
         .pulse-news-card:active {
-            transform: scale(0.98);
+            transform: scale(0.985);
             border-color: rgba(0, 229, 255, 0.4) !important;
         }
-        .pulse-news-img { width: 100%; height: 124px; object-fit: cover; display: block; background: #0f131f; }
-        .pulse-news-body { padding: 10px 11px 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
-        .pulse-news-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; line-height: 1.35; font-size: 13px; font-weight: 700; color: #FFFFFF; }
+        .pulse-news-img {
+            width: 100%;
+            height: 190px;
+            object-fit: cover;
+            display: block;
+            background: #0f131f;
+        }
+        @media (min-width: 500px) {
+            .pulse-news-img { height: 145px; }
+        }
+        .pulse-news-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .pulse-news-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; line-height: 1.36; font-size: 14.5px; font-weight: 750; color: #FFFFFF; }
         .pulse-news-tag {
             background: rgba(0, 229, 255, 0.12) !important;
             color: var(--fokk-cyan) !important;
@@ -1954,7 +1992,7 @@
             font-weight: 700 !important;
             display: inline-block !important;
         }
-        .pulse-news-footer { gap: 5px; flex-wrap: wrap; line-height: 1.3; font-size: 11px; color: var(--text-secondary); margin-top: auto; }
+        .pulse-news-footer { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; line-height: 1.3; font-size: 11.5px; color: var(--text-secondary); margin-top: auto; }
         .pulse-customize-btn {
             border: none !important;
             background: transparent !important;
@@ -1974,13 +2012,17 @@
         .pulse-custom-panel.active { display: grid; }
         .pulse-custom-panel label { display: flex; align-items: center; gap: 7px; color: var(--text-secondary); font-size: 12px; }
 
-        /* PULSE APP BAR HOME TRENDING TOGGLE BUTTON */
+        /* PULSE APP BAR HOME TRENDING TOGGLE BUTTON (COMPACT ICON BUTTON - NO OVERLAP) */
         .pulse-home-toggle-btn {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            padding: 5px 10px;
-            border-radius: 12px;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            min-height: 32px;
+            padding: 0;
+            border-radius: 9px;
             font-size: 11px;
             font-weight: 700;
             cursor: pointer;
@@ -1988,14 +2030,15 @@
             color: #94A3B8;
             border: 1px solid rgba(255, 255, 255, 0.14);
             transition: all 0.18s ease;
-            white-space: nowrap;
             touch-action: manipulation;
+            flex-shrink: 0;
+            margin: 0;
         }
         .pulse-home-toggle-btn:active {
-            transform: scale(0.96);
+            transform: scale(0.94);
         }
         .pulse-home-toggle-btn.active {
-            background: rgba(0, 229, 255, 0.15);
+            background: rgba(0, 229, 255, 0.16);
             color: #00E5FF;
             border-color: rgba(0, 229, 255, 0.45);
         }
@@ -2004,7 +2047,7 @@
         .home-trending-section {
             width: 100%;
             max-width: 520px;
-            margin: 10px auto 12px;
+            margin: 10px auto 14px;
             display: flex;
             flex-direction: column;
             gap: 8px;
@@ -2017,7 +2060,7 @@
         }
         .home-trending-scroll {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             overflow-x: auto;
             scroll-snap-type: x mandatory;
             scrollbar-width: none;
@@ -2028,17 +2071,18 @@
             display: none;
         }
         .home-trending-card {
-            flex: 0 0 252px;
-            max-width: 252px;
+            flex: 0 0 280px;
+            max-width: 280px;
+            min-height: 98px;
             scroll-snap-align: start;
             display: flex;
-            gap: 10px;
-            background: rgba(18, 24, 38, 0.78);
-            border: 1px solid rgba(148, 163, 184, 0.16);
+            gap: 11px;
+            background: rgba(18, 24, 38, 0.88);
+            border: 1px solid rgba(148, 163, 184, 0.18);
             border-radius: 14px;
-            padding: 9px 10px;
+            padding: 10px 12px;
             cursor: pointer;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
             transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
@@ -2047,12 +2091,14 @@
         .home-trending-card:active {
             transform: scale(0.975);
             border-color: rgba(0, 229, 255, 0.4);
-            background: rgba(26, 34, 52, 0.9);
+            background: rgba(26, 34, 52, 0.95);
         }
         .home-trending-img {
-            width: 60px;
-            height: 60px;
-            border-radius: 9px;
+            width: 78px;
+            height: 78px;
+            min-width: 78px;
+            min-height: 78px;
+            border-radius: 10px;
             object-fit: cover;
             flex-shrink: 0;
             background: #0D121F;
@@ -2063,6 +2109,7 @@
             justify-content: space-between;
             min-width: 0;
             flex: 1;
+            min-height: 78px;
         }
         .home-trending-meta {
             display: flex;
@@ -2074,15 +2121,15 @@
             white-space: nowrap;
         }
         .home-trending-title {
-            font-size: 12px;
-            font-weight: 600;
-            line-height: 1.32;
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.34;
             color: #F8FAFC;
             display: -webkit-box;
             -webkit-box-orient: vertical;
-            -webkit-line-clamp: 2;
+            -webkit-line-clamp: 3;
             overflow: hidden;
-            margin-top: 3px;
+            margin-top: 2px;
         }
 
         /* AUTHENTIC BRAND LOGOS FOR NEWS SOURCES */
@@ -3730,8 +3777,14 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 <span>Back</span>
             </button>
-            <span class="pulse-bar-title">Unlimited Visuals &amp; 4K</span>
-            <button class="pulse-customize-btn" onclick="openDialUrl('https://unsplash.com')" title="Explore 4K Library">Unsplash 4K</button>
+            <span class="pulse-bar-title">Visuals &amp; Wallpapers</span>
+            <div style="display:flex; align-items:center; gap:6px; margin-left:auto;">
+                <button class="pulse-customize-btn" onclick="triggerCustomWallpaperUpload()" style="display:inline-flex; align-items:center; gap:5px; background:rgba(0,229,255,0.16) !important; color:#00E5FF !important; border:1px solid rgba(0,229,255,0.35) !important;" title="Upload image from device to set as wallpaper">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span>Upload Image</span>
+                </button>
+                <button class="pulse-customize-btn" onclick="openDialUrl('https://unsplash.com')" title="Explore 4K Library">Unsplash 4K</button>
+            </div>
         </div>
         <div class="visual-scroll-content" id="visualScrollContent">
             <div class="visual-search-box">
@@ -3739,6 +3792,9 @@
                 <button class="visual-search-go" onclick="searchVisuals()">Search</button>
             </div>
             <div class="visual-tags-strip">
+                <button class="visual-tag-btn" onclick="triggerCustomWallpaperUpload()" style="background: linear-gradient(135deg, rgba(0, 229, 255, 0.22), rgba(59, 130, 246, 0.18)); border-color: rgba(0, 229, 255, 0.45); color: #E0F2FE;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload from Device
+                </button>
                 <button class="visual-tag-btn active" onclick="filterVisuals('all', this)">All Feeds</button>
                 <button class="visual-tag-btn" onclick="filterVisuals('sailboats', this)">⛵ Sail &amp; Horizon</button>
                 <button class="visual-tag-btn" onclick="filterVisuals('wallpapers', this)">4K Wallpapers</button>
@@ -3975,18 +4031,21 @@
                 <span>Back</span>
             </button>
             <div class="pulse-context" aria-label="Live briefing status">Live briefing</div>
-            <select id="pulseCountrySelect" class="pulse-country-select" aria-label="Choose region" onchange="onCountryChanged(this.value)">
-                <option value="global">Global (US)</option>
-                <option value="us">United States</option>
-                <option value="uk">United Kingdom</option>
-                <option value="in">India</option>
-                <option value="ca">Canada</option>
-                <option value="de">Germany</option>
-                <option value="au">Australia</option>
-            </select>
+            <div class="pulse-country-wrapper" onclick="document.getElementById('pulseCountrySelect').click()">
+                <select id="pulseCountrySelect" class="pulse-country-select" aria-label="Choose region" onchange="onCountryChanged(this.value)">
+                    <option value="global">Global (US)</option>
+                    <option value="us">United States</option>
+                    <option value="uk">United Kingdom</option>
+                    <option value="in">India</option>
+                    <option value="ca">Canada</option>
+                    <option value="de">Germany</option>
+                    <option value="au">Australia</option>
+                </select>
+                <svg class="pulse-country-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
             <button class="pulse-home-toggle-btn active" id="btnToggleHomeTrending" onclick="toggleHomeTrendingFeed(event)" title="Toggle trending articles on Home Screen">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                <span id="labelToggleHomeTrending">Home Feed: ON</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <span id="labelToggleHomeTrending" style="display:none;">Home Feed: ON</span>
             </button>
         </div>
 
@@ -5097,7 +5156,10 @@
                 window.FokkShieldBridge.triggerWallpaperPicker();
             } else {
                 const input = document.getElementById('wallpaperFileInput');
-                if (input) input.click();
+                if (input) {
+                    input.value = '';
+                    input.click();
+                }
             }
         }
 
@@ -5128,6 +5190,9 @@
                     if (window.FokkShieldBridge && typeof window.FokkShieldBridge.setGlobalTheme === 'function') {
                         window.FokkShieldBridge.setGlobalTheme('custom');
                     }
+                    if (typeof closeVisualHub === 'function') closeVisualHub();
+                    if (typeof closeThemeModal === 'function') closeThemeModal();
+                    if (typeof showPreviewToast === 'function') showPreviewToast('Custom device wallpaper applied!');
                 };
                 img.src = e.target.result;
             };
@@ -5849,17 +5914,19 @@
 
             scrollTrack.innerHTML = `
                 <div class="home-trending-card" style="opacity: 0.65;">
-                    <div style="width:60px; height:60px; border-radius:9px; background: rgba(255,255,255,0.06); flex-shrink:0;"></div>
-                    <div style="flex:1; display:flex; flex-direction:column; gap:6px; justify-content:center;">
-                        <div style="width:40%; height:10px; background:rgba(255,255,255,0.08); border-radius:4px;"></div>
-                        <div style="width:90%; height:11px; background:rgba(255,255,255,0.08); border-radius:4px;"></div>
+                    <div style="width:78px; height:78px; border-radius:10px; background: rgba(255,255,255,0.06); flex-shrink:0;"></div>
+                    <div style="flex:1; display:flex; flex-direction:column; gap:8px; justify-content:center; min-height:78px;">
+                        <div style="width:45%; height:11px; background:rgba(255,255,255,0.08); border-radius:4px;"></div>
+                        <div style="width:95%; height:12px; background:rgba(255,255,255,0.08); border-radius:4px;"></div>
+                        <div style="width:80%; height:12px; background:rgba(255,255,255,0.08); border-radius:4px;"></div>
                     </div>
                 </div>
                 <div class="home-trending-card" style="opacity: 0.65;">
-                    <div style="width:60px; height:60px; border-radius:9px; background: rgba(255,255,255,0.06); flex-shrink:0;"></div>
-                    <div style="flex:1; display:flex; flex-direction:column; gap:6px; justify-content:center;">
-                        <div style="width:40%; height:10px; background:rgba(255,255,255,0.08); border-radius:4px;"></div>
-                        <div style="width:85%; height:11px; background:rgba(255,255,255,0.08); border-radius:4px;"></div>
+                    <div style="width:78px; height:78px; border-radius:10px; background: rgba(255,255,255,0.06); flex-shrink:0;"></div>
+                    <div style="flex:1; display:flex; flex-direction:column; gap:8px; justify-content:center; min-height:78px;">
+                        <div style="width:45%; height:11px; background:rgba(255,255,255,0.08); border-radius:4px;"></div>
+                        <div style="width:90%; height:12px; background:rgba(255,255,255,0.08); border-radius:4px;"></div>
+                        <div style="width:75%; height:12px; background:rgba(255,255,255,0.08); border-radius:4px;"></div>
                     </div>
                 </div>
             `;
@@ -7920,13 +7987,14 @@
         setTimeout(initCommandCard, 80);
         setTimeout(initCommandCard, 350);
 
-        // Sync Live Stats from Android Bridge
+        // Auto-open Visual Hub if requested by native menu or intent
         try {
-            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.getStats === 'function') {
-                const stats = JSON.parse(window.FokkShieldBridge.getStats());
-                if (stats.blocked) {
-                    document.getElementById('statBlockedBadge').innerText = Number(stats.blocked).toLocaleString() + " Requests Filtered";
-                }
+            const urlParams = new URLSearchParams(window.location.search);
+            const act = urlParams.get('action');
+            if (act === 'visuals' || act === 'wallpapers') {
+                setTimeout(() => {
+                    if (typeof openVisualHub === 'function') openVisualHub();
+                }, 120);
             }
         } catch (e) {}
     </script>

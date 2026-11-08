@@ -541,9 +541,9 @@ open class MediaHubActivity : AppCompatActivity() {
     fun openWallpapersCustomizer() {
         val currentUrl = activeTab?.url ?: ""
         if (currentUrl.contains("fokk_start.html")) {
-            activeWebView?.evaluateJavascript("if (typeof openThemeModal === 'function') openThemeModal();", null)
+            activeWebView?.evaluateJavascript("if (typeof openVisualHub === 'function') openVisualHub(); else if (typeof openThemeModal === 'function') openThemeModal();", null)
         } else {
-            addNewTab("file:///android_asset/fokk_start.html?action=wallpapers", isPrivate = activeTab?.isPrivate == true)
+            addNewTab("file:///android_asset/fokk_start.html?action=visuals", isPrivate = activeTab?.isPrivate == true)
         }
     }
 
