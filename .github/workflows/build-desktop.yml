@@ -33,8 +33,6 @@ jobs:
       - name: Build Linux Packages
         working-directory: desktop
         run: npx electron-builder --linux deb AppImage --publish never
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4
@@ -47,6 +45,7 @@ jobs:
 
       - name: Attach Linux to Latest Release
         if: success()
+        continue-on-error: true
         working-directory: desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -78,15 +77,10 @@ jobs:
       - name: Install Dependencies
         working-directory: desktop
         run: npm install --no-audit
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ELECTRON_GET_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Windows Installer & Portable
         working-directory: desktop
         run: npx electron-builder --win nsis portable --publish never
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
@@ -97,6 +91,7 @@ jobs:
 
       - name: Attach Windows to Latest Release
         if: success()
+        continue-on-error: true
         working-directory: desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
