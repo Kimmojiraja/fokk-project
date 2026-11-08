@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Tab</title>
+    <link rel="stylesheet" href="start.css">
+</head>
+<body>
+    <!-- Full-bleed 4K Sailboat Wallpaper Layer -->
+    <div id="wallpaperBg" class="wallpaper-bg"></div>
+    <div class="wallpaper-overlay"></div>
+
+    <!-- Main Desktop Layout (Firefox Desktop Style) -->
+    <div class="firefox-layout-container">
+        <!-- Top Firefox-Style Brand Header -->
+        <header class="firefox-brand-header">
+            <div class="brand-logo-group">
+                <img src="icon.png" class="brand-app-logo" alt="Fokk Logo">
+                <h1 class="brand-name">Fokk</h1>
+            </div>
+        </header>
+
+
+        <!-- Centered Search Bar (Firefox Style - Microsoft Bing Default) -->
+        <section class="firefox-search-wrap">
+            <form id="desktopSearchForm" class="firefox-search-box">
+                <div class="search-engine-icon" id="searchEngineIcon" title="Microsoft Bing Search">
+                    <svg width="20" height="20" viewBox="0 0 24 24">
+                        <path fill="#008373" d="M5 3v18l7-4V7.5L8.5 6V3H5zm9 5l-2 1.2V14l4.5 2.5 3.5-2V10l-6-2z"/>
+                        <path fill="#00A88F" d="M12 7.5V17l4.5 2.5 3.5-2V10l-8-2.5z"/>
+                    </svg>
+                </div>
+                <input type="text" id="desktopSearchInput" class="firefox-search-input" placeholder="Search with Microsoft Bing or enter address" autocomplete="off" spellcheck="false" autofocus>
+                <button type="submit" class="search-arrow-btn" title="Search">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                        <polyline points="12 5 19 12 12 19"/>
+                    </svg>
+                </button>
+            </form>
+        </section>
+
+        <!-- Horizontal Shortcuts (8 Tiles - Firefox Style) -->
+        <section class="firefox-shortcuts-row" id="shortcutsContainer">
+            <!-- Dynamically populated via start.js with 8 squircle tiles -->
+        </section>
+
+        <!-- Thought-Provoking Stories (Firefox Style Grid) -->
+        <section class="firefox-stories-section">
+            <div class="firefox-stories-header">
+                <h2 class="stories-title">Thought-provoking stories</h2>
+                <div class="stories-region-badge">
+                    <select id="storiesRegionSelect" class="region-dropdown">
+                        <option value="global">Global</option>
+                        <option value="in">India</option>
+                        <option value="uk">United Kingdom</option>
+                        <option value="ca">Canada</option>
+                        <option value="au">Australia</option>
+                        <option value="de">Germany</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Editorial card grid -->
+            <div class="firefox-stories-grid" id="storiesGrid">
+                <!-- Injected via start.js -->
+            </div>
+
+            <!-- View More Stories Expansion Container -->
+            <div class="more-stories-wrap">
+                <button id="btnViewMoreStories" class="btn-more-stories" title="View More Real News Articles">
+                    <span id="btnViewMoreText">View More Stories</span>
+                    <svg id="btnViewMoreIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- Firefox-Style Floating Bottom-Right Pencil Customize Button -->
+    <button id="btnFloatingCustomize" class="floating-pencil-btn" title="Customize Page & Wallpapers">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9"/>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+        </svg>
+    </button>
+
+    <!-- Visual Studio & Wallpaper Selector Modal -->
+    <div id="wallpaperModal" class="modal-backdrop hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <h3>Visual Studio & 4K Wallpapers</h3>
+                    <p>Choose a coastal sailboat background or upload your own photo</p>
+                </div>
+                <button id="btnCloseModal" class="btn-modal-close">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="upload-banner">
+                    <div class="upload-banner-info">
+                        <strong>Upload from Device</strong>
+                        <span>Apply any custom high-resolution photo from your PC</span>
+                    </div>
+                    <button id="btnUploadDeviceImage" class="btn-upload">Browse Image</button>
+                    <input type="file" id="deviceFileInput" accept="image/*" style="display:none;">
+                </div>
+
+                <div class="curated-wallpapers-heading">Curated 4K Collections</div>
+                <div class="wallpapers-grid" id="wallpapersGrid">
+                    <!-- Curated choices: Sailboats, Alpine, Horizon, Cyberpunk, Obsidian -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="start.js"></script>
+</body>
+</html>
