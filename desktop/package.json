@@ -31,7 +31,15 @@
         "to": "assets",
         "filter": [
           "fokk_start.html",
+          "fokk_about.html",
+          "fokk_webtorrent.html",
+          "fokk_reader.js",
+          "fokk_reader.css",
+          "fokk_summarizer.js",
+          "fokko_content.js",
+          "fokko_content.css",
           "adblock_rules_curated.txt",
+          "blocklist_core.txt",
           "inject_adshield.js",
           "adblock_defusers.js"
         ]

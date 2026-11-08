@@ -562,6 +562,11 @@
                 }
             } catch (e) {}
         }
+        if (window.FokkShieldBridge && typeof window.FokkShieldBridge.refreshLiveNews === 'function') {
+            try {
+                window.FokkShieldBridge.refreshLiveNews('all', region);
+            } catch (e) {}
+        }
         liveFetchedStories = null;
         renderStories(ALL_STORIES);
     }
@@ -573,9 +578,21 @@
     }
 
     window.addEventListener('fokk-live-news-updated', (event) => {
-        if (event.detail && Array.isArray(event.detail)) {
-            liveFetchedStories = event.detail;
-            renderStories(event.detail);
+        let stories = null;
+        let incomingRegion = null;
+        if (Array.isArray(event.detail)) {
+            stories = event.detail;
+        } else if (event.detail && Array.isArray(event.detail.stories)) {
+            stories = event.detail.stories;
+            incomingRegion = event.detail.region;
+        }
+
+        const currentRegion = storiesRegionSelect ? storiesRegionSelect.value : 'global';
+        if (incomingRegion && incomingRegion !== currentRegion) return;
+
+        if (stories && stories.length > 0) {
+            liveFetchedStories = stories;
+            renderStories(stories);
         }
     });
 

@@ -5,6 +5,8 @@ class AdBlockEngine {
     constructor(assetsDir) {
         this.assetsDir = assetsDir;
         this.blockedDomains = new Set();
+        this.whitelistedDomains = new Set();
+        this.customBlockedDomains = new Set();
         this.blockedKeywords = [
             '/pagead/',
             '/api/stats/ads',
@@ -35,6 +37,7 @@ class AdBlockEngine {
     }
 
     init() {
+        // 1. Curated Adblock Rules
         const rulesPath = path.join(this.assetsDir, 'adblock_rules_curated.txt');
         if (fs.existsSync(rulesPath)) {
             try {
@@ -54,18 +57,55 @@ class AdBlockEngine {
             }
         }
 
-        // Cache injection scripts
+        // 2. Core Blocklist (AdShield core hostnames)
+        const corePath = path.join(this.assetsDir, 'blocklist_core.txt');
+        if (fs.existsSync(corePath)) {
+            try {
+                const coreLines = fs.readFileSync(corePath, 'utf8').split('\n');
+                for (const line of coreLines) {
+                    const trimmed = line.trim().toLowerCase();
+                    if (trimmed && !trimmed.startsWith('#') && !trimmed.startsWith('!')) {
+                        const host = trimmed.replace(/^0\.0\.0\.0\s+/, '').replace(/^127\.0\.0\.1\s+/, '').trim();
+                        if (host && host.length > 3 && !host.includes('/')) {
+                            this.blockedDomains.add(host);
+                        }
+                    }
+                }
+                console.log(`[AdBlock] Total active block rules: ${this.blockedDomains.size}`);
+            } catch (err) {
+                console.error('[AdBlock] Error reading core blocklist:', err);
+            }
+        }
+
+        // 3. Cache injection scripts
         this.injectJs = '';
         this.defusersJs = '';
+        this.readerJs = '';
+        this.summarizerJs = '';
+
         try {
             const injectPath = path.join(this.assetsDir, 'inject_adshield.js');
             if (fs.existsSync(injectPath)) this.injectJs = fs.readFileSync(injectPath, 'utf8');
 
             const defusersPath = path.join(this.assetsDir, 'adblock_defusers.js');
             if (fs.existsSync(defusersPath)) this.defusersJs = fs.readFileSync(defusersPath, 'utf8');
+
+            const readerPath = path.join(this.assetsDir, 'fokk_reader.js');
+            if (fs.existsSync(readerPath)) this.readerJs = fs.readFileSync(readerPath, 'utf8');
+
+            const summarizerPath = path.join(this.assetsDir, 'fokk_summarizer.js');
+            if (fs.existsSync(summarizerPath)) this.summarizerJs = fs.readFileSync(summarizerPath, 'utf8');
         } catch (e) {
             console.error('[AdBlock] Error loading injection scripts:', e);
         }
+    }
+
+    setWhitelist(domains) {
+        this.whitelistedDomains = new Set((domains || []).map(d => d.toLowerCase().trim()));
+    }
+
+    setCustomBlocked(domains) {
+        this.customBlockedDomains = new Set((domains || []).map(d => d.toLowerCase().trim()));
     }
 
     shouldBlock(url, resourceType) {
@@ -84,6 +124,25 @@ class AdBlockEngine {
             lowerUrl.includes('.ts') ||
             lowerUrl.includes('.m4s') ||
             lowerUrl.includes('googlevideo.com/videoplayback');
+
+        // Check Whitelist first
+        try {
+            const parsed = new URL(url);
+            const host = parsed.hostname.toLowerCase();
+
+            if (this.whitelistedDomains.has(host)) return false;
+            const parts = host.split('.');
+            if (parts.length > 2) {
+                const parentDomain = parts.slice(1).join('.');
+                if (this.whitelistedDomains.has(parentDomain)) return false;
+            }
+
+            // Check Custom Blacklisted domains
+            if (this.customBlockedDomains.has(host)) {
+                this.blockedCount++;
+                return true;
+            }
+        } catch (_) {}
 
         // YouTube ad endpoints isolation
         if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
@@ -137,7 +196,8 @@ class AdBlockEngine {
     getStats() {
         return {
             blocked: this.blockedCount,
-            activeRules: this.blockedDomains.size + this.blockedKeywords.length,
+            blockedCount: this.blockedCount,
+            activeRules: this.blockedDomains.size + this.customBlockedDomains.size + this.blockedKeywords.length,
             defusersEnabled: true
         };
     }

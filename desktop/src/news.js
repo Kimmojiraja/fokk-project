@@ -5,59 +5,78 @@ class DesktopNewsService {
     constructor() {
         this.cache = new Map();
         this.activeFetches = new Set();
-        this.cacheTtlMs = 20 * 60 * 1000; // 20 minutes
+        this.cacheTtlMs = 20 * 60 * 1000; // 20 minutes matching mobile APK
     }
 
     getSourcesFor(category = 'all', region = 'global') {
         const normCat = (category || 'all').toLowerCase();
         const normReg = (region || 'global').toLowerCase();
 
+        // Exact feed registries matching com.adshield.app.ui.MediaHubActivity
         const regionFeeds = {
             uk: {
                 tech: [
                     { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml' },
                     { name: 'The Guardian', url: 'https://www.theguardian.com/technology/rss' },
-                    { name: 'Wired', url: 'https://www.wired.com/feed/rss' }
+                    { name: 'Wired UK', url: 'https://www.wired.com/feed/rss' }
                 ],
                 all: [
                     { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/uk/rss.xml' },
                     { name: 'The Guardian', url: 'https://www.theguardian.com/uk/rss' },
                     { name: 'Sky News', url: 'https://feeds.skynews.com/feeds/rss/uk.xml' },
-                    { name: 'The Independent', url: 'https://www.independent.co.uk/news/uk/rss' }
+                    { name: 'The Independent', url: 'https://www.independent.co.uk/news/uk/rss' },
+                    { name: 'BBC World', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' }
                 ]
             },
             in: {
                 tech: [
                     { name: 'NDTV Gadgets', url: 'https://feeds.feedburner.com/gadgets360-latest' },
-                    { name: 'The Hindu', url: 'https://www.thehindu.com/sci-tech/technology/feeder/default.rss' }
+                    { name: 'The Hindu', url: 'https://www.thehindu.com/sci-tech/technology/feeder/default.rss' },
+                    { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml' }
                 ],
                 all: [
-                    { name: 'NDTV', url: 'https://feeds.feedburner.com/ndtvnews-top-stories' },
+                    { name: 'NDTV News', url: 'https://feeds.feedburner.com/ndtvnews-top-stories' },
                     { name: 'The Hindu', url: 'https://www.thehindu.com/news/national/feeder/default.rss' },
                     { name: 'Times of India', url: 'https://timesofindia.indiatimes.com/rssfeedstopstories.cms' },
-                    { name: 'India Today', url: 'https://www.indiatoday.in/rss/1206584' }
+                    { name: 'India Today', url: 'https://www.indiatoday.in/rss/1206584' },
+                    { name: 'Livemint', url: 'https://www.livemint.com/rss/news' }
                 ]
             },
             ca: {
+                tech: [
+                    { name: 'CBC News', url: 'https://www.cbc.ca/cmlink/rss-technology' },
+                    { name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml' }
+                ],
                 all: [
                     { name: 'CBC News', url: 'https://www.cbc.ca/cmlink/rss-topstories' },
+                    { name: 'CBC Canada', url: 'https://www.cbc.ca/cmlink/rss-canada' },
                     { name: 'CTV News', url: 'https://www.ctvnews.ca/rss/ctvnews-ca-top-stories-public-rss-1.822009' },
                     { name: 'Global News', url: 'https://globalnews.ca/feed/' },
-                    { name: 'CBC News', url: 'https://www.cbc.ca/cmlink/rss-world' }
+                    { name: 'CBC World', url: 'https://www.cbc.ca/cmlink/rss-world' }
                 ]
             },
             de: {
+                tech: [
+                    { name: 'Spiegel Netzwelt', url: 'https://www.spiegel.de/netzwelt/index.rss' },
+                    { name: 'Tagesschau', url: 'https://www.tagesschau.de/inland/regional/wirtschaft-und-finanzen-100~rss2.xml' }
+                ],
                 all: [
-                    { name: 'DW News', url: 'https://rss.dw.com/rdf/rss-en-all' },
+                    { name: 'Deutsche Welle', url: 'https://rss.dw.com/xml/rss-en-all' },
                     { name: 'Der Spiegel', url: 'https://www.spiegel.de/international/index.rss' },
-                    { name: 'Tagesschau', url: 'https://www.tagesschau.de/xml/rss2/' }
+                    { name: 'Tagesschau', url: 'https://www.tagesschau.de/infoservices/alle-meldungen-100~rss2.xml' },
+                    { name: 'Zeit Online', url: 'https://newsfeed.zeit.de/index' }
                 ]
             },
             au: {
+                tech: [
+                    { name: 'ABC News', url: 'https://www.abc.net.au/news/feed/51120/rss.xml' },
+                    { name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml' }
+                ],
                 all: [
-                    { name: 'ABC News Australia', url: 'https://www.abc.net.au/news/feed/51120/rss.xml' },
+                    { name: 'ABC News', url: 'https://www.abc.net.au/news/feed/51120/rss.xml' },
                     { name: 'Sydney Morning Herald', url: 'https://www.smh.com.au/rss/feed.xml' },
-                    { name: 'The Age', url: 'https://www.theage.com.au/rss/feed.xml' }
+                    { name: 'The Age', url: 'https://www.theage.com.au/rss/feed.xml' },
+                    { name: '9News Australia', url: 'https://www.9news.com.au/rss' }
                 ]
             },
             global: {
@@ -70,17 +89,13 @@ class DesktopNewsService {
                 world: [
                     { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
                     { name: 'CNN', url: 'http://rss.cnn.com/rss/edition_world.rss' },
-                    { name: 'ABC News', url: 'https://abcnews.go.com/abcnews/internationalheadlines' }
-                ],
-                business: [
-                    { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/business/rss.xml' },
-                    { name: 'Yahoo Finance', url: 'https://finance.yahoo.com/news/rssindex' },
-                    { name: 'CNN Business', url: 'http://rss.cnn.com/rss/money_latest.rss' }
+                    { name: 'ABC News', url: 'https://abcnews.go.com/abcnews/internationalheadlines' },
+                    { name: 'NPR', url: 'https://feeds.npr.org/1004/rss.xml' }
                 ],
                 all: [
                     { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/rss.xml' },
-                    { name: 'ABC News', url: 'https://abcnews.go.com/abcnews/topstories' },
                     { name: 'CNN', url: 'http://rss.cnn.com/rss/cnn_topstories.rss' },
+                    { name: 'ABC News', url: 'https://abcnews.go.com/abcnews/topstories' },
                     { name: 'NPR', url: 'https://feeds.npr.org/1001/rss.xml' },
                     { name: 'Yahoo News', url: 'https://news.yahoo.com/rss/' }
                 ]
@@ -96,10 +111,10 @@ class DesktopNewsService {
             const client = url.startsWith('https') ? https : http;
             const req = client.get(url, {
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Fokk/2.3.5',
+                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Fokk/2.3.5',
                     'Accept': 'application/rss+xml, application/xml, text/xml, */*'
                 },
-                timeout: 6000
+                timeout: 7000
             }, (res) => {
                 if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
                     return this.fetchUrl(res.headers.location).then(resolve).catch(reject);
@@ -122,6 +137,7 @@ class DesktopNewsService {
         const titleRegex = /<title(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i;
         const linkRegex = /<link(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i;
         const mediaRegex = /<media:content[^>]*url=["']([^"']+)["']|<enclosure[^>]*url=["']([^"']+)["']|<media:thumbnail[^>]*url=["']([^"']+)["']/i;
+        const descImgRegex = /<img[^>]+src=["']([^"']+)["']/i;
 
         let match;
         while ((match = itemRegex.exec(xmlText)) !== null) {
@@ -144,28 +160,33 @@ class DesktopNewsService {
 
             const lMatch = linkRegex.exec(content);
             const link = lMatch ? lMatch[1].trim() : '';
+            if (!link || !link.startsWith('http')) continue;
 
             let img = '';
             const mMatch = mediaRegex.exec(content);
             if (mMatch) {
                 img = mMatch[1] || mMatch[2] || mMatch[3] || '';
-                if (img.includes('/news/')) {
-                    img = img.replace('/240/', '/800/').replace('/134/', '/450/').replace('/135/', '/450/');
-                }
+            }
+            if (!img) {
+                const dMatch = descImgRegex.exec(content);
+                if (dMatch) img = dMatch[1] || '';
+            }
+
+            if (img && img.includes('/news/')) {
+                img = img.replace('/240/', '/800/').replace('/134/', '/450/').replace('/135/', '/450/');
             }
 
             items.push({
                 title,
                 source: srcName,
                 time: 'Live',
-                query: title.split(' - ')[0].split(' | ')[0],
                 category: category || 'all',
                 region: region || 'global',
                 url: link,
                 img: img,
                 image: img
             });
-            if (items.length >= 8) break;
+            if (items.length >= 10) break;
         }
         return items;
     }
@@ -192,7 +213,7 @@ class DesktopNewsService {
             } catch (_) {}
         }));
 
-        // Round-robin interleaving
+        // Round-robin interleaving to balance news sources
         const aggregated = [];
         const seenTitles = new Set();
         const maxLen = Math.max(0, ...perSourceItems.map(l => l.length));
@@ -210,7 +231,7 @@ class DesktopNewsService {
             }
         }
 
-        const finalResult = aggregated.slice(0, 30);
+        const finalResult = aggregated.slice(0, 32);
         if (finalResult.length > 0) {
             this.cache.set(cacheKey, { time: now, data: finalResult });
             return finalResult;

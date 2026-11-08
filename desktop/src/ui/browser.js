@@ -322,37 +322,33 @@ urlInput.addEventListener('keydown', (e) => {
     }
 });
 
-// Omnibox Reader Mode & Bookmark buttons
-if (btnReaderMode) {
-    btnReaderMode.addEventListener('click', () => {
-        const active = getActiveWebview();
-        if (!active) return;
-        isReaderActive = !isReaderActive;
-        btnReaderMode.classList.toggle('active', isReaderActive);
-
-        if (isReaderActive) {
-            active.executeJavaScript(`
+async function toggleReaderMode() {
+    const active = getActiveWebview();
+    if (!active) return;
+    try {
+        const script = await ipcRenderer.invoke('fokk-get-reader-script');
+        if (script) {
+            await active.executeJavaScript(`
                 (function() {
-                    if (document.getElementById('fokk-reader-style')) return;
-                    const style = document.createElement('style');
-                    style.id = 'fokk-reader-style';
-                    style.innerHTML = \`
-                        body { max-width: 760px !important; margin: 40px auto !important; padding: 0 24px !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Georgia, serif !important; font-size: 19px !important; line-height: 1.65 !important; background: #0D0E12 !important; color: #E2E8F0 !important; }
-                        nav, aside, header, footer, .ad, .advertisement, [class*="sidebar"], [id*="sidebar"] { display: none !important; }
-                        img { max-width: 100% !important; height: auto !important; border-radius: 8px !important; margin: 16px 0 !important; }
-                    \`;
-                    document.head.appendChild(style);
+                    if (typeof window.toggleFokkReaderMode !== 'function') {
+                        ${script}
+                    }
+                    if (typeof window.toggleFokkReaderMode === 'function') {
+                        window.toggleFokkReaderMode();
+                    }
                 })();
             `);
-            showToast('Reader View Enabled');
-        } else {
-            active.executeJavaScript(`
-                const r = document.getElementById('fokk-reader-style');
-                if (r) r.remove();
-            `);
-            showToast('Standard View Restored');
+            isReaderActive = !isReaderActive;
+            if (btnReaderMode) btnReaderMode.classList.toggle('active', isReaderActive);
+            showToast(isReaderActive ? 'Reader Mode Enabled' : 'Reader Mode Disabled');
         }
-    });
+    } catch (e) {
+        showToast('Reader mode unavailable on this page');
+    }
+}
+
+if (btnReaderMode) {
+    btnReaderMode.addEventListener('click', toggleReaderMode);
 }
 
 if (btnBookmarkOmni) {
@@ -455,15 +451,102 @@ if (btnBurnSession) {
 const actNewTab = document.getElementById('actNewTab');
 const actPrivateTab = document.getElementById('actPrivateTab');
 const actReaderMode = document.getElementById('actReaderMode');
+const actSmartSummary = document.getElementById('actSmartSummary');
+const actTorrent = document.getElementById('actTorrent');
 const actForceDark = document.getElementById('actForceDark');
 const actDesktopUA = document.getElementById('actDesktopUA');
 const actShare = document.getElementById('actShare');
 const actAddShortcut = document.getElementById('actAddShortcut');
 const actBookmarks = document.getElementById('actBookmarks');
 
+function openSummaryModal(summary) {
+    if (!featureHubModal || !featureModalTitle || !featureModalBody) return;
+    featureModalTitle.textContent = 'Fokk On-Device AI Summary';
+
+    const bulletsHtml = (summary.bullets || []).map(b => `
+        <li style="display: flex; gap: 10px; font-size: 13px; line-height: 1.5; color: #E2E8F0; margin-bottom: 8px;">
+            <span style="color: var(--fokk-cyan); font-weight: 800; font-size: 16px; line-height: 1;">•</span>
+            <span>${b}</span>
+        </li>
+    `).join('');
+
+    let metricsHtml = '';
+    if (summary.metrics && summary.metrics.length > 0) {
+        metricsHtml = `
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08);">
+                ${summary.metrics.map(m => `<span style="background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.25); color: var(--fokk-cyan); padding: 2px 8px; border-radius: 4px; font-size: 11px;">${m}</span>`).join('')}
+            </div>
+        `;
+    }
+
+    featureModalBody.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
+            <span style="background: rgba(0,229,255,0.15); color: var(--fokk-cyan); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">100% On-Device NLP · Zero Cloud</span>
+            <span style="font-size: 11.5px; color: var(--text-secondary);">${summary.readingTime || '1 min'} read · ${summary.wordCount || 0} words</span>
+        </div>
+        <h3 style="color: #FFF; font-size: 15px; font-weight: 700; margin-bottom: 14px; line-height: 1.4;">${summary.title || 'Extracted Summary'}</h3>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+            ${bulletsHtml}
+        </ul>
+        ${metricsHtml}
+        <button class="modal-btn secondary" id="btnCloseSummary" style="width: 100%; margin-top: 16px;">Done</button>
+    `;
+
+    document.getElementById('btnCloseSummary').onclick = () => {
+        featureHubModal.classList.add('hidden');
+    };
+
+    featureHubModal.classList.remove('hidden');
+}
+
 if (actNewTab) actNewTab.onclick = () => { createTab(START_PAGE_URL); desktopBrowserMenu.classList.add('hidden'); };
 if (actPrivateTab) actPrivateTab.onclick = () => { createTab(START_PAGE_URL, { isPrivate: true }); desktopBrowserMenu.classList.add('hidden'); };
-if (actReaderMode) actReaderMode.onclick = () => { if (btnReaderMode) btnReaderMode.click(); desktopBrowserMenu.classList.add('hidden'); };
+if (actReaderMode) actReaderMode.onclick = () => { desktopBrowserMenu.classList.add('hidden'); toggleReaderMode(); };
+
+if (actSmartSummary) {
+    actSmartSummary.onclick = async () => {
+        desktopBrowserMenu.classList.add('hidden');
+        const active = getActiveWebview();
+        if (!active) return;
+        showToast('Analyzing page with local AI summarizer...');
+        try {
+            const script = await ipcRenderer.invoke('fokk-get-summarizer-script');
+            const summary = await active.executeJavaScript(`
+                (function() {
+                    if (typeof window.generatePageSummary !== 'function') {
+                        ${script}
+                    }
+                    if (typeof window.generatePageSummary === 'function') {
+                        return window.generatePageSummary();
+                    }
+                    return null;
+                })();
+            `);
+
+            if (summary && summary.bullets && summary.bullets.length > 0) {
+                openSummaryModal(summary);
+            } else {
+                showToast('Not enough article content found to summarize', true);
+            }
+        } catch (e) {
+            showToast('Summarizer error: ' + (e.message || e), true);
+        }
+    };
+}
+
+if (actTorrent) {
+    actTorrent.onclick = async () => {
+        desktopBrowserMenu.classList.add('hidden');
+        try {
+            const torrentUrl = await ipcRenderer.invoke('fokk-get-torrent-url');
+            if (torrentUrl) {
+                createTab(torrentUrl);
+            }
+        } catch (e) {
+            showToast('Unable to launch Torrent Streamer');
+        }
+    };
+}
 
 if (actForceDark) {
     actForceDark.onclick = () => {
@@ -622,55 +705,124 @@ function openFeatureHub(hubId) {
 
     } else if (hubId === 'shield') {
         featureModalTitle.textContent = 'Fokk Shield & Ghost Stealth';
-        featureModalBody.innerHTML = `
-            <div class="modal-toggle-row">
-                <div class="modal-toggle-text">
-                    <div class="modal-toggle-title">Fokk Network Shield</div>
-                    <div class="modal-toggle-desc">40,000+ active curated network block rules and cosmetic defusers</div>
-                </div>
-                <input type="checkbox" id="chkShieldEngine" checked>
-            </div>
-            <div class="modal-toggle-row">
-                <div class="modal-toggle-text">
-                    <div class="modal-toggle-title">Canvas Cloaking & Stealth</div>
-                    <div class="modal-toggle-desc">Injects noise on HTML5 canvas readouts to prevent cross-site fingerprinting</div>
-                </div>
-                <input type="checkbox" id="chkCanvasCloak" checked>
-            </div>
-            <div class="modal-form-group" style="margin-top: 16px;">
-                <label class="modal-form-label">DNS-over-HTTPS (DoH)</label>
-                <select id="selDoH" class="modal-select">
-                    <option value="cloudflare">Cloudflare (1.1.1.1 — Fast & Private)</option>
-                    <option value="quad9">Quad9 (9.9.9.9 — Threat Protection)</option>
-                    <option value="google">Google Public DNS (8.8.8.8)</option>
-                    <option value="off">System Default</option>
-                </select>
-            </div>
-            <div class="modal-form-group" style="margin-top: 16px;">
-                <label class="modal-form-label">Whitelist Domain</label>
-                <input type="text" id="inputWhitelist" class="modal-input" placeholder="e.g. news.ycombinator.com">
-                <button class="modal-btn secondary" id="btnAddWhitelist" style="margin-top: 8px;">Add Domain to Whitelist</button>
-            </div>
-            <button class="modal-btn" id="btnSaveShield" style="margin-top: 14px;">Apply Protection Settings</button>
-        `;
+        let currentDoh = localStorage.getItem('fokk_doh_provider') || 'adguard';
+        let whitelist = JSON.parse(localStorage.getItem('fokk_shield_whitelist') || '[]');
+        let blacklist = JSON.parse(localStorage.getItem('fokk_shield_blacklist') || '[]');
 
-        document.getElementById('btnSaveShield').onclick = () => {
-            const doh = document.getElementById('selDoH').value;
-            ipcRenderer.send('fokk-set-doh', doh);
-            featureHubModal.classList.add('hidden');
-            showToast('Shield Settings Applied');
-        };
+        function renderShieldBody() {
+            featureModalBody.innerHTML = `
+                <div class="modal-toggle-row">
+                    <div class="modal-toggle-text">
+                        <div class="modal-toggle-title">Fokk Network Shield</div>
+                        <div class="modal-toggle-desc">40,000+ active curated network block rules and cosmetic defusers</div>
+                    </div>
+                    <input type="checkbox" id="chkShieldEngine" checked>
+                </div>
+                <div class="modal-toggle-row">
+                    <div class="modal-toggle-text">
+                        <div class="modal-toggle-title">Canvas Cloaking & Stealth</div>
+                        <div class="modal-toggle-desc">Injects noise on HTML5 canvas readouts to prevent cross-site fingerprinting</div>
+                    </div>
+                    <input type="checkbox" id="chkCanvasCloak" checked>
+                </div>
+                <div class="modal-form-group" style="margin-top: 16px;">
+                    <label class="modal-form-label">DNS-over-HTTPS (DoH)</label>
+                    <span class="modal-form-sub">Encrypted DNS resolution bypassing ISP tracking</span>
+                    <select id="selDoH" class="modal-select">
+                        <option value="adguard" ${currentDoh==='adguard'?'selected':''}>AdGuard (Default — 94.140.14.14 Zero Ads & Trackers)</option>
+                        <option value="nextdns" ${currentDoh==='nextdns'?'selected':''}>NextDNS (Ultra-Fast Threat Intelligence)</option>
+                        <option value="controld" ${currentDoh==='controld'?'selected':''}>Control D (Malware & Ad Blocker)</option>
+                        <option value="mullvad" ${currentDoh==='mullvad'?'selected':''}>Mullvad (Strict No-Logs WireGuard Privacy)</option>
+                        <option value="cloudflare" ${currentDoh==='cloudflare'?'selected':''}>Cloudflare (1.1.1.1 — Fast & Private)</option>
+                        <option value="quad9" ${currentDoh==='quad9'?'selected':''}>Quad9 (9.9.9.9 — Threat Protection)</option>
+                        <option value="google" ${currentDoh==='google'?'selected':''}>Google Public DNS (8.8.8.8)</option>
+                        <option value="off" ${currentDoh==='off'?'selected':''}>System Default DNS</option>
+                    </select>
+                </div>
+                <div class="modal-form-group" style="margin-top: 16px;">
+                    <label class="modal-form-label">Whitelisted Domains (${whitelist.length})</label>
+                    <span class="modal-form-sub">Domains where adblocking and defusers are disabled</span>
+                    <div style="display: flex; gap: 8px; margin-top: 6px;">
+                        <input type="text" id="inputWhitelist" class="modal-input" placeholder="e.g. news.ycombinator.com" style="flex: 1;">
+                        <button class="modal-btn secondary" id="btnAddWhitelist" style="padding: 0 14px;">Add</button>
+                    </div>
+                    <div id="whitelistTags" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; max-height: 80px; overflow-y: auto;">
+                        ${whitelist.map(d => `<span class="domain-tag" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); padding: 3px 8px; border-radius: 4px; font-size: 11px; color: #FFF; display: flex; align-items: center; gap: 6px;">${d} <button class="btn-remove-wl" data-domain="${d}" style="background: none; border: none; color: #FF5252; cursor: pointer; font-size: 13px; padding: 0;">&times;</button></span>`).join('')}
+                    </div>
+                </div>
+                <div class="modal-form-group" style="margin-top: 16px;">
+                    <label class="modal-form-label">Custom Blocked Domains (${blacklist.length})</label>
+                    <span class="modal-form-sub">Custom tracking or ad hostnames to reject</span>
+                    <div style="display: flex; gap: 8px; margin-top: 6px;">
+                        <input type="text" id="inputBlacklist" class="modal-input" placeholder="e.g. telemetry.example.com" style="flex: 1;">
+                        <button class="modal-btn secondary" id="btnAddBlacklist" style="padding: 0 14px;">Block</button>
+                    </div>
+                    <div id="blacklistTags" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; max-height: 80px; overflow-y: auto;">
+                        ${blacklist.map(d => `<span class="domain-tag" style="background: rgba(255,82,82,0.1); border: 1px solid rgba(255,82,82,0.25); padding: 3px 8px; border-radius: 4px; font-size: 11px; color: #FF8A80; display: flex; align-items: center; gap: 6px;">${d} <button class="btn-remove-bl" data-domain="${d}" style="background: none; border: none; color: #FF5252; cursor: pointer; font-size: 13px; padding: 0;">&times;</button></span>`).join('')}
+                    </div>
+                </div>
+                <button class="modal-btn" id="btnSaveShield" style="margin-top: 16px;">Apply Shield Settings</button>
+            `;
 
-        document.getElementById('btnAddWhitelist').onclick = () => {
-            const dom = document.getElementById('inputWhitelist').value.trim();
-            if (dom) {
-                let wl = JSON.parse(localStorage.getItem('fokk_shield_whitelist') || '[]');
-                if (!wl.includes(dom)) wl.push(dom);
-                localStorage.setItem('fokk_shield_whitelist', JSON.stringify(wl));
-                showToast(`Whitelisted: ${dom}`);
-                document.getElementById('inputWhitelist').value = '';
-            }
-        };
+            document.getElementById('btnSaveShield').onclick = () => {
+                const doh = document.getElementById('selDoH').value;
+                currentDoh = doh;
+                localStorage.setItem('fokk_doh_provider', doh);
+                ipcRenderer.send('fokk-set-doh', doh);
+                ipcRenderer.send('fokk-sync-whitelist', whitelist);
+                ipcRenderer.send('fokk-sync-blacklist', blacklist);
+                featureHubModal.classList.add('hidden');
+                showToast('Shield Settings Applied');
+            };
+
+            document.getElementById('btnAddWhitelist').onclick = () => {
+                const dom = document.getElementById('inputWhitelist').value.trim().toLowerCase();
+                if (dom && !whitelist.includes(dom)) {
+                    whitelist.push(dom);
+                    localStorage.setItem('fokk_shield_whitelist', JSON.stringify(whitelist));
+                    ipcRenderer.send('fokk-sync-whitelist', whitelist);
+                    renderShieldBody();
+                    showToast(`Whitelisted: ${dom}`);
+                }
+            };
+
+            document.getElementById('btnAddBlacklist').onclick = () => {
+                const dom = document.getElementById('inputBlacklist').value.trim().toLowerCase();
+                if (dom && !blacklist.includes(dom)) {
+                    blacklist.push(dom);
+                    localStorage.setItem('fokk_shield_blacklist', JSON.stringify(blacklist));
+                    ipcRenderer.send('fokk-sync-blacklist', blacklist);
+                    renderShieldBody();
+                    showToast(`Blocked domain: ${dom}`);
+                }
+            };
+
+            featureModalBody.querySelectorAll('.btn-remove-wl').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const d = btn.getAttribute('data-domain');
+                    whitelist = whitelist.filter(x => x !== d);
+                    localStorage.setItem('fokk_shield_whitelist', JSON.stringify(whitelist));
+                    ipcRenderer.send('fokk-sync-whitelist', whitelist);
+                    renderShieldBody();
+                    showToast(`Removed from whitelist: ${d}`);
+                };
+            });
+
+            featureModalBody.querySelectorAll('.btn-remove-bl').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const d = btn.getAttribute('data-domain');
+                    blacklist = blacklist.filter(x => x !== d);
+                    localStorage.setItem('fokk_shield_blacklist', JSON.stringify(blacklist));
+                    ipcRenderer.send('fokk-sync-blacklist', blacklist);
+                    renderShieldBody();
+                    showToast(`Removed from blacklist: ${d}`);
+                };
+            });
+        }
+
+        renderShieldBody();
 
     } else if (hubId === 'media') {
         featureModalTitle.textContent = 'Media & Picture-in-Picture';
@@ -860,10 +1012,50 @@ function openFeatureHub(hubId) {
                     </div>
                     <button class="modal-btn secondary" id="btnOpenCoffee">Buy Coffee</button>
                 </div>
+                <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 13px; font-weight: 700; color: #FFF;">Open to Code Contributors</div>
+                        <div style="font-size: 11px; color: var(--text-secondary);">Star, fork, and contribute to Fokk Project</div>
+                    </div>
+                    <button class="modal-btn secondary" id="btnOpenRepo">View GitHub Repo</button>
+                </div>
                 <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px;">
-                    <div style="font-size: 13px; font-weight: 700; color: #FFF; margin-bottom: 4px;">Crypto Privacy Vault</div>
-                    <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">Anonymous donations via Bitcoin (BTC) or Monero (XMR)</div>
-                    <code style="font-size: 10.5px; color: var(--fokk-cyan); word-break: break-all;">bc1qfokkprivacyvault2026shieldadblocker001</code>
+                    <div style="font-size: 13px; font-weight: 700; color: #FFF; margin-bottom: 2px;">Crypto Privacy Vault</div>
+                    <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">Direct, anonymous decentralized support:</div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <span style="font-size: 11px; font-weight: 700; color: #F7931A; margin-right: 6px;">BTC (Bitcoin):</span>
+                                <code style="font-size: 10.5px; color: #E2E8F0;">bc1qwxnv6uphj0ke8q50gdx6ew8j3lgvwhk6k2kaet</code>
+                            </div>
+                            <button class="modal-btn secondary btn-copy-crypto" data-crypto="bc1qwxnv6uphj0ke8q50gdx6ew8j3lgvwhk6k2kaet" data-name="BTC" style="padding: 2px 10px; font-size: 11px;">Copy</button>
+                        </div>
+
+                        <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <span style="font-size: 11px; font-weight: 700; color: #627EEA; margin-right: 6px;">ETH (Ethereum):</span>
+                                <code style="font-size: 10.5px; color: #E2E8F0;">0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525</code>
+                            </div>
+                            <button class="modal-btn secondary btn-copy-crypto" data-crypto="0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525" data-name="ETH" style="padding: 2px 10px; font-size: 11px;">Copy</button>
+                        </div>
+
+                        <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <span style="font-size: 11px; font-weight: 700; color: #F3BA2F; margin-right: 6px;">BNB (Smart Chain):</span>
+                                <code style="font-size: 10.5px; color: #E2E8F0;">0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525</code>
+                            </div>
+                            <button class="modal-btn secondary btn-copy-crypto" data-crypto="0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525" data-name="BNB" style="padding: 2px 10px; font-size: 11px;">Copy</button>
+                        </div>
+
+                        <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <span style="font-size: 11px; font-weight: 700; color: #14F195; margin-right: 6px;">SOL (Solana):</span>
+                                <code style="font-size: 10.5px; color: #E2E8F0;">DqgAgDj4PjvR4K1wtYfpaZuYNeNZgj2fQoKnXApWKuTj</code>
+                            </div>
+                            <button class="modal-btn secondary btn-copy-crypto" data-crypto="DqgAgDj4PjvR4K1wtYfpaZuYNeNZgj2fQoKnXApWKuTj" data-name="SOL" style="padding: 2px 10px; font-size: 11px;">Copy</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -873,9 +1065,22 @@ function openFeatureHub(hubId) {
             featureHubModal.classList.add('hidden');
         };
         document.getElementById('btnOpenCoffee').onclick = () => {
-            createTab('https://buymeacoffee.com/fokkshield');
+            createTab('https://www.buymeacoffee.com/k_raja');
             featureHubModal.classList.add('hidden');
         };
+        document.getElementById('btnOpenRepo').onclick = () => {
+            createTab('https://github.com/Kimmojiraja/fokk-project');
+            featureHubModal.classList.add('hidden');
+        };
+        featureModalBody.querySelectorAll('.btn-copy-crypto').forEach(btn => {
+            btn.onclick = () => {
+                const addr = btn.getAttribute('data-crypto');
+                const name = btn.getAttribute('data-name');
+                navigator.clipboard.writeText(addr).then(() => {
+                    showToast(`${name} address copied to clipboard`);
+                });
+            };
+        });
 
     } else if (hubId === 'license') {
         featureModalTitle.textContent = 'License & Legal Notice';
