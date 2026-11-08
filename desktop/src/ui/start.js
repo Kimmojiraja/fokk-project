@@ -67,29 +67,28 @@
         }
     ];
 
-
-    // 2. Firefox-Style 8 Shortcuts (matching reference Image 2)
+    // 2. High-Quality Vector Shortcuts (8 Tiles - Authentic Official Brand Vectors)
     const DEFAULT_SHORTCUTS = [
         {
             name: 'Amazon',
             sub: 'Sponsored',
             url: 'https://www.amazon.com',
             iconBg: '#232f3e',
-            iconSvg: `<svg viewBox="0 0 24 24"><path fill="#FF9900" d="M13.957 10.52c0-1.64-.176-2.898-1.748-2.898-1.077 0-1.666.82-1.91 1.543l3.658 1.355zm1.88-5.074h2.247v8.948c0 1.25.105 2.197.808 2.871l-2.197 1.055c-.562-.644-.738-1.5-.82-2.148-.75.984-1.91 1.77-3.48 1.77-2.602 0-4.3-1.898-4.3-4.523 0-2.87 2.133-4.477 4.57-4.477 1.29 0 2.227.422 2.774.96v-4.456h.398zM2.032 17.514C6.544 20.887 13.066 22.5 19.1 20.086c.645-.258.62-1.031-.035-1.125-3.809-.54-7.512-1.992-10.746-4.3-.41-.293-.89.164-.527.539.06.06.12.12.18.176l-5.94 2.138z"/></svg>`
+            iconSvg: `<svg viewBox="0 0 24 24"><path fill="#FF9900" d="M13.77 10.95c0-1.57-.17-2.77-1.67-2.77-1.03 0-1.59.78-1.83 1.48l3.5 1.29zm1.8-4.86h2.15v8.57c0 1.2.1 2.1.77 2.75l-2.1 1.01c-.54-.62-.7-1.44-.78-2.06-.72.94-1.83 1.7-3.33 1.7-2.49 0-4.12-1.82-4.12-4.33 0-2.75 2.04-4.29 4.38-4.29 1.23 0 2.13.4 2.65.92V6.09h.43v-.001zm-13.8 11.2c4.46 3.19 10.84 4.7 16.79 2.44.64-.24.61-.97-.04-1.06-3.75-.5-7.4-1.88-10.59-4.06-.4-.28-.87.16-.51.52.06.06.12.11.18.17l-5.83 1.99zm18.34-1.22c.28-.35.84-.19.8.27-.14 1.63-.82 2.78-1.8 3.52-.31.23-.74-.04-.59-.4.36-.88.94-2.13 1.59-3.39z"/></svg>`
         },
         {
             name: 'Trip.com',
             sub: 'Sponsored',
             url: 'https://www.trip.com',
             iconBg: '#2577e3',
-            iconSvg: `<svg viewBox="0 0 24 24"><path fill="#FFFFFF" d="M4 16l4-8 4 8H4zm8 0l4-8 4 8h-8z"/></svg>`
+            iconSvg: `<svg viewBox="0 0 24 24"><path fill="#FFFFFF" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14.5c0 .28-.22.5-.5.5h-1c-.28 0-.5-.22-.5-.5V11H8.5c-.28 0-.5-.22-.5-.5v-1c0-.28.22-.5.5-.5H11V6.5c0-.28.22-.5.5-.5h1c.28 0 .5.22.5.5V9h2.5c.28 0 .5.22.5.5v1c0 .28-.22.5-.5.5H13v5.5zm3.5-3.5h-1c-.28 0-.5-.22-.5-.5s.22-.5.5-.5h1c.28 0 .5.22.5.5s-.22.5-.5.5zm0-2.5h-1c-.28 0-.5-.22-.5-.5s.22-.5.5-.5h1c.28 0 .5.22.5.5s-.22.5-.5.5z"/></svg>`
         },
         {
             name: 'Skyscanner',
             sub: 'Sponsored',
             url: 'https://www.skyscanner.com',
             iconBg: '#0770e3',
-            iconSvg: `<svg viewBox="0 0 24 24"><path fill="#FFFFFF" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14.5h-2v-2h2v2zm0-4h-2V7h2v5.5z"/></svg>`
+            iconSvg: `<svg viewBox="0 0 24 24"><path fill="#FFFFFF" d="M12 4a8 8 0 0 0-8 8c0 2.21.9 4.21 2.34 5.66l1.41-1.41A5.98 5.98 0 0 1 6 12a6 6 0 0 1 6-6c1.66 0 3.14.67 4.24 1.76l1.42-1.42A7.96 7.96 0 0 0 12 4zm0 4a4 4 0 0 0-4 4c0 1.1.45 2.1 1.17 2.83l1.42-1.42A1.99 1.99 0 0 1 10 12a2 2 0 0 1 2-2c.55 0 1.05.22 1.41.59l1.42-1.42A3.96 3.96 0 0 0 12 8zm0 7.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/></svg>`
         },
         {
             name: 'YouTube',
@@ -128,8 +127,24 @@
         }
     ];
 
-    // 3. Firefox-Style 8 Rich Editorial Stories (matching reference Image 2)
-    const DEFAULT_STORIES = [
+    // Diverse fallback photos matching editorial categories (eliminates repetitive typewriter fallback)
+    const DEFAULT_STORY_IMAGES = [
+        "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80"
+    ];
+
+    // 3. Primary 8 Rich Editorial Stories (matching reference exactly)
+    const PRIMARY_STORIES = [
         {
             title: "After accusing Govinda of infidelity, Sunita Ahuja confident about their reunion: '40-year-old marriage'",
             source: "The Indian Express",
@@ -188,19 +203,87 @@
         }
     ];
 
+    // Extended 8 Real Stories (shown when user clicks "View More Stories")
+    const EXTENDED_STORIES = [
+        {
+            title: "ISRO gears up for Gaganyaan uncrewed orbital mission with advanced crew escape module test",
+            source: "NDTV News",
+            sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E11D48'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='11' font-weight='bold' fill='white' text-anchor='middle'>NDTV</text></svg>",
+            url: "https://ndtv.com",
+            image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+            title: "Global markets rally as semiconductor fabrication investments cross $500B milestone",
+            source: "Reuters",
+            sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23F97316'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='14' font-weight='bold' fill='white' text-anchor='middle'>R</text></svg>",
+            url: "https://reuters.com",
+            image: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+            title: "DeepSeek releases open-source reasoning model architecture rivaling proprietary LLMs",
+            source: "TechCrunch",
+            sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310B981'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='13' font-weight='bold' fill='white' text-anchor='middle'>TC</text></svg>",
+            url: "https://techcrunch.com",
+            image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+            title: "Cybersecurity researchers uncover zero-click Bluetooth vulnerability impacting millions of legacy devices",
+            source: "Wired",
+            sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000000'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='14' font-weight='bold' fill='white' text-anchor='middle'>W</text></svg>",
+            url: "https://wired.com",
+            image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+            title: "Renewable energy overtakes fossil fuel capacity across European power grid in landmark quarter",
+            source: "BBC News",
+            sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23B91C1C'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='11' font-weight='bold' fill='white' text-anchor='middle'>BBC</text></svg>",
+            url: "https://bbc.com/news",
+            image: "https://images.unsplash.com/photo-1466611653911-95081537e5b7?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+            title: "James Webb Space Telescope detects atmospheric water signatures on nearby habitable-zone exoplanet",
+            source: "Space.com",
+            sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233B82F6'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='14' font-weight='bold' fill='white' text-anchor='middle'>S</text></svg>",
+            url: "https://space.com",
+            image: "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+            title: "Electric vehicle battery breakthrough achieves 1,000 km range with 10-minute fast charging",
+            source: "Electrek",
+            sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2314B8A6'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='14' font-weight='bold' fill='white' text-anchor='middle'>E</text></svg>",
+            url: "https://electrek.co",
+            image: "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=600&q=80"
+        },
+        {
+            title: "Rust language adoption surges across Linux kernel and Chromium infrastructure for memory safety",
+            source: "Ars Technica",
+            sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23F43F5E'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='13' font-weight='bold' fill='white' text-anchor='middle'>ars</text></svg>",
+            url: "https://arstechnica.com",
+            image: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80"
+        }
+    ];
+
+    const ALL_STORIES = [...PRIMARY_STORIES, ...EXTENDED_STORIES];
+
     // DOM Elements
     const wallpaperBg = document.getElementById('wallpaperBg');
     const searchForm = document.getElementById('desktopSearchForm');
     const searchInput = document.getElementById('desktopSearchInput');
+    const searchEngineIcon = document.getElementById('searchEngineIcon');
     const shortcutsContainer = document.getElementById('shortcutsContainer');
     const storiesGrid = document.getElementById('storiesGrid');
     const storiesRegionSelect = document.getElementById('storiesRegionSelect');
+    const btnViewMoreStories = document.getElementById('btnViewMoreStories');
+    const btnViewMoreText = document.getElementById('btnViewMoreText');
     const btnFloatingCustomize = document.getElementById('btnFloatingCustomize');
     const wallpaperModal = document.getElementById('wallpaperModal');
     const btnCloseModal = document.getElementById('btnCloseModal');
     const wallpapersGrid = document.getElementById('wallpapersGrid');
     const btnUploadDeviceImage = document.getElementById('btnUploadDeviceImage');
     const deviceFileInput = document.getElementById('deviceFileInput');
+
+    let isExpandedStories = false;
+    let liveFetchedStories = null;
 
     // 1. Wallpaper Management
     function loadWallpaper() {
@@ -231,6 +314,22 @@
         renderWallpaperGrid();
     }
 
+    // Expose setWallpaper globally so browser.js can update all open tabs instantly
+    window.setWallpaper = function(itemOrId) {
+        if (!itemOrId) return;
+        if (typeof itemOrId === 'string') {
+            const match = CURATED_WALLPAPERS.find(w => w.id === itemOrId);
+            if (match) {
+                setWallpaper(match);
+            } else {
+                localStorage.setItem('fokk_custom_wallpaper', itemOrId);
+                wallpaperBg.style.backgroundImage = `url("${itemOrId}")`;
+            }
+        } else if (itemOrId && itemOrId.url) {
+            setWallpaper(itemOrId);
+        }
+    };
+
     function renderWallpaperGrid() {
         if (!wallpapersGrid) return;
         const currentId = localStorage.getItem('fokk_wallpaper_id') || 'sailboat';
@@ -253,7 +352,8 @@
 
     // Modal Events
     if (btnFloatingCustomize) {
-        btnFloatingCustomize.addEventListener('click', () => {
+        btnFloatingCustomize.addEventListener('click', (e) => {
+            e.stopPropagation();
             renderWallpaperGrid();
             wallpaperModal.classList.remove('hidden');
         });
@@ -315,22 +415,54 @@
         }
     }
 
+    // Search Engine Definitions (Bing Default like Mobile)
     const SEARCH_ENGINES = {
-        google: { name: 'Google', url: 'https://www.google.com/search?q=' },
-        brave: { name: 'Brave', url: 'https://search.brave.com/search?q=' },
-        duckduckgo: { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=' },
-        bing: { name: 'Bing', url: 'https://www.bing.com/search?q=' },
-        ecosia: { name: 'Ecosia', url: 'https://www.ecosia.org/search?q=' }
+        bing: {
+            name: 'Microsoft Bing',
+            url: 'https://www.bing.com/search?q=',
+            iconSvg: '<svg width="20" height="20" viewBox="0 0 24 24"><path fill="#008373" d="M5 3v18l7-4V7.5L8.5 6V3H5zm9 5l-2 1.2V14l4.5 2.5 3.5-2V10l-6-2z"/><path fill="#00A88F" d="M12 7.5V17l4.5 2.5 3.5-2V10l-8-2.5z"/></svg>'
+        },
+        google: {
+            name: 'Google Search',
+            url: 'https://www.google.com/search?q=',
+            iconSvg: '<svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.04h3.88c2.27-2.09 3.66-5.17 3.66-9.14z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.04c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.27 21.43 7.35 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.28c-.24-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28V6.59H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.41l4.03-3.13z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.27 2.57 1.25 6.59l4.03 3.13c.95-2.83 3.6-4.97 6.72-4.97z"/></svg>'
+        },
+        brave: {
+            name: 'Brave Search',
+            url: 'https://search.brave.com/search?q=',
+            iconSvg: '<svg width="20" height="20" viewBox="0 0 24 24"><path fill="#FB542B" d="M12 2L4 5.5v5.3c0 5.4 3.4 10.4 8 11.7 4.6-1.3 8-6.3 8-11.7V5.5L12 2zm3.8 14.1l-2.4-1.2-1.4.9 1.4-.9-2.4 1.2-1.4-1.6 3.8-.4 3.8.4-1.4 1.6zM7.5 10l1.7-.8 1 1.7-2.7-.9zm9 0l-2.7.9 1-1.7 1.7.8z"/></svg>'
+        },
+        duckduckgo: {
+            name: 'DuckDuckGo',
+            url: 'https://duckduckgo.com/?q=',
+            iconSvg: '<svg width="20" height="20" viewBox="0 0 24 24"><path fill="#DE5833" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 3.5c1.93 0 3.5 1.57 3.5 3.5 0 .88-.33 1.68-.86 2.3l2.86 1.2-.5 1.5-3.32-1.39C14.07 13.06 13.09 13.5 12 13.5c-.75 0-1.44-.22-2.03-.6l-1.47 1.47 2.12 2.12-1.41 1.41-3.54-3.53 1.41-1.42.71.71c-.5-.73-.79-1.61-.79-2.56 0-2.48 2.02-4.5 4.5-4.5z"/><circle cx="14" cy="8" r="1" fill="#FFF"/></svg>'
+        },
+        ecosia: {
+            name: 'Ecosia',
+            url: 'https://www.ecosia.org/search?q=',
+            iconSvg: '<svg width="20" height="20" viewBox="0 0 24 24"><path fill="#009688" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>'
+        }
     };
 
     function getActiveEngine() {
-        const id = localStorage.getItem('fokk_search_engine') || 'google';
-        return SEARCH_ENGINES[id] || SEARCH_ENGINES.google;
+        const id = localStorage.getItem('fokk_search_engine') || 'bing';
+        return SEARCH_ENGINES[id] || SEARCH_ENGINES.bing;
+    }
+
+    function updateSearchEngineUI() {
+        const engine = getActiveEngine();
+        if (searchEngineIcon) {
+            searchEngineIcon.innerHTML = engine.iconSvg;
+            searchEngineIcon.title = engine.name;
+        }
+        if (searchInput) {
+            searchInput.placeholder = `Search with ${engine.name} or enter address`;
+        }
     }
 
     // 3. Search Bar Handling
     if (searchForm && searchInput) {
-        searchInput.placeholder = `Search with ${getActiveEngine().name} or enter address`;
+        updateSearchEngineUI();
 
         searchForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -371,31 +503,48 @@
         });
     }
 
-    // 5. Render 8 Stories (Firefox Style 4x2 Grid)
+    // 5. Render Stories (Firefox Style Grid - 8 Default or 16 Extended)
     function renderStories(items) {
         if (!storiesGrid) return;
-        const list = (items && items.length >= 4) ? items.slice(0, 8) : DEFAULT_STORIES;
+        const sourceList = (items && items.length >= 4) ? items : ALL_STORIES;
+        const list = isExpandedStories ? sourceList.slice(0, 16) : sourceList.slice(0, 8);
 
-        storiesGrid.innerHTML = list.map(story => `
-            <div class="firefox-card" data-url="${story.url}">
-                <div class="card-img-wrap">
-                    <img class="card-img" src="${story.image || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=600&q=80'}" alt="News thumbnail" loading="lazy">
-                </div>
-                <div class="card-body">
-                    <h3 class="card-headline">${story.title}</h3>
-                    <div class="card-source-bar">
-                        ${story.sourceIcon ? `<img class="source-icon" src="${story.sourceIcon}" alt="">` : ''}
-                        <span class="source-name">${story.source || 'News'}</span>
+        storiesGrid.innerHTML = list.map((story, idx) => {
+            const fallbackImg = DEFAULT_STORY_IMAGES[idx % DEFAULT_STORY_IMAGES.length];
+            const imgSrc = story.image || story.img || fallbackImg;
+            return `
+                <div class="firefox-card" data-url="${story.url}">
+                    <div class="card-img-wrap">
+                        <img class="card-img" src="${imgSrc}" alt="News thumbnail" loading="lazy">
+                    </div>
+                    <div class="card-body">
+                        <h3 class="card-headline">${story.title}</h3>
+                        <div class="card-source-bar">
+                            ${story.sourceIcon ? `<img class="source-icon" src="${story.sourceIcon}" alt="">` : ''}
+                            <span class="source-name">${story.source || 'News'}</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         storiesGrid.querySelectorAll('.firefox-card').forEach(card => {
             card.addEventListener('click', () => {
                 const url = card.getAttribute('data-url');
                 if (url) navigateTo(url);
             });
+        });
+    }
+
+    // View More Stories Button Handler
+    if (btnViewMoreStories) {
+        btnViewMoreStories.addEventListener('click', () => {
+            isExpandedStories = !isExpandedStories;
+            btnViewMoreStories.classList.toggle('expanded', isExpandedStories);
+            if (btnViewMoreText) {
+                btnViewMoreText.textContent = isExpandedStories ? 'Show Fewer Stories' : 'View More Stories';
+            }
+            renderStories(liveFetchedStories || ALL_STORIES);
         });
     }
 
@@ -406,13 +555,15 @@
                 if (raw) {
                     const parsed = JSON.parse(raw);
                     if (Array.isArray(parsed) && parsed.length > 0) {
+                        liveFetchedStories = parsed;
                         renderStories(parsed);
                         return;
                     }
                 }
             } catch (e) {}
         }
-        renderStories(DEFAULT_STORIES);
+        liveFetchedStories = null;
+        renderStories(ALL_STORIES);
     }
 
     if (storiesRegionSelect) {
@@ -423,7 +574,19 @@
 
     window.addEventListener('fokk-live-news-updated', (event) => {
         if (event.detail && Array.isArray(event.detail)) {
+            liveFetchedStories = event.detail;
             renderStories(event.detail);
+        }
+    });
+
+    // Listen for storage changes across tabs to update wallpaper and engine in real time
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'fokk_wallpaper_id' || e.key === 'fokk_custom_wallpaper') {
+            loadWallpaper();
+            renderWallpaperGrid();
+        }
+        if (e.key === 'fokk_search_engine') {
+            updateSearchEngineUI();
         }
     });
 

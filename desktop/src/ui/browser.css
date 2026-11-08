@@ -35,11 +35,11 @@ html, body {
     flex-direction: column;
 }
 
-/* 1. Titlebar & Tab Strip */
+/* 1. Titlebar & Tab Strip (Zero Bottom Border for Seamless Blend) */
 .titlebar {
     height: 42px;
     background: var(--bg-titlebar);
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: none;
     display: flex;
     align-items: center;
     -webkit-app-region: drag;
@@ -75,7 +75,7 @@ html, body {
     flex: 1;
     display: flex;
     align-items: flex-end;
-    gap: 3px;
+    gap: 2px;
     height: 100%;
     overflow-x: auto;
     overflow-y: hidden;
@@ -85,13 +85,12 @@ html, body {
 .tab-strip::-webkit-scrollbar { display: none; }
 
 .browser-tab {
-    height: 34px;
+    height: 35px;
     max-width: 200px;
     min-width: 120px;
     flex: 1;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid transparent;
-    border-bottom: none;
+    background: rgba(255, 255, 255, 0.02);
+    border: none;
     border-radius: 8px 8px 0 0;
     display: flex;
     align-items: center;
@@ -100,20 +99,20 @@ html, body {
     font-size: 12px;
     color: var(--text-secondary);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background 0.15s ease, color 0.15s ease;
     position: relative;
 }
 
 .browser-tab:hover {
-    background: rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.06);
     color: var(--text-primary);
 }
 
 .browser-tab.active {
     background: var(--bg-toolbar);
     color: var(--text-primary);
-    border-color: var(--border-color);
-    box-shadow: 0 -2px 0 0 var(--fokk-cyan) inset;
+    border: none;
+    box-shadow: 0 2px 0 0 var(--fokk-cyan) inset;
 }
 
 .tab-favicon {
@@ -203,10 +202,11 @@ html, body {
     color: #FFF;
 }
 
-/* 2. Toolbar & Omnibox */
+/* 2. Toolbar & Omnibox (Seamless with active tab) */
 .toolbar {
     height: 44px;
     background: var(--bg-toolbar);
+    border-top: none;
     border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
@@ -282,8 +282,8 @@ html, body {
 .omnibox-engine-selector {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 2px 6px;
+    gap: 5px;
+    padding: 3px 6px;
     border-radius: 6px;
     cursor: pointer;
     position: relative;
@@ -296,6 +296,7 @@ html, body {
 .omnibox-engine-icon {
     display: flex;
     align-items: center;
+    justify-content: center;
 }
 .engine-chevron {
     color: var(--text-secondary);
@@ -309,12 +310,15 @@ html, body {
     border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 6px;
-    min-width: 140px;
+    min-width: 170px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
     z-index: 200;
 }
 .omnibox-engine-dropdown.hidden { display: none; }
 .engine-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     padding: 8px 12px;
     border-radius: 6px;
     font-size: 12.5px;
@@ -397,7 +401,7 @@ webview.active {
     display: flex;
 }
 
-/* 4. Desktop 3-Dots Menu Dropdown (Rich Mobile-Parity Layout) */
+/* 4. Desktop 3-Dots Menu Dropdown */
 .browser-menu-dropdown {
     position: absolute;
     top: 86px;
@@ -680,7 +684,7 @@ webview.active {
 }
 .feature-hub-modal.hidden { display: none; }
 .feature-modal-card {
-    width: 560px;
+    width: 580px;
     max-width: 90vw;
     max-height: 85vh;
     background: #111216;

@@ -162,7 +162,8 @@ class DesktopNewsService {
                 category: category || 'all',
                 region: region || 'global',
                 url: link,
-                img: img
+                img: img,
+                image: img
             });
             if (items.length >= 8) break;
         }

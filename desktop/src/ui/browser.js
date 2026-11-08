@@ -37,38 +37,39 @@ const btnClose = document.getElementById('btnClose');
 const START_PAGE_URL = ipcRenderer.sendSync('fokk-get-start-page-url');
 const PRELOAD_SCRIPT_PATH = ipcRenderer.sendSync('fokk-get-preload-path');
 
-// Search Engine Registry
+// Search Engine Registry (Authentic Vector SVGs, Bing Default as like mobile)
 const OMNIBOX_ENGINES = {
+    bing: {
+        name: 'Microsoft Bing',
+        searchUrl: 'https://www.bing.com/search?q=',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#008373" d="M5 3v18l7-4V7.5L8.5 6V3H5zm9 5l-2 1.2V14l4.5 2.5 3.5-2V10l-6-2z"/><path fill="#00A88F" d="M12 7.5V17l4.5 2.5 3.5-2V10l-8-2.5z"/></svg>'
+    },
     google: {
-        name: 'Google',
+        name: 'Google Search',
         searchUrl: 'https://www.google.com/search?q=',
         iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.04h3.88c2.27-2.09 3.66-5.17 3.66-9.14z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.04c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.27 21.43 7.35 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.28c-.24-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28V6.59H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.41l4.03-3.13z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.27 2.57 1.25 6.59l4.03 3.13c.95-2.83 3.6-4.97 6.72-4.97z"/></svg>'
     },
     brave: {
         name: 'Brave Search',
         searchUrl: 'https://search.brave.com/search?q=',
-        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#FB542B" d="M12 2L3 6v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V6l-9-4z"/></svg>'
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#FB542B" d="M12 2L4 5.5v5.3c0 5.4 3.4 10.4 8 11.7 4.6-1.3 8-6.3 8-11.7V5.5L12 2zm3.8 14.1l-2.4-1.2-1.4.9 1.4-.9-2.4 1.2-1.4-1.6 3.8-.4 3.8.4-1.4 1.6zM7.5 10l1.7-.8 1 1.7-2.7-.9zm9 0l-2.7.9 1-1.7 1.7.8z"/></svg>'
     },
     duckduckgo: {
         name: 'DuckDuckGo',
         searchUrl: 'https://duckduckgo.com/?q=',
-        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#DE5833"/><circle cx="12" cy="12" r="4" fill="#FFF"/></svg>'
-    },
-    bing: {
-        name: 'Bing',
-        searchUrl: 'https://www.bing.com/search?q=',
-        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#008373" d="M5 3v18l7-4V7.5L8.5 6V3H5zm9 5l-2 1.2V14l4.5 2.5 3.5-2V10l-6-2z"/></svg>'
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#DE5833" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 3.5c1.93 0 3.5 1.57 3.5 3.5 0 .88-.33 1.68-.86 2.3l2.86 1.2-.5 1.5-3.32-1.39C14.07 13.06 13.09 13.5 12 13.5c-.75 0-1.44-.22-2.03-.6l-1.47 1.47 2.12 2.12-1.41 1.41-3.54-3.53 1.41-1.42.71.71c-.5-.73-.79-1.61-.79-2.56 0-2.48 2.02-4.5 4.5-4.5z"/><circle cx="14" cy="8" r="1" fill="#FFF"/></svg>'
     },
     ecosia: {
         name: 'Ecosia',
         searchUrl: 'https://www.ecosia.org/search?q=',
-        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#00A389" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4 0h-2v-4h2v4z"/></svg>'
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#00A389" d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17h8v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7zm-1 16h2v3h-2v-3z"/></svg>'
     }
 };
 
-let currentEngine = localStorage.getItem('fokk_search_engine') || 'google';
+// Bing is default like mobile
+let currentEngine = localStorage.getItem('fokk_search_engine') || 'bing';
 
-// Toast Notification System
+// Clean Professional Toast Notifications (Zero Emojis)
 function showToast(message, isAlert = false) {
     if (!toastContainer) return;
     const toast = document.createElement('div');
@@ -136,7 +137,7 @@ function createTab(url = START_PAGE_URL, options = {}) {
     webview.addEventListener('page-title-updated', (e) => {
         const titleEl = document.getElementById('title_' + tabId);
         if (titleEl && e.title) {
-            titleEl.textContent = (isPrivate ? '🕵️ ' : '') + e.title;
+            titleEl.textContent = (isPrivate ? '[Private] ' : '') + e.title;
         }
     });
 
@@ -205,7 +206,7 @@ function updateNavState(webview) {
 function updateOmnibox(rawUrl) {
     if (!rawUrl || rawUrl.includes('start.html') || rawUrl.includes('fokk_start.html') || rawUrl.startsWith('file://')) {
         urlInput.value = '';
-        const engine = OMNIBOX_ENGINES[currentEngine] || OMNIBOX_ENGINES.google;
+        const engine = OMNIBOX_ENGINES[currentEngine] || OMNIBOX_ENGINES.bing;
         urlInput.placeholder = `Search with ${engine.name} or enter address`;
         if (btnBookmarkOmni) btnBookmarkOmni.classList.remove('active');
     } else {
@@ -273,6 +274,15 @@ function setOmniboxEngine(engineId) {
             item.classList.toggle('selected', item.getAttribute('data-engine') === engineId);
         });
     }
+
+    // Also notify active start pages to update their search placeholder
+    tabs.forEach(t => {
+        t.webview.executeJavaScript(`
+            if (typeof updateSearchEngineUI === 'function') {
+                updateSearchEngineUI('${engineId}');
+            }
+        `).catch(() => {});
+    });
 }
 
 if (omniboxEngineSelector && omniboxEngineDropdown) {
@@ -303,7 +313,7 @@ urlInput.addEventListener('keydown', (e) => {
         } else if (query.includes('.') && !query.includes(' ') && !query.endsWith('.')) {
             targetUrl = 'https://' + query;
         } else {
-            const engine = OMNIBOX_ENGINES[currentEngine] || OMNIBOX_ENGINES.google;
+            const engine = OMNIBOX_ENGINES[currentEngine] || OMNIBOX_ENGINES.bing;
             targetUrl = engine.searchUrl + encodeURIComponent(query);
         }
 
@@ -334,7 +344,7 @@ if (btnReaderMode) {
                     document.head.appendChild(style);
                 })();
             `);
-            showToast('📖 Reader Mode Enabled');
+            showToast('Reader View Enabled');
         } else {
             active.executeJavaScript(`
                 const r = document.getElementById('fokk-reader-style');
@@ -363,7 +373,7 @@ if (btnBookmarkOmni) {
         } else {
             bookmarks.push({ title, url, time: Date.now() });
             btnBookmarkOmni.classList.add('active');
-            showToast('⭐ Saved to Bookmarks');
+            showToast('Saved to Bookmarks');
         }
         localStorage.setItem('fokk_bookmarks', JSON.stringify(bookmarks));
     });
@@ -399,7 +409,7 @@ if (menuNavForward) menuNavForward.onclick = () => btnForward.click();
 if (menuNavReload) menuNavReload.onclick = () => btnReload.click();
 if (menuNavHome) menuNavHome.onclick = () => btnHome.click();
 if (menuNavHistory) menuNavHistory.onclick = () => openFeatureHub('privacy');
-if (menuNavDownloads) menuNavDownloads.onclick = () => showToast('📥 Downloads directory: ~/Downloads');
+if (menuNavDownloads) menuNavDownloads.onclick = () => showToast('Downloads directory: ~/Downloads');
 
 // Shield Toggle in Menu
 const menuShieldToggle = document.getElementById('menuShieldToggle');
@@ -412,30 +422,29 @@ if (menuShieldToggle) {
             menuShieldBadge.textContent = isEnabled ? 'SHIELD ACTIVE' : 'SHIELD DISABLED';
             menuShieldBadge.className = 'shield-status-badge ' + (isEnabled ? 'active' : 'disabled');
         }
-        showToast(isEnabled ? '🛡️ Fokk Shield: Active' : '⚠️ Fokk Shield: Disabled');
+        showToast(isEnabled ? 'Fokk Shield: Active' : 'Fokk Shield: Disabled');
     });
 }
 
-// 🔥 Burn Session
+// Burn Session (Purge all history & cache)
 const btnBurnSession = document.getElementById('btnBurnSession');
 if (btnBurnSession) {
     btnBurnSession.addEventListener('click', async () => {
         desktopBrowserMenu.classList.add('hidden');
-        showToast('🔥 Burning browsing session and cookies...', true);
+        showToast('Burning browsing session and cookies...', true);
 
         try {
             await ipcRenderer.invoke('fokk-burn-session');
             localStorage.removeItem('fokk_bookmarks');
             localStorage.removeItem('fokk_search_history');
 
-            // Close all extra tabs
             while (tabs.length > 1) {
                 closeTab(tabs[tabs.length - 1].id);
             }
             const active = getActiveWebview();
             if (active) active.loadURL(START_PAGE_URL);
 
-            showToast('🔥 All cookies, cache & history burned!', true);
+            showToast('All cookies, cache and session history purged', true);
         } catch (e) {
             showToast('Failed to burn session: ' + e.message, true);
         }
@@ -464,7 +473,7 @@ if (actForceDark) {
         desktopBrowserMenu.classList.add('hidden');
         if (isForcedDark) {
             active.insertCSS('html { filter: invert(90%) hue-rotate(180deg) !important; background: #121212 !important; } img, video, iframe, canvas { filter: invert(100%) hue-rotate(180deg) !important; }');
-            showToast('🌓 Dark Mode Forced');
+            showToast('Dark Mode Forced');
         } else {
             active.reload();
             showToast('Standard Theme Restored');
@@ -483,7 +492,7 @@ if (actDesktopUA) {
         const desktopUA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
         active.setUserAgent(isMobileUA ? mobileUA : desktopUA);
         active.reload();
-        showToast(isMobileUA ? '📱 Switched to Mobile User-Agent' : '🖥️ Switched to Desktop User-Agent');
+        showToast(isMobileUA ? 'Switched to Mobile User-Agent' : 'Switched to Desktop User-Agent');
     };
 }
 
@@ -493,7 +502,7 @@ if (actShare) {
         if (active) {
             const url = active.getURL();
             navigator.clipboard.writeText(url).then(() => {
-                showToast('🔗 Link copied to clipboard!');
+                showToast('Link copied to clipboard');
             });
         }
         desktopBrowserMenu.classList.add('hidden');
@@ -510,7 +519,7 @@ if (actAddShortcut) {
                 let shortcuts = JSON.parse(localStorage.getItem('fokk_desktop_shortcuts') || '[]');
                 shortcuts.push({ name, url, sub: new URL(url).hostname });
                 localStorage.setItem('fokk_desktop_shortcuts', JSON.stringify(shortcuts));
-                showToast(`⚡ Added "${name}" to Home Shortcuts`);
+                showToast(`Added \"${name}\" to Home Shortcuts`);
             }
         }
         desktopBrowserMenu.classList.add('hidden');
@@ -568,24 +577,24 @@ if (btnVisuals) {
     btnVisuals.addEventListener('click', () => openFeatureHub('visuals'));
 }
 if (btnDownloadsNav) {
-    btnDownloadsNav.addEventListener('click', () => showToast('📥 Downloads directory: ~/Downloads'));
+    btnDownloadsNav.addEventListener('click', () => showToast('Downloads directory: ~/Downloads'));
 }
 
 function openFeatureHub(hubId) {
     if (!featureHubModal || !featureModalBody) return;
 
     if (hubId === 'general') {
-        featureModalTitle.textContent = '⚙️ General & Search Engines';
+        featureModalTitle.textContent = 'General & Search Engines';
         featureModalBody.innerHTML = `
             <div class="modal-form-group">
                 <label class="modal-form-label">Default Search Engine</label>
-                <span class="modal-form-sub">Omnibox and new tab search provider</span>
+                <span class="modal-form-sub">Active search engine for omnibox and home page search</span>
                 <select id="selDefaultEngine" class="modal-select">
+                    <option value="bing" ${currentEngine==='bing'?'selected':''}>Microsoft Bing (Default)</option>
                     <option value="google" ${currentEngine==='google'?'selected':''}>Google Search</option>
                     <option value="brave" ${currentEngine==='brave'?'selected':''}>Brave Search</option>
                     <option value="duckduckgo" ${currentEngine==='duckduckgo'?'selected':''}>DuckDuckGo</option>
-                    <option value="bing" ${currentEngine==='bing'?'selected':''}>Microsoft Bing</option>
-                    <option value="ecosia" ${currentEngine==='ecosia'?'selected':''}>Ecosia (Plants Trees)</option>
+                    <option value="ecosia" ${currentEngine==='ecosia'?'selected':''}>Ecosia</option>
                 </select>
             </div>
             <div class="modal-form-group">
@@ -595,11 +604,11 @@ function openFeatureHub(hubId) {
             <div class="modal-toggle-row">
                 <div class="modal-toggle-text">
                     <div class="modal-toggle-title">Hardware Acceleration</div>
-                    <div class="modal-toggle-desc">Use GPU for ultra-fast compositor rendering</div>
+                    <div class="modal-toggle-desc">GPU compositor rendering for smooth 60fps animations</div>
                 </div>
                 <input type="checkbox" checked disabled>
             </div>
-            <button class="modal-btn" id="btnSaveGeneral" style="margin-top: 14px;">Save Changes</button>
+            <button class="modal-btn" id="btnSaveGeneral" style="margin-top: 14px;">Save Settings</button>
         `;
 
         document.getElementById('btnSaveGeneral').onclick = () => {
@@ -608,64 +617,80 @@ function openFeatureHub(hubId) {
             const homeUrl = document.getElementById('inputHomeUrl').value;
             localStorage.setItem('fokk_custom_home', homeUrl);
             featureHubModal.classList.add('hidden');
-            showToast('Settings Saved');
+            showToast('Search Settings Saved');
         };
 
     } else if (hubId === 'shield') {
-        featureModalTitle.textContent = '🛡️ Shield & Ghost Stealth';
+        featureModalTitle.textContent = 'Fokk Shield & Ghost Stealth';
         featureModalBody.innerHTML = `
             <div class="modal-toggle-row">
                 <div class="modal-toggle-text">
-                    <div class="modal-toggle-title">Fokk AdShield Engine</div>
-                    <div class="modal-toggle-desc">Over 40,000 curated network ad & cosmetic defuser rules active</div>
+                    <div class="modal-toggle-title">Fokk Network Shield</div>
+                    <div class="modal-toggle-desc">40,000+ active curated network block rules and cosmetic defusers</div>
                 </div>
                 <input type="checkbox" id="chkShieldEngine" checked>
             </div>
             <div class="modal-toggle-row">
                 <div class="modal-toggle-text">
-                    <div class="modal-toggle-title">Canvas & Fingerprint Cloaking</div>
-                    <div class="modal-toggle-desc">Spoofs canvas readouts to neutralize browser fingerprinting</div>
+                    <div class="modal-toggle-title">Canvas Cloaking & Stealth</div>
+                    <div class="modal-toggle-desc">Injects noise on HTML5 canvas readouts to prevent cross-site fingerprinting</div>
                 </div>
                 <input type="checkbox" id="chkCanvasCloak" checked>
             </div>
             <div class="modal-form-group" style="margin-top: 16px;">
                 <label class="modal-form-label">DNS-over-HTTPS (DoH)</label>
                 <select id="selDoH" class="modal-select">
-                    <option value="cloudflare">Cloudflare (1.1.1.1 — Ultra Fast & Private)</option>
-                    <option value="quad9">Quad9 (9.9.9.9 — Malware Blocking)</option>
+                    <option value="cloudflare">Cloudflare (1.1.1.1 — Fast & Private)</option>
+                    <option value="quad9">Quad9 (9.9.9.9 — Threat Protection)</option>
                     <option value="google">Google Public DNS (8.8.8.8)</option>
                     <option value="off">System Default</option>
                 </select>
             </div>
-            <button class="modal-btn" id="btnSaveShield" style="margin-top: 14px;">Apply Stealth Protection</button>
+            <div class="modal-form-group" style="margin-top: 16px;">
+                <label class="modal-form-label">Whitelist Domain</label>
+                <input type="text" id="inputWhitelist" class="modal-input" placeholder="e.g. news.ycombinator.com">
+                <button class="modal-btn secondary" id="btnAddWhitelist" style="margin-top: 8px;">Add Domain to Whitelist</button>
+            </div>
+            <button class="modal-btn" id="btnSaveShield" style="margin-top: 14px;">Apply Protection Settings</button>
         `;
 
         document.getElementById('btnSaveShield').onclick = () => {
             const doh = document.getElementById('selDoH').value;
             ipcRenderer.send('fokk-set-doh', doh);
             featureHubModal.classList.add('hidden');
-            showToast('Shield Stealth Settings Applied');
+            showToast('Shield Settings Applied');
+        };
+
+        document.getElementById('btnAddWhitelist').onclick = () => {
+            const dom = document.getElementById('inputWhitelist').value.trim();
+            if (dom) {
+                let wl = JSON.parse(localStorage.getItem('fokk_shield_whitelist') || '[]');
+                if (!wl.includes(dom)) wl.push(dom);
+                localStorage.setItem('fokk_shield_whitelist', JSON.stringify(wl));
+                showToast(`Whitelisted: ${dom}`);
+                document.getElementById('inputWhitelist').value = '';
+            }
         };
 
     } else if (hubId === 'media') {
-        featureModalTitle.textContent = '🎬 Media, Gestures & PiP';
+        featureModalTitle.textContent = 'Media & Picture-in-Picture';
         featureModalBody.innerHTML = `
             <div class="modal-form-group">
                 <label class="modal-form-label">Picture-in-Picture</label>
-                <span class="modal-form-sub">Pop video on the current tab into a floating PiP window</span>
+                <span class="modal-form-sub">Detach video on active tab into floating window</span>
                 <button class="modal-btn" id="btnPopPiP">Pop Active Video to PiP</button>
             </div>
             <div class="modal-toggle-row">
                 <div class="modal-toggle-text">
                     <div class="modal-toggle-title">Background Audio Playback</div>
-                    <div class="modal-toggle-desc">Keep videos playing when switching tabs</div>
+                    <div class="modal-toggle-desc">Continue playing media when navigating between tabs</div>
                 </div>
                 <input type="checkbox" checked disabled>
             </div>
             <div class="modal-toggle-row">
                 <div class="modal-toggle-text">
                     <div class="modal-toggle-title">Block Video Autoplay</div>
-                    <div class="modal-toggle-desc">Prevent intrusive videos from starting with sound</div>
+                    <div class="modal-toggle-desc">Prevent websites from playing audio-enabled videos automatically</div>
                 </div>
                 <input type="checkbox" checked>
             </div>
@@ -680,13 +705,13 @@ function openFeatureHub(hubId) {
                         v.requestPictureInPicture().catch(e => console.log(e));
                     }
                 `);
-                showToast('🎬 Picture-in-Picture Triggered');
+                showToast('Picture-in-Picture Triggered');
             }
             featureHubModal.classList.add('hidden');
         };
 
     } else if (hubId === 'privacy') {
-        featureModalTitle.textContent = '🔐 Privacy Vault & Data Purge';
+        featureModalTitle.textContent = 'Privacy Vault & Purge';
         featureModalBody.innerHTML = `
             <div class="modal-form-group">
                 <label class="modal-form-label">Selective Data Purge</label>
@@ -708,11 +733,11 @@ function openFeatureHub(hubId) {
 
             await ipcRenderer.invoke('fokk-clear-data', { storages });
             featureHubModal.classList.add('hidden');
-            showToast('✅ Browsing data cleared successfully');
+            showToast('Browsing data cleared successfully');
         };
 
     } else if (hubId === 'scripts') {
-        featureModalTitle.textContent = '🧩 Extensions & User Scripts';
+        featureModalTitle.textContent = 'Extensions & User Scripts';
         featureModalBody.innerHTML = `
             <div class="modal-form-group">
                 <label class="modal-form-label">Custom CSS Injector</label>
@@ -745,13 +770,13 @@ function openFeatureHub(hubId) {
         };
 
     } else if (hubId === 'visuals') {
-        featureModalTitle.textContent = '🖼️ Visuals & 4K Sailboat Studio';
+        featureModalTitle.textContent = 'Visuals & 4K Sailboat Studio';
         const currentWp = localStorage.getItem('fokk_wallpaper_id') || 'sailboat';
 
         let html = `
             <div class="modal-form-group">
                 <label class="modal-form-label">Pre-installed 4K Sailboat Wallpapers</label>
-                <span class="modal-form-sub">Zero-loading offline high-resolution nautical backgrounds</span>
+                <span class="modal-form-sub">Instant offline nautical backgrounds with zero network delay</span>
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px;">
         `;
 
@@ -779,17 +804,20 @@ function openFeatureHub(hubId) {
                 localStorage.setItem('fokk_wallpaper_id', id);
                 localStorage.removeItem('fokk_custom_wallpaper');
 
-                // Notify start pages
+                // Notify all active start pages to update instantly
                 tabs.forEach(t => {
                     t.webview.executeJavaScript(`
-                        if (typeof setWallpaper === 'function') {
-                            setWallpaper({ id: '${id}', url: '${file}' });
+                        if (typeof window.setWallpaper === 'function') {
+                            window.setWallpaper({ id: '${id}', url: '${file}' });
+                        } else {
+                            const bg = document.getElementById('wallpaperBg');
+                            if (bg) bg.style.backgroundImage = 'url("${file}")';
                         }
                     `).catch(() => {});
                 });
 
                 featureHubModal.classList.add('hidden');
-                showToast(`⛵ Wallpaper applied: ${card.querySelector('span').textContent}`);
+                showToast(`Wallpaper applied: ${card.querySelector('span').textContent}`);
             };
         });
 
@@ -804,12 +832,78 @@ function openFeatureHub(hubId) {
                     `).catch(() => {});
                 });
                 featureHubModal.classList.add('hidden');
-                showToast('Custom Wallpaper uploaded & applied!');
+                showToast('Custom Wallpaper uploaded and applied');
             }
         };
 
+    } else if (hubId === 'fundraising') {
+        featureModalTitle.textContent = 'Fundraising & Contributing';
+        featureModalBody.innerHTML = `
+            <div style="margin-bottom: 16px;">
+                <h4 style="color: #FFF; font-size: 14px; margin-bottom: 6px;">Support Independent Privacy</h4>
+                <p style="font-size: 12px; line-height: 1.6; color: var(--text-secondary);">
+                    Fokk Browser has zero ads, zero trackers, and zero telemetry. It is built and maintained by privacy advocates funded solely by community sponsors.
+                </p>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 13px; font-weight: 700; color: #FFF;">GitHub Sponsors</div>
+                        <div style="font-size: 11px; color: var(--text-secondary);">Monthly recurring developer sponsorship</div>
+                    </div>
+                    <button class="modal-btn secondary" id="btnOpenGhSponsors">Sponsor on GitHub</button>
+                </div>
+                <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 13px; font-weight: 700; color: #FFF;">Buy Me a Coffee</div>
+                        <div style="font-size: 11px; color: var(--text-secondary);">One-time community contribution</div>
+                    </div>
+                    <button class="modal-btn secondary" id="btnOpenCoffee">Buy Coffee</button>
+                </div>
+                <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px;">
+                    <div style="font-size: 13px; font-weight: 700; color: #FFF; margin-bottom: 4px;">Crypto Privacy Vault</div>
+                    <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;">Anonymous donations via Bitcoin (BTC) or Monero (XMR)</div>
+                    <code style="font-size: 10.5px; color: var(--fokk-cyan); word-break: break-all;">bc1qfokkprivacyvault2026shieldadblocker001</code>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('btnOpenGhSponsors').onclick = () => {
+            createTab('https://github.com/sponsors/Kimmojiraja');
+            featureHubModal.classList.add('hidden');
+        };
+        document.getElementById('btnOpenCoffee').onclick = () => {
+            createTab('https://buymeacoffee.com/fokkshield');
+            featureHubModal.classList.add('hidden');
+        };
+
+    } else if (hubId === 'license') {
+        featureModalTitle.textContent = 'License & Legal Notice';
+        featureModalBody.innerHTML = `
+            <div style="margin-bottom: 14px;">
+                <h4 style="color: #FFF; font-size: 14px; margin-bottom: 6px;">Fokk Shield Browser — MIT License</h4>
+                <div style="background: #090A0C; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 11px; line-height: 1.5; color: var(--text-secondary); max-height: 150px; overflow-y: auto;">
+                    Copyright (c) 2026 Fokk Shield Team<br><br>
+                    Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software.<br><br>
+                    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+                </div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <div style="font-size: 12px; font-weight: 700; color: #FFF; margin-bottom: 4px;">Open Source Acknowledgments</div>
+                <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.5;">
+                    Built with Electron 30, Chromium 124, and curated adblock rule sets inspired by EasyList, Peter Lowe, and uBlock Origin community filters.
+                </div>
+            </div>
+            <div style="background: rgba(0,229,255,0.06); border: 1px solid rgba(0,229,255,0.2); border-radius: 8px; padding: 10px;">
+                <div style="font-size: 11.5px; font-weight: 700; color: var(--fokk-cyan);">Zero Data Collection Guarantee</div>
+                <div style="font-size: 10.5px; color: var(--text-secondary); margin-top: 2px;">
+                    This software never tracks, logs, stores, or transmits your search history, URLs, or personal data to any external server.
+                </div>
+            </div>
+        `;
+
     } else if (hubId === 'about') {
-        featureModalTitle.textContent = 'ℹ️ About Fokk Browser';
+        featureModalTitle.textContent = 'About Fokk Browser';
         featureModalBody.innerHTML = `
             <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
                 <img src="icon.png" style="width: 52px; height: 52px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,229,255,0.4);">

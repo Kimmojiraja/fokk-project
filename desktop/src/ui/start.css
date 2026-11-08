@@ -392,15 +392,56 @@ body {
     color: #cbd5e1;
 }
 
+/* View More Stories Wrap & Button */
+.more-stories-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 26px;
+    width: 100%;
+}
+
+.btn-more-stories {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(43, 42, 51, 0.88);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--firefox-border);
+    color: #f1f5f9;
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 10px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.22s ease;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.btn-more-stories:hover {
+    background: rgba(56, 55, 68, 0.98);
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 22px rgba(0, 229, 255, 0.25);
+}
+
+.btn-more-stories svg {
+    transition: transform 0.2s ease;
+}
+
+.btn-more-stories.expanded svg {
+    transform: rotate(180deg);
+}
+
 /* Floating Bottom-Right Pencil Customize Button (Firefox Style) */
 .floating-pencil-btn {
     position: fixed;
-    bottom: 22px;
-    right: 22px;
+    bottom: 24px;
+    right: 24px;
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background: rgba(43, 42, 51, 0.9);
+    background: rgba(43, 42, 51, 0.92);
     backdrop-filter: blur(16px);
     border: 1px solid var(--firefox-border);
     color: #ffffff;
@@ -408,14 +449,16 @@ body {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     transition: all 0.2s ease;
-    z-index: 100;
+    z-index: 9999;
+    pointer-events: auto;
 }
 
 .floating-pencil-btn:hover {
     background: rgba(60, 59, 72, 1);
-    border-color: var(--firefox-border-hover);
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
     transform: scale(1.08);
 }
 
