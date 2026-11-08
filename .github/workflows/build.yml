@@ -69,6 +69,6 @@ jobs:
             EXTRA_FLAG="--prerelease"
           fi
           gh release create "$TAG" app/build/outputs/apk/debug/*.apk \
-            --title "Fokk Shield $TAG" \
+            --title "Fokk Shield Android $TAG" \
             --notes-file version.json \
             $EXTRA_FLAG || gh release upload "$TAG" app/build/outputs/apk/debug/*.apk --clobber

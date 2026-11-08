@@ -1,15 +1,17 @@
-name: Build Desktop Browser (Windows & Linux)
+name: Build & Release Desktop Browser (Linux, Windows, macOS)
 
 on:
   push:
     paths:
       - 'desktop/**'
       - '.github/workflows/build-desktop.yml'
+    tags:
+      - 'desktop-v*'
   workflow_dispatch:
 
 jobs:
   build-linux:
-    name: Build Ubuntu (.deb & .AppImage)
+    name: Build Linux (.deb & .AppImage)
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -43,21 +45,26 @@ jobs:
             desktop/dist/*.AppImage
           retention-days: 14
 
-      - name: Attach Linux to Latest Release
+      - name: Publish Linux to Desktop Release
         if: success()
         continue-on-error: true
         working-directory: desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          LATEST_TAG=$(gh release list --limit 1 | awk '{print $1}')
-          if [ -n "$LATEST_TAG" ]; then
-            echo "Uploading Linux packages to release $LATEST_TAG"
-            gh release upload "$LATEST_TAG" dist/*.deb dist/*.AppImage --clobber || true
-          fi
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="desktop-v$VERSION"
+          echo "Targeting release tag: $TAG"
+          NOTES="Fokk Browser Desktop v$VERSION multi-platform release with uBlock Origin adblocker, browsing history, downloads manager, custom profile, shortcut tiles, and cohesive themes."
+          gh release view "$TAG" || gh release create "$TAG" \
+            --title "Fokk Desktop v$VERSION (Linux, Windows, macOS)" \
+            --notes "$NOTES" \
+            --prerelease=false || true
+
+          gh release upload "$TAG" dist/*.deb dist/*.AppImage --clobber || true
 
   build-windows:
-    name: Build Windows (.exe Installer)
+    name: Build Windows (Zip & Portable)
     runs-on: windows-latest
     permissions:
       contents: write
@@ -78,26 +85,79 @@ jobs:
         working-directory: desktop
         run: npm install --no-audit
 
-      - name: Build Windows Installer & Portable
+      - name: Build Windows Packages
         working-directory: desktop
-        run: npx electron-builder --win nsis portable --publish never
+        run: npx electron-builder --win zip -c.win.signAndEditExecutable=false --publish never
 
       - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Fokk-Browser-Windows
-          path: desktop/dist/*.exe
+          path: |
+            desktop/dist/*-win.zip
+            desktop/dist/*.exe
           retention-days: 14
 
-      - name: Attach Windows to Latest Release
+      - name: Publish Windows to Desktop Release
         if: success()
         continue-on-error: true
         working-directory: desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          LATEST_TAG=$(gh release list --limit 1 | awk '{print $1}')
-          if [ -n "$LATEST_TAG" ]; then
-            echo "Uploading Windows installers to release $LATEST_TAG"
-            gh release upload "$LATEST_TAG" dist/*.exe --clobber || true
-          fi
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="desktop-v$VERSION"
+          echo "Targeting release tag: $TAG"
+          gh release view "$TAG" || gh release create "$TAG" \
+            --title "Fokk Desktop v$VERSION (Linux, Windows, macOS)" \
+            --notes "Fokk Browser Desktop v$VERSION multi-platform release." \
+            --prerelease=false || true
+
+          gh release upload "$TAG" dist/*-win.zip --clobber || true
+
+  build-macos:
+    name: Build macOS (Zip)
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        working-directory: desktop
+        run: npm install --no-audit
+
+      - name: Build macOS Package
+        working-directory: desktop
+        run: npx electron-builder --mac zip --publish never
+
+      - name: Upload macOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fokk-Browser-macOS
+          path: desktop/dist/*-mac.zip
+          retention-days: 14
+
+      - name: Publish macOS to Desktop Release
+        if: success()
+        continue-on-error: true
+        working-directory: desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="desktop-v$VERSION"
+          echo "Targeting release tag: $TAG"
+          gh release view "$TAG" || gh release create "$TAG" \
+            --title "Fokk Desktop v$VERSION (Linux, Windows, macOS)" \
+            --notes "Fokk Browser Desktop v$VERSION multi-platform release." \
+            --prerelease=false || true
+
+          gh release upload "$TAG" dist/*-mac.zip --clobber || true

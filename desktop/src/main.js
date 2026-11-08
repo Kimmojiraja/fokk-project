@@ -489,30 +489,71 @@ function fetchJson(url) {
 ipcMain.handle('fokk-check-update', async () => {
     const currentVersion = app.getVersion() || '1.0.0';
     try {
-        const release = await fetchJson('https://api.github.com/repos/Kimmojiraja/fokk-project/releases/latest');
-        const latestTag = release.tag_name || '';
-        const latestVersion = latestTag.replace(/^v/i, '');
-        const isNewer = compareVersions(latestVersion, currentVersion) > 0;
+        let releases = [];
+        try {
+            const list = await fetchJson('https://api.github.com/repos/Kimmojiraja/fokk-project/releases?per_page=15');
+            if (Array.isArray(list)) releases = list;
+        } catch (_) {}
 
-        // Find platform asset
-        const assets = release.assets || [];
-        let matchedAsset = null;
-        if (process.platform === 'linux') {
-            matchedAsset = assets.find(a => a.name.endsWith('.AppImage')) || assets.find(a => a.name.endsWith('.deb'));
-        } else if (process.platform === 'win32') {
-            matchedAsset = assets.find(a => a.name.endsWith('-win.zip') || a.name.endsWith('.zip') || a.name.endsWith('.exe'));
-        } else if (process.platform === 'darwin') {
-            matchedAsset = assets.find(a => a.name.endsWith('-mac.zip') || a.name.endsWith('.dmg') || a.name.endsWith('.zip'));
+        // Fallback to latest single release if list fails
+        if (releases.length === 0) {
+            try {
+                const single = await fetchJson('https://api.github.com/repos/Kimmojiraja/fokk-project/releases/latest');
+                if (single && single.tag_name) releases = [single];
+            } catch (_) {}
         }
+
+        if (releases.length === 0) {
+            return { available: false, currentVersion, error: 'No releases found' };
+        }
+
+        // Helper to check if asset matches current platform
+        const findPlatformAsset = (assets) => {
+            if (!Array.isArray(assets)) return null;
+            if (process.platform === 'linux') {
+                return assets.find(a => a.name.endsWith('.AppImage')) || assets.find(a => a.name.endsWith('.deb'));
+            } else if (process.platform === 'win32') {
+                return assets.find(a => a.name.endsWith('-win.zip') || a.name.endsWith('.zip') || a.name.endsWith('.exe'));
+            } else if (process.platform === 'darwin') {
+                return assets.find(a => a.name.endsWith('-mac.zip') || a.name.endsWith('.dmg') || a.name.endsWith('.zip'));
+            }
+            return null;
+        };
+
+        // Filter releases: specifically prioritize desktop releases or releases with desktop assets
+        let targetRelease = null;
+        let matchedAsset = null;
+
+        for (const rel of releases) {
+            const tag = (rel.tag_name || '').toLowerCase();
+            const asset = findPlatformAsset(rel.assets || []);
+            // Matches if tag indicates desktop or it contains desktop assets
+            if (tag.startsWith('desktop-') || asset) {
+                targetRelease = rel;
+                matchedAsset = asset;
+                break;
+            }
+        }
+
+        // If no specifically desktop-tagged release found, fall back to first release
+        if (!targetRelease) {
+            targetRelease = releases[0];
+            matchedAsset = findPlatformAsset(targetRelease.assets || []);
+        }
+
+        const rawTag = targetRelease.tag_name || '';
+        // Extract clean semantic version, removing 'desktop-v', 'desktop-', 'v'
+        const latestVersion = rawTag.replace(/^desktop-v?/i, '').replace(/^v/i, '') || '1.0.0';
+        const isNewer = compareVersions(latestVersion, currentVersion) > 0;
 
         return {
             available: isNewer,
             currentVersion,
             latestVersion,
-            releaseName: release.name || latestTag,
-            releaseNotes: release.body || '',
-            publishedAt: release.published_at || '',
-            downloadUrl: matchedAsset ? matchedAsset.browser_download_url : (release.html_url || 'https://github.com/Kimmojiraja/fokk-project/releases/latest'),
+            releaseName: targetRelease.name || rawTag,
+            releaseNotes: targetRelease.body || '',
+            publishedAt: targetRelease.published_at || '',
+            downloadUrl: matchedAsset ? matchedAsset.browser_download_url : (targetRelease.html_url || 'https://github.com/Kimmojiraja/fokk-project/releases'),
             fileName: matchedAsset ? matchedAsset.name : `fokk-browser-${latestVersion}`,
             fileSize: matchedAsset ? matchedAsset.size : 0
         };
