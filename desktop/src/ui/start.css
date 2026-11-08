@@ -92,6 +92,14 @@ body {
     gap: 14px;
 }
 
+.brand-app-logo {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    box-shadow: 0 4px 22px rgba(0, 229, 255, 0.35);
+    object-fit: cover;
+}
+
 .brand-emblem {
     width: 44px;
     height: 44px;

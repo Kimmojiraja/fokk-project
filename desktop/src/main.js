@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, session, dialog, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const AdBlockEngine = require('./adblock');
@@ -10,20 +10,24 @@ const packagedAssetsDir = path.join(process.resourcesPath || '', 'assets');
 const ASSETS_DIR = fs.existsSync(packagedAssetsDir) ? packagedAssetsDir : devAssetsDir;
 const START_PAGE_URL = `file://${path.join(__dirname, 'ui', 'start.html')}`;
 const PRELOAD_PATH = path.join(__dirname, 'preload.js');
-const ICON_PATH = path.join(__dirname, '..', 'assets', 'icon.png');
+const ICON_PATH = fs.existsSync(path.join(__dirname, 'ui', 'icon.png'))
+    ? path.join(__dirname, 'ui', 'icon.png')
+    : path.join(__dirname, '..', 'assets', 'icon.png');
 
 let mainWindow = null;
+let shieldEnabled = true;
 const adblock = new AdBlockEngine(ASSETS_DIR);
 
 function createWindow() {
+    const appIcon = nativeImage.createFromPath(ICON_PATH);
     mainWindow = new BrowserWindow({
         width: 1280,
         height: 850,
         minWidth: 800,
         minHeight: 600,
         frame: false,
-        backgroundColor: '#0B0F19',
-        icon: ICON_PATH,
+        backgroundColor: '#090A0C',
+        icon: appIcon,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
@@ -35,7 +39,7 @@ function createWindow() {
 
     // Adblocker Network Interceptor
     session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
-        if (adblock.shouldBlock(details.url, details.resourceType)) {
+        if (shieldEnabled && adblock.shouldBlock(details.url, details.resourceType)) {
             // Send live stats update to UI
             if (mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send('fokk-stats-updated', adblock.getStats());
@@ -50,7 +54,9 @@ function createWindow() {
     app.on('web-contents-created', (event, contents) => {
         if (contents.getType() === 'webview') {
             contents.on('dom-ready', () => {
-                adblock.injectCosmeticFilters(contents);
+                if (shieldEnabled) {
+                    adblock.injectCosmeticFilters(contents);
+                }
             });
         }
     });
@@ -162,6 +168,67 @@ ipcMain.on('fokk-open-url', (event, url) => {
 ipcMain.on('fokk-open-menu', () => {
     console.log('[Menu] Native menu opened');
 });
+
+// Shield state toggle and status
+ipcMain.on('fokk-toggle-shield', (event, val) => {
+    if (typeof val === 'boolean') {
+        shieldEnabled = val;
+    } else {
+        shieldEnabled = !shieldEnabled;
+    }
+    event.returnValue = shieldEnabled;
+});
+
+ipcMain.on('fokk-get-shield-status', (event) => {
+    event.returnValue = shieldEnabled;
+});
+
+// Burn session: Purge all history, cookies, cache, local storage
+ipcMain.handle('fokk-burn-session', async () => {
+    try {
+        await session.defaultSession.clearStorageData({
+            storages: ['cookies', 'localstorage', 'cache', 'shadercache', 'websql', 'indexdb', 'serviceworkers', 'cachestorage']
+        });
+        await session.defaultSession.clearCache();
+        return { success: true };
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+});
+
+// Selective clear data
+ipcMain.handle('fokk-clear-data', async (event, options) => {
+    try {
+        await session.defaultSession.clearStorageData(options || {});
+        return { success: true };
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+});
+
+// DNS-over-HTTPS configuration
+ipcMain.on('fokk-set-doh', (event, provider) => {
+    try {
+        const dohMap = {
+            cloudflare: 'https://cloudflare-dns.com/dns-query',
+            quad9: 'https://dns.quad9.net/dns-query',
+            google: 'https://dns.google/dns-query'
+        };
+        if (dohMap[provider] && app.configureHostResolver) {
+            app.configureHostResolver({
+                secureDnsMode: 'secure',
+                secureDnsServers: [dohMap[provider]]
+            });
+        } else if (app.configureHostResolver) {
+            app.configureHostResolver({
+                secureDnsMode: 'off'
+            });
+        }
+    } catch (e) {
+        console.error('[DoH] Failed to configure host resolver:', e);
+    }
+});
+
 
 // Application Lifecycle
 app.whenReady().then(() => {

@@ -3,6 +3,9 @@ const { ipcRenderer } = require('electron');
 let tabs = [];
 let activeTabId = null;
 let tabCounter = 0;
+let currentZoom = 1.0;
+let isForcedDark = false;
+let isReaderActive = false;
 
 const tabStrip = document.getElementById('tabStrip');
 const btnNewTab = document.getElementById('btnNewTab');
@@ -15,47 +18,107 @@ const btnHome = document.getElementById('btnHome');
 const shieldCountText = document.getElementById('shieldCountText');
 const shieldBadge = document.getElementById('shieldBadge');
 const btnVisuals = document.getElementById('btnVisuals');
+const btnDownloadsNav = document.getElementById('btnDownloadsNav');
 const btnMenu = document.getElementById('btnMenu');
+const desktopBrowserMenu = document.getElementById('desktopBrowserMenu');
+const featureHubModal = document.getElementById('featureHubModal');
+const featureModalTitle = document.getElementById('featureModalTitle');
+const featureModalBody = document.getElementById('featureModalBody');
+const btnCloseFeatureModal = document.getElementById('btnCloseFeatureModal');
+const toastContainer = document.getElementById('toastContainer');
+const btnReaderMode = document.getElementById('btnReaderMode');
+const btnBookmarkOmni = document.getElementById('btnBookmarkOmni');
+
+// Window controls
+const btnMin = document.getElementById('btnMin');
+const btnMax = document.getElementById('btnMax');
+const btnClose = document.getElementById('btnClose');
 
 const START_PAGE_URL = ipcRenderer.sendSync('fokk-get-start-page-url');
 const PRELOAD_SCRIPT_PATH = ipcRenderer.sendSync('fokk-get-preload-path');
 
-// 1. Tab Creation & Switching
-function createTab(url = START_PAGE_URL, makeActive = true) {
+// Search Engine Registry
+const OMNIBOX_ENGINES = {
+    google: {
+        name: 'Google',
+        searchUrl: 'https://www.google.com/search?q=',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.04h3.88c2.27-2.09 3.66-5.17 3.66-9.14z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.04c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.27 21.43 7.35 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.28c-.24-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28V6.59H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.41l4.03-3.13z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.27 2.57 1.25 6.59l4.03 3.13c.95-2.83 3.6-4.97 6.72-4.97z"/></svg>'
+    },
+    brave: {
+        name: 'Brave Search',
+        searchUrl: 'https://search.brave.com/search?q=',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#FB542B" d="M12 2L3 6v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V6l-9-4z"/></svg>'
+    },
+    duckduckgo: {
+        name: 'DuckDuckGo',
+        searchUrl: 'https://duckduckgo.com/?q=',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#DE5833"/><circle cx="12" cy="12" r="4" fill="#FFF"/></svg>'
+    },
+    bing: {
+        name: 'Bing',
+        searchUrl: 'https://www.bing.com/search?q=',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#008373" d="M5 3v18l7-4V7.5L8.5 6V3H5zm9 5l-2 1.2V14l4.5 2.5 3.5-2V10l-6-2z"/></svg>'
+    },
+    ecosia: {
+        name: 'Ecosia',
+        searchUrl: 'https://www.ecosia.org/search?q=',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#00A389" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4 0h-2v-4h2v4z"/></svg>'
+    }
+};
+
+let currentEngine = localStorage.getItem('fokk_search_engine') || 'google';
+
+// Toast Notification System
+function showToast(message, isAlert = false) {
+    if (!toastContainer) return;
+    const toast = document.createElement('div');
+    toast.className = 'fokk-toast';
+    if (isAlert) {
+        toast.style.borderColor = 'rgba(255, 82, 82, 0.6)';
+    }
+    toast.innerHTML = message;
+    toastContainer.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 2800);
+}
+
+// 1. Tab Creation & Management
+function createTab(url = START_PAGE_URL, options = {}) {
     tabCounter++;
     const tabId = 'tab_' + tabCounter;
+    const isPrivate = !!options.isPrivate;
 
-    // Create tab button
     const tabEl = document.createElement('div');
-    tabEl.className = 'browser-tab';
+    tabEl.className = 'browser-tab' + (isPrivate ? ' private-tab' : '');
     tabEl.id = 'tab_btn_' + tabId;
     tabEl.innerHTML = `
-        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300E5FF'><path d='M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm0 2.18l6 2.25v4.66c0 4.14-2.73 8.01-6 9.07-3.27-1.06-6-4.93-6-9.07V6.43l6-2.25z'/></svg>" class="tab-favicon" id="fav_${tabId}">
-        <span class="tab-title" id="title_${tabId}">New Tab</span>
+        <img src="icon.png" class="tab-favicon" id="fav_${tabId}">
+        <span class="tab-title" id="title_${tabId}">${isPrivate ? 'Private Tab' : 'New Tab'}</span>
         <button class="tab-close" title="Close Tab (Ctrl+W)">&times;</button>
     `;
 
-    // Tab close click
     tabEl.querySelector('.tab-close').onclick = (e) => {
         e.stopPropagation();
         closeTab(tabId);
     };
 
-    // Tab activate click
     tabEl.onclick = () => activateTab(tabId);
-
-    // Insert before the new tab button
     tabStrip.insertBefore(tabEl, btnNewTab);
 
-    // Create webview element
     const webview = document.createElement('webview');
     webview.id = 'view_' + tabId;
     webview.setAttribute('src', url);
     webview.setAttribute('preload', PRELOAD_SCRIPT_PATH);
     webview.setAttribute('allowpopups', 'true');
     webview.setAttribute('webpreferences', 'contextIsolation=yes, javascript=yes');
+    if (isPrivate) {
+        webview.setAttribute('partition', 'fokk_incognito_' + Date.now());
+    }
 
-    // Webview event listeners
     webview.addEventListener('did-start-loading', () => {
         if (activeTabId === tabId) {
             btnReload.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
@@ -66,18 +129,21 @@ function createTab(url = START_PAGE_URL, makeActive = true) {
         if (activeTabId === tabId) {
             btnReload.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/></svg>`;
             updateNavState(webview);
+            updateOmnibox(webview.getURL());
         }
     });
 
     webview.addEventListener('page-title-updated', (e) => {
         const titleEl = document.getElementById('title_' + tabId);
-        if (titleEl) titleEl.textContent = e.title || 'Fokk Browser';
+        if (titleEl && e.title) {
+            titleEl.textContent = (isPrivate ? '🕵️ ' : '') + e.title;
+        }
     });
 
     webview.addEventListener('page-favicon-updated', (e) => {
-        if (e.favicons && e.favicons.length > 0) {
-            const favEl = document.getElementById('fav_' + tabId);
-            if (favEl) favEl.src = e.favicons[0];
+        const favEl = document.getElementById('fav_' + tabId);
+        if (favEl && e.favicons && e.favicons.length > 0) {
+            favEl.src = e.favicons[0];
         }
     });
 
@@ -88,32 +154,27 @@ function createTab(url = START_PAGE_URL, makeActive = true) {
         }
     });
 
-    webview.addEventListener('did-navigate-in-page', (e) => {
-        if (activeTabId === tabId) {
-            updateOmnibox(e.url);
-            updateNavState(webview);
-        }
+    webview.addEventListener('new-window', (e) => {
+        createTab(e.url, { isPrivate });
     });
 
     viewsContainer.appendChild(webview);
 
-    tabs.push({ id: tabId, element: tabEl, webview: webview });
-
-    if (makeActive) {
-        activateTab(tabId);
-    }
-    return tabId;
+    tabs.push({ id: tabId, el: tabEl, webview: webview, isPrivate: isPrivate });
+    activateTab(tabId);
 }
 
 function activateTab(tabId) {
     activeTabId = tabId;
     tabs.forEach(t => {
-        const isCurrent = t.id === tabId;
-        t.element.classList.toggle('active', isCurrent);
-        t.webview.classList.toggle('active', isCurrent);
-        if (isCurrent) {
+        if (t.id === tabId) {
+            t.el.classList.add('active');
+            t.webview.classList.add('active');
             updateOmnibox(t.webview.getURL ? t.webview.getURL() : '');
             updateNavState(t.webview);
+        } else {
+            t.el.classList.remove('active');
+            t.webview.classList.remove('active');
         }
     });
 }
@@ -122,9 +183,9 @@ function closeTab(tabId) {
     const idx = tabs.findIndex(t => t.id === tabId);
     if (idx === -1) return;
 
-    const tab = tabs[idx];
-    tab.element.remove();
-    tab.webview.remove();
+    const t = tabs[idx];
+    t.el.remove();
+    t.webview.remove();
     tabs.splice(idx, 1);
 
     if (tabs.length === 0) {
@@ -135,34 +196,84 @@ function closeTab(tabId) {
     }
 }
 
-// Search Engines Configuration for Omnibox
-const OMNIBOX_ENGINES = {
-    google: {
-        name: 'Google',
-        url: 'https://www.google.com/search?q=',
-        icon: `<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.04h3.88c2.27-2.09 3.66-5.17 3.66-9.14z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.04c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.27 21.43 7.35 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.28c-.24-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28V6.59H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.41l4.03-3.13z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.27 2.57 1.25 6.59l4.03 3.13c.95-2.83 3.6-4.97 6.72-4.97z"/></svg>`
-    },
-    brave: {
-        name: 'Brave Search',
-        url: 'https://search.brave.com/search?q=',
-        icon: `<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#FB542B" d="M12 2L3 6.5v6.5C3 18.25 7 22.5 12 24c5-1.5 9-5.75 9-11V6.5L12 2z"/></svg>`
-    },
-    duckduckgo: {
-        name: 'DuckDuckGo',
-        url: 'https://duckduckgo.com/?q=',
-        icon: `<svg width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#DE5833"/><circle cx="12" cy="12" r="4" fill="#FFFFFF"/></svg>`
-    },
-    bing: {
-        name: 'Bing',
-        url: 'https://www.bing.com/search?q=',
-        icon: `<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#008373" d="M5 2v19.5l4.5-2.5 5.5 3 4-2.5V8.5L12 5l-7-3z"/></svg>`
+function updateNavState(webview) {
+    if (!webview || typeof webview.canGoBack !== 'function') return;
+    btnBack.disabled = !webview.canGoBack();
+    btnForward.disabled = !webview.canGoForward();
+}
+
+function updateOmnibox(rawUrl) {
+    if (!rawUrl || rawUrl.includes('start.html') || rawUrl.includes('fokk_start.html') || rawUrl.startsWith('file://')) {
+        urlInput.value = '';
+        const engine = OMNIBOX_ENGINES[currentEngine] || OMNIBOX_ENGINES.google;
+        urlInput.placeholder = `Search with ${engine.name} or enter address`;
+        if (btnBookmarkOmni) btnBookmarkOmni.classList.remove('active');
+    } else {
+        urlInput.value = rawUrl;
+        const bookmarks = JSON.parse(localStorage.getItem('fokk_bookmarks') || '[]');
+        if (btnBookmarkOmni) {
+            btnBookmarkOmni.classList.toggle('active', bookmarks.some(b => b.url === rawUrl));
+        }
+    }
+}
+
+// 2. Navigation Actions
+btnBack.onclick = () => {
+    const active = getActiveWebview();
+    if (active && active.canGoBack()) active.goBack();
+};
+
+btnForward.onclick = () => {
+    const active = getActiveWebview();
+    if (active && active.canGoForward()) active.goForward();
+};
+
+btnReload.onclick = () => {
+    const active = getActiveWebview();
+    if (active) {
+        if (active.isLoading()) active.stop();
+        else active.reload();
     }
 };
 
-let activeOmniboxEngine = 'google';
+btnHome.onclick = () => {
+    const active = getActiveWebview();
+    if (active) active.loadURL(START_PAGE_URL);
+};
+
+btnNewTab.onclick = () => createTab(START_PAGE_URL);
+
+// Window controls
+if (btnMin) btnMin.onclick = () => ipcRenderer.send('fokk-win-min');
+if (btnMax) btnMax.onclick = () => ipcRenderer.send('fokk-win-max');
+if (btnClose) btnClose.onclick = () => ipcRenderer.send('fokk-win-close');
+
+function getActiveWebview() {
+    const t = tabs.find(x => x.id === activeTabId);
+    return t ? t.webview : null;
+}
+
+// 3. Omnibox Engine Selector & Submission
 const omniboxEngineSelector = document.getElementById('omniboxEngineSelector');
 const omniboxEngineIcon = document.getElementById('omniboxEngineIcon');
 const omniboxEngineDropdown = document.getElementById('omniboxEngineDropdown');
+
+function setOmniboxEngine(engineId) {
+    if (!OMNIBOX_ENGINES[engineId]) return;
+    currentEngine = engineId;
+    localStorage.setItem('fokk_search_engine', engineId);
+
+    if (omniboxEngineIcon) {
+        omniboxEngineIcon.innerHTML = OMNIBOX_ENGINES[engineId].iconSvg;
+    }
+    updateOmnibox(getActiveWebview()?.getURL?.() || '');
+
+    if (omniboxEngineDropdown) {
+        omniboxEngineDropdown.querySelectorAll('.engine-item').forEach(item => {
+            item.classList.toggle('selected', item.getAttribute('data-engine') === engineId);
+        });
+    }
+}
 
 if (omniboxEngineSelector && omniboxEngineDropdown) {
     omniboxEngineSelector.addEventListener('click', (e) => {
@@ -170,211 +281,605 @@ if (omniboxEngineSelector && omniboxEngineDropdown) {
         omniboxEngineDropdown.classList.toggle('hidden');
     });
 
-    document.addEventListener('click', () => {
-        omniboxEngineDropdown.classList.add('hidden');
-    });
-
     omniboxEngineDropdown.querySelectorAll('.engine-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const engineKey = item.getAttribute('data-engine');
-            if (OMNIBOX_ENGINES[engineKey]) {
-                activeOmniboxEngine = engineKey;
-                omniboxEngineIcon.innerHTML = OMNIBOX_ENGINES[engineKey].icon;
-                omniboxEngineDropdown.querySelectorAll('.engine-item').forEach(i => i.classList.remove('selected'));
-                item.classList.add('selected');
-                updateOmnibox(getActiveWebview() ? getActiveWebview().getURL() : '');
-            }
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setOmniboxEngine(item.getAttribute('data-engine'));
+            omniboxEngineDropdown.classList.add('hidden');
         });
     });
 }
 
-function updateOmnibox(url) {
-    if (!url || url.includes('start.html') || url.includes('fokk_start.html') || url.startsWith('file://')) {
-        urlInput.value = '';
-        urlInput.placeholder = `Search with ${OMNIBOX_ENGINES[activeOmniboxEngine].name} or enter address`;
-    } else {
-        urlInput.value = url;
+setOmniboxEngine(currentEngine);
+
+urlInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const query = urlInput.value.trim();
+        if (!query) return;
+
+        let targetUrl = '';
+        if (/^https?:\/\//i.test(query)) {
+            targetUrl = query;
+        } else if (query.includes('.') && !query.includes(' ') && !query.endsWith('.')) {
+            targetUrl = 'https://' + query;
+        } else {
+            const engine = OMNIBOX_ENGINES[currentEngine] || OMNIBOX_ENGINES.google;
+            targetUrl = engine.searchUrl + encodeURIComponent(query);
+        }
+
+        const active = getActiveWebview();
+        if (active) active.loadURL(targetUrl);
     }
+});
+
+// Omnibox Reader Mode & Bookmark buttons
+if (btnReaderMode) {
+    btnReaderMode.addEventListener('click', () => {
+        const active = getActiveWebview();
+        if (!active) return;
+        isReaderActive = !isReaderActive;
+        btnReaderMode.classList.toggle('active', isReaderActive);
+
+        if (isReaderActive) {
+            active.executeJavaScript(`
+                (function() {
+                    if (document.getElementById('fokk-reader-style')) return;
+                    const style = document.createElement('style');
+                    style.id = 'fokk-reader-style';
+                    style.innerHTML = \`
+                        body { max-width: 760px !important; margin: 40px auto !important; padding: 0 24px !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Georgia, serif !important; font-size: 19px !important; line-height: 1.65 !important; background: #0D0E12 !important; color: #E2E8F0 !important; }
+                        nav, aside, header, footer, .ad, .advertisement, [class*="sidebar"], [id*="sidebar"] { display: none !important; }
+                        img { max-width: 100% !important; height: auto !important; border-radius: 8px !important; margin: 16px 0 !important; }
+                    \`;
+                    document.head.appendChild(style);
+                })();
+            `);
+            showToast('📖 Reader Mode Enabled');
+        } else {
+            active.executeJavaScript(`
+                const r = document.getElementById('fokk-reader-style');
+                if (r) r.remove();
+            `);
+            showToast('Standard View Restored');
+        }
+    });
 }
 
-function updateNavState(webview) {
-    try {
-        btnBack.disabled = !webview.canGoBack();
-        btnForward.disabled = !webview.canGoForward();
-    } catch (_) {}
+if (btnBookmarkOmni) {
+    btnBookmarkOmni.addEventListener('click', () => {
+        const active = getActiveWebview();
+        if (!active) return;
+        const url = active.getURL();
+        const title = active.getTitle() || url;
+        if (!url || url.startsWith('file://')) return;
+
+        let bookmarks = JSON.parse(localStorage.getItem('fokk_bookmarks') || '[]');
+        const exists = bookmarks.some(b => b.url === url);
+
+        if (exists) {
+            bookmarks = bookmarks.filter(b => b.url !== url);
+            btnBookmarkOmni.classList.remove('active');
+            showToast('Removed from Bookmarks');
+        } else {
+            bookmarks.push({ title, url, time: Date.now() });
+            btnBookmarkOmni.classList.add('active');
+            showToast('⭐ Saved to Bookmarks');
+        }
+        localStorage.setItem('fokk_bookmarks', JSON.stringify(bookmarks));
+    });
 }
 
-function getActiveWebview() {
-    const tab = tabs.find(t => t.id === activeTabId);
-    return tab ? tab.webview : null;
-}
-
-// 2. Navigation Controls
-btnBack.onclick = () => {
-    const wv = getActiveWebview();
-    if (wv && wv.canGoBack()) wv.goBack();
-};
-
-btnForward.onclick = () => {
-    const wv = getActiveWebview();
-    if (wv && wv.canGoForward()) wv.goForward();
-};
-
-btnReload.onclick = () => {
-    const wv = getActiveWebview();
-    if (wv) {
-        if (wv.isLoading()) wv.stop();
-        else wv.reload();
-    }
-};
-
-btnHome.onclick = () => {
-    const wv = getActiveWebview();
-    if (wv) wv.loadURL(START_PAGE_URL);
-};
-
-btnVisuals.onclick = () => {
-    const wv = getActiveWebview();
-    if (wv) {
-        wv.loadURL(START_PAGE_URL);
-        setTimeout(() => {
-            wv.executeJavaScript("document.getElementById('btnFloatingCustomize') && document.getElementById('btnFloatingCustomize').click();");
-        }, 350);
-    }
-};
-
-// 3. Desktop 3-Dots Menu Dropdown
-const desktopBrowserMenu = document.getElementById('desktopBrowserMenu');
-
+// 4. Desktop Browser Menu & Daily Essentials
 if (btnMenu && desktopBrowserMenu) {
-    btnMenu.onclick = (e) => {
+    btnMenu.addEventListener('click', (e) => {
         e.stopPropagation();
         desktopBrowserMenu.classList.toggle('hidden');
-    };
+    });
 
     document.addEventListener('click', (e) => {
         if (!desktopBrowserMenu.contains(e.target) && e.target !== btnMenu) {
             desktopBrowserMenu.classList.add('hidden');
         }
-    });
-
-    document.getElementById('menuNewTab').onclick = () => {
-        createTab(START_PAGE_URL);
-        desktopBrowserMenu.classList.add('hidden');
-    };
-
-    document.getElementById('menuVisuals').onclick = () => {
-        btnVisuals.click();
-        desktopBrowserMenu.classList.add('hidden');
-    };
-
-    document.getElementById('menuBookmarks').onclick = () => {
-        const wv = getActiveWebview();
-        const title = wv ? wv.getTitle() : 'New Tab';
-        alert(`Bookmarked: ${title}`);
-        desktopBrowserMenu.classList.add('hidden');
-    };
-
-    document.getElementById('menuHistory').onclick = () => {
-        createTab('https://myactivity.google.com');
-        desktopBrowserMenu.classList.add('hidden');
-    };
-
-    document.getElementById('menuDownloads').onclick = () => {
-        alert('Downloads: Files are saved to your system Downloads folder.');
-        desktopBrowserMenu.classList.add('hidden');
-    };
-
-    let currentZoom = 1.0;
-    const zoomLevelText = document.getElementById('zoomLevelText');
-    document.getElementById('btnZoomIn').onclick = () => {
-        currentZoom = Math.min(2.0, Math.round((currentZoom + 0.1) * 10) / 10);
-        const wv = getActiveWebview();
-        if (wv) wv.setZoomFactor(currentZoom);
-        zoomLevelText.textContent = Math.round(currentZoom * 100) + '%';
-    };
-    document.getElementById('btnZoomOut').onclick = () => {
-        currentZoom = Math.max(0.5, Math.round((currentZoom - 0.1) * 10) / 10);
-        const wv = getActiveWebview();
-        if (wv) wv.setZoomFactor(currentZoom);
-        zoomLevelText.textContent = Math.round(currentZoom * 100) + '%';
-    };
-
-    let shieldActive = true;
-    document.getElementById('menuToggleShield').onclick = () => {
-        shieldActive = !shieldActive;
-        document.getElementById('menuToggleShield').querySelector('span').textContent = 
-            shieldActive ? 'Fokk Shield: Active' : 'Fokk Shield: Paused';
-        shieldBadge.style.opacity = shieldActive ? '1' : '0.4';
-    };
-
-    document.getElementById('menuClearData').onclick = () => {
-        const wv = getActiveWebview();
-        if (wv) {
-            wv.clearHistory();
+        if (omniboxEngineDropdown && !omniboxEngineSelector.contains(e.target)) {
+            omniboxEngineDropdown.classList.add('hidden');
         }
-        alert('Browsing data and cache cleared.');
+    });
+}
+
+// Quick Nav in Menu
+const menuNavBack = document.getElementById('menuNavBack');
+const menuNavForward = document.getElementById('menuNavForward');
+const menuNavReload = document.getElementById('menuNavReload');
+const menuNavHome = document.getElementById('menuNavHome');
+const menuNavHistory = document.getElementById('menuNavHistory');
+const menuNavDownloads = document.getElementById('menuNavDownloads');
+
+if (menuNavBack) menuNavBack.onclick = () => btnBack.click();
+if (menuNavForward) menuNavForward.onclick = () => btnForward.click();
+if (menuNavReload) menuNavReload.onclick = () => btnReload.click();
+if (menuNavHome) menuNavHome.onclick = () => btnHome.click();
+if (menuNavHistory) menuNavHistory.onclick = () => openFeatureHub('privacy');
+if (menuNavDownloads) menuNavDownloads.onclick = () => showToast('📥 Downloads directory: ~/Downloads');
+
+// Shield Toggle in Menu
+const menuShieldToggle = document.getElementById('menuShieldToggle');
+const menuShieldBadge = document.getElementById('menuShieldBadge');
+
+if (menuShieldToggle) {
+    menuShieldToggle.addEventListener('click', () => {
+        const isEnabled = ipcRenderer.sendSync('fokk-toggle-shield');
+        if (menuShieldBadge) {
+            menuShieldBadge.textContent = isEnabled ? 'SHIELD ACTIVE' : 'SHIELD DISABLED';
+            menuShieldBadge.className = 'shield-status-badge ' + (isEnabled ? 'active' : 'disabled');
+        }
+        showToast(isEnabled ? '🛡️ Fokk Shield: Active' : '⚠️ Fokk Shield: Disabled');
+    });
+}
+
+// 🔥 Burn Session
+const btnBurnSession = document.getElementById('btnBurnSession');
+if (btnBurnSession) {
+    btnBurnSession.addEventListener('click', async () => {
+        desktopBrowserMenu.classList.add('hidden');
+        showToast('🔥 Burning browsing session and cookies...', true);
+
+        try {
+            await ipcRenderer.invoke('fokk-burn-session');
+            localStorage.removeItem('fokk_bookmarks');
+            localStorage.removeItem('fokk_search_history');
+
+            // Close all extra tabs
+            while (tabs.length > 1) {
+                closeTab(tabs[tabs.length - 1].id);
+            }
+            const active = getActiveWebview();
+            if (active) active.loadURL(START_PAGE_URL);
+
+            showToast('🔥 All cookies, cache & history burned!', true);
+        } catch (e) {
+            showToast('Failed to burn session: ' + e.message, true);
+        }
+    });
+}
+
+// Daily Essentials Actions
+const actNewTab = document.getElementById('actNewTab');
+const actPrivateTab = document.getElementById('actPrivateTab');
+const actReaderMode = document.getElementById('actReaderMode');
+const actForceDark = document.getElementById('actForceDark');
+const actDesktopUA = document.getElementById('actDesktopUA');
+const actShare = document.getElementById('actShare');
+const actAddShortcut = document.getElementById('actAddShortcut');
+const actBookmarks = document.getElementById('actBookmarks');
+
+if (actNewTab) actNewTab.onclick = () => { createTab(START_PAGE_URL); desktopBrowserMenu.classList.add('hidden'); };
+if (actPrivateTab) actPrivateTab.onclick = () => { createTab(START_PAGE_URL, { isPrivate: true }); desktopBrowserMenu.classList.add('hidden'); };
+if (actReaderMode) actReaderMode.onclick = () => { if (btnReaderMode) btnReaderMode.click(); desktopBrowserMenu.classList.add('hidden'); };
+
+if (actForceDark) {
+    actForceDark.onclick = () => {
+        const active = getActiveWebview();
+        if (!active) return;
+        isForcedDark = !isForcedDark;
+        desktopBrowserMenu.classList.add('hidden');
+        if (isForcedDark) {
+            active.insertCSS('html { filter: invert(90%) hue-rotate(180deg) !important; background: #121212 !important; } img, video, iframe, canvas { filter: invert(100%) hue-rotate(180deg) !important; }');
+            showToast('🌓 Dark Mode Forced');
+        } else {
+            active.reload();
+            showToast('Standard Theme Restored');
+        }
+    };
+}
+
+let isMobileUA = false;
+if (actDesktopUA) {
+    actDesktopUA.onclick = () => {
+        const active = getActiveWebview();
+        if (!active) return;
+        desktopBrowserMenu.classList.add('hidden');
+        isMobileUA = !isMobileUA;
+        const mobileUA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36';
+        const desktopUA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+        active.setUserAgent(isMobileUA ? mobileUA : desktopUA);
+        active.reload();
+        showToast(isMobileUA ? '📱 Switched to Mobile User-Agent' : '🖥️ Switched to Desktop User-Agent');
+    };
+}
+
+if (actShare) {
+    actShare.onclick = () => {
+        const active = getActiveWebview();
+        if (active) {
+            const url = active.getURL();
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('🔗 Link copied to clipboard!');
+            });
+        }
         desktopBrowserMenu.classList.add('hidden');
     };
 }
 
-// 4. Omnibox Submit Handling with Search Engine Selection
-urlInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        let input = urlInput.value.trim();
-        if (!input) return;
-
-        let targetUrl = input;
-        const hasProtocol = /^https?:\/\//i.test(input);
-        const hasTld = /^([a-z0-9-]+\.)+[a-z]{2,}(\/.*)?$/i.test(input);
-
-        if (hasProtocol) {
-            targetUrl = input;
-        } else if (hasTld && !input.includes(' ')) {
-            targetUrl = 'https://' + input;
-        } else {
-            targetUrl = OMNIBOX_ENGINES[activeOmniboxEngine].url + encodeURIComponent(input);
+if (actAddShortcut) {
+    actAddShortcut.onclick = () => {
+        const active = getActiveWebview();
+        if (active) {
+            const url = active.getURL();
+            const name = active.getTitle() || 'Shortcut';
+            if (url && !url.startsWith('file://')) {
+                let shortcuts = JSON.parse(localStorage.getItem('fokk_desktop_shortcuts') || '[]');
+                shortcuts.push({ name, url, sub: new URL(url).hostname });
+                localStorage.setItem('fokk_desktop_shortcuts', JSON.stringify(shortcuts));
+                showToast(`⚡ Added "${name}" to Home Shortcuts`);
+            }
         }
+        desktopBrowserMenu.classList.add('hidden');
+    };
+}
 
-        const wv = getActiveWebview();
-        if (wv) {
-            wv.loadURL(targetUrl);
-            wv.focus();
+if (actBookmarks) actBookmarks.onclick = () => { openFeatureHub('privacy'); desktopBrowserMenu.classList.add('hidden'); };
+
+// Zoom Controls
+const btnZoomIn = document.getElementById('btnZoomIn');
+const btnZoomOut = document.getElementById('btnZoomOut');
+const zoomLevelText = document.getElementById('zoomLevelText');
+
+if (btnZoomIn) {
+    btnZoomIn.onclick = () => {
+        const active = getActiveWebview();
+        if (active) {
+            currentZoom = Math.min(2.5, currentZoom + 0.1);
+            active.setZoomFactor(currentZoom);
+            if (zoomLevelText) zoomLevelText.textContent = Math.round(currentZoom * 100) + '%';
         }
-    }
+    };
+}
+
+if (btnZoomOut) {
+    btnZoomOut.onclick = () => {
+        const active = getActiveWebview();
+        if (active) {
+            currentZoom = Math.max(0.5, currentZoom - 0.1);
+            active.setZoomFactor(currentZoom);
+            if (zoomLevelText) zoomLevelText.textContent = Math.round(currentZoom * 100) + '%';
+        }
+    };
+}
+
+// 5. Feature Hubs Modal
+const PREINSTALLED_SAILBOATS = [
+    { id: 'sailboat', name: 'Sunset Coastal Sailboat (Default)', file: 'wallpaper_sailboat.jpg' },
+    { id: 'sailboat_2', name: 'Azure Ocean Yacht', file: 'wallpaper_sailboat_2.jpg' },
+    { id: 'sailboat_3', name: 'Golden Hour Sloop', file: 'wallpaper_sailboat_3.jpg' },
+    { id: 'sailboat_4', name: 'Open Sea Regatta', file: 'wallpaper_sailboat_4.jpg' },
+    { id: 'sailboat_5', name: 'Tropical Lagoon Sailboat', file: 'wallpaper_sailboat_5.jpg' },
+    { id: 'sailboat_6', name: 'Dramatic Horizon Sailing', file: 'wallpaper_sailboat_6.jpg' }
+];
+
+document.querySelectorAll('.menu-hub-item').forEach(item => {
+    item.addEventListener('click', () => {
+        const hubId = item.getAttribute('data-hub');
+        openFeatureHub(hubId);
+        desktopBrowserMenu.classList.add('hidden');
+    });
 });
 
-btnNewTab.onclick = () => createTab(START_PAGE_URL);
+if (btnVisuals) {
+    btnVisuals.addEventListener('click', () => openFeatureHub('visuals'));
+}
+if (btnDownloadsNav) {
+    btnDownloadsNav.addEventListener('click', () => showToast('📥 Downloads directory: ~/Downloads'));
+}
 
-// 5. Window Controls
-document.getElementById('btnMin').onclick = () => ipcRenderer.send('fokk-win-min');
-document.getElementById('btnMax').onclick = () => ipcRenderer.send('fokk-win-max');
-document.getElementById('btnClose').onclick = () => ipcRenderer.send('fokk-win-close');
+function openFeatureHub(hubId) {
+    if (!featureHubModal || !featureModalBody) return;
 
-// 6. Adblock Stats Sync
-ipcRenderer.on('fokk-stats-updated', (event, stats) => {
-    if (stats && typeof stats.blocked === 'number') {
-        shieldCountText.textContent = stats.blocked.toLocaleString();
+    if (hubId === 'general') {
+        featureModalTitle.textContent = '⚙️ General & Search Engines';
+        featureModalBody.innerHTML = `
+            <div class="modal-form-group">
+                <label class="modal-form-label">Default Search Engine</label>
+                <span class="modal-form-sub">Omnibox and new tab search provider</span>
+                <select id="selDefaultEngine" class="modal-select">
+                    <option value="google" ${currentEngine==='google'?'selected':''}>Google Search</option>
+                    <option value="brave" ${currentEngine==='brave'?'selected':''}>Brave Search</option>
+                    <option value="duckduckgo" ${currentEngine==='duckduckgo'?'selected':''}>DuckDuckGo</option>
+                    <option value="bing" ${currentEngine==='bing'?'selected':''}>Microsoft Bing</option>
+                    <option value="ecosia" ${currentEngine==='ecosia'?'selected':''}>Ecosia (Plants Trees)</option>
+                </select>
+            </div>
+            <div class="modal-form-group">
+                <label class="modal-form-label">Home Page Address</label>
+                <input type="text" id="inputHomeUrl" class="modal-input" value="${localStorage.getItem('fokk_custom_home') || 'fokk://newtab'}">
+            </div>
+            <div class="modal-toggle-row">
+                <div class="modal-toggle-text">
+                    <div class="modal-toggle-title">Hardware Acceleration</div>
+                    <div class="modal-toggle-desc">Use GPU for ultra-fast compositor rendering</div>
+                </div>
+                <input type="checkbox" checked disabled>
+            </div>
+            <button class="modal-btn" id="btnSaveGeneral" style="margin-top: 14px;">Save Changes</button>
+        `;
+
+        document.getElementById('btnSaveGeneral').onclick = () => {
+            const chosen = document.getElementById('selDefaultEngine').value;
+            setOmniboxEngine(chosen);
+            const homeUrl = document.getElementById('inputHomeUrl').value;
+            localStorage.setItem('fokk_custom_home', homeUrl);
+            featureHubModal.classList.add('hidden');
+            showToast('Settings Saved');
+        };
+
+    } else if (hubId === 'shield') {
+        featureModalTitle.textContent = '🛡️ Shield & Ghost Stealth';
+        featureModalBody.innerHTML = `
+            <div class="modal-toggle-row">
+                <div class="modal-toggle-text">
+                    <div class="modal-toggle-title">Fokk AdShield Engine</div>
+                    <div class="modal-toggle-desc">Over 40,000 curated network ad & cosmetic defuser rules active</div>
+                </div>
+                <input type="checkbox" id="chkShieldEngine" checked>
+            </div>
+            <div class="modal-toggle-row">
+                <div class="modal-toggle-text">
+                    <div class="modal-toggle-title">Canvas & Fingerprint Cloaking</div>
+                    <div class="modal-toggle-desc">Spoofs canvas readouts to neutralize browser fingerprinting</div>
+                </div>
+                <input type="checkbox" id="chkCanvasCloak" checked>
+            </div>
+            <div class="modal-form-group" style="margin-top: 16px;">
+                <label class="modal-form-label">DNS-over-HTTPS (DoH)</label>
+                <select id="selDoH" class="modal-select">
+                    <option value="cloudflare">Cloudflare (1.1.1.1 — Ultra Fast & Private)</option>
+                    <option value="quad9">Quad9 (9.9.9.9 — Malware Blocking)</option>
+                    <option value="google">Google Public DNS (8.8.8.8)</option>
+                    <option value="off">System Default</option>
+                </select>
+            </div>
+            <button class="modal-btn" id="btnSaveShield" style="margin-top: 14px;">Apply Stealth Protection</button>
+        `;
+
+        document.getElementById('btnSaveShield').onclick = () => {
+            const doh = document.getElementById('selDoH').value;
+            ipcRenderer.send('fokk-set-doh', doh);
+            featureHubModal.classList.add('hidden');
+            showToast('Shield Stealth Settings Applied');
+        };
+
+    } else if (hubId === 'media') {
+        featureModalTitle.textContent = '🎬 Media, Gestures & PiP';
+        featureModalBody.innerHTML = `
+            <div class="modal-form-group">
+                <label class="modal-form-label">Picture-in-Picture</label>
+                <span class="modal-form-sub">Pop video on the current tab into a floating PiP window</span>
+                <button class="modal-btn" id="btnPopPiP">Pop Active Video to PiP</button>
+            </div>
+            <div class="modal-toggle-row">
+                <div class="modal-toggle-text">
+                    <div class="modal-toggle-title">Background Audio Playback</div>
+                    <div class="modal-toggle-desc">Keep videos playing when switching tabs</div>
+                </div>
+                <input type="checkbox" checked disabled>
+            </div>
+            <div class="modal-toggle-row">
+                <div class="modal-toggle-text">
+                    <div class="modal-toggle-title">Block Video Autoplay</div>
+                    <div class="modal-toggle-desc">Prevent intrusive videos from starting with sound</div>
+                </div>
+                <input type="checkbox" checked>
+            </div>
+        `;
+
+        document.getElementById('btnPopPiP').onclick = () => {
+            const active = getActiveWebview();
+            if (active) {
+                active.executeJavaScript(`
+                    const v = document.querySelector('video');
+                    if (v && document.pictureInPictureEnabled) {
+                        v.requestPictureInPicture().catch(e => console.log(e));
+                    }
+                `);
+                showToast('🎬 Picture-in-Picture Triggered');
+            }
+            featureHubModal.classList.add('hidden');
+        };
+
+    } else if (hubId === 'privacy') {
+        featureModalTitle.textContent = '🔐 Privacy Vault & Data Purge';
+        featureModalBody.innerHTML = `
+            <div class="modal-form-group">
+                <label class="modal-form-label">Selective Data Purge</label>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                    <label style="display: flex; gap: 8px; font-size: 13px; color: #FFF;"><input type="checkbox" id="cHistory" checked> Browsing History & Favicons</label>
+                    <label style="display: flex; gap: 8px; font-size: 13px; color: #FFF;"><input type="checkbox" id="cCookies" checked> Cookies & Site Permissions</label>
+                    <label style="display: flex; gap: 8px; font-size: 13px; color: #FFF;"><input type="checkbox" id="cCache" checked> Cached Images & Files</label>
+                    <label style="display: flex; gap: 8px; font-size: 13px; color: #FFF;"><input type="checkbox" id="cStorage" checked> LocalStorage & IndexedDB</label>
+                </div>
+            </div>
+            <button class="modal-btn danger" id="btnPurgeNow" style="margin-top: 16px;">Purge Selected Data Now</button>
+        `;
+
+        document.getElementById('btnPurgeNow').onclick = async () => {
+            const storages = [];
+            if (document.getElementById('cCookies').checked) storages.push('cookies');
+            if (document.getElementById('cCache').checked) storages.push('cache');
+            if (document.getElementById('cStorage').checked) storages.push('localstorage', 'indexdb');
+
+            await ipcRenderer.invoke('fokk-clear-data', { storages });
+            featureHubModal.classList.add('hidden');
+            showToast('✅ Browsing data cleared successfully');
+        };
+
+    } else if (hubId === 'scripts') {
+        featureModalTitle.textContent = '🧩 Extensions & User Scripts';
+        featureModalBody.innerHTML = `
+            <div class="modal-form-group">
+                <label class="modal-form-label">Custom CSS Injector</label>
+                <textarea id="txtCustomCSS" class="modal-textarea" rows="4" placeholder="/* CSS to inject on active page */"></textarea>
+                <button class="modal-btn secondary" id="btnInjectCSS" style="margin-top: 6px;">Inject CSS</button>
+            </div>
+            <div class="modal-form-group" style="margin-top: 16px;">
+                <label class="modal-form-label">Custom JavaScript Injector</label>
+                <textarea id="txtCustomJS" class="modal-textarea" rows="4" placeholder="// JS to evaluate on active page"></textarea>
+                <button class="modal-btn" id="btnInjectJS" style="margin-top: 6px;">Execute JavaScript</button>
+            </div>
+        `;
+
+        document.getElementById('btnInjectCSS').onclick = () => {
+            const css = document.getElementById('txtCustomCSS').value;
+            const active = getActiveWebview();
+            if (active && css) {
+                active.insertCSS(css);
+                showToast('CSS Injected into page');
+            }
+        };
+
+        document.getElementById('btnInjectJS').onclick = () => {
+            const js = document.getElementById('txtCustomJS').value;
+            const active = getActiveWebview();
+            if (active && js) {
+                active.executeJavaScript(js);
+                showToast('JavaScript Executed');
+            }
+        };
+
+    } else if (hubId === 'visuals') {
+        featureModalTitle.textContent = '🖼️ Visuals & 4K Sailboat Studio';
+        const currentWp = localStorage.getItem('fokk_wallpaper_id') || 'sailboat';
+
+        let html = `
+            <div class="modal-form-group">
+                <label class="modal-form-label">Pre-installed 4K Sailboat Wallpapers</label>
+                <span class="modal-form-sub">Zero-loading offline high-resolution nautical backgrounds</span>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px;">
+        `;
+
+        PREINSTALLED_SAILBOATS.forEach(boat => {
+            const isSel = boat.id === currentWp;
+            html += `
+                <div class="wp-thumb-card" data-id="${boat.id}" data-file="${boat.file}" style="background-image: url('${boat.file}'); height: 96px; border-radius: 8px; background-size: cover; background-position: center; border: 2px solid ${isSel ? 'var(--fokk-cyan)' : 'transparent'}; cursor: pointer; position: relative; display: flex; align-items: flex-end; padding: 6px;">
+                    <span style="background: rgba(0,0,0,0.65); padding: 2px 6px; border-radius: 4px; font-size: 10.5px; color: #FFF; font-weight: 600;">${boat.name}</span>
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+            </div>
+            <button class="modal-btn secondary" id="btnUploadCustomWp" style="width: 100%; margin-top: 12px;">Upload Custom Image from Computer</button>
+        `;
+
+        featureModalBody.innerHTML = html;
+
+        featureModalBody.querySelectorAll('.wp-thumb-card').forEach(card => {
+            card.onclick = () => {
+                const id = card.getAttribute('data-id');
+                const file = card.getAttribute('data-file');
+                localStorage.setItem('fokk_wallpaper_id', id);
+                localStorage.removeItem('fokk_custom_wallpaper');
+
+                // Notify start pages
+                tabs.forEach(t => {
+                    t.webview.executeJavaScript(`
+                        if (typeof setWallpaper === 'function') {
+                            setWallpaper({ id: '${id}', url: '${file}' });
+                        }
+                    `).catch(() => {});
+                });
+
+                featureHubModal.classList.add('hidden');
+                showToast(`⛵ Wallpaper applied: ${card.querySelector('span').textContent}`);
+            };
+        });
+
+        document.getElementById('btnUploadCustomWp').onclick = async () => {
+            const dataUrl = await ipcRenderer.invoke('fokk-pick-wallpaper');
+            if (dataUrl) {
+                localStorage.setItem('fokk_custom_wallpaper', dataUrl);
+                tabs.forEach(t => {
+                    t.webview.executeJavaScript(`
+                        const bg = document.getElementById('wallpaperBg');
+                        if (bg) bg.style.backgroundImage = 'url("${dataUrl}")';
+                    `).catch(() => {});
+                });
+                featureHubModal.classList.add('hidden');
+                showToast('Custom Wallpaper uploaded & applied!');
+            }
+        };
+
+    } else if (hubId === 'about') {
+        featureModalTitle.textContent = 'ℹ️ About Fokk Browser';
+        featureModalBody.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
+                <img src="icon.png" style="width: 52px; height: 52px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,229,255,0.4);">
+                <div>
+                    <h3 style="color: #FFF; font-size: 18px;">Fokk Browser Desktop</h3>
+                    <div style="color: var(--fokk-cyan); font-size: 12px; font-weight: 700;">Version 1.0.0 · Rust Shield Edition</div>
+                    <div style="color: var(--text-secondary); font-size: 11px;">Chromium 124 / Electron 30</div>
+                </div>
+            </div>
+            <p style="font-size: 12.5px; line-height: 1.6; color: var(--text-secondary); margin-bottom: 14px;">
+                Fokk Browser is an ultra-fast, zero-compromise desktop web browser engineered with built-in network adblocking, canvas cloaking, DNS privacy, and distraction-free tools.
+            </p>
+            <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px;">
+                <div style="font-size: 12px; font-weight: 700; color: #FFF; margin-bottom: 4px;">Source & Community</div>
+                <div style="font-size: 11.5px; color: var(--fokk-cyan); cursor: pointer;" id="linkRepo">github.com/Kimmojiraja/fokk-project</div>
+            </div>
+        `;
+        document.getElementById('linkRepo').onclick = () => {
+            createTab('https://github.com/Kimmojiraja/fokk-project');
+            featureHubModal.classList.add('hidden');
+        };
     }
-});
 
-// Keyboard Shortcuts (Ctrl+T, Ctrl+W, Ctrl+R, F5, Ctrl+L)
+    featureHubModal.classList.remove('hidden');
+}
+
+if (btnCloseFeatureModal) {
+    btnCloseFeatureModal.onclick = () => featureHubModal.classList.add('hidden');
+}
+if (featureHubModal) {
+    featureHubModal.onclick = (e) => {
+        if (e.target === featureHubModal) featureHubModal.classList.add('hidden');
+    };
+}
+
+// 6. Keyboard Shortcuts
 window.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.key.toLowerCase() === 't') {
-        e.preventDefault();
-        createTab(START_PAGE_URL);
-    } else if (e.ctrlKey && e.key.toLowerCase() === 'w') {
-        e.preventDefault();
-        if (activeTabId) closeTab(activeTabId);
-    } else if ((e.ctrlKey && e.key.toLowerCase() === 'r') || e.key === 'F5') {
-        e.preventDefault();
-        btnReload.click();
-    } else if (e.ctrlKey && e.key.toLowerCase() === 'l') {
-        e.preventDefault();
-        urlInput.select();
-        urlInput.focus();
+    if (e.ctrlKey) {
+        if (e.key === 't' || e.key === 'T') {
+            e.preventDefault();
+            createTab(START_PAGE_URL);
+        } else if (e.key === 'w' || e.key === 'W') {
+            e.preventDefault();
+            if (activeTabId) closeTab(activeTabId);
+        } else if (e.key === 'r' || e.key === 'R') {
+            e.preventDefault();
+            btnReload.click();
+        } else if (e.key === 'l' || e.key === 'L') {
+            e.preventDefault();
+            urlInput.focus();
+            urlInput.select();
+        } else if (e.key === 'd' || e.key === 'D') {
+            e.preventDefault();
+            if (btnBookmarkOmni) btnBookmarkOmni.click();
+        } else if (e.key === '=' || e.key === '+') {
+            e.preventDefault();
+            if (btnZoomIn) btnZoomIn.click();
+        } else if (e.key === '-') {
+            e.preventDefault();
+            if (btnZoomOut) btnZoomOut.click();
+        }
     }
 });
 
-// Start initial tab
+// Real-time AdBlock Stats from Electron Main Process
+ipcRenderer.on('fokk-stats-updated', (event, stats) => {
+    if (shieldCountText && stats && typeof stats.blockedCount === 'number') {
+        shieldCountText.textContent = stats.blockedCount;
+    }
+});
+
+// Initialize Initial Tab
 createTab(START_PAGE_URL);

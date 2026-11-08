@@ -3,34 +3,70 @@
 (function() {
     'use strict';
 
-    // 1. Curated 4K Wallpapers (Sailboats Default)
+    // 1. Curated 4K Wallpapers (Pre-installed Sailboat Collection + Landscapes)
     const CURATED_WALLPAPERS = [
         {
             id: 'sailboat',
-            name: 'Sailboats at Dusk (Default)',
-            url: 'wallpaper_sailboat.jpg'
+            name: 'Sunset Coastal Sailboat (Default)',
+            url: 'wallpaper_sailboat.jpg',
+            thumb: 'wallpaper_sailboat.jpg'
+        },
+        {
+            id: 'sailboat_2',
+            name: 'Azure Ocean Yacht',
+            url: 'wallpaper_sailboat_2.jpg',
+            thumb: 'wallpaper_sailboat_2.jpg'
+        },
+        {
+            id: 'sailboat_3',
+            name: 'Golden Hour Sloop',
+            url: 'wallpaper_sailboat_3.jpg',
+            thumb: 'wallpaper_sailboat_3.jpg'
+        },
+        {
+            id: 'sailboat_4',
+            name: 'Open Sea Regatta',
+            url: 'wallpaper_sailboat_4.jpg',
+            thumb: 'wallpaper_sailboat_4.jpg'
+        },
+        {
+            id: 'sailboat_5',
+            name: 'Tropical Lagoon Sailboat',
+            url: 'wallpaper_sailboat_5.jpg',
+            thumb: 'wallpaper_sailboat_5.jpg'
+        },
+        {
+            id: 'sailboat_6',
+            name: 'Dramatic Horizon Sailing',
+            url: 'wallpaper_sailboat_6.jpg',
+            thumb: 'wallpaper_sailboat_6.jpg'
         },
         {
             id: 'alpine',
             name: 'Alpine Serenity',
-            url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2560&q=85'
+            url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2560&q=85',
+            thumb: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=360&q=60'
         },
         {
             id: 'horizon',
             name: 'Golden Horizon',
-            url: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=2560&q=85'
+            url: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=2560&q=85',
+            thumb: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=360&q=60'
         },
         {
             id: 'cyberpunk',
             name: 'Neon Metropolis',
-            url: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=2560&q=85'
+            url: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=2560&q=85',
+            thumb: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=360&q=60'
         },
         {
             id: 'obsidian',
-            name: 'Minimalist Charcoal',
-            url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080"><rect width="1920" height="1080" fill="%231c1b22"/></svg>'
+            name: 'Stealth Matte Black',
+            url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080"><rect width="1920" height="1080" fill="%23090a0c"/></svg>',
+            thumb: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="192" height="108" viewBox="0 0 192 108"><rect width="192" height="108" fill="%23090a0c"/></svg>'
         }
     ];
+
 
     // 2. Firefox-Style 8 Shortcuts (matching reference Image 2)
     const DEFAULT_SHORTCUTS = [
@@ -279,8 +315,23 @@
         }
     }
 
+    const SEARCH_ENGINES = {
+        google: { name: 'Google', url: 'https://www.google.com/search?q=' },
+        brave: { name: 'Brave', url: 'https://search.brave.com/search?q=' },
+        duckduckgo: { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=' },
+        bing: { name: 'Bing', url: 'https://www.bing.com/search?q=' },
+        ecosia: { name: 'Ecosia', url: 'https://www.ecosia.org/search?q=' }
+    };
+
+    function getActiveEngine() {
+        const id = localStorage.getItem('fokk_search_engine') || 'google';
+        return SEARCH_ENGINES[id] || SEARCH_ENGINES.google;
+    }
+
     // 3. Search Bar Handling
     if (searchForm && searchInput) {
+        searchInput.placeholder = `Search with ${getActiveEngine().name} or enter address`;
+
         searchForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const query = searchInput.value.trim();
@@ -292,7 +343,7 @@
             } else if (query.includes('.') && !query.includes(' ')) {
                 targetUrl = 'https://' + query;
             } else {
-                targetUrl = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+                targetUrl = getActiveEngine().url + encodeURIComponent(query);
             }
 
             navigateTo(targetUrl);
