@@ -720,69 +720,213 @@ open class MediaHubActivity : AppCompatActivity() {
     private val cachedNewsByCategory = java.util.concurrent.ConcurrentHashMap<String, String>()
     private val activeNewsFetches = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
-    fun fetchLivePulseNews(category: String, forceRefresh: Boolean = false): String {
-        val norm = category.lowercase(Locale.ROOT).trim()
+    fun fetchLivePulseNews(category: String, region: String = "global", forceRefresh: Boolean = false): String {
+        val normCat = category.lowercase(Locale.ROOT).trim().ifBlank { "all" }
+        val normRegion = region.lowercase(Locale.ROOT).trim().ifBlank { "global" }
+        val cacheKey = "${normRegion}_$normCat"
 
-        val lastFetchTime = localPrefs.getLong("fokk_pulse_news_time_$norm", 0L)
+        val lastFetchTime = localPrefs.getLong("fokk_pulse_news_time_$cacheKey", 0L)
         val now = System.currentTimeMillis()
-        val isStale = (now - lastFetchTime) > (12 * 60 * 60 * 1000L) // 12 hours TTL
+        val isStale = (now - lastFetchTime) > (20 * 60 * 1000L) // 20 minutes TTL for fresh updates
 
-        if (!cachedNewsByCategory.containsKey(norm)) {
-            val disk = localPrefs.getString("fokk_pulse_news_$norm", null)
+        if (!cachedNewsByCategory.containsKey(cacheKey)) {
+            val disk = localPrefs.getString("fokk_pulse_news_$cacheKey", null)
             if (!disk.isNullOrBlank()) {
-                cachedNewsByCategory[norm] = disk
+                cachedNewsByCategory[cacheKey] = disk
             }
         }
 
-        val cachedResult = cachedNewsByCategory[norm] ?: ""
+        val cachedResult = cachedNewsByCategory[cacheKey] ?: ""
 
         if (forceRefresh || cachedResult.isBlank() || isStale) {
-            triggerBackgroundPulseFetch(norm)
+            triggerBackgroundPulseFetch(normCat, normRegion)
         }
 
         return cachedResult
     }
 
-    private fun triggerBackgroundPulseFetch(norm: String) {
-        if (!activeNewsFetches.add(norm)) return
+    private fun triggerBackgroundPulseFetch(normCat: String, normRegion: String) {
+        val fetchKey = "${normRegion}_$normCat"
+        if (!activeNewsFetches.add(fetchKey)) return
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                data class NewsFeedSource(val name: String, val url: String)
+                data class NewsFeedSource(val name: String, val url: String, val defaultCategory: String = "all")
 
-                val sources = when (norm) {
-                    "tech" -> listOf(
-                        NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/technology/rss.xml"),
-                        NewsFeedSource("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index"),
-                        NewsFeedSource("Wired", "https://www.wired.com/feed/rss"),
-                        NewsFeedSource("The Verge", "https://www.theverge.com/rss/index.xml")
-                    )
-                    "world" -> listOf(
-                        NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/world/rss.xml"),
-                        NewsFeedSource("CNN", "http://rss.cnn.com/rss/edition_world.rss"),
-                        NewsFeedSource("ABC News", "https://abcnews.go.com/abcnews/internationalheadlines")
-                    )
-                    "business", "markets" -> listOf(
-                        NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/business/rss.xml"),
-                        NewsFeedSource("Yahoo Finance", "https://finance.yahoo.com/news/rssindex"),
-                        NewsFeedSource("CNN Business", "http://rss.cnn.com/rss/money_latest.rss")
-                    )
-                    "science" -> listOf(
-                        NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml"),
-                        NewsFeedSource("Wired Science", "https://www.wired.com/feed/category/science/latest/rss")
-                    )
-                    "culture", "entertainment" -> listOf(
-                        NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml"),
-                        NewsFeedSource("CNN", "http://rss.cnn.com/rss/edition_entertainment.rss"),
-                        NewsFeedSource("Wired Culture", "https://www.wired.com/feed/category/culture/latest/rss")
-                    )
-                    else -> listOf(
-                        NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/rss.xml"),
-                        NewsFeedSource("ABC News", "https://abcnews.go.com/abcnews/topstories"),
-                        NewsFeedSource("CNN", "http://rss.cnn.com/rss/cnn_topstories.rss"),
-                        NewsFeedSource("Yahoo News", "https://news.yahoo.com/rss/"),
-                        NewsFeedSource("NPR", "https://feeds.npr.org/1001/rss.xml")
-                    )
+                val sources = when (normRegion) {
+                    "uk" -> when (normCat) {
+                        "tech" -> listOf(
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/technology/rss.xml", "tech"),
+                            NewsFeedSource("The Guardian", "https://www.theguardian.com/technology/rss", "tech"),
+                            NewsFeedSource("Wired", "https://www.wired.com/feed/rss", "tech")
+                        )
+                        "business", "markets" -> listOf(
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/business/rss.xml", "business"),
+                            NewsFeedSource("The Guardian", "https://www.theguardian.com/uk/business/rss", "business"),
+                            NewsFeedSource("Sky News", "https://feeds.skynews.com/feeds/rss/business.xml", "business")
+                        )
+                        "culture", "entertainment" -> listOf(
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml", "culture"),
+                            NewsFeedSource("The Guardian", "https://www.theguardian.com/uk/culture/rss", "culture"),
+                            NewsFeedSource("Sky News", "https://feeds.skynews.com/feeds/rss/entertainment.xml", "culture")
+                        )
+                        "science" -> listOf(
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", "science"),
+                            NewsFeedSource("The Guardian", "https://www.theguardian.com/science/rss", "science")
+                        )
+                        else -> listOf(
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/uk/rss.xml", "news"),
+                            NewsFeedSource("The Guardian", "https://www.theguardian.com/uk/rss", "news"),
+                            NewsFeedSource("Sky News", "https://feeds.skynews.com/feeds/rss/uk.xml", "news"),
+                            NewsFeedSource("The Independent", "https://www.independent.co.uk/news/uk/rss", "news"),
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/world/rss.xml", "world")
+                        )
+                    }
+                    "in" -> when (normCat) {
+                        "tech" -> listOf(
+                            NewsFeedSource("NDTV Gadgets", "https://feeds.feedburner.com/gadgets360-latest", "tech"),
+                            NewsFeedSource("The Hindu", "https://www.thehindu.com/sci-tech/technology/feeder/default.rss", "tech"),
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/technology/rss.xml", "tech")
+                        )
+                        "business", "markets" -> listOf(
+                            NewsFeedSource("Livemint", "https://www.livemint.com/rss/news", "business"),
+                            NewsFeedSource("The Hindu", "https://www.thehindu.com/business/feeder/default.rss", "business"),
+                            NewsFeedSource("NDTV Profit", "https://feeds.feedburner.com/ndtvprofit-latest", "business")
+                        )
+                        "culture", "entertainment" -> listOf(
+                            NewsFeedSource("NDTV Movies", "https://feeds.feedburner.com/ndtvmovies-latest", "culture"),
+                            NewsFeedSource("The Hindu", "https://www.thehindu.com/entertainment/feeder/default.rss", "culture"),
+                            NewsFeedSource("India Today", "https://www.indiatoday.in/rss/1206577", "culture")
+                        )
+                        "science" -> listOf(
+                            NewsFeedSource("The Hindu", "https://www.thehindu.com/sci-tech/science/feeder/default.rss", "science"),
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", "science")
+                        )
+                        else -> listOf(
+                            NewsFeedSource("NDTV News", "https://feeds.feedburner.com/ndtvnews-top-stories", "news"),
+                            NewsFeedSource("The Hindu", "https://www.thehindu.com/news/national/feeder/default.rss", "news"),
+                            NewsFeedSource("Times of India", "https://timesofindia.indiatimes.com/rssfeedstopstories.cms", "news"),
+                            NewsFeedSource("India Today", "https://www.indiatoday.in/rss/1206584", "news"),
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/world/asia/india/rss.xml", "news")
+                        )
+                    }
+                    "ca" -> when (normCat) {
+                        "tech" -> listOf(
+                            NewsFeedSource("CBC News", "https://www.cbc.ca/cmlink/rss-technology", "tech"),
+                            NewsFeedSource("The Verge", "https://www.theverge.com/rss/index.xml", "tech"),
+                            NewsFeedSource("Wired", "https://www.wired.com/feed/rss", "tech")
+                        )
+                        "business", "markets" -> listOf(
+                            NewsFeedSource("CBC Business", "https://www.cbc.ca/cmlink/rss-business", "business"),
+                            NewsFeedSource("CTV News", "https://www.ctvnews.ca/rss/ctvnews-ca-business-public-rss-1.822295", "business")
+                        )
+                        "culture", "entertainment" -> listOf(
+                            NewsFeedSource("CBC Arts", "https://www.cbc.ca/cmlink/rss-arts", "culture"),
+                            NewsFeedSource("CTV News", "https://www.ctvnews.ca/rss/ctvnews-ca-entertainment-public-rss-1.822292", "culture")
+                        )
+                        "science" -> listOf(
+                            NewsFeedSource("CBC Science", "https://www.cbc.ca/cmlink/rss-technology", "science"),
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", "science")
+                        )
+                        else -> listOf(
+                            NewsFeedSource("CBC News", "https://www.cbc.ca/cmlink/rss-topstories", "news"),
+                            NewsFeedSource("CBC News", "https://www.cbc.ca/cmlink/rss-canada", "news"),
+                            NewsFeedSource("CTV News", "https://www.ctvnews.ca/rss/ctvnews-ca-top-stories-public-rss-1.822009", "news"),
+                            NewsFeedSource("Global News", "https://globalnews.ca/feed/", "news"),
+                            NewsFeedSource("CBC News", "https://www.cbc.ca/cmlink/rss-world", "world")
+                        )
+                    }
+                    "de" -> when (normCat) {
+                        "tech" -> listOf(
+                            NewsFeedSource("Spiegel Netzwelt", "https://www.spiegel.de/netzwelt/index.rss", "tech"),
+                            NewsFeedSource("Tagesschau", "https://www.tagesschau.de/inland/regional/wirtschaft-und-finanzen-100~rss2.xml", "tech"),
+                            NewsFeedSource("Wired", "https://www.wired.com/feed/rss", "tech")
+                        )
+                        "business", "markets" -> listOf(
+                            NewsFeedSource("Spiegel Wirtschaft", "https://www.spiegel.de/wirtschaft/index.rss", "business"),
+                            NewsFeedSource("Tagesschau", "https://www.tagesschau.de/wirtschaft/index~rss2.xml", "business"),
+                            NewsFeedSource("DW News", "https://rss.dw.com/xml/rss-de-eco", "business")
+                        )
+                        "culture", "entertainment" -> listOf(
+                            NewsFeedSource("Spiegel Kultur", "https://www.spiegel.de/kultur/index.rss", "culture"),
+                            NewsFeedSource("DW Kultur", "https://rss.dw.com/xml/rss-de-cul", "culture")
+                        )
+                        "science" -> listOf(
+                            NewsFeedSource("Spiegel Wissenschaft", "https://www.spiegel.de/wissenschaft/index.rss", "science"),
+                            NewsFeedSource("Tagesschau", "https://www.tagesschau.de/wissen/index~rss2.xml", "science")
+                        )
+                        else -> listOf(
+                            NewsFeedSource("Deutsche Welle", "https://rss.dw.com/xml/rss-en-all", "news"),
+                            NewsFeedSource("Der Spiegel", "https://www.spiegel.de/international/index.rss", "news"),
+                            NewsFeedSource("Tagesschau", "https://www.tagesschau.de/infoservices/alle-meldungen-100~rss2.xml", "news"),
+                            NewsFeedSource("Zeit Online", "https://newsfeed.zeit.de/index", "news"),
+                            NewsFeedSource("Der Spiegel", "https://www.spiegel.de/schlagzeilen/tops/index.rss", "news")
+                        )
+                    }
+                    "au" -> when (normCat) {
+                        "tech" -> listOf(
+                            NewsFeedSource("ABC News", "https://www.abc.net.au/news/feed/51120/rss.xml", "tech"),
+                            NewsFeedSource("The Verge", "https://www.theverge.com/rss/index.xml", "tech"),
+                            NewsFeedSource("Wired", "https://www.wired.com/feed/rss", "tech")
+                        )
+                        "business", "markets" -> listOf(
+                            NewsFeedSource("ABC News", "https://www.abc.net.au/news/feed/51892/rss.xml", "business"),
+                            NewsFeedSource("Sydney Morning Herald", "https://www.smh.com.au/rss/business.xml", "business")
+                        )
+                        "culture", "entertainment" -> listOf(
+                            NewsFeedSource("ABC News", "https://www.abc.net.au/news/feed/51900/rss.xml", "culture"),
+                            NewsFeedSource("Sydney Morning Herald", "https://www.smh.com.au/rss/culture.xml", "culture")
+                        )
+                        "science" -> listOf(
+                            NewsFeedSource("ABC News", "https://www.abc.net.au/news/feed/51898/rss.xml", "science"),
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", "science")
+                        )
+                        else -> listOf(
+                            NewsFeedSource("ABC News", "https://www.abc.net.au/news/feed/51120/rss.xml", "news"),
+                            NewsFeedSource("Sydney Morning Herald", "https://www.smh.com.au/rss/feed.xml", "news"),
+                            NewsFeedSource("The Age", "https://www.theage.com.au/rss/feed.xml", "news"),
+                            NewsFeedSource("9News", "https://www.9news.com.au/rss", "news"),
+                            NewsFeedSource("ABC News", "https://www.abc.net.au/news/feed/52278/rss.xml", "world")
+                        )
+                    }
+                    else -> when (normCat) {
+                        "tech" -> listOf(
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/technology/rss.xml", "tech"),
+                            NewsFeedSource("The Verge", "https://www.theverge.com/rss/index.xml", "tech"),
+                            NewsFeedSource("Wired", "https://www.wired.com/feed/rss", "tech"),
+                            NewsFeedSource("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index", "tech")
+                        )
+                        "world" -> listOf(
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/world/rss.xml", "world"),
+                            NewsFeedSource("CNN", "http://rss.cnn.com/rss/edition_world.rss", "world"),
+                            NewsFeedSource("ABC News", "https://abcnews.go.com/abcnews/internationalheadlines", "world"),
+                            NewsFeedSource("NPR", "https://feeds.npr.org/1004/rss.xml", "world")
+                        )
+                        "business", "markets" -> listOf(
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/business/rss.xml", "business"),
+                            NewsFeedSource("Yahoo Finance", "https://finance.yahoo.com/news/rssindex", "business"),
+                            NewsFeedSource("CNN Business", "http://rss.cnn.com/rss/money_latest.rss", "business"),
+                            NewsFeedSource("CNBC", "https://www.cnbc.com/id/100003114/device/rss/rss.html", "business")
+                        )
+                        "science" -> listOf(
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", "science"),
+                            NewsFeedSource("Wired Science", "https://www.wired.com/feed/category/science/latest/rss", "science"),
+                            NewsFeedSource("NPR Science", "https://feeds.npr.org/1007/rss.xml", "science")
+                        )
+                        "culture", "entertainment" -> listOf(
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml", "culture"),
+                            NewsFeedSource("CNN", "http://rss.cnn.com/rss/edition_entertainment.rss", "culture"),
+                            NewsFeedSource("Wired Culture", "https://www.wired.com/feed/category/culture/latest/rss", "culture")
+                        )
+                        else -> listOf(
+                            NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/rss.xml", "news"),
+                            NewsFeedSource("ABC News", "https://abcnews.go.com/abcnews/topstories", "news"),
+                            NewsFeedSource("CNN", "http://rss.cnn.com/rss/cnn_topstories.rss", "news"),
+                            NewsFeedSource("Reuters", "https://news.yahoo.com/rss/", "news"),
+                            NewsFeedSource("NPR", "https://feeds.npr.org/1001/rss.xml", "news"),
+                            NewsFeedSource("The Verge", "https://www.theverge.com/rss/index.xml", "tech")
+                        )
+                    }
                 }
 
                 fun fetchXml(urlStr: String): String? {
@@ -817,24 +961,61 @@ open class MediaHubActivity : AppCompatActivity() {
                 val linkRegex = Regex("<link>(.*?)</link>")
                 val mediaRegex = Regex("""<media:thumbnail[^>]+url=["']([^"']+)["']|<media:content[^>]+url=["']([^"']+)["']|<enclosure[^>]+url=["']([^"']+)["']|<img[^>]+src=["']([^"']+)["']""")
 
-                val aggregatedItems = mutableListOf<JSONObject>()
+                val perSourceItems = mutableMapOf<String, MutableList<JSONObject>>()
                 val seenTitles = mutableSetOf<String>()
 
-                for (src in sources) {
+                // Shuffle sources to diversify news origin on each fetch
+                val shuffledSources = sources.shuffled()
+
+                for (src in shuffledSources) {
                     try {
                         val xml = fetchXml(src.url) ?: continue
-                        itemRegex.findAll(xml).take(8).forEach { itemMatch ->
+                        val itemsForSource = mutableListOf<JSONObject>()
+                        itemRegex.findAll(xml).take(10).forEach { itemMatch ->
                             val content = itemMatch.groupValues[1]
                             val rawTitle = titleRegex.find(content)?.let { it.groupValues[1].ifEmpty { it.groupValues[2] } } ?: return@forEach
                             if (rawTitle.contains("Google News", ignoreCase = true) || rawTitle.equals("BBC News", ignoreCase = true)) return@forEach
-                            val titleClean = rawTitle.replace("&amp;", "&").replace("&quot;", "\"").replace("&#39;", "'").replace("<![CDATA[", "").replace("]]>", "").trim()
-                            if (titleClean.length < 10) return@forEach
-                            val normTitle = titleClean.lowercase(Locale.ROOT).take(40)
-                            if (seenTitles.contains(normTitle)) return@forEach
-                            seenTitles.add(normTitle)
 
-                            val detectedSource = sourceRegex.find(content)?.groupValues?.get(1)?.replace("&amp;", "&") ?: src.name
-                            val link = linkRegex.find(content)?.groupValues?.get(1) ?: ""
+                            val titleClean = rawTitle
+                                .replace("&amp;", "&")
+                                .replace("&quot;", "\"")
+                                .replace("&#39;", "'")
+                                .replace("&apos;", "'")
+                                .replace("&ndash;", "–")
+                                .replace("&mdash;", "—")
+                                .replace("&nbsp;", " ")
+                                .replace("<![CDATA[", "")
+                                .replace("]]>", "")
+                                .trim()
+
+                            // Quality filter 1: Length check
+                            if (titleClean.length < 15) return@forEach
+
+                            // Quality filter 2: Suppress promo stubs
+                            val lowerTitle = titleClean.lowercase(Locale.ROOT)
+                            if (lowerTitle.startsWith("watch live:") || lowerTitle.startsWith("subscribe to") || lowerTitle.startsWith("listen now:")) return@forEach
+
+                            // Quality filter 3: Title deduplication
+                            val normTitleKey = lowerTitle.replace(Regex("[^a-z0-9]"), "").take(35)
+                            if (seenTitles.contains(normTitleKey)) return@forEach
+                            seenTitles.add(normTitleKey)
+
+                            var detectedSource = sourceRegex.find(content)?.groupValues?.get(1)?.replace("&amp;", "&") ?: src.name
+                            if (detectedSource.contains("BBC", ignoreCase = true)) detectedSource = "BBC News"
+                            else if (detectedSource.contains("ABC News", ignoreCase = true) || (detectedSource.contains("ABC", ignoreCase = true) && normRegion != "au")) detectedSource = "ABC News"
+                            else if (detectedSource.contains("CNN", ignoreCase = true)) detectedSource = "CNN"
+                            else if (detectedSource.contains("NDTV", ignoreCase = true)) detectedSource = "NDTV"
+                            else if (detectedSource.contains("Hindu", ignoreCase = true)) detectedSource = "The Hindu"
+                            else if (detectedSource.contains("Times of India", ignoreCase = true) || detectedSource.equals("TOI", ignoreCase = true)) detectedSource = "Times of India"
+                            else if (detectedSource.contains("CBC", ignoreCase = true)) detectedSource = "CBC News"
+                            else if (detectedSource.contains("Spiegel", ignoreCase = true)) detectedSource = "Der Spiegel"
+                            else if (detectedSource.contains("Deutsche Welle", ignoreCase = true) || detectedSource.equals("DW", ignoreCase = true)) detectedSource = "DW News"
+                            else if (detectedSource.contains("Guardian", ignoreCase = true)) detectedSource = "The Guardian"
+                            else if (detectedSource.contains("Sydney Morning Herald", ignoreCase = true) || detectedSource.equals("SMH", ignoreCase = true)) detectedSource = "Sydney Morning Herald"
+                            else if (detectedSource.contains("Verge", ignoreCase = true)) detectedSource = "The Verge"
+                            else if (detectedSource.contains("Wired", ignoreCase = true)) detectedSource = "Wired"
+
+                            val link = linkRegex.find(content)?.groupValues?.get(1)?.trim() ?: ""
                             var mediaUrl = mediaRegex.find(content)?.let {
                                 it.groupValues[1].ifEmpty { it.groupValues[2].ifEmpty { it.groupValues[3].ifEmpty { it.groupValues[4] } } }
                             } ?: ""
@@ -843,37 +1024,52 @@ open class MediaHubActivity : AppCompatActivity() {
                                 mediaUrl = mediaUrl.replace("/240/", "/800/").replace("/134/", "/450/").replace("/135/", "/450/")
                             }
 
-                            val query = titleClean.substringBefore(" - ")
+                            val query = titleClean.substringBefore(" - ").substringBefore(" | ")
                             val obj = JSONObject().apply {
                                 put("title", titleClean)
                                 put("source", detectedSource)
                                 put("time", "Live")
                                 put("query", query)
-                                put("category", norm)
+                                put("category", normCat)
+                                put("region", normRegion)
                                 put("url", link)
                                 if (mediaUrl.isNotBlank()) put("img", mediaUrl)
                             }
-                            aggregatedItems.add(obj)
+                            itemsForSource.add(obj)
+                        }
+                        if (itemsForSource.isNotEmpty()) {
+                            perSourceItems[src.name] = itemsForSource
                         }
                     } catch (_: Exception) {}
                 }
 
+                // Fair interleaving across distinct news sources so one publisher doesn't dominate
+                val aggregatedItems = mutableListOf<JSONObject>()
+                val maxCount = perSourceItems.values.maxOfOrNull { it.size } ?: 0
+                for (i in 0 until maxCount) {
+                    for (list in perSourceItems.values) {
+                        if (i < list.size) {
+                            aggregatedItems.add(list[i])
+                        }
+                    }
+                }
+
                 if (aggregatedItems.isNotEmpty()) {
                     val jsonArr = JSONArray()
-                    aggregatedItems.take(24).forEach { jsonArr.put(it) }
+                    aggregatedItems.take(30).forEach { jsonArr.put(it) }
                     val jsonStr = jsonArr.toString()
 
-                    cachedNewsByCategory[norm] = jsonStr
+                    cachedNewsByCategory[fetchKey] = jsonStr
                     localPrefs.edit()
-                        .putString("fokk_pulse_news_$norm", jsonStr)
-                        .putLong("fokk_pulse_news_time_$norm", System.currentTimeMillis())
+                        .putString("fokk_pulse_news_$fetchKey", jsonStr)
+                        .putLong("fokk_pulse_news_time_$fetchKey", System.currentTimeMillis())
                         .apply()
 
                     withContext(Dispatchers.Main) {
                         tabs.forEach { tab ->
                             if (isHomePageUrl(tab.url)) {
                                 tab.webView?.evaluateJavascript(
-                                    "if (typeof onLiveNewsReceived === 'function') onLiveNewsReceived('$norm', ${JSONObject.quote(jsonStr)});",
+                                    "if (typeof onLiveNewsReceived === 'function') onLiveNewsReceived('$normCat', '$normRegion', ${JSONObject.quote(jsonStr)});",
                                     null
                                 )
                             }
@@ -882,15 +1078,16 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
             } catch (_: Exception) {
             } finally {
-                activeNewsFetches.remove(norm)
+                activeNewsFetches.remove(fetchKey)
             }
         }
     }
 
     fun preloadPulseNews() {
         lifecycleScope.launch(Dispatchers.IO) {
-            listOf("all", "tech", "world", "business", "science", "culture").forEach { cat ->
-                fetchLivePulseNews(cat)
+            val region = localPrefs.getString("fokk_pulse_country", "global") ?: "global"
+            listOf("all", "tech", "world", "business").forEach { cat ->
+                fetchLivePulseNews(cat, region)
             }
         }
     }
@@ -1647,12 +1844,32 @@ open class MediaHubActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun getLiveNews(category: String): String {
-            return activity.fetchLivePulseNews(category)
+            return activity.fetchLivePulseNews(category, "global")
+        }
+
+        @JavascriptInterface
+        fun getLiveNews(category: String, region: String): String {
+            return activity.fetchLivePulseNews(category, region)
+        }
+
+        @JavascriptInterface
+        fun getLiveNewsForRegion(category: String, region: String): String {
+            return activity.fetchLivePulseNews(category, region)
         }
 
         @JavascriptInterface
         fun refreshLiveNews(category: String): String {
-            return activity.fetchLivePulseNews(category, forceRefresh = true)
+            return activity.fetchLivePulseNews(category, "global", forceRefresh = true)
+        }
+
+        @JavascriptInterface
+        fun refreshLiveNews(category: String, region: String): String {
+            return activity.fetchLivePulseNews(category, region, forceRefresh = true)
+        }
+
+        @JavascriptInterface
+        fun refreshLiveNewsForRegion(category: String, region: String): String {
+            return activity.fetchLivePulseNews(category, region, forceRefresh = true)
         }
 
         @JavascriptInterface
