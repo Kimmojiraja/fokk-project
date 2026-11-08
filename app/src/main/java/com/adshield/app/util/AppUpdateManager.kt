@@ -20,7 +20,7 @@ import kotlin.concurrent.thread
 object AppUpdateManager {
 
     private const val VERSION_JSON_URL = "https://raw.githubusercontent.com/Kimmojiraja/fokk-project/main/version.json"
-    private const val GITHUB_RELEASE_API = "https://api.github.com/repos/Kimmojiraja/fokk-project/releases/latest"
+    private const val GITHUB_RELEASE_API = "https://api.github.com/repos/Kimmojiraja/fokk-project/releases?per_page=1"
 
     fun checkForUpdates(activity: Activity, manualCheck: Boolean = false) {
         val currentCode = getCurrentVersionCode(activity)
@@ -41,6 +41,8 @@ object AppUpdateManager {
                 conn.readTimeout = 5000
                 conn.useCaches = false
                 conn.setRequestProperty("User-Agent", "FokkShield-App")
+                conn.setRequestProperty("Cache-Control", "no-cache")
+                conn.setRequestProperty("Pragma", "no-cache")
                 if (conn.responseCode != HttpURLConnection.HTTP_OK) {
                     throw IllegalStateException("Version metadata returned HTTP ${conn.responseCode}")
                 }
@@ -60,19 +62,24 @@ object AppUpdateManager {
                     conn.setRequestProperty("User-Agent", "FokkShield-App")
                     if (conn.responseCode == 200) {
                         val text = conn.inputStream.bufferedReader().use { it.readText() }
-                        val json = JSONObject(text)
-                        changelog = json.optString("body", changelog)
-                        val assets = json.optJSONArray("assets")
-                        if (assets != null && assets.length() > 0) {
-                            for (i in 0 until assets.length()) {
-                                val asset = assets.getJSONObject(i)
-                                val name = asset.optString("name", "")
-                                if (name.endsWith(".apk")) {
-                                    downloadUrl = asset.optString("browser_download_url", "")
-                                    latestCode = currentCode + 1
-                                    latestName = json.optString("tag_name", "Latest")
-                                    metadataLoaded = true
-                                    break
+                        val releasesArray = org.json.JSONArray(text)
+                        if (releasesArray.length() > 0) {
+                            val releaseObj = releasesArray.getJSONObject(0)
+                            changelog = releaseObj.optString("body", changelog)
+                            val tagName = releaseObj.optString("tag_name", "")
+                            val tagVersionCode = parseVersionCodeFromTag(tagName)
+                            val assets = releaseObj.optJSONArray("assets")
+                            if (assets != null && assets.length() > 0) {
+                                for (i in 0 until assets.length()) {
+                                    val asset = assets.getJSONObject(i)
+                                    val name = asset.optString("name", "")
+                                    if (name.endsWith(".apk")) {
+                                        downloadUrl = asset.optString("browser_download_url", "")
+                                        latestCode = if (tagVersionCode > 0) tagVersionCode else currentCode + 1
+                                        latestName = tagName.removePrefix("v")
+                                        metadataLoaded = true
+                                        break
+                                    }
                                 }
                             }
                         }
@@ -375,5 +382,18 @@ object AppUpdateManager {
         } catch (e: Exception) {
             "1.0.0"
         }
+    }
+
+    private fun parseVersionCodeFromTag(tag: String): Int {
+        return try {
+            val clean = tag.removePrefix("v").trim()
+            val parts = clean.split(".")
+            if (parts.size >= 2) {
+                val major = parts[0].toIntOrNull() ?: 0
+                val minor = parts[1].toIntOrNull() ?: 0
+                val patch = if (parts.size >= 3) parts[2].toIntOrNull() ?: 0 else 0
+                major * 100 + minor * 10 + patch
+            } else 0
+        } catch (_: Exception) { 0 }
     }
 }
