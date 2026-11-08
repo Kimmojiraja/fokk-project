@@ -1464,6 +1464,13 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         @JavascriptInterface
+        fun openDualScreen() {
+            activity.runOnUiThread {
+                activity.toggleDualDeckMode()
+            }
+        }
+
+        @JavascriptInterface
         fun openBookmarks() {
             activity.runOnUiThread {
                 activity.showSavedPagesDialog()
@@ -1818,7 +1825,8 @@ open class MediaHubActivity : AppCompatActivity() {
         val isSelfAppPromotion = (currentHost.contains("spotify.com") && (rawUrl.startsWith("spotify:") || rawUrl.contains("package=com.spotify.music"))) ||
             (currentHost.contains("youtube.com") && (rawUrl.startsWith("vnd.youtube:") || rawUrl.contains("package=com.google.android.youtube"))) ||
             (currentHost.contains("reddit.com") && (rawUrl.contains("package=com.reddit.frontpage") || rawUrl.contains("reddit.app.link"))) ||
-            (currentHost.contains("instagram.com") && (rawUrl.startsWith("instagram:") || rawUrl.contains("package=com.instagram.android")))
+            (currentHost.contains("instagram.com") && (rawUrl.startsWith("instagram:") || rawUrl.contains("package=com.instagram.android"))) ||
+            ((currentHost.contains("x.com") || currentHost.contains("twitter.com")) && (rawUrl.startsWith("twitter:") || rawUrl.contains("package=com.twitter.android") || rawUrl.contains("twitter.app.link")))
 
         if (isSelfAppPromotion) {
             val parsedIntent = runCatching { Intent.parseUri(rawUrl, Intent.URI_INTENT_SCHEME) }.getOrNull()
@@ -2707,7 +2715,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 // Never replace a requested document with a synthetic empty response.
                 if (request?.isForMainFrame == true) return super.shouldInterceptRequest(view, request)
 
-                val pageUrl = view?.let { pageUrlsByWebView[it] }
+                val pageUrl = view?.url?.takeIf { it.isNotBlank() } ?: view?.let { pageUrlsByWebView[it] }
                 val requestUrl = request?.url?.toString()
                 val host = request?.url?.host ?: return super.shouldInterceptRequest(view, request)
                 val hostLower = host.lowercase(Locale.ROOT)
@@ -2720,6 +2728,22 @@ open class MediaHubActivity : AppCompatActivity() {
                 if (pageHostLower != null && (pageHostLower.contains("browserbench") || pageHostLower.contains("speedometer") || pageHostLower.contains("webxprt"))) {
                     return super.shouldInterceptRequest(view, request)
                 }
+
+                // X (Twitter) SPA: Unconditionally allow all Twitter/X endpoints, GraphQL queries,
+                // and Twimg CDN bundles so the React client boots cleanly without CORS or interception errors
+                val isTwitterHost = hostLower == "x.com" || hostLower.endsWith(".x.com") ||
+                    hostLower == "twitter.com" || hostLower.endsWith(".twitter.com") ||
+                    hostLower == "twimg.com" || hostLower.endsWith(".twimg.com") ||
+                    hostLower == "t.co" || hostLower.endsWith(".t.co")
+                if (isTwitterHost) {
+                    return super.shouldInterceptRequest(view, request)
+                }
+                val isTwitterPage = pageHostLower == "x.com" || pageHostLower?.endsWith(".x.com") == true ||
+                    pageHostLower == "twitter.com" || pageHostLower?.endsWith(".twitter.com") == true
+                if (isTwitterPage && (isSocialInfrastructureHost(host) || isSocialAppHost(host))) {
+                    return super.shouldInterceptRequest(view, request)
+                }
+
                 val isCrossSiteRequest = pageHost != null && !isSameSite(pageHost, host)
                 if (isCrossSiteRequest) recordThirdPartyRequest(view, host)
 
