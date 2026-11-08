@@ -22,7 +22,9 @@
     }
     window.__fokk_defusers_active = true;
 
-    var noop = function() {};
+    function installMainWorldDefusers() {
+        if (window.__fokk_main_defusers_installed) return;
+        window.__fokk_main_defusers_installed = true;
     var noopObjInstance = new Proxy({}, {
         get: function(target, prop) {
             if (prop === 'then') return undefined;
@@ -217,20 +219,24 @@
         }
     } catch(e) {}
 
-    // 6. Universal Bait Element Defuser & Dimension Spoofing
-    // Modern anti-adblock scripts (The Sun, Admiral, Sourcepoint, BlockAdBlock) create bait elements
-    // and check if their offsetHeight === 0 or display === 'none'. We spoof these checks cleanly.
+    // 6. Universal Bait Element Defuser & Complete Dimension Spoofing
+    // Modern anti-adblock scripts (Fox News, The Sun, Admiral, Sourcepoint, BlockAdBlock) create bait elements
+    // and check offsetHeight === 0, getBoundingClientRect(), or display === 'none'.
     try {
-        var baitClassRegex = /(^|\s|_|-)(ad|ads|adsbox|ad-unit|ad-slot|ad-banner|banner-ad|pub_300x250|sponsored|google-ad|afs_ads|ad_header)($|\s|_|-)/i;
-        var baitIdRegex = /(^|_|-)(ad|ads|adsbox|ad-unit|ad-slot|ad-banner|banner-ad|pub_300x250|google-ad|afs_ads)($|_|-)/i;
+        var baitClassRegex = /(^|\s|_|-)(ad|ads|adsbox|ad-unit|ad-slot|ad-banner|banner-ad|pub_300x250|sponsored|google-ad|afs_ads|ad_header|trc_related_container|dfp-ad|gpt-ad|ad-zone|advertisement|ad-container)($|\s|_|-)/i;
+        var baitIdRegex = /(^|_|-)(ad|ads|adsbox|ad-unit|ad-slot|ad-banner|banner-ad|pub_300x250|google-ad|afs_ads|ad-zone|advertisement|dfp-ad)($|_|-)/i;
 
         var isBaitElement = function(el) {
             if (!el || el.nodeType !== 1) return false;
+            // STRICT USER SAFETY: NEVER spoof or tamper with editorial videos, players, articles, or social embeds!
+            var tag = el.tagName;
+            if (tag === 'VIDEO' || tag === 'AUDIO' || tag === 'IFRAME' || tag === 'ARTICLE' || tag === 'MAIN') return false;
+            if (el.querySelector && el.querySelector('video, audio, iframe, [class*="player"], [id*="player"], twitter-tweet, .twitter-tweet, [data-testid="tweet"]')) return false;
             var cls = el.className;
             if (typeof cls === 'string' && baitClassRegex.test(cls)) return true;
             var id = el.id;
             if (typeof id === 'string' && baitIdRegex.test(id)) return true;
-            if (el.hasAttribute && (el.hasAttribute('data-ad-slot') || el.hasAttribute('data-ad-unit'))) return true;
+            if (el.hasAttribute && (el.hasAttribute('data-ad-slot') || el.hasAttribute('data-ad-unit') || el.hasAttribute('data-ad-zone'))) return true;
             return false;
         };
 
@@ -282,6 +288,29 @@
             });
         }
 
+        // CRITICAL: getBoundingClientRect spoofing for Admiral, Fox News, Sourcepoint
+        var origGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+        if (origGetBoundingClientRect) {
+            Element.prototype.getBoundingClientRect = function() {
+                var rect = origGetBoundingClientRect.call(this);
+                if (rect && rect.height === 0 && rect.width === 0 && isBaitElement(this)) {
+                    return {
+                        top: 10,
+                        left: 10,
+                        right: 310,
+                        bottom: 260,
+                        width: 300,
+                        height: 250,
+                        x: 10,
+                        y: 10,
+                        toJSON: function() { return this; }
+                    };
+                }
+                return rect;
+            };
+        }
+
+        // ComputedStyle Proxy: intercepts both direct property reads and getPropertyValue()
         var origGetComputedStyle = window.getComputedStyle;
         if (origGetComputedStyle) {
             window.getComputedStyle = function(el, pseudo) {
@@ -289,9 +318,35 @@
                 if (el && isBaitElement(el) && res) {
                     return new Proxy(res, {
                         get: function(target, prop) {
-                            if (prop === 'display' && target.display === 'none') return 'block';
-                            if (prop === 'visibility' && target.visibility === 'hidden') return 'visible';
-                            if (prop === 'opacity' && (target.opacity === '0' || target.opacity === 0)) return '1';
+                            if (prop === 'display') {
+                                var d = target.display;
+                                return (d === 'none' || !d) ? 'block' : d;
+                            }
+                            if (prop === 'visibility') {
+                                var v = target.visibility;
+                                return (v === 'hidden' || !v) ? 'visible' : v;
+                            }
+                            if (prop === 'opacity') {
+                                var o = target.opacity;
+                                return (o === '0' || o === 0 || !o) ? '1' : o;
+                            }
+                            if (prop === 'getPropertyValue') {
+                                return function(name) {
+                                    if (name === 'display') {
+                                        var val = target.getPropertyValue('display');
+                                        return (val === 'none' || !val) ? 'block' : val;
+                                    }
+                                    if (name === 'visibility') {
+                                        var val = target.getPropertyValue('visibility');
+                                        return (val === 'hidden' || !val) ? 'visible' : val;
+                                    }
+                                    if (name === 'opacity') {
+                                        var val = target.getPropertyValue('opacity');
+                                        return (val === '0' || val === 0 || !val) ? '1' : val;
+                                    }
+                                    return target.getPropertyValue(name);
+                                };
+                            }
                             var val = target[prop];
                             return typeof val === 'function' ? val.bind(target) : val;
                         }
@@ -315,11 +370,38 @@
         window.adBlockEnabled = false;
         window.adblockDetected = false;
         window.adBlockerDetected = false;
+        window.advertisementLoaded = true;
         window.criteo = window.criteo || { events: [] };
         window.criteo_q = window.criteo_q || [];
         window.outbrain = window.outbrain || { ready: true };
         window.taboola = window.taboola || { push: noop };
         window._taboola = window._taboola || [];
+        window.YAP = window.YAP || { ad: noop };
+        window.ybar = window.ybar || {};
+
+        // Admiral Defusers (Fox News, local news, Hearst, etc.)
+        var fakeAdmiral = {
+            load: noop,
+            ready: function(cb) { if (typeof cb === 'function') setTimeout(cb, 10); },
+            on: noop,
+            emit: noop,
+            track: noop
+        };
+        window.admiral = window.admiral || fakeAdmiral;
+        window.Admiral = window.Admiral || fakeAdmiral;
+        window._admiral = window._admiral || fakeAdmiral;
+        window.DA_ready = true;
+
+        // Google Funding Choices (googlefc)
+        window.googlefc = window.googlefc || {
+            callbackQueue: [],
+            controlledMessagingFunction: noop,
+            getAdBlockerStatus: function(cb) {
+                if (typeof cb === 'function') setTimeout(function() { cb(0); }, 5);
+                return 0; // 0 = Not blocked
+            },
+            showRevocationMessage: noop
+        };
 
         try {
             Object.defineProperty(window, 'adBlockEnabled', {
@@ -358,6 +440,31 @@
         window.BlockAdBlock = fakeBab;
         window.snackpack = true;
     } catch(e) {}
+}
+
+    // Execute in current world
+    try { installMainWorldDefusers(); } catch (e) {}
+
+    // Synchronously bridge into page's Main World (essential for Android addDocumentStartJavaScript)
+    try {
+        var bridgeScript = document.createElement('script');
+        bridgeScript.textContent = '(' + installMainWorldDefusers.toString() + ')();';
+        var docRoot = document.head || document.documentElement;
+        if (docRoot) {
+            docRoot.appendChild(bridgeScript);
+            bridgeScript.remove();
+        } else {
+            var bridgeObserver = new MutationObserver(function() {
+                var root = document.head || document.documentElement;
+                if (root) {
+                    bridgeObserver.disconnect();
+                    root.appendChild(bridgeScript);
+                    bridgeScript.remove();
+                }
+            });
+            bridgeObserver.observe(document, { childList: true, subtree: true });
+        }
+    } catch (e) {}
 
     // 8. News Article Auto-Scroll Restorer & Paywall Curtain Neutralizer
     var restoreScroll = function() {
@@ -387,7 +494,7 @@
         } catch(e) {}
     };
 
-    // 9. Intelligent Anti-Adblock Defuser & Auto-Dismissal (Generic across The Sun, Forbes, etc.)
+    // 9. Intelligent Anti-Adblock Defuser & Auto-Dismissal (Generic across Fox News, The Sun, Yahoo, Forbes, etc.)
     var scrubNagElements = function() {
         try {
             var nagPhrases = [
@@ -395,13 +502,21 @@
                 'interfering with this page',
                 'disable any ad or script',
                 'ad blocker detected',
+                'adblocker detected',
                 'ad blocker',
                 'ad-blocker',
                 'disable your ad blocker',
                 'turn off your ad blocker',
+                'turn off your ad-blocker',
                 'please allow ads',
                 'bloqueur de publicité',
-                'werbeblocker'
+                'werbeblocker',
+                'supporting our journalism',
+                'we noticed you\'re using an ad blocker',
+                'we noticed you are using an ad blocker',
+                'disable adblock',
+                'turn off ad block',
+                'pause your ad blocker'
             ];
 
             var dismissPhrases = [
@@ -415,14 +530,20 @@
                 'remind me later',
                 'dismiss',
                 'close',
-                'not now'
+                'not now',
+                'i\'ll do it later'
             ];
 
             // Target candidate modals, dialogs, overlays
-            var dialogs = document.querySelectorAll('div[role="dialog"], div[class*="dialog"], div[class*="modal"], div[class*="overlay"], div[class*="popup"], div[class*="adblock"], div[id*="adblock"], div[id*="modal"], div[id*="dialog"], section[role="dialog"]');
+            var dialogs = document.querySelectorAll('div[role="dialog"], div[class*="dialog"], div[class*="modal"], div[class*="overlay"], div[class*="popup"], div[class*="adblock"], div[id*="adblock"], div[id*="modal"], div[id*="dialog"], section[role="dialog"], div[class*="sp_message"], div[id*="sp_message"], .admiral-root, div[class*="admiral-"], .fc-ab-root, .fc-dialog-container');
             for (var d = 0; d < dialogs.length; d++) {
                 var dlg = dialogs[d];
                 if (!dlg) continue;
+
+                // STRICT USER SAFETY: NEVER touch article-related videos, players, tweets, or main article content!
+                if (dlg.querySelector && dlg.querySelector('video, audio, [class*="player"], [id*="player"], twitter-tweet, .twitter-tweet, [data-testid="tweet"]')) continue;
+                if (dlg.closest && dlg.closest('video, audio, [class*="player"], [id*="player"], article, main')) continue;
+
                 var dlgText = (dlg.innerText || dlg.textContent || '').toLowerCase();
                 var isAdblockNag = false;
                 for (var n = 0; n < nagPhrases.length; n++) {
@@ -431,6 +552,11 @@
                         break;
                     }
                 }
+                var cls = dlg.className || '';
+                var id = dlg.id || '';
+                if (typeof cls === 'string' && (cls.indexOf('admiral') !== -1 || cls.indexOf('fc-ab-root') !== -1 || cls.indexOf('sp_message') !== -1)) isAdblockNag = true;
+                if (typeof id === 'string' && (id.indexOf('sp_message') !== -1 || id.indexOf('admiral') !== -1)) isAdblockNag = true;
+
                 if (!isAdblockNag) continue;
 
                 // 1. Try to auto-click secondary dismissal button / link (e.g. "Continue without supporting us")
@@ -455,16 +581,19 @@
 
                 // 2. Hide the modal container and backdrop
                 var topModal = dlg.closest('div[class*="container"], div[class*="wrap"], div[style*="z-index"]') || dlg;
+                if (topModal.querySelector && topModal.querySelector('video, audio, [class*="player"], [id*="player"], article, main')) {
+                    topModal = dlg;
+                }
                 topModal.style.setProperty('display', 'none', 'important');
                 topModal.style.setProperty('opacity', '0', 'important');
                 topModal.style.setProperty('pointer-events', 'none', 'important');
                 topModal.style.setProperty('visibility', 'hidden', 'important');
 
                 // Clean backdrop overlays
-                var backdrops = document.querySelectorAll('.modal-backdrop, .overlay-backdrop, [class*="backdrop"], div[style*="position: fixed"][style*="z-index"]');
+                var backdrops = document.querySelectorAll('.modal-backdrop, .overlay-backdrop, [class*="backdrop"], .sp_veil, div[style*="position: fixed"][style*="z-index"]');
                 for (var b = 0; b < backdrops.length; b++) {
                     var bd = backdrops[b];
-                    if (bd && bd !== topModal && !bd.querySelector('video, iframe, main, article')) {
+                    if (bd && bd !== topModal && !bd.querySelector('video, audio, iframe, main, article, [class*="player"]')) {
                         var bds = bd.style;
                         if (bds.position === 'fixed' || (window.getComputedStyle(bd).position === 'fixed')) {
                             bd.style.setProperty('display', 'none', 'important');
@@ -494,12 +623,11 @@
         restoreScroll();
     }
 
-    // High-performance debounced MutationObserver (Max 1 run per 400ms, zero layout thrashing)
+    // High-performance debounced MutationObserver (Continuous, 350ms debounced, zero layout thrashing)
     try {
         var nagScheduled = false;
-        var sweepsCount = 0;
         var nagObserver = new MutationObserver(function(mutations) {
-            if (nagScheduled || sweepsCount > 15) return;
+            if (nagScheduled) return;
             var hasRelevantAddition = false;
             for (var i = 0; i < mutations.length; i++) {
                 var added = mutations[i].addedNodes;
@@ -522,9 +650,8 @@
             nagScheduled = true;
             setTimeout(function() {
                 nagScheduled = false;
-                sweepsCount++;
                 scrubNagElements();
-            }, 400);
+            }, 350);
         });
 
         var targetObserveNode = document.body || document.documentElement;

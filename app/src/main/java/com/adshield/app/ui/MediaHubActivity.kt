@@ -2720,17 +2720,19 @@ open class MediaHubActivity : AppCompatActivity() {
                 // Social apps are tightly coupled SPAs. Allow core social infrastructure & feeds,
                 // but block known third-party ad networks, telemetry trackers, and ad pixels.
                 if (isSocialAppHost(pageHost) || isSocialInfrastructureHost(host)) {
-                    val isAdOrTracker = isDedicatedAdOrTrackerHost(host) ||
-                        urlStr.contains("/pagead/") ||
+                    val isThirdPartyAd = urlStr.contains("/pagead/") ||
                         urlStr.contains("doubleclick.net") ||
-                        urlStr.contains("/ads/") ||
                         urlStr.contains("adservice.google.") ||
                         urlStr.contains("googleadservices.com") ||
                         urlStr.contains("googletagservices.com") ||
                         urlStr.contains("amazon-adsystem.com") ||
                         urlStr.contains("criteo.") ||
                         urlStr.contains("taboola.com") ||
-                        urlStr.contains("outbrain.com") ||
+                        urlStr.contains("outbrain.com")
+                    val isGenericAdPath = !isSocialInfrastructureHost(host) && urlStr.contains("/ads/")
+                    val isAdOrTracker = isDedicatedAdOrTrackerHost(host) ||
+                        isThirdPartyAd ||
+                        isGenericAdPath ||
                         AdShieldApp.instance.blocklistEngine.isUrlBlocked(requestUrl ?: "")
                     if (isAdOrTracker && !isMediaRequest) {
                         recordFilteredRequest(view, host)
@@ -3485,14 +3487,17 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     private fun createBlockedResourceResponse(urlStr: String): WebResourceResponse {
-        val isJson = urlStr.contains("/youtubei/") || urlStr.contains("/api/stats/ads") || urlStr.contains(".json")
-        val isJs = urlStr.endsWith(".js") || urlStr.contains(".js?")
+        val isVast = urlStr.contains("vast") || urlStr.contains("vpaid") || urlStr.contains("adtag") || urlStr.contains("/ad_tag") || urlStr.contains("spotxchange")
+        val isJson = !isVast && (urlStr.contains("/youtubei/") || urlStr.contains("/api/stats/ads") || urlStr.contains(".json"))
+        val isJs = !isVast && (urlStr.endsWith(".js") || urlStr.contains(".js?"))
         val mimeType = when {
+            isVast -> "application/xml"
             isJson -> "application/json"
             isJs -> "application/javascript"
             else -> "text/plain"
         }
         val emptyPayload = when {
+            isVast -> "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"3.0\"></VAST>"
             isJson -> "{}"
             urlStr.contains("adsbygoogle") -> "(function(){window.adsbygoogle=window.adsbygoogle||[];window.adsbygoogle.loaded=true;})();"
             urlStr.contains("gpt.js") || urlStr.contains("googletagservices") -> "(function(){window.googletag=window.googletag||{cmd:[],apiReady:true};window.googletag.pubads=window.googletag.pubads||function(){var s={addEventListener:function(){},clear:function(){},display:function(){},enableAsyncRendering:function(){},enableSingleRequest:function(){},getSlots:function(){return[];},getSlotIdMap:function(){return{};},isInitialLoadDisabled:function(){return false;},refresh:function(){},setTargeting:function(){}};return s;};})();"
@@ -3501,7 +3506,8 @@ open class MediaHubActivity : AppCompatActivity() {
             urlStr.contains("analytics") || urlStr.contains("gtag") || urlStr.contains("ga.js") -> "(function(){window.ga=window.ga||function(){};window.gtag=window.gtag||function(){};})();"
             urlStr.contains("cookielaw") || urlStr.contains("onetrust") -> "(function(){window.OneTrust=window.OneTrust||{IsAlertBoxClosed:function(){return true;},Close:function(){}};})();"
             urlStr.contains("cookiebot") -> "(function(){window.Cookiebot=window.Cookiebot||{consent:{necessary:true,preferences:false,statistics:false,marketing:false},hasResponse:true};})();"
-            urlStr.contains("fundingchoices") -> "(function(){window.googlefc=window.googlefc||{callbackQueue:[]};})();"
+            urlStr.contains("fundingchoices") -> "(function(){window.googlefc=window.googlefc||{callbackQueue:[],controlledMessagingFunction:function(){},getAdBlockerStatus:function(cb){if(typeof cb==='function')setTimeout(function(){cb(0);},5);return 0;},showRevocationMessage:function(){}};})();"
+            urlStr.contains("/ads.js") || urlStr.contains("advertisement.js") || urlStr.contains("adframe.js") || urlStr.contains("/advert.js") || urlStr.contains("adserver.js") || urlStr.contains("ad-zone.js") -> "(function(){window.canRunAds=true;window.isAdBlockActive=false;window.isAdBlocked=false;window.adBlock=false;window.adblock=false;window.adblockDetected=false;window.google_ad_client='ca-pub-0000000000000000';})();"
             isJs -> "/* blocked by fokk brave-shield */"
             else -> ""
         }

@@ -1,6 +1,6 @@
 {
-  "versionCode": 219,
-  "versionName": "2.1.9",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.1.9/app-debug.apk",
-  "changelog": "- YouTube Zero-Buffering & Startup Delay Fix: Eliminated XHR manifest re-serialization for /player, /next, /reel, and /browse, removing buffer stalls on watch, shorts, and feed playback.\n- In-Flight Page-Side Defuser: Ad data defused in-place via Response.prototype.json and JSON.parse without stalling data streams.\n- ABP-Style Network Filtering: Full support for ||host^ anchors, @@ exceptions, and path-scoped rules with boundary matching.\n- Pure Android System WebView v2.1.9 release (17.4 MB)."
+  "versionCode": 222,
+  "versionName": "2.2.2",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.2.2/app-debug.apk",
+  "changelog": "- Universal Skippable Video Ad Blocker: Instantly eliminates preroll video ads across adult tube platforms (MindGeek, TrafficJunky, ExoClick) and streaming players (FluidPlayer, VideoJS, JWPlayer, IMA SDK).\n- Real-Time Skip Trigger & Countdown Bypass: Removes artificial countdown delays, unlocks disabled skip buttons, and automatically completes prerolls without human interaction.\n- Network-Level VAST / VPAID XML Ad Defuser: Synthesizes empty VAST 3.0 XML responses to short-circuit video ad auction requests before media streams are downloaded.\n- Editorial & Social Video Protection: Zero interference with news article clips, social feeds (X / Twitter, Instagram, Reddit), or regular media playback.\n- YouTube uBO Standard Retained: Zero playback rate or buffering glitches on YouTube.\n- Pure Android System WebView v2.2.2 release (17.4 MB)."
 }
