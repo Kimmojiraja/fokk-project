@@ -303,3 +303,141 @@ webview {
 webview.active {
     display: flex;
 }
+
+/* 4. Omnibox Engine Chooser */
+.omnibox-engine-selector {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    transition: background 0.15s ease;
+}
+.omnibox-engine-selector:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+.omnibox-engine-icon {
+    display: flex;
+    align-items: center;
+}
+.engine-chevron {
+    color: var(--text-secondary);
+}
+
+.omnibox-engine-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: #151d30;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 6px;
+    min-width: 140px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    z-index: 200;
+}
+.omnibox-engine-dropdown.hidden { display: none; }
+.engine-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.engine-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+.engine-item.selected {
+    background: rgba(0, 229, 255, 0.15);
+    color: var(--fokk-cyan);
+    font-weight: 600;
+}
+
+/* 5. 3-Dots Desktop Menu Dropdown */
+.browser-menu-dropdown {
+    position: absolute;
+    top: 84px;
+    right: 12px;
+    width: 250px;
+    background: #141b2c;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7);
+    z-index: 300;
+    backdrop-filter: blur(20px);
+}
+.browser-menu-dropdown.hidden { display: none; }
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.menu-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+.menu-item svg {
+    color: var(--text-secondary);
+}
+.menu-shortcut {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.menu-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 6px 4px;
+}
+
+.menu-item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    padding: 2px 6px;
+}
+.zoom-btn {
+    background: transparent;
+    border: none;
+    color: #FFF;
+    font-size: 15px;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+.zoom-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+.zoom-level {
+    font-size: 12px;
+    font-weight: 600;
+    min-width: 38px;
+    text-align: center;
+}
