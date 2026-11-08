@@ -1,0 +1,102 @@
+name: Build Desktop Browser (Windows & Linux)
+
+on:
+  push:
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/build-desktop.yml'
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    name: Build Ubuntu (.deb & .AppImage)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: desktop/package.json
+
+      - name: Install Dependencies
+        working-directory: desktop
+        run: npm install
+
+      - name: Build Linux Packages
+        working-directory: desktop
+        run: npx electron-builder --linux deb AppImage
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fokk-Browser-Linux
+          path: desktop/dist/*.deb
+          retention-days: 14
+
+      - name: Attach Linux to Latest Release
+        if: success()
+        working-directory: desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST_TAG=$(gh release list --limit 1 | awk '{print $1}')
+          if [ -n "$LATEST_TAG" ]; then
+            echo "Uploading Linux packages to release $LATEST_TAG"
+            gh release upload "$LATEST_TAG" dist/*.deb dist/*.AppImage --clobber || true
+          fi
+
+  build-windows:
+    name: Build Windows (.exe Installer)
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: desktop/package.json
+
+      - name: Install Dependencies
+        working-directory: desktop
+        run: npm install
+
+      - name: Build Windows Installer & Portable
+        working-directory: desktop
+        run: npx electron-builder --win nsis portable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fokk-Browser-Windows
+          path: desktop/dist/*.exe
+          retention-days: 14
+
+      - name: Attach Windows to Latest Release
+        if: success()
+        working-directory: desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          LATEST_TAG=$(gh release list --limit 1 | awk '{print $1}')
+          if [ -n "$LATEST_TAG" ]; then
+            echo "Uploading Windows installers to release $LATEST_TAG"
+            gh release upload "$LATEST_TAG" dist/*.exe --clobber || true
+          fi
