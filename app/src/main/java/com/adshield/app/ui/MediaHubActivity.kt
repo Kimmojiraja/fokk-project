@@ -718,30 +718,71 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     private val cachedNewsByCategory = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val activeNewsFetches = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
-    fun fetchLivePulseNews(category: String): String {
+    fun fetchLivePulseNews(category: String, forceRefresh: Boolean = false): String {
         val norm = category.lowercase(Locale.ROOT).trim()
-        val cached = cachedNewsByCategory[norm]
-        if (!cached.isNullOrBlank()) return cached
+
+        val lastFetchTime = localPrefs.getLong("fokk_pulse_news_time_$norm", 0L)
+        val now = System.currentTimeMillis()
+        val isStale = (now - lastFetchTime) > (12 * 60 * 60 * 1000L) // 12 hours TTL
+
+        if (!cachedNewsByCategory.containsKey(norm)) {
+            val disk = localPrefs.getString("fokk_pulse_news_$norm", null)
+            if (!disk.isNullOrBlank()) {
+                cachedNewsByCategory[norm] = disk
+            }
+        }
+
+        val cachedResult = cachedNewsByCategory[norm] ?: ""
+
+        if (forceRefresh || cachedResult.isBlank() || isStale) {
+            triggerBackgroundPulseFetch(norm)
+        }
+
+        return cachedResult
+    }
+
+    private fun triggerBackgroundPulseFetch(norm: String) {
+        if (!activeNewsFetches.add(norm)) return
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // High-quality public Media RSS feeds with genuine HD article photographs
-                val primaryRssUrl = when (norm) {
-                    "tech" -> "https://feeds.bbci.co.uk/news/technology/rss.xml"
-                    "business", "markets" -> "https://feeds.bbci.co.uk/news/business/rss.xml"
-                    "science" -> "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml"
-                    "world" -> "https://feeds.bbci.co.uk/news/world/rss.xml"
-                    "culture", "entertainment" -> "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml"
-                    else -> "https://feeds.bbci.co.uk/news/rss.xml"
-                }
-                val fallbackRssUrl = when (norm) {
-                    "tech" -> "https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en"
-                    "business", "markets" -> "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en"
-                    "science" -> "https://news.google.com/rss/headlines/section/topic/SCIENCE?hl=en-US&gl=US&ceid=US:en"
-                    "world" -> "https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-US&gl=US&ceid=US:en"
-                    "culture", "entertainment" -> "https://news.google.com/rss/headlines/section/topic/ENTERTAINMENT?hl=en-US&gl=US&ceid=US:en"
-                    else -> "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en"
+                data class NewsFeedSource(val name: String, val url: String)
+
+                val sources = when (norm) {
+                    "tech" -> listOf(
+                        NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/technology/rss.xml"),
+                        NewsFeedSource("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index"),
+                        NewsFeedSource("Wired", "https://www.wired.com/feed/rss"),
+                        NewsFeedSource("The Verge", "https://www.theverge.com/rss/index.xml")
+                    )
+                    "world" -> listOf(
+                        NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/world/rss.xml"),
+                        NewsFeedSource("CNN", "http://rss.cnn.com/rss/edition_world.rss"),
+                        NewsFeedSource("ABC News", "https://abcnews.go.com/abcnews/internationalheadlines")
+                    )
+                    "business", "markets" -> listOf(
+                        NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/business/rss.xml"),
+                        NewsFeedSource("Yahoo Finance", "https://finance.yahoo.com/news/rssindex"),
+                        NewsFeedSource("CNN Business", "http://rss.cnn.com/rss/money_latest.rss")
+                    )
+                    "science" -> listOf(
+                        NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml"),
+                        NewsFeedSource("Wired Science", "https://www.wired.com/feed/category/science/latest/rss")
+                    )
+                    "culture", "entertainment" -> listOf(
+                        NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml"),
+                        NewsFeedSource("CNN", "http://rss.cnn.com/rss/edition_entertainment.rss"),
+                        NewsFeedSource("Wired Culture", "https://www.wired.com/feed/category/culture/latest/rss")
+                    )
+                    else -> listOf(
+                        NewsFeedSource("BBC News", "https://feeds.bbci.co.uk/news/rss.xml"),
+                        NewsFeedSource("ABC News", "https://abcnews.go.com/abcnews/topstories"),
+                        NewsFeedSource("CNN", "http://rss.cnn.com/rss/cnn_topstories.rss"),
+                        NewsFeedSource("Yahoo News", "https://news.yahoo.com/rss/"),
+                        NewsFeedSource("NPR", "https://feeds.npr.org/1001/rss.xml")
+                    )
                 }
 
                 fun fetchXml(urlStr: String): String? {
@@ -749,8 +790,8 @@ open class MediaHubActivity : AppCompatActivity() {
                     var redirects = 0
                     while (redirects < 4) {
                         val conn = URL(currentUrl).openConnection() as HttpURLConnection
-                        conn.connectTimeout = 4000
-                        conn.readTimeout = 4000
+                        conn.connectTimeout = 4500
+                        conn.readTimeout = 4500
                         conn.instanceFollowRedirects = true
                         conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36")
                         val code = conn.responseCode
@@ -770,49 +811,88 @@ open class MediaHubActivity : AppCompatActivity() {
                     return null
                 }
 
-                val xml = fetchXml(primaryRssUrl) ?: fetchXml(fallbackRssUrl)
-                if (!xml.isNullOrBlank()) {
-                    val itemRegex = Regex("<item>(.*?)</item>", RegexOption.DOT_MATCHES_ALL)
-                    val titleRegex = Regex("<title><!\\[CDATA\\[(.*?)\\]\\]></title>|<title>(.*?)</title>")
-                    val sourceRegex = Regex("<source[^>]*>(.*?)</source>")
-                    val linkRegex = Regex("<link>(.*?)</link>")
-                    val mediaRegex = Regex("""<media:thumbnail[^>]+url=["']([^"']+)["']|<media:content[^>]+url=["']([^"']+)["']|<enclosure[^>]+url=["']([^"']+)["']|<img[^>]+src=["']([^"']+)["']""")
+                val itemRegex = Regex("<item>(.*?)</item>", RegexOption.DOT_MATCHES_ALL)
+                val titleRegex = Regex("<title><!\\[CDATA\\[(.*?)\\]\\]></title>|<title>(.*?)</title>")
+                val sourceRegex = Regex("<source[^>]*>(.*?)</source>")
+                val linkRegex = Regex("<link>(.*?)</link>")
+                val mediaRegex = Regex("""<media:thumbnail[^>]+url=["']([^"']+)["']|<media:content[^>]+url=["']([^"']+)["']|<enclosure[^>]+url=["']([^"']+)["']|<img[^>]+src=["']([^"']+)["']""")
 
+                val aggregatedItems = mutableListOf<JSONObject>()
+                val seenTitles = mutableSetOf<String>()
+
+                for (src in sources) {
+                    try {
+                        val xml = fetchXml(src.url) ?: continue
+                        itemRegex.findAll(xml).take(8).forEach { itemMatch ->
+                            val content = itemMatch.groupValues[1]
+                            val rawTitle = titleRegex.find(content)?.let { it.groupValues[1].ifEmpty { it.groupValues[2] } } ?: return@forEach
+                            if (rawTitle.contains("Google News", ignoreCase = true) || rawTitle.equals("BBC News", ignoreCase = true)) return@forEach
+                            val titleClean = rawTitle.replace("&amp;", "&").replace("&quot;", "\"").replace("&#39;", "'").replace("<![CDATA[", "").replace("]]>", "").trim()
+                            if (titleClean.length < 10) return@forEach
+                            val normTitle = titleClean.lowercase(Locale.ROOT).take(40)
+                            if (seenTitles.contains(normTitle)) return@forEach
+                            seenTitles.add(normTitle)
+
+                            val detectedSource = sourceRegex.find(content)?.groupValues?.get(1)?.replace("&amp;", "&") ?: src.name
+                            val link = linkRegex.find(content)?.groupValues?.get(1) ?: ""
+                            var mediaUrl = mediaRegex.find(content)?.let {
+                                it.groupValues[1].ifEmpty { it.groupValues[2].ifEmpty { it.groupValues[3].ifEmpty { it.groupValues[4] } } }
+                            } ?: ""
+
+                            if (mediaUrl.contains("ichef.bbci.co.uk")) {
+                                mediaUrl = mediaUrl.replace("/240/", "/800/").replace("/134/", "/450/").replace("/135/", "/450/")
+                            }
+
+                            val query = titleClean.substringBefore(" - ")
+                            val obj = JSONObject().apply {
+                                put("title", titleClean)
+                                put("source", detectedSource)
+                                put("time", "Live")
+                                put("query", query)
+                                put("category", norm)
+                                put("url", link)
+                                if (mediaUrl.isNotBlank()) put("img", mediaUrl)
+                            }
+                            aggregatedItems.add(obj)
+                        }
+                    } catch (_: Exception) {}
+                }
+
+                if (aggregatedItems.isNotEmpty()) {
                     val jsonArr = JSONArray()
-                    itemRegex.findAll(xml).take(15).forEach { itemMatch ->
-                        val content = itemMatch.groupValues[1]
-                        val rawTitle = titleRegex.find(content)?.let { it.groupValues[1].ifEmpty { it.groupValues[2] } } ?: return@forEach
-                        if (rawTitle.contains("Google News", ignoreCase = true) || rawTitle.equals("BBC News", ignoreCase = true)) return@forEach
-                        val titleClean = rawTitle.replace("&amp;", "&").replace("&quot;", "\"").replace("&#39;", "'").replace("<![CDATA[", "").replace("]]>", "").trim()
-                        val source = sourceRegex.find(content)?.groupValues?.get(1)?.replace("&amp;", "&") ?: if (xml.contains("BBC", ignoreCase = true)) "BBC News" else "News"
-                        val link = linkRegex.find(content)?.groupValues?.get(1) ?: ""
-                        var mediaUrl = mediaRegex.find(content)?.let {
-                            it.groupValues[1].ifEmpty { it.groupValues[2].ifEmpty { it.groupValues[3].ifEmpty { it.groupValues[4] } } }
-                        } ?: ""
-                        // Automatically upscale BBC and standard news thumbnails to crisp HD
-                        if (mediaUrl.contains("ichef.bbci.co.uk")) {
-                            mediaUrl = mediaUrl.replace("/240/", "/800/").replace("/134/", "/450/").replace("/135/", "/450/")
-                        }
-                        val query = titleClean.substringBefore(" - ")
+                    aggregatedItems.take(24).forEach { jsonArr.put(it) }
+                    val jsonStr = jsonArr.toString()
 
-                        val obj = JSONObject().apply {
-                            put("title", titleClean)
-                            put("source", source)
-                            put("time", "Live")
-                            put("query", query)
-                            put("category", norm)
-                            put("url", link)
-                            if (mediaUrl.isNotBlank()) put("img", mediaUrl)
+                    cachedNewsByCategory[norm] = jsonStr
+                    localPrefs.edit()
+                        .putString("fokk_pulse_news_$norm", jsonStr)
+                        .putLong("fokk_pulse_news_time_$norm", System.currentTimeMillis())
+                        .apply()
+
+                    withContext(Dispatchers.Main) {
+                        tabs.forEach { tab ->
+                            if (isHomePageUrl(tab.url)) {
+                                tab.webView?.evaluateJavascript(
+                                    "if (typeof onLiveNewsReceived === 'function') onLiveNewsReceived('$norm', ${JSONObject.quote(jsonStr)});",
+                                    null
+                                )
+                            }
                         }
-                        jsonArr.put(obj)
-                    }
-                    if (jsonArr.length() > 0) {
-                        cachedNewsByCategory[norm] = jsonArr.toString()
                     }
                 }
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            } finally {
+                activeNewsFetches.remove(norm)
+            }
         }
-        return cachedNewsByCategory[norm] ?: ""
+    }
+
+    fun preloadPulseNews() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            listOf("all", "tech", "world", "business", "science", "culture").forEach { cat ->
+                fetchLivePulseNews(cat)
+            }
+        }
     }
 
     private fun extractSearchQuery(url: String?): String? {
@@ -967,6 +1047,7 @@ open class MediaHubActivity : AppCompatActivity() {
         setupRefreshControl()
         initMediaSession()
         fetchLiveTrendingTopics()
+        preloadPulseNews()
 
         val initialUrl = incomingWebUrl(intent)
         if (isIsolatedPrivateProfile) {
@@ -1567,6 +1648,11 @@ open class MediaHubActivity : AppCompatActivity() {
         @JavascriptInterface
         fun getLiveNews(category: String): String {
             return activity.fetchLivePulseNews(category)
+        }
+
+        @JavascriptInterface
+        fun refreshLiveNews(category: String): String {
+            return activity.fetchLivePulseNews(category, forceRefresh = true)
         }
 
         @JavascriptInterface
@@ -2715,7 +2801,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 // Never replace a requested document with a synthetic empty response.
                 if (request?.isForMainFrame == true) return super.shouldInterceptRequest(view, request)
 
-                val pageUrl = view?.url?.takeIf { it.isNotBlank() } ?: view?.let { pageUrlsByWebView[it] }
+                val pageUrl = view?.let { pageUrlsByWebView[it] }
                 val requestUrl = request?.url?.toString()
                 val host = request?.url?.host ?: return super.shouldInterceptRequest(view, request)
                 val hostLower = host.lowercase(Locale.ROOT)
@@ -5073,7 +5159,7 @@ open class MediaHubActivity : AppCompatActivity() {
         val sheetBinding = SheetBrowserMenuBinding.inflate(layoutInflater)
         dialog.setContentView(sheetBinding.root)
 
-        val userAlias = prefs.getString(PREF_USER_ALIAS, "Shadow Falcon") ?: "Shadow Falcon"
+        val userAlias = prefs.getString(PREF_USER_ALIAS, "Fokk User") ?: "Fokk User"
         sheetBinding.textMenuProfileName.text = userAlias
         loadAvatarInto(sheetBinding.imgMenuProfileAvatar)
         sheetBinding.rowMenuProfile.setOnClickListener {
@@ -6930,7 +7016,7 @@ open class MediaHubActivity : AppCompatActivity() {
         activeAccountDialogBinding = sheetBinding
 
         fun refreshProfileHeader() {
-            val alias = prefs.getString(PREF_USER_ALIAS, "Shadow Falcon") ?: "Shadow Falcon"
+            val alias = prefs.getString(PREF_USER_ALIAS, "Fokk User") ?: "Fokk User"
             sheetBinding.textAccountAlias.text = alias
             loadAvatarInto(sheetBinding.imgAccountAvatar)
         }
@@ -6963,7 +7049,7 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         sheetBinding.btnEditAlias.setOnClickListener {
-            val currentAlias = prefs.getString(PREF_USER_ALIAS, "Shadow Falcon") ?: "Shadow Falcon"
+            val currentAlias = prefs.getString(PREF_USER_ALIAS, "Fokk User") ?: "Fokk User"
             val input = EditText(this).apply {
                 setText(currentAlias)
                 setSingleLine()
@@ -7091,7 +7177,7 @@ open class MediaHubActivity : AppCompatActivity() {
         try {
             val json = JSONObject().apply {
                 put("version", 1)
-                put("alias", prefs.getString(PREF_USER_ALIAS, "Shadow Falcon"))
+                put("alias", prefs.getString(PREF_USER_ALIAS, "Fokk User"))
                 put("avatar", prefs.getString(PREF_USER_AVATAR, "falcon"))
                 put("searchEngine", prefs.getString(PREF_SEARCH_ENGINE, SearchEngine.BING.name))
                 put("history", localPrefs.getString(PREF_BROWSING_HISTORY, "[]"))
