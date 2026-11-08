@@ -1,6 +1,6 @@
 {
-  "versionCode": 232,
-  "versionName": "2.3.2",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.3.2/app-debug.apk",
-  "changelog": "- Critical Stability Fix: Eliminated background thread WebView checkThread() violation in shouldInterceptRequest that caused the app to close when tapping buttons or navigating.\n- New Home Screen Action Buttons: Dual Screen split-deck multitasking and Fokk Shield defense buttons with pure black-and-white minimalist vector icons.\n- Curated Sail & Horizon 4K Wallpapers: Added prominent Sailboat & Ocean collection with local 4K photography.\n- Zero-Glitch Visual Discovery Grid: Stable 2-column grid with smooth image fallbacks and zero layout shift.\n- X.com (Twitter) Complete Loading Fix: Exempted Twitter from script tampering and synthetic request blocks."
+  "versionCode": 233,
+  "versionName": "2.3.3",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.3.3/app-debug.apk",
+  "changelog": "- Premier Multi-Source Live News: Aggregated live feeds from BBC News, CNN, ABC News, Wired, Ars Technica, Yahoo News, and NPR with authentic imagery.\n- 12-Hour Smart News Caching: Instant 0ms startup from local cache with automated background refresh.\n- Instant Zero-Lag Home Controls: High-speed 3-dots in-place action menu, direct native tab switcher dialog integration, and instantaneous private incognito toggle.\n- Zero-Glitch Visual Discovery Studio: Fixed infinite scroll layout reflows, requestAnimationFrame debounced loading, expanded 4K sailboat collections, and hardware back button integration."
 }

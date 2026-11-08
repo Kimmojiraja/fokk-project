@@ -1688,6 +1688,42 @@
             background: rgba(255, 255, 255, 0.03);
         }
 
+        .pulse-news-skeleton {
+            display: flex;
+            gap: 14px;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            animation: pulseShimmer 1.5s infinite ease-in-out;
+        }
+
+        .skeleton-img {
+            width: 100px;
+            height: 76px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            flex-shrink: 0;
+        }
+
+        .skeleton-lines {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .skeleton-line {
+            height: 12px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        @keyframes pulseShimmer {
+            0% { opacity: 0.35; }
+            50% { opacity: 0.8; }
+            100% { opacity: 0.35; }
+        }
+
         .pulse-news-img {
             width: 100px;
             height: 76px;
@@ -2933,7 +2969,7 @@
         }
         .visual-infinite-spinner {
             text-align: center;
-            padding: 18px 0;
+            padding: 12px 0;
             color: var(--fokk-cyan);
             font-size: 12px;
             font-weight: 700;
@@ -2941,6 +2977,10 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            height: 44px;
+            box-sizing: border-box;
+            opacity: 0;
+            transition: opacity 0.2s ease;
         }
         .visual-card-info {
             padding: 8px 10px;
@@ -3340,33 +3380,6 @@
     </div>
 
     <!-- Modals -->
-    <!-- TAB SWITCHER MODAL FOR DESKTOP & WEB -->
-    <div class="modal-overlay" id="tabSwitcherModal" onclick="closeModalOnBg(event)">
-        <div class="modal-card" style="max-width: 380px;">
-            <div class="modal-title">
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <span class="tab-badge-num" style="border-color:#00E5FF;color:#00E5FF;">1</span>
-                    <span>Active Tabs</span>
-                </div>
-                <button class="modal-close" onclick="closeTabSwitcherModal()">✕</button>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(255,255,255,0.06);border:1.5px solid #00E5FF;border-radius:12px;">
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <img src="fokk_logo.png" style="width:26px;height:26px;border-radius:6px;" onerror="this.src='ic_fokk_logo.png'">
-                        <div>
-                            <div style="font-size:13.5px;font-weight:700;color:#FFF;">Fokk Start Page</div>
-                            <div style="font-size:11px;color:#8E9CAE;">Home • Protected by AdShield</div>
-                        </div>
-                    </div>
-                    <span style="font-size:10px;font-weight:700;background:rgba(0,229,255,0.2);color:#00E5FF;padding:3px 8px;border-radius:6px;">ACTIVE</span>
-                </div>
-                <button class="modal-btn" onclick="triggerNewTabAction()" style="background:linear-gradient(135deg,#00E5FF,#00B4D8);color:#0A0F1D;font-weight:700;margin-top:4px;">
-                    + Open New Tab
-                </button>
-            </div>
-        </div>
-    </div>
 
     <div class="modal-overlay" id="shortcutsModal" onclick="closeModalOnBg(event)">
         <div class="modal-card" style="max-height: 85vh; overflow-y: auto;">
@@ -3420,7 +3433,7 @@
             <div class="visual-grid" id="visualGridContainer">
                 <!-- Staggered Pinterest masonry cards dynamically loaded -->
             </div>
-            <div id="visualInfiniteLoader" class="visual-infinite-spinner" style="display:none;">
+            <div id="visualInfiniteLoader" class="visual-infinite-spinner" style="opacity:0;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
                 <span>Loading more ultra visuals...</span>
             </div>
@@ -3985,14 +3998,6 @@
                 if (typeof e.preventDefault === 'function') e.preventDefault();
             }
             if (navigator.vibrate) try { navigator.vibrate(15); } catch (err) {}
-            try {
-                if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openMenu === 'function') {
-                    window.FokkShieldBridge.openMenu();
-                    return;
-                }
-            } catch (err) {
-                console.error("openMenu error", err);
-            }
             const popover = document.getElementById('commandMenuPopover');
             const engPop = document.getElementById('engineDropdownPopover');
             if (engPop) engPop.classList.remove('active');
@@ -4269,18 +4274,6 @@
             } catch (err) {
                 console.error("openTabs error", err);
             }
-            openTabSwitcherModal();
-        }
-
-        function openTabSwitcherModal() {
-            const m = document.getElementById('tabSwitcherModal');
-            if (m) m.classList.add('active');
-        }
-
-        function closeTabSwitcherModal(e) {
-            if (e && e.target && !e.target.classList.contains('modal-overlay') && !e.target.classList.contains('modal-close')) return;
-            const m = document.getElementById('tabSwitcherModal');
-            if (m) m.classList.remove('active');
         }
 
         function triggerNewTabAction(e) {
@@ -4291,8 +4284,6 @@
             if (navigator.vibrate) try { navigator.vibrate(20); } catch (err) {}
             const popover = document.getElementById('commandMenuPopover');
             if (popover) popover.classList.remove('active');
-            const tabModal = document.getElementById('tabSwitcherModal');
-            if (tabModal) tabModal.classList.remove('active');
             if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openNewTab === 'function') {
                 window.FokkShieldBridge.openNewTab();
             } else {
@@ -4591,7 +4582,7 @@
             if (navigator.vibrate) try { navigator.vibrate(20); } catch (err) {}
             const popover = document.getElementById('commandMenuPopover');
             if (popover) popover.classList.remove('active');
-            openThemeModal();
+            openVisualHub(e);
         }
 
         function openShortcutsManager() {
@@ -4972,6 +4963,7 @@
             if (navigator.vibrate) {
                 try { navigator.vibrate(20); } catch (e) {}
             }
+            try { history.pushState({ modal: 'livePulse' }, ''); } catch (err) {}
             renderPulseData();
             const modal = document.getElementById('livePulseModal');
             if (modal) modal.classList.add('active');
@@ -5027,161 +5019,7 @@
         let currentCity = localStorage.getItem('fokk_pulse_city') || 'New York, US';
         let currentNewsCategory = 'all';
 
-        const richEditorialArticles = [
-            // TECH & AI
-            {
-                title: "Next-Gen Autonomous AI Agents Redefining Full-Stack Software Engineering",
-                category: "tech",
-                tag: "Tech & AI",
-                source: "Ars Technica",
-                time: "15m ago",
-                img: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=640&q=82",
-                query: "Next-gen AI autonomous coding agents software developments"
-            },
-            {
-                title: "Open-Weights Reasoning Models Challenge Proprietary Frontier AI Frontiers",
-                category: "tech",
-                tag: "AI Research",
-                source: "MIT Tech Review",
-                time: "42m ago",
-                img: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=640&q=82",
-                query: "Open weights reasoning models frontier artificial intelligence"
-            },
-            {
-                title: "Silicon Photonics Breakthrough Accelerates Ultra-Low Latency Data Centers",
-                category: "tech",
-                tag: "Hardware",
-                source: "TechCrunch",
-                time: "1h ago",
-                img: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=640&q=80",
-                query: "Silicon photonics breakthrough optical computing interconnects"
-            },
-            {
-                title: "End-to-End Encrypted Protocols Deployed Across 3 Billion Mobile Devices",
-                category: "tech",
-                tag: "Privacy",
-                source: "Wired",
-                time: "2h ago",
-                img: "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=640&q=80",
-                query: "Post quantum cryptography mobile end to end encryption"
-            },
-
-            // MARKETS & FINANCE
-            {
-                title: "Bitcoin Surges Past $68,000 as Institutional Spot ETF Inflows Reach All-Time High",
-                category: "business",
-                tag: "Crypto",
-                source: "Bloomberg",
-                time: "25m ago",
-                img: "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?auto=format&fit=crop&w=640&q=80",
-                query: "Bitcoin ETF inflows crypto market rally today"
-            },
-            {
-                title: "Global Central Banks Signal Coordinated Easing Cycle Amid Soft Landing Signals",
-                category: "business",
-                tag: "Economy",
-                source: "Financial Times",
-                time: "55m ago",
-                img: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=640&q=80",
-                query: "Federal Reserve interest rate cuts global markets economy"
-            },
-            {
-                title: "Semiconductor Fabrication Investments Expand with $120B in Next-Gen Foundries",
-                category: "business",
-                tag: "Industry",
-                source: "Wall Street Journal",
-                time: "2h ago",
-                img: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=640&q=80",
-                query: "Global semiconductor foundries investment expansion 2026"
-            },
-
-            // WORLD NEWS
-            {
-                title: "International Renewable Energy Accord Targets 11,000 GW Tripling Milestone",
-                category: "world",
-                tag: "Global Accord",
-                source: "Reuters",
-                time: "35m ago",
-                img: "https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=640&q=80",
-                query: "International renewable energy expansion summit accord"
-            },
-            {
-                title: "High-Speed Trans-Continental Rail Network Completes Phase 1 Tunnel Breakthrough",
-                category: "world",
-                tag: "Infrastructure",
-                source: "BBC News",
-                time: "1h ago",
-                img: "https://images.unsplash.com/photo-1474487548417-781cb71495f3?auto=format&fit=crop&w=640&q=80",
-                query: "High speed rail megaproject construction transit"
-            },
-            {
-                title: "Global Digital Sovereignty Framework Protects Consumer Data Mobility",
-                category: "world",
-                tag: "Policy",
-                source: "The Guardian",
-                time: "3h ago",
-                img: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=640&q=82",
-                query: "Digital sovereignty consumer data privacy regulations"
-            },
-
-            // SCIENCE & SPACE
-            {
-                title: "James Webb Telescope Discovers Atmospheres on Habitable-Zone Earth Cousins",
-                category: "science",
-                tag: "Deep Space",
-                source: "Nature",
-                time: "30m ago",
-                img: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=640&q=82",
-                query: "James Webb telescope exoplanet atmosphere biosignature discovery"
-            },
-            {
-                title: "Starship Flight 7 Achieves Full Reusability Milestone in Orbital Catch Test",
-                category: "science",
-                tag: "Aerospace",
-                source: "SpaceNews",
-                time: "1h ago",
-                img: "https://images.unsplash.com/photo-1517976487508-b80c32607f2a?auto=format&fit=crop&w=640&q=80",
-                query: "SpaceX Starship orbital catch booster flight test"
-            },
-            {
-                title: "Solid-State Battery Energy Density Doubled in Commercial Manufacturing Trials",
-                category: "science",
-                tag: "Clean Tech",
-                source: "Science Magazine",
-                time: "4h ago",
-                img: "https://images.unsplash.com/photo-1558441719-8d48980f89a6?auto=format&fit=crop&w=640&q=80",
-                query: "Solid state battery commercial manufacturing electric vehicles"
-            },
-
-            // ENTERTAINMENT
-            {
-                title: "Dune-Scale Sci-Fi Epic Shatters Global Box Office Records with $240M Debut",
-                category: "culture",
-                tag: "Cinema",
-                source: "Variety",
-                time: "50m ago",
-                img: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=640&q=80",
-                query: "Global box office new movie release premiere"
-            },
-            {
-                title: "Next-Gen Unreal Engine 6 Announced with Photorealistic Real-Time Neural Radiance",
-                category: "culture",
-                tag: "Gaming",
-                source: "IGN",
-                time: "1h ago",
-                img: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=640&q=80",
-                query: "Unreal Engine next gen gaming neural rendering graphics"
-            },
-            {
-                title: "Grammy Winners Announced Celebrating Global Indie & Spatial Audio Innovations",
-                category: "culture",
-                tag: "Music",
-                source: "Rolling Stone",
-                time: "3h ago",
-                img: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=640&q=80",
-                query: "Music industry awards spatial audio album releases"
-            }
-        ];
+        const richEditorialArticles = [];
 
         const regionalData = {
             global: {
@@ -5526,7 +5364,17 @@
             items.forEach((item, index) => {
                 const card = document.createElement('div');
                 card.className = 'pulse-news-card';
-                card.onclick = () => openPulseQuery(item.query || item.title);
+                card.onclick = () => {
+                    if (item.url && item.url.startsWith('http')) {
+                        if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openUrl === 'function') {
+                            window.FokkShieldBridge.openUrl(item.url);
+                        } else {
+                            window.location.href = item.url;
+                        }
+                    } else {
+                        openPulseQuery(item.query || item.title);
+                    }
+                };
                 const imgSrc = getDynamicArticlePhoto(item, index);
                 card.innerHTML = `
                     <img src="${imgSrc}" alt="News image unavailable" class="pulse-news-img" onerror="this.onerror=null;this.src=getNewsImageFallback();">
@@ -5535,7 +5383,7 @@
                         <div class="pulse-news-footer">
                             <span class="pulse-news-tag">${item.tag || item.category || 'Live'}</span>
                             <span>&bull;</span>
-                            <span>${item.source || 'News'}</span>
+                            <span style="color:#00E5FF;font-weight:700;">${item.source || 'News'}</span>
                             <span>&bull;</span>
                             <span>${item.time || 'Live'}</span>
                         </div>
@@ -5545,27 +5393,91 @@
             });
         }
 
-        function renderFilteredNews(retryCount = 0) {
+        window.onLiveNewsReceived = function(category, jsonStr) {
             try {
-                if (window.FokkShieldBridge && typeof window.FokkShieldBridge.getLiveNews === 'function') {
-                    const raw = window.FokkShieldBridge.getLiveNews(currentNewsCategory);
-                    if (raw) {
-                        const parsed = JSON.parse(raw);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                            renderNewsCards(parsed);
-                            return;
-                        }
-                    } else if (retryCount < 4) {
-                        setTimeout(() => renderFilteredNews(retryCount + 1), 800);
+                if (!jsonStr) return;
+                const parsed = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    const normCat = (category || 'all').toLowerCase();
+                    try { localStorage.setItem('fokk_cached_pulse_' + normCat, JSON.stringify(parsed)); } catch (e) {}
+                    if (normCat === currentNewsCategory || (currentNewsCategory === 'all' && normCat === 'all')) {
+                        renderNewsCards(parsed);
+                    }
+                }
+            } catch (e) {
+                console.error("onLiveNewsReceived error", e);
+            }
+        };
+
+        function renderFilteredNews(retryCount = 0) {
+            const cat = currentNewsCategory;
+            // 1. Instant check from localStorage
+            try {
+                const local = localStorage.getItem('fokk_cached_pulse_' + cat);
+                if (local) {
+                    const parsed = JSON.parse(local);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        renderNewsCards(parsed);
                     }
                 }
             } catch (e) {}
 
-            const filtered = richEditorialArticles.filter(item => {
-                if (currentNewsCategory === 'all') return true;
-                return item.category === currentNewsCategory;
-            });
-            renderNewsCards(filtered);
+            // 2. Query bridge for cached/live multi-source news
+            try {
+                if (window.FokkShieldBridge && typeof window.FokkShieldBridge.getLiveNews === 'function') {
+                    const raw = window.FokkShieldBridge.getLiveNews(cat);
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            try { localStorage.setItem('fokk_cached_pulse_' + cat, raw); } catch(e){}
+                            renderNewsCards(parsed);
+                            return;
+                        }
+                    } else if (retryCount < 5) {
+                        setTimeout(() => renderFilteredNews(retryCount + 1), 600);
+                        return;
+                    }
+                }
+            } catch (e) {}
+
+            // 3. Shimmer skeleton placeholder while loading first time
+            const newsList = document.getElementById('pulseNewsList');
+            if (newsList && newsList.children.length === 0) {
+                newsList.innerHTML = `
+                    <div class="pulse-news-skeleton">
+                        <div class="skeleton-img"></div>
+                        <div class="skeleton-lines">
+                            <div class="skeleton-line" style="width:92%"></div>
+                            <div class="skeleton-line" style="width:75%"></div>
+                            <div class="skeleton-line" style="width:40%"></div>
+                        </div>
+                    </div>
+                    <div class="pulse-news-skeleton">
+                        <div class="skeleton-img"></div>
+                        <div class="skeleton-lines">
+                            <div class="skeleton-line" style="width:85%"></div>
+                            <div class="skeleton-line" style="width:68%"></div>
+                            <div class="skeleton-line" style="width:35%"></div>
+                        </div>
+                    </div>
+                    <div class="pulse-news-skeleton">
+                        <div class="skeleton-img"></div>
+                        <div class="skeleton-lines">
+                            <div class="skeleton-line" style="width:90%"></div>
+                            <div class="skeleton-line" style="width:60%"></div>
+                            <div class="skeleton-line" style="width:45%"></div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function refreshCurrentNews() {
+            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.refreshLiveNews === 'function') {
+                window.FokkShieldBridge.refreshLiveNews(currentNewsCategory);
+            } else {
+                renderFilteredNews();
+            }
         }
 
         function onCountryChanged(country) {
@@ -5841,7 +5753,11 @@
                 { id: "sb6", title: "Classic Wooden Hull Sloop", sub: "Pacific Blue Waters • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=82" },
                 { id: "sb7", title: "Emerald Bay Tropical Anchor", sub: "Crystal Lagoon Reef • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1516815231560-8f41ec531527?auto=format&fit=crop&w=800&q=82" },
                 { id: "sb8", title: "Open Atlantic Windward Run", sub: "Deep Indigo Waves • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1506929562872-bb421503ef21?auto=format&fit=crop&w=800&q=82" },
-                { id: "sb9", title: "Virgin Islands Secluded Moor", sub: "Caribbean Turquoise • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&w=800&q=82" }
+                { id: "sb9", title: "Virgin Islands Secluded Moor", sub: "Caribbean Turquoise • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb10", title: "High-Performance Ocean Regatta", sub: "Windward Spinnaker • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1517411032315-54ef2cb783bb?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb11", title: "Twilight Golden Sails", sub: "Horizon Sunbeam • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1494791368093-85217fbbf8de?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb12", title: "Aegean Coastal Explorer", sub: "Cyclades Turquoise • UHD", ratio: "1.4", img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb13", title: "Catamaran Island Anchorage", sub: "Crystal Clear Atoll • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=82" }
             ],
             wallpapers: [
                 { id: "w1", title: "Cyberpunk Tokyo Rain", sub: "4K OLED • Ultra Neon", ratio: "1.4", img: "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&w=800&q=82" },
@@ -5938,6 +5854,8 @@
             }
             if (navigator.vibrate) try { navigator.vibrate(20); } catch (err) {}
             visualPage = 1;
+            visualHasMore = true;
+            try { history.pushState({ modal: 'visualHub' }, ''); } catch (err) {}
             renderVisualCuratedShelf();
             renderVisualGrid(currentVisualCategory, '', true);
             const m = document.getElementById('visualHubModal');
@@ -6253,24 +6171,66 @@
             if (!scrollContainer || scrollContainer.__fokk_infinite_bound) return;
             scrollContainer.__fokk_infinite_bound = true;
 
+            let scrollTicking = false;
             scrollContainer.addEventListener('scroll', function() {
-                if (isVisualLoading) return;
-                const distToBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight;
-                if (distToBottom < 300) {
-                    isVisualLoading = true;
-                    const loader = document.getElementById('visualInfiniteLoader');
-                    if (loader) loader.style.display = 'flex';
-                    setTimeout(() => {
-                        visualPage++;
-                        const input = document.getElementById('visualSearchInput');
-                        const q = input ? input.value.trim() : '';
-                        renderVisualGrid(currentVisualCategory, q, false);
-                        if (loader) loader.style.display = 'none';
-                        isVisualLoading = false;
-                    }, 400);
-                }
-            });
+                if (scrollTicking) return;
+                scrollTicking = true;
+                requestAnimationFrame(() => {
+                    scrollTicking = false;
+                    if (isVisualLoading || !visualHasMore) return;
+                    const distToBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight;
+                    if (distToBottom < 380) {
+                        isVisualLoading = true;
+                        const loader = document.getElementById('visualInfiniteLoader');
+                        if (loader) loader.style.opacity = '1';
+                        setTimeout(() => {
+                            visualPage++;
+                            const input = document.getElementById('visualSearchInput');
+                            const q = input ? input.value.trim() : '';
+                            const grid = document.getElementById('visualGridContainer');
+                            const nextBatch = getUnlimitedVisualBatch(currentVisualCategory, visualPage, q);
+                            if (nextBatch.length > 0 && grid) {
+                                appendVisualCards(nextBatch, grid);
+                            } else if (nextBatch.length === 0) {
+                                visualHasMore = false;
+                            }
+                            renderVisualGrid(currentVisualCategory, q, false);
+                            if (loader) loader.style.opacity = '0';
+                            isVisualLoading = false;
+                        }, 250);
+                    }
+                });
+            }, { passive: true });
         }
+
+        window.addEventListener('popstate', function(event) {
+            const v = document.getElementById('visualHubModal');
+            if (v && v.classList.contains('active')) {
+                v.classList.remove('active');
+                v.style.display = 'none';
+                return;
+            }
+            const l = document.getElementById('livePulseModal');
+            if (l && l.classList.contains('active')) {
+                l.classList.remove('active');
+                return;
+            }
+            const light = document.getElementById('visualLightboxModal');
+            if (light && light.style.display === 'flex') {
+                light.style.display = 'none';
+                return;
+            }
+            const popover = document.getElementById('commandMenuPopover');
+            if (popover && popover.classList.contains('active')) {
+                popover.classList.remove('active');
+                return;
+            }
+            const engPop = document.getElementById('engineDropdownPopover');
+            if (engPop && engPop.classList.contains('active')) {
+                engPop.classList.remove('active');
+                return;
+            }
+        });
 
         function searchVisuals() {
             const input = document.getElementById('visualSearchInput');
