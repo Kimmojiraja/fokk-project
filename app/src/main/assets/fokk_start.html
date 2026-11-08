@@ -2027,15 +2027,16 @@
             color: #000000;
             font-weight: 800;
         }
-        /* PINTEREST 2-COLUMN MASONRY & CARD STYLING */
+        /* STABLE ZERO-GLITCH 2-COLUMN GRID & CARD STYLING */
         .visual-grid {
-            column-count: 2;
-            column-gap: 10px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
             width: 100%;
         }
         .visual-card {
-            break-inside: avoid;
-            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
             border-radius: 16px;
             overflow: hidden;
             background: #141824;
@@ -2043,6 +2044,7 @@
             position: relative;
             transition: transform 0.18s ease;
             box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            contain: paint;
         }
         .visual-card:active {
             transform: scale(0.98);
@@ -2051,12 +2053,10 @@
             width: 100%;
             height: auto;
             aspect-ratio: 9 / 14;
-            min-height: 140px;
             background: #1e2436;
             border-radius: 16px 16px 0 0;
             object-fit: cover;
             display: block;
-            transition: opacity 0.2s ease;
         }
         .visual-card-footer {
             display: flex;
@@ -3243,29 +3243,27 @@
                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
             </button>
+            <button class="home-essential" onclick="openDualScreenAction(event)" title="Dual Screen Multitasking" aria-label="Dual Screen">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+                    <rect x="3" y="3" width="18" height="18" rx="4" stroke="#000000" stroke-width="2.2"/>
+                    <line x1="3" y1="12" x2="21" y2="12" stroke="#000000" stroke-width="2.2"/>
+                    <circle cx="8" cy="7.5" r="1.3" fill="#000000"/>
+                    <circle cx="8" cy="16.5" r="1.3" fill="#000000"/>
+                    <line x1="11.5" y1="7.5" x2="16.5" y2="7.5" stroke="#000000" stroke-width="1.8" stroke-linecap="round"/>
+                    <line x1="11.5" y1="16.5" x2="16.5" y2="16.5" stroke="#000000" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </button>
+            <button class="home-essential" onclick="openShieldAction(event)" title="Fokk Shield Defense" aria-label="Fokk Shield">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+                    <path d="M12 2L4 5.5v6c0 5.5 3.4 10.7 8 12.5 4.6-1.8 8-7 8-12.5v-6L12 2z" stroke="#000000" stroke-width="2.2" stroke-linejoin="round"/>
+                    <path d="M9 12.2l2.2 2.3 4.3-4.5" stroke="#000000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
             <button class="home-essential" onclick="openVisualHub(event)" title="Visuals & Wallpapers" aria-label="Images">
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
                     <rect x="2.5" y="3.5" width="19" height="17" rx="4" stroke="#000000" stroke-width="2.2"/>
                     <circle cx="16.5" cy="8.5" r="1.6" fill="#000000"/>
                     <path d="M 3.5 17.5 L 9 11.5 L 13.5 16 L 16 13.5 L 20.5 18 C 20.5 19.5 19.5 20.5 18 20.5 L 6 20.5 C 4.5 20.5 3.5 19.5 3.5 18 Z" fill="#000000"/>
-                </svg>
-            </button>
-            <button class="home-essential" onclick="openMediaVideoHub(event)" title="Trending Videos" aria-label="Videos">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="#000000" stroke-width="2.2"/>
-                    <polygon points="10,8 17,12 10,16" fill="#000000"/>
-                </svg>
-            </button>
-            <button class="home-essential" onclick="openAudioHub(event)" title="Music & Audio" aria-label="Audio">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#000000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 14v-2a8 8 0 0 1 16 0v2"/>
-                    <rect x="2.5" y="13.5" width="3" height="6.5" rx="1.5" fill="#000000" stroke="none"/>
-                    <rect x="18.5" y="13.5" width="3" height="6.5" rx="1.5" fill="#000000" stroke="none"/>
-                    <line x1="8.5" y1="12" x2="8.5" y2="16"/>
-                    <line x1="10.25" y1="10" x2="10.25" y2="18"/>
-                    <line x1="12" y1="8.5" x2="12" y2="19.5"/>
-                    <line x1="13.75" y1="10" x2="13.75" y2="18"/>
-                    <line x1="15.5" y1="12" x2="15.5" y2="16"/>
                 </svg>
             </button>
         </div>
@@ -3409,6 +3407,7 @@
             </div>
             <div class="visual-tags-strip">
                 <button class="visual-tag-btn active" onclick="filterVisuals('all', this)">All Feeds</button>
+                <button class="visual-tag-btn" onclick="filterVisuals('sailboats', this)">⛵ Sail &amp; Horizon</button>
                 <button class="visual-tag-btn" onclick="filterVisuals('wallpapers', this)">4K Wallpapers</button>
                 <button class="visual-tag-btn" onclick="filterVisuals('cyberpunk', this)">Cyberpunk &amp; Neon</button>
                 <button class="visual-tag-btn" onclick="filterVisuals('nature', this)">Ethereal Nature</button>
@@ -4551,6 +4550,21 @@
                 return;
             }
             if (!isAppEnvironment) showPreviewToast('AdShield Defense');
+        }
+
+        function openDualScreenAction(e) {
+            if (e) {
+                if (typeof e.stopPropagation === 'function') e.stopPropagation();
+                if (typeof e.preventDefault === 'function') e.preventDefault();
+            }
+            if (navigator.vibrate) try { navigator.vibrate(20); } catch (err) {}
+            const popover = document.getElementById('commandMenuPopover');
+            if (popover) popover.classList.remove('active');
+            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openDualScreen === 'function') {
+                window.FokkShieldBridge.openDualScreen();
+                return;
+            }
+            if (!isAppEnvironment) showPreviewToast('Dual Screen Multitasking');
         }
 
         function openSettingsAction(e) {
@@ -5818,6 +5832,17 @@
         // UNLIMITED VISUALS & 4K WALLPAPERS STUDIO (PINTEREST MASONRY + INFINITE)
         // =========================================================================
         const visualSeedLibrary = {
+            sailboats: [
+                { id: "sb1", title: "Sapphire Ocean Solitude", sub: "Sunlight Reflections • 4K", ratio: "1.4", img: "wallpapers/fokk_sailboat_1.jpg" },
+                { id: "sb2", title: "Turquoise Horizon Sail", sub: "Minimalist Teal Calm • 4K", ratio: "1.4", img: "wallpapers/fokk_sailboat_2.jpg" },
+                { id: "sb3", title: "Glistening Sunlight Yacht", sub: "Pure Oceanic Freedom • 4K", ratio: "1.4", img: "wallpapers/fokk_sailboat_3.jpg" },
+                { id: "sb4", title: "White Sail in Azure Waters", sub: "Mediterranean Breeze • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb5", title: "Sunset Horizon Golden Voyage", sub: "Golden Hour Calm • UHD", ratio: "1.4", img: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb6", title: "Classic Wooden Hull Sloop", sub: "Pacific Blue Waters • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb7", title: "Emerald Bay Tropical Anchor", sub: "Crystal Lagoon Reef • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1516815231560-8f41ec531527?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb8", title: "Open Atlantic Windward Run", sub: "Deep Indigo Waves • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1506929562872-bb421503ef21?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb9", title: "Virgin Islands Secluded Moor", sub: "Caribbean Turquoise • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&w=800&q=82" }
+            ],
             wallpapers: [
                 { id: "w1", title: "Cyberpunk Tokyo Rain", sub: "4K OLED • Ultra Neon", ratio: "1.4", img: "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&w=800&q=82" },
                 { id: "w2", title: "Alpine Emerald Mirror Lake", sub: "8K UHD • Dolomites", ratio: "0.8", img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=82" },
@@ -6025,7 +6050,7 @@
                 const safeCat = (item.category || 'wallpapers').replace(/'/g, "\\'");
                 const safeSub = (item.sub || 'Ultra 4K').replace(/'/g, "\\'");
                 card.innerHTML = `
-                    <img src="${item.img}" alt="${item.title}" loading="lazy" onclick="openVisualLightbox('${safeTitle}', '${safeUrl}', '${safeCat}', '${safeSub}')">
+                    <img src="${item.img}" alt="${item.title}" loading="lazy" onerror="this.onerror=null;this.src='wallpapers/fokk_sailboat_1.jpg';" onclick="openVisualLightbox('${safeTitle}', '${safeUrl}', '${safeCat}', '${safeSub}')">
                     <div class="visual-card-footer">
                         <div class="visual-card-text" onclick="openVisualLightbox('${safeTitle}', '${safeUrl}', '${safeCat}', '${safeSub}')">
                             <span class="visual-card-title">${item.title}</span>
@@ -6055,6 +6080,9 @@
             // Asynchronously fetch online wallpapers in background without UI thread freeze
             setTimeout(async () => {
                 try {
+                    if (cat === 'sailboats' && !query) {
+                        return; // Keep curated sailboat collection pristine without random network reordering
+                    }
                     const searchQuery = query || (cat === 'all' ? 'wallpapers' : cat);
                     let raw = '';
                     if (window.FokkShieldBridge && typeof window.FokkShieldBridge.fetchOnlineWallpapers === 'function') {

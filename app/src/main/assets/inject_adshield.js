@@ -19,6 +19,13 @@
         hostIs('threads.net') || hostIs('facebook.com') || href.includes('//x.com') || href.includes('//twitter.com');
     const isYouTube = hostIs('youtube.com') || hostIs('youtu.be') || currentHost.endsWith('.youtube.com');
 
+    // X (Twitter) SPA: Complete zero-tampering pass-through.
+    // X relies heavily on React, Relay, strict CSP nonces, and virtual windowing.
+    // Any injected scripts, prototype wrappers, or DOM observers cause fatal crashes or blank screen loops on X.
+    if (hostIs('x.com') || hostIs('twitter.com') || href.includes('//x.com') || href.includes('//twitter.com')) {
+        return;
+    }
+
     // =========================================================================
     // Dynamic Anti-Fingerprint Cloak: Safe Protections (Non-destructive to bot checkers)
     // Avoids altering Canvas prototypes which triggers Cloudflare/Kasada/PerimeterX bot blocks.
