@@ -2720,17 +2720,19 @@ open class MediaHubActivity : AppCompatActivity() {
                 // Social apps are tightly coupled SPAs. Allow core social infrastructure & feeds,
                 // but block known third-party ad networks, telemetry trackers, and ad pixels.
                 if (isSocialAppHost(pageHost) || isSocialInfrastructureHost(host)) {
-                    val isAdOrTracker = isDedicatedAdOrTrackerHost(host) ||
-                        urlStr.contains("/pagead/") ||
+                    val isThirdPartyAd = urlStr.contains("/pagead/") ||
                         urlStr.contains("doubleclick.net") ||
-                        urlStr.contains("/ads/") ||
                         urlStr.contains("adservice.google.") ||
                         urlStr.contains("googleadservices.com") ||
                         urlStr.contains("googletagservices.com") ||
                         urlStr.contains("amazon-adsystem.com") ||
                         urlStr.contains("criteo.") ||
                         urlStr.contains("taboola.com") ||
-                        urlStr.contains("outbrain.com") ||
+                        urlStr.contains("outbrain.com")
+                    val isGenericAdPath = !isSocialInfrastructureHost(host) && urlStr.contains("/ads/")
+                    val isAdOrTracker = isDedicatedAdOrTrackerHost(host) ||
+                        isThirdPartyAd ||
+                        isGenericAdPath ||
                         AdShieldApp.instance.blocklistEngine.isUrlBlocked(requestUrl ?: "")
                     if (isAdOrTracker && !isMediaRequest) {
                         recordFilteredRequest(view, host)

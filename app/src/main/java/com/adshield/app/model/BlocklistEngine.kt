@@ -199,7 +199,23 @@ class BlocklistEngine(private val context: Context) {
         "challenges.cloudflare.com",
         "cloudflare.com",
         "hcaptcha.com",
-        "recaptcha.net"
+        "recaptcha.net",
+        // Social Platform Core Infrastructure (Guaranteed never blocked)
+        "x.com",
+        "twitter.com",
+        "twimg.com",
+        "abs.twimg.com",
+        "pbs.twimg.com",
+        "t.co",
+        "api.x.com",
+        "api.twitter.com",
+        "reddit.com",
+        "redditmedia.com",
+        "redd.it",
+        "instagram.com",
+        "cdninstagram.com",
+        "facebook.com",
+        "fbcdn.net"
     )
 
     /**

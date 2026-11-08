@@ -1,6 +1,6 @@
 {
-  "versionCode": 219,
-  "versionName": "2.1.9",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.1.9/app-debug.apk",
-  "changelog": "- YouTube Zero-Buffering & Startup Delay Fix: Eliminated XHR manifest re-serialization for /player, /next, /reel, and /browse, removing buffer stalls on watch, shorts, and feed playback.\n- In-Flight Page-Side Defuser: Ad data defused in-place via Response.prototype.json and JSON.parse without stalling data streams.\n- ABP-Style Network Filtering: Full support for ||host^ anchors, @@ exceptions, and path-scoped rules with boundary matching.\n- Pure Android System WebView v2.1.9 release (17.4 MB)."
+  "versionCode": 220,
+  "versionName": "2.2.0",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.2.0/app-debug.apk",
+  "changelog": "- X (Twitter) Loading & Stability Fix: Eliminated GraphQL in-flight fetch decoding conflicts and Relay schema desync, restoring smooth loading on x.com and twitter.com without 'Try again' errors.\n- Robust Cosmetic Ad Shield for Social Networks: Replaced destructive DOM removals and payload splicing with zero-latency, crash-proof CSS element hiding and style-level collapse for promoted tweets and trends.\n- Protected Social CDN Delivery: Whitelisted core social infrastructure domains (twimg.com, abs.twimg.com, t.co) to ensure asset and Webpack bundles stream without disruption.\n- Pure Android System WebView v2.2.0 release (17.4 MB)."
 }

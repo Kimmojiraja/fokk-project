@@ -176,49 +176,10 @@
             return modified;
         }
 
-        // X (Twitter) GraphQL in-flight timeline scrubber
+        // X (Twitter) GraphQL timeline: Promoted tweets are handled cleanly via cosmetic CSS and DOM hiding.
+        // Mutating GraphQL schema/instructions in-flight desyncs Relay and causes React Error Boundary crashes ("Try again").
         function sanitizeXData(data) {
-            if (!data || typeof data !== 'object') return false;
-            let modified = false;
-            function cleanEntries(instructions) {
-                if (!Array.isArray(instructions)) return;
-                for (let j = 0; j < instructions.length; j++) {
-                    const inst = instructions[j];
-                    if (inst && Array.isArray(inst.entries)) {
-                        for (let i = inst.entries.length - 1; i >= 0; i--) {
-                            const entry = inst.entries[i];
-                            const itemContent = entry && entry.content && (entry.content.itemContent || (entry.content.items && entry.content.items[0] && entry.content.items[0].item && entry.content.items[0].item.itemContent));
-                            if (itemContent && (itemContent.promotedMetadata || itemContent.promoted_metadata)) {
-                                inst.entries.splice(i, 1);
-                                modified = true;
-                            }
-                        }
-                    }
-                    if (inst && inst.entry) {
-                        const itemContent = inst.entry.content && inst.entry.content.itemContent;
-                        if (itemContent && (itemContent.promotedMetadata || itemContent.promoted_metadata)) {
-                            delete inst.entry;
-                            modified = true;
-                        }
-                    }
-                }
-            }
-            try {
-                if (data.data) {
-                    for (const k in data.data) {
-                        const sub = data.data[k];
-                        if (sub && typeof sub === 'object') {
-                            if (sub.timeline && Array.isArray(sub.timeline.instructions)) {
-                                cleanEntries(sub.timeline.instructions);
-                            }
-                            if (sub.home_timeline_urt && Array.isArray(sub.home_timeline_urt.instructions)) {
-                                cleanEntries(sub.home_timeline_urt.instructions);
-                            }
-                        }
-                    }
-                }
-            } catch (e) {}
-            return modified;
+            return false;
         }
 
         // Hook ytInitialPlayerResponse so initial inline page data is sanitized before player boots
@@ -235,76 +196,10 @@
             });
         } catch (e) {}
 
-        // Global fetch hook: intercepts in-flight JSON responses for YouTube, Reddit, X, and Instagram
-        if (window.fetch) {
-            const origFetch = window.fetch;
-            window.fetch = async function(input, init) {
-                const response = await origFetch.apply(this, arguments);
-                try {
-                    const url = (typeof input === 'string') ? input : (input && input.url ? input.url : '');
-                    if (!url || typeof url !== 'string') return response;
-                    const host = window.location.hostname;
-
-                    // YouTube player / navigation responses: do NOT reconstruct the Response here.
-                    // Re-cloning and re-serializing the player manifest delays streaming-data
-                    // delivery and can leave the player stuck on a blank/buffering screen.
-                    // Ad data is still defused page-side via the Response.prototype.json hook below,
-                    // and ad network requests are blocked at the native network layer.
-
-                    // 2. Reddit GraphQL Feed API
-                    if (host.includes('reddit.com') && (url.includes('/api/v2/graphql') || url.includes('gql.reddit.com'))) {
-                        try {
-                            const clone = response.clone();
-                            const data = await clone.json();
-                            if (sanitizeRedditData(data)) {
-                                return new Response(JSON.stringify(data), {
-                                    status: response.status,
-                                    statusText: response.statusText,
-                                    headers: response.headers
-                                });
-                            }
-                        } catch (e) {
-                            return response;
-                        }
-                    }
-
-                    // 3. X (Twitter) GraphQL Timeline API
-                    if ((host.includes('x.com') || host.includes('twitter.com')) && url.includes('/i/api/graphql/')) {
-                        try {
-                            const clone = response.clone();
-                            const data = await clone.json();
-                            if (sanitizeXData(data)) {
-                                return new Response(JSON.stringify(data), {
-                                    status: response.status,
-                                    statusText: response.statusText,
-                                    headers: response.headers
-                                });
-                            }
-                        } catch (e) {
-                            return response;
-                        }
-                    }
-
-                    // 4. Instagram Timeline / Reels / Clips API
-                    if (host.includes('instagram.com') && (url.includes('/api/v1/feed/') || url.includes('/graphql/query') || url.includes('/api/v1/clips/'))) {
-                        try {
-                            const clone = response.clone();
-                            const data = await clone.json();
-                            if (sanitizeInstagramData(data)) {
-                                return new Response(JSON.stringify(data), {
-                                    status: response.status,
-                                    statusText: response.statusText,
-                                    headers: response.headers
-                                });
-                            }
-                        } catch (e) {
-                            return response;
-                        }
-                    }
-                } catch (e) {}
-                return response;
-            };
-        }
+        // Response integrity: We intentionally do NOT reconstruct Response objects in window.fetch.
+        // Re-serializing JSON with original compressed headers (gzip/br) causes Chromium ERR_CONTENT_DECODING_FAILED.
+        // Ad payloads are defused in-memory via Response.prototype.json below, and network requests
+        // are blocked at the native layer without touching fetch streams.
 
         // uBlock Origin standard: Defuses YouTube ad data across ALL response parsing methods:
         // 1. window.JSON.parse — scoped to YouTube only to avoid blocking other sites
@@ -331,7 +226,6 @@
                         const host = window.location.hostname;
                         if (host.includes('youtube.com')) sanitizeYtPlayerResponse(data);
                         else if (host.includes('reddit.com')) sanitizeRedditData(data);
-                        else if (host.includes('x.com') || host.includes('twitter.com')) sanitizeXData(data);
                         else if (host.includes('instagram.com')) sanitizeInstagramData(data);
                     }
                     return data;
@@ -356,7 +250,6 @@
                                 const host = window.location.hostname;
                                 if (host.includes('youtube.com')) sanitizeYtPlayerResponse(res);
                                 else if (host.includes('reddit.com')) sanitizeRedditData(res);
-                                else if (host.includes('x.com') || host.includes('twitter.com')) sanitizeXData(res);
                                 else if (host.includes('instagram.com')) sanitizeInstagramData(res);
                             }
                             return res;
@@ -943,24 +836,7 @@
                         this.addEventListener('readystatechange', modifyRedditResponse, { capture: true });
                         this.addEventListener('load', modifyRedditResponse, { capture: true });
                     }
-                    const isX = this._fokkTargetUrl.includes('/i/api/graphql/');
-                    if (isX) {
-                        const self = this;
-                        const modifyXResponse = function() {
-                            if (self.readyState === 4 && self.status === 200) {
-                                try {
-                                    const data = JSON.parse(self.responseText);
-                                    if (sanitizeXData(data)) {
-                                        const cleaned = JSON.stringify(data);
-                                        Object.defineProperty(self, 'responseText', { value: cleaned, configurable: true });
-                                        Object.defineProperty(self, 'response', { value: cleaned, configurable: true });
-                                    }
-                                } catch (e) {}
-                            }
-                        };
-                        this.addEventListener('readystatechange', modifyXResponse, { capture: true });
-                        this.addEventListener('load', modifyXResponse, { capture: true });
-                    }
+
                     const isIg = this._fokkTargetUrl.includes('/graphql/query') ||
                                  this._fokkTargetUrl.includes('/api/v1/feed/timeline/') ||
                                  this._fokkTargetUrl.includes('/api/v1/feed/reels_tray/') ||
@@ -1692,7 +1568,15 @@
             if (document.body) document.body.style.overflow = 'auto';
         } else if (host.includes('x.com') || host.includes('twitter.com')) {
             document.querySelectorAll('div[data-testid="cellInnerDiv"]:has([data-testid="placementTracking"]), div[data-testid="placementTracking"], .promoted-account, .promotion').forEach(function(el) {
-                try { el.remove(); } catch (e) {}
+                try {
+                    el.style.setProperty('display', 'none', 'important');
+                    el.style.setProperty('height', '0px', 'important');
+                    el.style.setProperty('min-height', '0px', 'important');
+                    el.style.setProperty('max-height', '0px', 'important');
+                    el.style.setProperty('padding', '0px', 'important');
+                    el.style.setProperty('margin', '0px', 'important');
+                    el.style.setProperty('overflow', 'hidden', 'important');
+                } catch (e) {}
             });
         } else if (host.includes('instagram.com')) {
             document.querySelectorAll('article:has(a[href*="/about/ads"]), div[role="article"]:has(a[href*="/about/ads"]), div:has(> [aria-label*="Sponsored"])').forEach(function(el) {
