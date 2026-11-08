@@ -3503,7 +3503,8 @@ open class MediaHubActivity : AppCompatActivity() {
             urlStr.contains("analytics") || urlStr.contains("gtag") || urlStr.contains("ga.js") -> "(function(){window.ga=window.ga||function(){};window.gtag=window.gtag||function(){};})();"
             urlStr.contains("cookielaw") || urlStr.contains("onetrust") -> "(function(){window.OneTrust=window.OneTrust||{IsAlertBoxClosed:function(){return true;},Close:function(){}};})();"
             urlStr.contains("cookiebot") -> "(function(){window.Cookiebot=window.Cookiebot||{consent:{necessary:true,preferences:false,statistics:false,marketing:false},hasResponse:true};})();"
-            urlStr.contains("fundingchoices") -> "(function(){window.googlefc=window.googlefc||{callbackQueue:[]};})();"
+            urlStr.contains("fundingchoices") -> "(function(){window.googlefc=window.googlefc||{callbackQueue:[],controlledMessagingFunction:function(){},getAdBlockerStatus:function(cb){if(typeof cb==='function')setTimeout(function(){cb(0);},5);return 0;},showRevocationMessage:function(){}};})();"
+            urlStr.contains("/ads.js") || urlStr.contains("advertisement.js") || urlStr.contains("adframe.js") || urlStr.contains("/advert.js") || urlStr.contains("adserver.js") || urlStr.contains("ad-zone.js") -> "(function(){window.canRunAds=true;window.isAdBlockActive=false;window.isAdBlocked=false;window.adBlock=false;window.adblock=false;window.adblockDetected=false;window.google_ad_client='ca-pub-0000000000000000';})();"
             isJs -> "/* blocked by fokk brave-shield */"
             else -> ""
         }
