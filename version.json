@@ -1,6 +1,6 @@
 {
-  "versionCode": 221,
-  "versionName": "2.2.1",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.2.1/app-debug.apk",
-  "changelog": "- Universal Anti-Adblock Immunity Engine: Defuses adblock detector traps across Fox News, The Sun, Yahoo, and news publishers using Main World V8 script bridging.\n- Advanced Bait Element & Dimension Spoofing: Intercepts getBoundingClientRect(), offsetHeight, clientHeight, and getComputedStyle().getPropertyValue() so bait elements appear fully rendered without displaying ads.\n- Major Vendor Stubs & Network Probe Defusers: Embedded mocks for Admiral, Google Funding Choices, Sourcepoint, and synthetic probe scripts (/ads.js, advertisement.js).\n- Editorial Media & Video Protection: Strict guards ensuring article video players, embedded tweets, and editorial content are never hidden or disrupted.\n- Pure Android System WebView v2.2.1 release (17.4 MB)."
+  "versionCode": 222,
+  "versionName": "2.2.2",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.2.2/app-debug.apk",
+  "changelog": "- Universal Skippable Video Ad Blocker: Instantly eliminates preroll video ads across adult tube platforms (MindGeek, TrafficJunky, ExoClick) and streaming players (FluidPlayer, VideoJS, JWPlayer, IMA SDK).\n- Real-Time Skip Trigger & Countdown Bypass: Removes artificial countdown delays, unlocks disabled skip buttons, and automatically completes prerolls without human interaction.\n- Network-Level VAST / VPAID XML Ad Defuser: Synthesizes empty VAST 3.0 XML responses to short-circuit video ad auction requests before media streams are downloaded.\n- Editorial & Social Video Protection: Zero interference with news article clips, social feeds (X / Twitter, Instagram, Reddit), or regular media playback.\n- YouTube uBO Standard Retained: Zero playback rate or buffering glitches on YouTube.\n- Pure Android System WebView v2.2.2 release (17.4 MB)."
 }

@@ -1384,6 +1384,157 @@
     }
 
     // =========================================================================
+    // Universal Skippable Video Ad Blocker (Tube, Adult, Streaming & Web Video)
+    // Instantly clicks skip buttons, unblocks countdown timers, defuses VAST
+    // Linear ad modes, and fast-forwards dedicated ad preroll video elements.
+    // Strictly protects editorial article videos, social embeds, and YouTube uBO standard.
+    // =========================================================================
+    function runUniversalVideoAdSkipper() {
+        const host = window.location.hostname;
+        if (host.includes('youtube.com')) {
+            runYouTubeAdSkipper();
+            return;
+        }
+
+        // STRICT USER SAFETY: Never tamper with Twitter / X, Instagram, or Reddit video streams
+        if (host.includes('twitter.com') || host.includes('x.com') || host.includes('instagram.com') || host.includes('reddit.com')) {
+            return;
+        }
+
+        // 1. Universal Skip Button Clicker (MindGeek, TrafficJunky, ExoClick, Fluid, VideoJS, JWPlayer, etc.)
+        const universalSkipSelectors = [
+            '.mgp_skip_button', '.mgp_ad_skip', '.mgp_skip', '.mgp_preroll_skip',
+            '.tj-skip-button', '.tj_skip_button', '.tj-skip-container button',
+            '.skipButton', '.skip_button', '.skip-button', '.skip-btn', '.skip_btn',
+            '.ad-skip', '.ad_skip', '.video-ad-skip-button', '.ad_skip_button',
+            '.preroll-skip-button', '.skip-container button', '.adSkipButton',
+            '.vast-skip-button', '.vast-block-skip-button', '.vast-skip',
+            '.vjs-ad-skip', '.vjs-skip-button',
+            '.jw-ad-skip', '.jw-ad-skip-button', '.jw-skip',
+            '.fluid_skip_ad', '.fp_skip_ad', '.fp_skip_button',
+            '.ima-skip-button', '.ima-countdown-div',
+            '[class*="skip-button" i]', '[class*="ad-skip" i]', '[class*="skip-ad" i]',
+            '[id*="skip-button" i]', '[id*="ad-skip" i]', '[id*="skip-ad" i]',
+            'button[aria-label*="skip" i]', 'div[aria-label*="skip" i]'
+        ];
+
+        for (let i = 0; i < universalSkipSelectors.length; i++) {
+            const btns = document.querySelectorAll(universalSkipSelectors[i]);
+            for (let j = 0; j < btns.length; j++) {
+                const btn = btns[j];
+                // Safety guard: Never click elements in editorial articles or main content text
+                if (btn.closest && btn.closest('article:not([class*="player"]):not([class*="video"]), main:not([class*="player"]):not([class*="video"])')) continue;
+                try {
+                    btn.removeAttribute('disabled');
+                    if ('disabled' in btn) btn.disabled = false;
+                    btn.style.setProperty('pointer-events', 'auto', 'important');
+                    btn.click();
+                    btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+                } catch (e) {}
+            }
+        }
+
+        // 2. Dynamic Text Matching inside Video Player Containers
+        try {
+            const containers = document.querySelectorAll(
+                '.video-player, [class*="player" i], [id*="player" i], ' +
+                '[class*="ad-container" i], [class*="video-container" i]'
+            );
+            const skipRegex = /^(skip(\s*ad(s)?)?|skip\s*video|skip\s*in\s*\d+s?|passer(\s*l'annonce)?|saltar(\s*anuncio)?|überspringen)(\s*\([0-9s]+\))?$/i;
+            for (let c = 0; c < containers.length; c++) {
+                const cand = containers[c].querySelectorAll('button, div, span, a');
+                for (let k = 0; k < cand.length; k++) {
+                    const el = cand[k];
+                    if (el.children.length > 2) continue;
+                    const txt = (el.innerText || el.textContent || '').trim().toLowerCase();
+                    if (txt && (skipRegex.test(txt) || (txt.startsWith('skip ad') && txt.length < 20))) {
+                        try {
+                            el.removeAttribute('disabled');
+                            if ('disabled' in el) el.disabled = false;
+                            el.style.setProperty('pointer-events', 'auto', 'important');
+                            el.click();
+                            el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+                        } catch (e) {}
+                    }
+                }
+            }
+        } catch (e) {}
+
+        // 3. Player API End-Ad Signals (Video.js Ads, JWPlayer)
+        try {
+            if (window.videojs) {
+                const players = (typeof window.videojs.getPlayers === 'function') ? window.videojs.getPlayers() : window.videojs.players;
+                if (players) {
+                    for (const id in players) {
+                        const p = players[id];
+                        if (p && p.ads && typeof p.ads.endLinearAdMode === 'function') {
+                            const isAd = (typeof p.ads.isAdPlaying === 'function') ? p.ads.isAdPlaying() : (p.ads.state === 'ad-playback');
+                            if (isAd) {
+                                p.ads.endLinearAdMode();
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e) {}
+
+        try {
+            if (typeof window.jwplayer === 'function') {
+                const jw = window.jwplayer();
+                if (jw && typeof jw.getState === 'function') {
+                    const state = jw.getState();
+                    if (state === 'ad-playing' || state === 'ad-buffering') {
+                        if (typeof jw.skipAd === 'function') jw.skipAd();
+                    }
+                }
+            }
+        } catch (e) {}
+
+        // 4. Fast-forward and complete dedicated ad video elements
+        const adVideos = document.querySelectorAll(
+            'video.ad-video, video.ad-interrupting, video[class*="preroll" i], ' +
+            'video[src*="ad_"], video[src*="vast"], ' +
+            '.ad-container video, .ad-overlay video, ' +
+            '[class*="ad-showing" i] video, [class*="ad-playing" i] video, ' +
+            '.vjs-ad-playing video, [id*="ad-container" i] video, ' +
+            '.mgp_ad_video, .tj-ad-video, [class*="fluid_ad" i] video'
+        );
+        for (let v = 0; v < adVideos.length; v++) {
+            const vid = adVideos[v];
+            if (vid.closest && vid.closest('article:not([class*="player"]):not([class*="video"]), main:not([class*="player"]):not([class*="video"])')) continue;
+            try {
+                if (!vid.paused && !vid.ended) {
+                    vid.muted = true;
+                    if (isFinite(vid.duration) && vid.duration > 0) {
+                        vid.currentTime = vid.duration;
+                    } else {
+                        vid.currentTime = 999999;
+                    }
+                    vid.dispatchEvent(new Event('ended'));
+                }
+            } catch (e) {}
+        }
+
+        // 5. Clean up lingering preroll/ad overlays inside player containers
+        document.querySelectorAll(
+            '.vast-block-overlay, .ad-interrupting, .vjs-ad-loading, ' +
+            '.mgp_ad_overlay, .tj-ad-overlay, .fluid_ad_container, .video-ad-overlay'
+        ).forEach(function(el) {
+            if (el.closest && el.closest('article:not([class*="player"]), main:not([class*="player"])')) return;
+            try { el.remove(); } catch (e) {}
+        });
+    }
+
+    if (!window.location.hostname.includes('youtube.com')) {
+        const host = window.location.hostname;
+        if (!host.includes('twitter.com') && !host.includes('x.com') && !host.includes('instagram.com') && !host.includes('reddit.com')) {
+            setInterval(runUniversalVideoAdSkipper, 800);
+            document.addEventListener('loadeddata', runUniversalVideoAdSkipper, { capture: true, passive: true });
+            document.addEventListener('playing', runUniversalVideoAdSkipper, { capture: true, passive: true });
+        }
+    }
+
+    // =========================================================================
     // Instagram Feed Ad & Sponsored Story Scrubber
     // =========================================================================
     function scrubInstagramAds() {
@@ -1853,7 +2004,7 @@
                 pendingSweep = false;
                 if (host.includes('google.') || host.includes('bing.com')) scrubAiContent();
                 if (host.includes('youtube.com')) {
-                    runYouTubeAdSkipper();
+                    runUniversalVideoAdSkipper();
                     scrubYouTubeSponsored();
                 } else if (host.includes('instagram.com')) {
                     scrubInstagramAds();
@@ -1862,6 +2013,7 @@
                     scrubAppPromos();
                     scrubCookieBanners();
                     scrubAdultAndStreamingAds();
+                    runUniversalVideoAdSkipper();
                     defuseClickjackingOverlays();
                     defuseAntiAdblockModals();
                     defuseDeceptiveButtons();
@@ -1880,7 +2032,7 @@
         const host = window.location.hostname;
         if (host.includes('google.') || host.includes('bing.com')) scrubAiContent();
         if (host.includes('youtube.com')) {
-            runYouTubeAdSkipper();
+            runUniversalVideoAdSkipper();
             scrubYouTubeSponsored();
         } else if (host.includes('instagram.com')) {
             scrubInstagramAds();
@@ -1889,6 +2041,7 @@
             scrubAppPromos();
             scrubCookieBanners();
             scrubAdultAndStreamingAds();
+            runUniversalVideoAdSkipper();
             defuseClickjackingOverlays();
             defuseAntiAdblockModals();
             defuseDeceptiveButtons();

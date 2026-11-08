@@ -3487,14 +3487,17 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     private fun createBlockedResourceResponse(urlStr: String): WebResourceResponse {
-        val isJson = urlStr.contains("/youtubei/") || urlStr.contains("/api/stats/ads") || urlStr.contains(".json")
-        val isJs = urlStr.endsWith(".js") || urlStr.contains(".js?")
+        val isVast = urlStr.contains("vast") || urlStr.contains("vpaid") || urlStr.contains("adtag") || urlStr.contains("/ad_tag") || urlStr.contains("spotxchange")
+        val isJson = !isVast && (urlStr.contains("/youtubei/") || urlStr.contains("/api/stats/ads") || urlStr.contains(".json"))
+        val isJs = !isVast && (urlStr.endsWith(".js") || urlStr.contains(".js?"))
         val mimeType = when {
+            isVast -> "application/xml"
             isJson -> "application/json"
             isJs -> "application/javascript"
             else -> "text/plain"
         }
         val emptyPayload = when {
+            isVast -> "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"3.0\"></VAST>"
             isJson -> "{}"
             urlStr.contains("adsbygoogle") -> "(function(){window.adsbygoogle=window.adsbygoogle||[];window.adsbygoogle.loaded=true;})();"
             urlStr.contains("gpt.js") || urlStr.contains("googletagservices") -> "(function(){window.googletag=window.googletag||{cmd:[],apiReady:true};window.googletag.pubads=window.googletag.pubads||function(){var s={addEventListener:function(){},clear:function(){},display:function(){},enableAsyncRendering:function(){},enableSingleRequest:function(){},getSlots:function(){return[];},getSlotIdMap:function(){return{};},isInitialLoadDisabled:function(){return false;},refresh:function(){},setTargeting:function(){}};return s;};})();"
