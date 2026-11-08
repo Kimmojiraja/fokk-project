@@ -8,7 +8,9 @@
     "start": "electron .",
     "pack:linux": "electron-builder --linux --dir",
     "dist:linux": "electron-builder --linux deb AppImage",
-    "dist:win": "electron-builder --win nsis portable",
+    "dist:win": "electron-builder --win zip -c.win.signAndEditExecutable=false",
+    "dist:mac": "electron-builder --mac zip",
+    "dist:all": "electron-builder --linux deb AppImage --win zip -c.win.signAndEditExecutable=false --mac zip",
     "dist": "electron-builder -wl"
   },
   "keywords": ["browser", "adblock", "privacy", "chromium", "fokk"],
@@ -53,6 +55,11 @@
     },
     "win": {
       "target": ["nsis", "portable"],
+      "icon": "assets/icon.png"
+    },
+    "mac": {
+      "target": ["zip"],
+      "category": "public.app-category.productivity",
       "icon": "assets/icon.png"
     },
     "nsis": {

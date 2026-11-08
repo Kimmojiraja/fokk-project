@@ -46,10 +46,9 @@
             <!-- Dynamically populated via start.js with 8 squircle tiles -->
         </section>
 
-        <!-- Thought-Provoking Stories (Firefox Style Grid) -->
+        <!-- Real Live News Stories (Firefox Style Grid) -->
         <section class="firefox-stories-section">
             <div class="firefox-stories-header">
-                <h2 class="stories-title">Thought-provoking stories</h2>
                 <div class="stories-region-badge">
                     <select id="storiesRegionSelect" class="region-dropdown">
                         <option value="global">Global</option>
@@ -79,13 +78,42 @@
         </section>
     </div>
 
-    <!-- Firefox-Style Floating Bottom-Right Pencil Customize Button -->
-    <button id="btnFloatingCustomize" class="floating-pencil-btn" title="Customize Page & Wallpapers">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 20h9"/>
-            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-        </svg>
-    </button>
+    <!-- Add Custom Shortcut Modal -->
+    <div id="addShortcutModal" class="modal-backdrop hidden">
+        <div class="modal-card shortcut-modal-card">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <h3>Add New Shortcut</h3>
+                    <p>Enter title and domain to automatically fetch its official logo</p>
+                </div>
+                <button id="btnCloseShortcutModal" class="btn-modal-close">&times;</button>
+            </div>
+            <div class="modal-body shortcut-modal-body">
+                <div class="modal-field">
+                    <label for="shortcutTitleInput">Shortcut Name</label>
+                    <input type="text" id="shortcutTitleInput" placeholder="e.g. GitHub" class="modal-input" autocomplete="off">
+                </div>
+                <div class="modal-field">
+                    <label for="shortcutUrlInput">Website URL or Domain</label>
+                    <input type="text" id="shortcutUrlInput" placeholder="e.g. github.com" class="modal-input" autocomplete="off">
+                </div>
+                <div class="shortcut-preview-row">
+                    <div class="shortcut-preview-card" id="shortcutPreviewCard">
+                        <img id="shortcutPreviewImg" src="" class="shortcut-favicon-img" style="display:none;" alt="">
+                        <div id="shortcutPreviewFallback" class="shortcut-letter">G</div>
+                    </div>
+                    <div class="shortcut-preview-text">
+                        <div class="preview-name" id="previewName">Shortcut Name</div>
+                        <div class="preview-url" id="previewUrl">example.com</div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="btnCancelShortcut" class="btn-secondary">Cancel</button>
+                    <button type="button" id="btnSaveShortcut" class="btn-primary">Add Shortcut</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Visual Studio & Wallpaper Selector Modal -->
     <div id="wallpaperModal" class="modal-backdrop hidden">

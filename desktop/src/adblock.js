@@ -216,6 +216,55 @@ class AdBlockEngine {
 
     injectCosmeticFilters(webContents) {
         if (!webContents || webContents.isDestroyed()) return;
+        const currentUrl = (webContents.getURL ? webContents.getURL() : '').toLowerCase();
+        const isYouTube = currentUrl.includes('youtube.com') || currentUrl.includes('youtu.be');
+
+        if (isYouTube) {
+            // Targeted YouTube Desktop Adblock: zero tampering with SVG icons, sidebar, or player settings menu
+            const ytCleanScript = `
+                try {
+                    if (!window.__fokk_yt_cleaned) {
+                        window.__fokk_yt_cleaned = true;
+                        const style = document.createElement('style');
+                        style.id = '__fokk_yt_style';
+                        style.textContent = \`
+                            ytd-ad-slot-renderer,
+                            ytd-in-feed-ad-layout-renderer,
+                            ytd-banner-promo-renderer,
+                            ytd-promoted-video-renderer,
+                            ytd-display-ad-renderer,
+                            ytd-statement-banner-renderer,
+                            ytd-rich-item-renderer:has(ytd-ad-slot-renderer),
+                            ytd-rich-item-renderer:has(ytd-in-feed-ad-layout-renderer),
+                            ytd-rich-item-renderer:has([aria-label*="Sponsored" i]),
+                            ytd-rich-item-renderer:has(.badge-style-type-ad),
+                            ytd-video-renderer:has([aria-label*="Sponsored" i]),
+                            ytd-video-renderer:has(.badge-style-type-ad),
+                            .ytp-ad-overlay-container,
+                            .ytp-ad-text,
+                            .ytp-ad-preview-text,
+                            div[class*="ad-showing"] .ytp-ad-text {
+                                display: none !important;
+                            }
+                        \`;
+                        (document.head || document.documentElement).appendChild(style);
+
+                        setInterval(() => {
+                            const isAdShowing = document.querySelector('.ad-showing, .ad-interrupting');
+                            if (isAdShowing) {
+                                const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+                                if (player && typeof player.skipAd === 'function') player.skipAd();
+                                const skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, button.ytp-ad-skip-button');
+                                if (skipBtn) skipBtn.click();
+                            }
+                        }, 1000);
+                    }
+                } catch (e) {}
+            `;
+            webContents.executeJavaScript(ytCleanScript).catch(() => {});
+            return;
+        }
+
         const combined = `
             try {
                 if (!window.__fokk_injected) {
