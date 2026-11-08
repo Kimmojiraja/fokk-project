@@ -516,7 +516,10 @@
                 'we noticed you are using an ad blocker',
                 'disable adblock',
                 'turn off ad block',
-                'pause your ad blocker'
+                'pause your ad blocker',
+                'welcome to fox news',
+                'consider disabling your ad blocker',
+                'make sure filterlist is'
             ];
 
             var dismissPhrases = [
@@ -535,14 +538,14 @@
             ];
 
             // Target candidate modals, dialogs, overlays
-            var dialogs = document.querySelectorAll('div[role="dialog"], div[class*="dialog"], div[class*="modal"], div[class*="overlay"], div[class*="popup"], div[class*="adblock"], div[id*="adblock"], div[id*="modal"], div[id*="dialog"], section[role="dialog"], div[class*="sp_message"], div[id*="sp_message"], .admiral-root, div[class*="admiral-"], .fc-ab-root, .fc-dialog-container');
+            var dialogs = document.querySelectorAll('div[role="dialog"], div[class*="dialog"], div[class*="modal"], div[class*="overlay"], div[class*="popup"], div[class*="adblock"], div[id*="adblock"], div[id*="modal"], div[id*="dialog"], section[role="dialog"], div[class*="sp_message"], div[id*="sp_message"], .admiral-root, div[class*="admiral-"], .fc-ab-root, .fc-dialog-container, div[class*="fnc-alert"], [class*="fnc-modal"]');
             for (var d = 0; d < dialogs.length; d++) {
                 var dlg = dialogs[d];
                 if (!dlg) continue;
 
-                // STRICT USER SAFETY: NEVER touch article-related videos, players, tweets, or main article content!
+                // STRICT USER SAFETY: NEVER remove actual articles, mains, video players, or tweets!
+                if (dlg.tagName === 'ARTICLE' || dlg.tagName === 'MAIN' || dlg.tagName === 'HEADER' || dlg.tagName === 'NAV') continue;
                 if (dlg.querySelector && dlg.querySelector('video, audio, [class*="player"], [id*="player"], twitter-tweet, .twitter-tweet, [data-testid="tweet"]')) continue;
-                if (dlg.closest && dlg.closest('video, audio, [class*="player"], [id*="player"], article, main')) continue;
 
                 var dlgText = (dlg.innerText || dlg.textContent || '').toLowerCase();
                 var isAdblockNag = false;
@@ -579,12 +582,19 @@
                     if (clicked) break;
                 }
 
-                // 2. Hide the modal container and backdrop
-                var topModal = dlg.closest('div[class*="container"], div[class*="wrap"], div[style*="z-index"]') || dlg;
-                if (topModal.querySelector && topModal.querySelector('video, audio, [class*="player"], [id*="player"], article, main')) {
-                    topModal = dlg;
+                // 2. Hide the modal container safely without collapsing whole page container
+                var topModal = dlg;
+                var parent = dlg.parentElement;
+                if (parent && parent !== document.body && parent !== document.documentElement) {
+                    var parentPos = window.getComputedStyle(parent).position;
+                    if ((parentPos === 'fixed' || parentPos === 'absolute') && !parent.querySelector('article, main')) {
+                        topModal = parent;
+                    }
                 }
                 topModal.style.setProperty('display', 'none', 'important');
+                topModal.style.setProperty('opacity', '0', 'important');
+                topModal.style.setProperty('pointer-events', 'none', 'important');
+                topModal.style.setProperty('visibility', 'hidden', 'important');
                 topModal.style.setProperty('opacity', '0', 'important');
                 topModal.style.setProperty('pointer-events', 'none', 'important');
                 topModal.style.setProperty('visibility', 'hidden', 'important');
