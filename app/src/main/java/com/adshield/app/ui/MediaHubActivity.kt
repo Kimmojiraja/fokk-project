@@ -2715,7 +2715,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 // Never replace a requested document with a synthetic empty response.
                 if (request?.isForMainFrame == true) return super.shouldInterceptRequest(view, request)
 
-                val pageUrl = view?.url?.takeIf { it.isNotBlank() } ?: view?.let { pageUrlsByWebView[it] }
+                val pageUrl = view?.let { pageUrlsByWebView[it] }
                 val requestUrl = request?.url?.toString()
                 val host = request?.url?.host ?: return super.shouldInterceptRequest(view, request)
                 val hostLower = host.lowercase(Locale.ROOT)

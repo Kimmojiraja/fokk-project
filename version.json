@@ -1,6 +1,6 @@
 {
-  "versionCode": 231,
-  "versionName": "2.3.1",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.3.1/app-debug.apk",
-  "changelog": "- New Home Screen Action Buttons: Replaced Video with Dual Screen split-deck multitasking and Audio with Fokk Shield page button, featuring sleek black-and-white minimalist vector icons.\n- Curated Sail & Horizon 4K Wallpapers: Added a prominent Sailboat & Ocean category featuring user-selected 4K sailboat photography and curated oceanic wallpapers.\n- Zero-Glitch Visual Discovery Grid: Replaced column masonry with a rock-solid, zero-jump 2-column grid with smooth image fallbacks and zero layout shift.\n- X.com (Twitter) Complete Loading Fix: Exempted Twitter from script tampering, prototype monkey-patching, and synthetic request blocks, allowing Twitter React/Relay client and GraphQL feeds to load instantly.\n- Dual-Deck Web Bridge: Connected start page Dual Screen action directly to the native dual-deck viewport engine."
+  "versionCode": 232,
+  "versionName": "2.3.2",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.3.2/app-debug.apk",
+  "changelog": "- Critical Stability Fix: Eliminated background thread WebView checkThread() violation in shouldInterceptRequest that caused the app to close when tapping buttons or navigating.\n- New Home Screen Action Buttons: Dual Screen split-deck multitasking and Fokk Shield defense buttons with pure black-and-white minimalist vector icons.\n- Curated Sail & Horizon 4K Wallpapers: Added prominent Sailboat & Ocean collection with local 4K photography.\n- Zero-Glitch Visual Discovery Grid: Stable 2-column grid with smooth image fallbacks and zero layout shift.\n- X.com (Twitter) Complete Loading Fix: Exempted Twitter from script tampering and synthetic request blocks."
 }
