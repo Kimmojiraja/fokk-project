@@ -31,15 +31,15 @@ jobs:
 
       - name: Build Linux Packages
         working-directory: desktop
-        run: npx electron-builder --linux deb AppImage
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --linux deb AppImage --publish never
 
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Fokk-Browser-Linux
-          path: desktop/dist/*.deb
+          path: |
+            desktop/dist/*.deb
+            desktop/dist/*.AppImage
           retention-days: 14
 
       - name: Attach Linux to Latest Release
@@ -77,9 +77,7 @@ jobs:
 
       - name: Build Windows Installer & Portable
         working-directory: desktop
-        run: npx electron-builder --win nsis portable
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis portable --publish never
 
       - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4

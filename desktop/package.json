@@ -12,7 +12,8 @@
     "dist": "electron-builder -wl"
   },
   "keywords": ["browser", "adblock", "privacy", "chromium", "fokk"],
-  "author": "Fokk Shield Team",
+  "homepage": "https://github.com/Kimmojiraja/fokk-project",
+  "author": "Fokk Shield Team <rajakimmoji@gmail.com>",
   "license": "MIT",
   "build": {
     "appId": "com.adshield.fokk",
@@ -39,7 +40,8 @@
     "linux": {
       "target": ["deb", "AppImage"],
       "category": "Network;WebBrowser",
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "maintainer": "Fokk Shield Team <rajakimmoji@gmail.com>"
     },
     "win": {
       "target": ["nsis", "portable"],
