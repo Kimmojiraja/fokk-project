@@ -123,6 +123,26 @@ function createTab(url = START_PAGE_URL, options = {}) {
     webview.setAttribute('webpreferences', 'contextIsolation=yes, javascript=yes');
     if (isPrivate) {
         webview.setAttribute('partition', 'fokk_incognito_' + Date.now());
+    } else {
+        webview.setAttribute('partition', 'persist:fokk_default_session');
+    }
+
+    function recordHistoryItem(navUrl, navTitle) {
+        if (isPrivate || !navUrl || navUrl.startsWith('file:') || navUrl.startsWith('fokk:')) return;
+        try {
+            let hist = JSON.parse(localStorage.getItem('fokk_browsing_history') || '[]');
+            if (hist.length > 0 && hist[0].url === navUrl && (Date.now() - hist[0].time < 60000)) {
+                return;
+            }
+            hist.unshift({
+                id: Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                url: navUrl,
+                title: navTitle || navUrl,
+                time: Date.now()
+            });
+            if (hist.length > 1000) hist.pop();
+            localStorage.setItem('fokk_browsing_history', JSON.stringify(hist));
+        } catch (_) {}
     }
 
     webview.addEventListener('did-start-loading', () => {
@@ -132,6 +152,17 @@ function createTab(url = START_PAGE_URL, options = {}) {
             btnReload.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
             if (shieldCountText) shieldCountText.textContent = '0';
         }
+    });
+
+    webview.addEventListener('dom-ready', () => {
+        const currentTheme = localStorage.getItem('fokk_theme') || 'dark';
+        const isLight = currentTheme === 'light';
+        webview.executeJavaScript(`
+            if (document.body) {
+                document.body.classList.toggle('theme-light', ${isLight});
+                try { localStorage.setItem('fokk_theme', '${currentTheme}'); } catch(_) {}
+            }
+        `).catch(() => {});
     });
 
     webview.addEventListener('did-stop-loading', () => {
@@ -147,6 +178,9 @@ function createTab(url = START_PAGE_URL, options = {}) {
         if (titleEl && e.title) {
             titleEl.textContent = (isPrivate ? '[Private] ' : '') + e.title;
         }
+        if (!isPrivate && webview.getURL) {
+            recordHistoryItem(webview.getURL(), e.title);
+        }
     });
 
     webview.addEventListener('page-favicon-updated', (e) => {
@@ -160,6 +194,10 @@ function createTab(url = START_PAGE_URL, options = {}) {
         if (activeTabId === tabId) {
             updateOmnibox(e.url);
             updateNavState(webview);
+        }
+        if (!isPrivate) {
+            const currentTitle = (webview.getTitle ? webview.getTitle() : '') || e.url;
+            recordHistoryItem(e.url, currentTitle);
         }
     });
 
@@ -416,8 +454,49 @@ if (menuNavBack) menuNavBack.onclick = () => btnBack.click();
 if (menuNavForward) menuNavForward.onclick = () => btnForward.click();
 if (menuNavReload) menuNavReload.onclick = () => btnReload.click();
 if (menuNavHome) menuNavHome.onclick = () => btnHome.click();
-if (menuNavHistory) menuNavHistory.onclick = () => openFeatureHub('privacy');
-if (menuNavDownloads) menuNavDownloads.onclick = () => showToast('Downloads directory: ~/Downloads');
+if (menuNavHistory) menuNavHistory.onclick = () => openFeatureHub('history');
+if (menuNavDownloads) menuNavDownloads.onclick = () => openFeatureHub('downloads');
+
+// User Profile (Shadow Falcon & Custom Avatar)
+const menuAvatarWrap = document.getElementById('menuAvatarWrap');
+const menuAvatarImg = document.getElementById('menuAvatarImg');
+const menuUsernameText = document.getElementById('menuUsernameText');
+const btnEditUsername = document.getElementById('btnEditUsername');
+
+function loadUserProfile() {
+    const savedName = localStorage.getItem('fokk_user_name') || 'Shadow Falcon';
+    const savedAvatar = localStorage.getItem('fokk_user_avatar');
+
+    if (menuUsernameText) menuUsernameText.textContent = savedName;
+    if (menuAvatarImg && savedAvatar) {
+        menuAvatarImg.src = savedAvatar;
+    }
+}
+loadUserProfile();
+
+if (menuAvatarWrap) {
+    menuAvatarWrap.onclick = async () => {
+        desktopBrowserMenu.classList.add('hidden');
+        try {
+            const avatarData = await ipcRenderer.invoke('fokk-pick-avatar');
+            if (avatarData) {
+                localStorage.setItem('fokk_user_avatar', avatarData);
+                if (menuAvatarImg) menuAvatarImg.src = avatarData;
+                showToast('Profile avatar updated');
+            }
+        } catch (e) {
+            showToast('Unable to update avatar: ' + e.message);
+        }
+    };
+}
+
+if (btnEditUsername) {
+    btnEditUsername.onclick = (e) => {
+        e.stopPropagation();
+        desktopBrowserMenu.classList.add('hidden');
+        openFeatureHub('edit-profile');
+    };
+}
 
 // Shield Toggle in Menu
 const menuShieldToggle = document.getElementById('menuShieldToggle');
@@ -560,19 +639,41 @@ if (actTorrent) {
     };
 }
 
-if (actForceDark) {
-    actForceDark.onclick = () => {
-        const active = getActiveWebview();
-        if (!active) return;
-        isForcedDark = !isForcedDark;
-        desktopBrowserMenu.classList.add('hidden');
-        if (isForcedDark) {
-            active.insertCSS('html { filter: invert(90%) hue-rotate(180deg) !important; background: #121212 !important; } img, video, iframe, canvas { filter: invert(100%) hue-rotate(180deg) !important; }');
-            showToast('Dark Mode Forced');
-        } else {
-            active.reload();
-            showToast('Standard Theme Restored');
+// Theme Switcher (Dark & Light)
+const actThemeToggle = document.getElementById('actThemeToggle');
+const actThemeToggleText = document.getElementById('actThemeToggleText');
+
+function applyTheme(themeName) {
+    const isLight = themeName === 'light';
+    document.body.classList.toggle('theme-light', isLight);
+    if (actThemeToggleText) {
+        actThemeToggleText.textContent = isLight ? 'Dark Mode' : 'Light Mode';
+    }
+    localStorage.setItem('fokk_theme', themeName);
+
+    // Sync to all webviews (including Start Page)
+    tabs.forEach(t => {
+        if (t.webview) {
+            t.webview.executeJavaScript(`
+                if (document.body) {
+                    document.body.classList.toggle('theme-light', ${isLight});
+                    try { localStorage.setItem('fokk_theme', '${themeName}'); } catch(_) {}
+                }
+            `).catch(() => {});
         }
+    });
+}
+
+const currentGlobalTheme = localStorage.getItem('fokk_theme') || 'dark';
+applyTheme(currentGlobalTheme);
+
+if (actThemeToggle) {
+    actThemeToggle.onclick = () => {
+        desktopBrowserMenu.classList.add('hidden');
+        const cur = localStorage.getItem('fokk_theme') || 'dark';
+        const next = cur === 'light' ? 'dark' : 'light';
+        applyTheme(next);
+        showToast(next === 'light' ? 'Light Theme Applied' : 'Stealth Dark Mode Restored');
     };
 }
 
@@ -672,13 +773,238 @@ if (btnVisuals) {
     btnVisuals.addEventListener('click', () => openFeatureHub('visuals'));
 }
 if (btnDownloadsNav) {
-    btnDownloadsNav.addEventListener('click', () => showToast('Downloads directory: ~/Downloads'));
+    btnDownloadsNav.addEventListener('click', () => openFeatureHub('downloads'));
 }
 
 function openFeatureHub(hubId) {
     if (!featureHubModal || !featureModalBody) return;
 
-    if (hubId === 'general') {
+    if (hubId === 'history') {
+        featureModalTitle.textContent = 'Browsing History';
+        let historyList = [];
+        try {
+            historyList = JSON.parse(localStorage.getItem('fokk_browsing_history') || '[]');
+        } catch (_) {}
+
+        function renderHistoryList(filterQuery = '') {
+            const filtered = filterQuery
+                ? historyList.filter(h => (h.title && h.title.toLowerCase().includes(filterQuery)) || (h.url && h.url.toLowerCase().includes(filterQuery)))
+                : historyList;
+
+            let itemsHtml = '';
+            if (filtered.length === 0) {
+                itemsHtml = `
+                    <div style="text-align: center; padding: 36px 16px; color: var(--text-secondary); font-size: 13px;">
+                        ${filterQuery ? 'No history matching "' + filterQuery + '"' : 'Zero browsing history recorded yet. Visited sites will appear here.'}
+                    </div>
+                `;
+            } else {
+                itemsHtml = filtered.map(h => {
+                    const timeStr = new Date(h.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' · ' + new Date(h.time).toLocaleDateString();
+                    let domain = '';
+                    try { domain = new URL(h.url).hostname; } catch(_) { domain = h.url; }
+                    const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+
+                    return `
+                        <div class="history-item-row" data-id="${h.id}" data-url="${h.url}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.15s ease;">
+                            <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
+                                <img src="${faviconUrl}" style="width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;" onerror="this.style.display='none'">
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-size: 13px; font-weight: 600; color: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${h.title || domain}</div>
+                                    <div style="font-size: 11px; color: var(--fokk-cyan); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${h.url}</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                                <span style="font-size: 11px; color: var(--text-secondary);">${timeStr}</span>
+                                <button class="btn-delete-history-item" data-id="${h.id}" title="Remove from History" style="background: none; border: none; color: #FF5252; cursor: pointer; font-size: 16px; padding: 0 4px; line-height: 1;">&times;</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            const container = document.getElementById('historyListContainer');
+            if (container) {
+                container.innerHTML = itemsHtml;
+                container.querySelectorAll('.history-item-row').forEach(row => {
+                    row.onclick = (e) => {
+                        if (e.target.classList.contains('btn-delete-history-item')) return;
+                        const u = row.getAttribute('data-url');
+                        if (u) {
+                            createTab(u);
+                            featureHubModal.classList.add('hidden');
+                        }
+                    };
+                });
+                container.querySelectorAll('.btn-delete-history-item').forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        const id = btn.getAttribute('data-id');
+                        historyList = historyList.filter(x => x.id !== id);
+                        localStorage.setItem('fokk_browsing_history', JSON.stringify(historyList));
+                        renderHistoryList(document.getElementById('inputSearchHistory') ? document.getElementById('inputSearchHistory').value.trim().toLowerCase() : '');
+                    };
+                });
+            }
+        }
+
+        featureModalBody.innerHTML = `
+            <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+                <input type="text" id="inputSearchHistory" class="modal-input" placeholder="Search history by title or URL..." style="flex: 1;">
+                <button class="modal-btn secondary" id="btnClearAllHistory" style="padding: 0 16px; white-space: nowrap;">Clear All</button>
+            </div>
+            <div id="historyListContainer" style="max-height: 400px; overflow-y: auto; padding-right: 4px;"></div>
+        `;
+
+        renderHistoryList('');
+
+        const searchInput = document.getElementById('inputSearchHistory');
+        if (searchInput) {
+            searchInput.oninput = (e) => renderHistoryList(e.target.value.trim().toLowerCase());
+        }
+
+        const btnClear = document.getElementById('btnClearAllHistory');
+        if (btnClear) {
+            btnClear.onclick = () => {
+                historyList = [];
+                localStorage.removeItem('fokk_browsing_history');
+                renderHistoryList('');
+                showToast('Browsing history cleared');
+            };
+        }
+
+    } else if (hubId === 'downloads') {
+        featureModalTitle.textContent = 'Downloads Manager';
+
+        async function renderDownloadsList() {
+            let list = [];
+            try {
+                list = await ipcRenderer.invoke('fokk-get-downloads');
+            } catch (_) {}
+
+            let html = '';
+            if (!list || list.length === 0) {
+                html = `
+                    <div style="text-align: center; padding: 40px 16px; color: var(--text-secondary); font-size: 13px;">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="margin-bottom: 10px; opacity: 0.6;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <div>No recent downloads found in this session.</div>
+                        <div style="font-size: 11.5px; margin-top: 8px; color: var(--fokk-cyan); cursor: pointer; text-decoration: underline;" id="linkOpenDlDir">Open ~/Downloads Folder</div>
+                    </div>
+                `;
+            } else {
+                html = list.map(d => {
+                    const mbTotal = (d.totalBytes / (1024 * 1024)).toFixed(1);
+                    const mbReceived = (d.receivedBytes / (1024 * 1024)).toFixed(1);
+                    const isDone = d.state === 'completed';
+                    const isProgress = d.state === 'progressing';
+
+                    return `
+                        <div class="download-item-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--fokk-cyan)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <div style="font-size: 13px; font-weight: 600; color: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${d.fileName}</div>
+                                </div>
+                                <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 700; ${isDone ? 'background: rgba(16,185,129,0.15); color: #10B981;' : (isProgress ? 'background: rgba(0,229,255,0.15); color: var(--fokk-cyan);' : 'background: rgba(239,68,68,0.15); color: #EF4444;')}">${d.state.toUpperCase()}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: var(--text-secondary); margin-top: 4px;">
+                                <span>${isProgress ? `${mbReceived} MB / ${mbTotal} MB` : `${mbTotal} MB`}</span>
+                                <div style="display: flex; gap: 8px;">
+                                    ${isDone ? `<button class="modal-btn secondary btn-open-dl" data-path="${d.savePath}" style="padding: 3px 10px; font-size: 11px;">Open File</button>` : ''}
+                                    <button class="modal-btn secondary btn-folder-dl" data-path="${d.savePath}" style="padding: 3px 10px; font-size: 11px;">Show in Folder</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            const container = document.getElementById('downloadsListContainer');
+            if (container) {
+                container.innerHTML = html;
+                const linkDir = document.getElementById('linkOpenDlDir');
+                if (linkDir) {
+                    linkDir.onclick = () => ipcRenderer.invoke('fokk-open-downloads-folder');
+                }
+                container.querySelectorAll('.btn-open-dl').forEach(btn => {
+                    btn.onclick = () => {
+                        const p = btn.getAttribute('data-path');
+                        if (p) ipcRenderer.invoke('fokk-open-download-file', p);
+                    };
+                });
+                container.querySelectorAll('.btn-folder-dl').forEach(btn => {
+                    btn.onclick = () => {
+                        const p = btn.getAttribute('data-path');
+                        ipcRenderer.invoke('fokk-show-in-folder', p);
+                    };
+                });
+            }
+        }
+
+        featureModalBody.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                <button class="modal-btn secondary" id="btnOpenDownloadsFolder" style="display: flex; align-items: center; gap: 6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    <span>Open Downloads Folder</span>
+                </button>
+                <button class="modal-btn secondary" id="btnClearDownloadsList" style="color: #FF5252;">Clear List</button>
+            </div>
+            <div id="downloadsListContainer" style="max-height: 400px; overflow-y: auto; padding-right: 4px;"></div>
+        `;
+
+        renderDownloadsList();
+
+        document.getElementById('btnOpenDownloadsFolder').onclick = () => {
+            ipcRenderer.invoke('fokk-open-downloads-folder');
+        };
+        document.getElementById('btnClearDownloadsList').onclick = async () => {
+            await ipcRenderer.invoke('fokk-clear-downloads');
+            renderDownloadsList();
+            showToast('Downloads list cleared');
+        };
+
+    } else if (hubId === 'edit-profile') {
+        featureModalTitle.textContent = 'Edit Profile';
+        const curName = localStorage.getItem('fokk_user_name') || 'Shadow Falcon';
+        const curAvatar = localStorage.getItem('fokk_user_avatar') || 'icon.png';
+
+        featureModalBody.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 14px; margin-bottom: 20px;">
+                <div style="position: relative; width: 72px; height: 72px; border-radius: 50%; overflow: hidden; border: 2px solid var(--fokk-cyan); box-shadow: 0 4px 20px rgba(0,229,255,0.35); cursor: pointer;" id="modalAvatarPreviewWrap" title="Click to choose new photo">
+                    <img id="modalAvatarPreview" src="${curAvatar}" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <button class="modal-btn secondary" id="btnModalPickAvatar" style="font-size: 11.5px; padding: 4px 14px;">Change Avatar Picture</button>
+            </div>
+            <div class="modal-form-group">
+                <label class="modal-form-label">Username</label>
+                <input type="text" id="inputEditUsername" class="modal-input" value="${curName}" placeholder="Enter display username">
+            </div>
+            <button class="modal-btn" id="btnSaveUserProfile" style="margin-top: 16px;">Save Profile</button>
+        `;
+
+        let pendingAvatar = curAvatar;
+
+        async function pickAvatar() {
+            const res = await ipcRenderer.invoke('fokk-pick-avatar');
+            if (res) {
+                pendingAvatar = res;
+                document.getElementById('modalAvatarPreview').src = res;
+            }
+        }
+
+        document.getElementById('btnModalPickAvatar').onclick = pickAvatar;
+        document.getElementById('modalAvatarPreviewWrap').onclick = pickAvatar;
+
+        document.getElementById('btnSaveUserProfile').onclick = () => {
+            const newName = (document.getElementById('inputEditUsername').value || '').trim() || 'Shadow Falcon';
+            localStorage.setItem('fokk_user_name', newName);
+            if (pendingAvatar) localStorage.setItem('fokk_user_avatar', pendingAvatar);
+            loadUserProfile();
+            featureHubModal.classList.add('hidden');
+            showToast('Profile updated successfully');
+        };
+
+    } else if (hubId === 'general') {
         featureModalTitle.textContent = 'General & Search Engines';
         featureModalBody.innerHTML = `
             <div class="modal-form-group">

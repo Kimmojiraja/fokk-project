@@ -115,6 +115,9 @@ contextBridge.exposeInMainWorld('FokkShieldBridge', {
         }
         return fileData;
     },
+    triggerAvatarPicker: async () => {
+        return await ipcRenderer.invoke('fokk-pick-avatar');
+    },
 
     // Custom Shortcuts Management
     getCustomShortcuts: () => {

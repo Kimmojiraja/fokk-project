@@ -280,7 +280,26 @@ body {
     z-index: 10;
 }
 
-.shortcut-tile:hover .shortcut-del-btn {
+.shortcut-edit-btn {
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #0284C7;
+    color: #FFF;
+    border: none;
+    cursor: pointer;
+    font-size: 10px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.shortcut-tile:hover .shortcut-del-btn,
+.shortcut-tile:hover .shortcut-edit-btn {
     display: flex;
 }
 
@@ -779,3 +798,189 @@ body {
     font-weight: 600;
     color: #ffffff;
 }
+
+/* ==========================================================================
+   Cohesive Light Theme Architecture (Start Page)
+   ========================================================================== */
+body.theme-light {
+    --firefox-dark-base: #F8FAFC;
+    --firefox-card-bg: rgba(255, 255, 255, 0.95);
+    --firefox-card-hover: #FFFFFF;
+    --firefox-border: rgba(0, 0, 0, 0.08);
+    --firefox-border-hover: rgba(0, 0, 0, 0.16);
+    --text-white: #0F172A;
+    --text-light: #1E293B;
+    --text-muted: #64748B;
+    --accent-cyan: #0284C7;
+    background-color: #F8FAFC;
+    color: #0F172A;
+}
+
+body.theme-light .wallpaper-overlay {
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.65) 0%, rgba(248, 250, 252, 0.88) 100%);
+}
+
+body.theme-light .brand-name {
+    color: #0F172A;
+}
+
+body.theme-light .firefox-search-box {
+    background: #FFFFFF !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06) !important;
+}
+
+body.theme-light .firefox-search-box:focus-within {
+    border-color: var(--accent-cyan) !important;
+    box-shadow: 0 4px 22px rgba(2, 132, 199, 0.18) !important;
+}
+
+body.theme-light .firefox-search-input {
+    color: #0F172A !important;
+}
+
+body.theme-light .firefox-search-input::placeholder {
+    color: #94A3B8 !important;
+}
+
+body.theme-light .search-arrow-btn {
+    color: #64748B;
+}
+
+body.theme-light .search-arrow-btn:hover {
+    color: #0F172A;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.theme-light .shortcut-icon-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+body.theme-light .shortcut-tile:hover .shortcut-icon-card {
+    background: #F8FAFC;
+    border-color: rgba(0, 0, 0, 0.16);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+}
+
+body.theme-light .add-shortcut-card {
+    border: 1px dashed rgba(0, 0, 0, 0.25);
+    color: rgba(0, 0, 0, 0.6);
+}
+
+body.theme-light .add-shortcut-card:hover {
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+}
+
+body.theme-light .shortcut-label {
+    color: #0F172A;
+    text-shadow: none;
+}
+
+body.theme-light .shortcut-letter {
+    color: #0F172A;
+}
+
+body.theme-light .firefox-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+body.theme-light .firefox-card:hover {
+    background: #FFFFFF;
+    border-color: rgba(0, 0, 0, 0.16);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+body.theme-light .card-headline {
+    color: #0F172A;
+}
+
+body.theme-light .card-source-bar {
+    color: #64748B;
+}
+
+body.theme-light .region-dropdown {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    color: #334155;
+}
+
+body.theme-light .btn-more-stories {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    color: #334155;
+}
+
+body.theme-light .btn-more-stories:hover {
+    background: #F1F5F9;
+    color: #0F172A;
+}
+
+body.theme-light .modal-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
+}
+
+body.theme-light .modal-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+body.theme-light .modal-title-wrap h3 {
+    color: #0F172A;
+}
+
+body.theme-light .modal-title-wrap p {
+    color: #64748B;
+}
+
+body.theme-light .modal-field label {
+    color: #64748B;
+}
+
+body.theme-light .modal-input {
+    background: #F8FAFC;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    color: #0F172A;
+}
+
+body.theme-light .shortcut-preview-row {
+    background: #F8FAFC;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+body.theme-light .shortcut-preview-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+body.theme-light .preview-name {
+    color: #0F172A;
+}
+
+body.theme-light .preview-url {
+    color: #64748B;
+}
+
+body.theme-light .btn-secondary {
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    color: #334155;
+}
+
+body.theme-light .btn-secondary:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #0F172A;
+}
+
+body.theme-light .btn-modal-close {
+    color: #64748B;
+}
+
+body.theme-light .btn-modal-close:hover {
+    color: #0F172A;
+}
+

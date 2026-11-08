@@ -45,6 +45,14 @@ function broadcastStatsThrottled() {
     }, 250);
 }
 
+const downloadItems = [];
+
+function broadcastDownloadUpdate(dl) {
+    webContents.getAllWebContents().forEach(wc => {
+        try { wc.send('fokk-download-update', dl); } catch (_) {}
+    });
+}
+
 function setupAdblockingForSession(sess) {
     if (!sess || sess.__fokk_configured) return;
     sess.__fokk_configured = true;
@@ -72,6 +80,40 @@ function setupAdblockingForSession(sess) {
         } else {
             callback({ cancel: false });
         }
+    });
+
+    sess.on('will-download', (event, item) => {
+        const id = 'dl_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        const fileName = item.getFilename();
+        const totalBytes = item.getTotalBytes();
+        const record = {
+            id,
+            fileName,
+            totalBytes,
+            receivedBytes: 0,
+            savePath: item.getSavePath(),
+            state: 'progressing',
+            startTime: Date.now()
+        };
+        downloadItems.unshift(record);
+        if (downloadItems.length > 50) downloadItems.pop();
+        broadcastDownloadUpdate(record);
+
+        item.on('updated', (e, state) => {
+            record.receivedBytes = item.getReceivedBytes();
+            record.totalBytes = item.getTotalBytes();
+            record.savePath = item.getSavePath();
+            record.state = state;
+            broadcastDownloadUpdate(record);
+        });
+
+        item.on('done', (e, state) => {
+            record.receivedBytes = item.getReceivedBytes();
+            record.savePath = item.getSavePath();
+            record.state = state;
+            record.endTime = Date.now();
+            broadcastDownloadUpdate(record);
+        });
     });
 }
 
@@ -281,10 +323,18 @@ ipcMain.handle('fokk-get-torrent-url', () => {
 // 7. Session Burn & Clear Browsing Data
 ipcMain.handle('fokk-burn-session', async () => {
     try {
-        await session.defaultSession.clearStorageData({
+        const defaultSess = session.defaultSession;
+        const persistSess = session.fromPartition('persist:fokk_default_session');
+        const clearOpts = {
             storages: ['cookies', 'localstorage', 'cache', 'shadercache', 'websql', 'indexdb', 'serviceworkers', 'cachestorage']
-        });
-        await session.defaultSession.clearCache();
+        };
+        await Promise.all([
+            defaultSess.clearStorageData(clearOpts).catch(() => {}),
+            defaultSess.clearCache().catch(() => {}),
+            persistSess.clearStorageData(clearOpts).catch(() => {}),
+            persistSess.clearCache().catch(() => {})
+        ]);
+        downloadItems.length = 0;
         return { success: true };
     } catch (e) {
         return { success: false, error: e.message };
@@ -294,16 +344,72 @@ ipcMain.handle('fokk-burn-session', async () => {
 ipcMain.handle('fokk-clear-data', async (event, options) => {
     try {
         await session.defaultSession.clearStorageData(options || {});
+        try {
+            await session.fromPartition('persist:fokk_default_session').clearStorageData(options || {});
+        } catch (_) {}
         return { success: true };
     } catch (e) {
         return { success: false, error: e.message };
     }
 });
 
-// 8. Custom Wallpaper Picker
+// 7b. Downloads Manager Handlers
+ipcMain.handle('fokk-get-downloads', () => {
+    return downloadItems;
+});
+
+ipcMain.handle('fokk-open-download-file', async (event, filePath) => {
+    if (!filePath || !fs.existsSync(filePath)) return { success: false, error: 'File not found on disk' };
+    const err = await shell.openPath(filePath);
+    return { success: !err, error: err };
+});
+
+ipcMain.handle('fokk-show-in-folder', async (event, filePath) => {
+    if (filePath && fs.existsSync(filePath)) {
+        shell.showItemInFolder(filePath);
+        return { success: true };
+    }
+    const dlFolder = app.getPath('downloads');
+    shell.openPath(dlFolder);
+    return { success: true };
+});
+
+ipcMain.handle('fokk-open-downloads-folder', async () => {
+    const dlFolder = app.getPath('downloads');
+    await shell.openPath(dlFolder);
+    return { success: true };
+});
+
+ipcMain.handle('fokk-clear-downloads', () => {
+    downloadItems.length = 0;
+    return { success: true };
+});
+
+// 8. Custom Wallpaper & Avatar Pickers
 let customWallpaperBase64 = '';
 ipcMain.on('fokk-get-wallpaper-data', (event) => {
     event.returnValue = customWallpaperBase64;
+});
+
+ipcMain.handle('fokk-pick-avatar', async () => {
+    if (!mainWindow) return null;
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title: 'Choose Profile Avatar',
+        filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'] }],
+        properties: ['openFile']
+    });
+
+    if (!result.canceled && result.filePaths.length > 0) {
+        try {
+            const filePath = result.filePaths[0];
+            const ext = path.extname(filePath).replace('.', '') || 'png';
+            const data = fs.readFileSync(filePath).toString('base64');
+            return `data:image/${ext === 'svg' ? 'svg+xml' : ext};base64,${data}`;
+        } catch (e) {
+            console.error('[Avatar] Error reading file:', e);
+        }
+    }
+    return null;
 });
 
 ipcMain.handle('fokk-pick-wallpaper', async () => {

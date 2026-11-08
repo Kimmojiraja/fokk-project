@@ -487,53 +487,179 @@
         });
     }
 
-    // 4. Render Shortcuts (High-Res Favicons + Custom User Shortcuts + In-Page Modal)
-    function getCombinedShortcuts() {
+    // 4. Render Shortcuts (Unified Editable List + 128px Google Favicons + In-Page Modal)
+    function getSavedShortcuts() {
+        try {
+            const raw = localStorage.getItem('fokk_desktop_shortcuts');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            }
+        } catch (_) {}
+
+        // First run migration from DEFAULT_SHORTCUTS
         let removed = new Set();
         try {
-            const rawRem = localStorage.getItem('fokk_removed_shortcuts');
-            if (rawRem) removed = new Set(JSON.parse(rawRem));
+            const remRaw = localStorage.getItem('fokk_removed_shortcuts');
+            if (remRaw) removed = new Set(JSON.parse(remRaw));
         } catch (_) {}
 
-        let custom = [];
-        try {
-            const raw = localStorage.getItem('fokk_desktop_shortcuts') || localStorage.getItem('fokk_custom_shortcuts');
-            if (raw) custom = JSON.parse(raw);
-        } catch (_) {}
+        const list = DEFAULT_SHORTCUTS.filter(d => !removed.has(d.url.replace(/\/$/, ''))).map(d => ({
+            name: d.name,
+            url: d.url,
+            sub: d.sub || '',
+            iconBg: d.iconBg || '',
+            iconSvg: d.iconSvg || ''
+        }));
+        localStorage.setItem('fokk_desktop_shortcuts', JSON.stringify(list));
+        return list;
+    }
 
-        const seenUrls = new Set();
-        const validShortcuts = [];
+    function saveShortcutsList(list) {
+        localStorage.setItem('fokk_desktop_shortcuts', JSON.stringify(list));
+        localStorage.setItem('fokk_custom_shortcuts', JSON.stringify(list));
+    }
 
-        // Add non-removed default shortcuts
-        for (const d of DEFAULT_SHORTCUTS) {
-            const norm = d.url.replace(/\/$/, '');
-            if (!removed.has(norm) && !seenUrls.has(norm)) {
-                seenUrls.add(norm);
-                validShortcuts.push(d);
+    // Modal elements
+    let editingOriginalUrl = null;
+    const shortcutModal = document.getElementById('addShortcutModal');
+    const shortcutModalHeading = document.getElementById('shortcutModalHeading');
+    const shortcutModalSub = document.getElementById('shortcutModalSub');
+    const shortcutTitleInput = document.getElementById('shortcutTitleInput');
+    const shortcutUrlInput = document.getElementById('shortcutUrlInput');
+    const shortcutPreviewImg = document.getElementById('shortcutPreviewImg');
+    const shortcutPreviewFallback = document.getElementById('shortcutPreviewFallback');
+    const previewName = document.getElementById('previewName');
+    const previewUrl = document.getElementById('previewUrl');
+    const btnCancelShortcut = document.getElementById('btnCancelShortcut');
+    const btnSaveShortcut = document.getElementById('btnSaveShortcut');
+    const btnCloseShortcutModal = document.getElementById('btnCloseShortcutModal');
+
+    function updateShortcutPreview() {
+        const rawUrl = (shortcutUrlInput ? shortcutUrlInput.value : '').trim();
+        const rawTitle = (shortcutTitleInput ? shortcutTitleInput.value : '').trim();
+
+        if (!rawUrl) {
+            if (previewUrl) previewUrl.textContent = 'example.com';
+            if (shortcutPreviewImg) shortcutPreviewImg.style.display = 'none';
+            if (shortcutPreviewFallback) {
+                shortcutPreviewFallback.style.display = 'flex';
+                shortcutPreviewFallback.textContent = rawTitle ? rawTitle.charAt(0).toUpperCase() : 'W';
             }
+            if (previewName) previewName.textContent = rawTitle || 'Shortcut Name';
+            return;
         }
 
-        // Add non-removed custom shortcuts
-        for (const c of custom) {
-            const norm = (c.url || '').replace(/\/$/, '');
-            if (norm && !removed.has(norm) && !seenUrls.has(norm)) {
-                seenUrls.add(norm);
-                let host = '';
-                try { host = new URL(c.url).hostname; } catch(_) { host = c.url; }
-                validShortcuts.push({
-                    name: c.name || c.title || host.replace('www.', ''),
-                    url: c.url,
-                    sub: host,
-                    isCustom: true
-                });
-            }
+        let host = rawUrl.replace(/^https?:\/\//i, '').split('/')[0];
+        if (previewUrl) previewUrl.textContent = host;
+
+        const autoTitle = host.replace(/^www\./i, '').split('.')[0];
+        const displayName = rawTitle || (autoTitle ? autoTitle.charAt(0).toUpperCase() + autoTitle.slice(1) : 'Shortcut');
+        if (previewName) previewName.textContent = displayName;
+        if (shortcutPreviewFallback) shortcutPreviewFallback.textContent = displayName.charAt(0).toUpperCase();
+
+        const faviconUrl = `https://www.google.com/s2/favicons?domain=${host}&sz=128`;
+        if (shortcutPreviewImg) {
+            shortcutPreviewImg.src = faviconUrl;
+            shortcutPreviewImg.onload = () => {
+                shortcutPreviewImg.style.display = 'block';
+                if (shortcutPreviewFallback) shortcutPreviewFallback.style.display = 'none';
+            };
+            shortcutPreviewImg.onerror = () => {
+                shortcutPreviewImg.style.display = 'none';
+                if (shortcutPreviewFallback) shortcutPreviewFallback.style.display = 'flex';
+            };
         }
-        return validShortcuts;
+    }
+
+    function openShortcutModal(isEdit = false, item = null) {
+        if (!shortcutModal) return;
+        editingOriginalUrl = isEdit && item ? item.url : null;
+
+        if (isEdit && item) {
+            if (shortcutModalHeading) shortcutModalHeading.textContent = 'Edit Shortcut';
+            if (shortcutModalSub) shortcutModalSub.textContent = 'Modify title or website domain to update this shortcut';
+            if (shortcutTitleInput) shortcutTitleInput.value = item.name || '';
+            if (shortcutUrlInput) shortcutUrlInput.value = item.url || '';
+            if (btnSaveShortcut) btnSaveShortcut.textContent = 'Save Changes';
+        } else {
+            if (shortcutModalHeading) shortcutModalHeading.textContent = 'Add New Shortcut';
+            if (shortcutModalSub) shortcutModalSub.textContent = 'Enter title and domain to automatically fetch its official logo';
+            if (shortcutTitleInput) shortcutTitleInput.value = '';
+            if (shortcutUrlInput) shortcutUrlInput.value = '';
+            if (btnSaveShortcut) btnSaveShortcut.textContent = 'Add Shortcut';
+        }
+
+        updateShortcutPreview();
+        shortcutModal.classList.remove('hidden');
+        setTimeout(() => {
+            if (isEdit && shortcutTitleInput) shortcutTitleInput.focus();
+            else if (shortcutUrlInput) shortcutUrlInput.focus();
+        }, 60);
+    }
+
+    function closeShortcutModal() {
+        if (shortcutModal) shortcutModal.classList.add('hidden');
+        editingOriginalUrl = null;
+    }
+
+    function saveShortcutAction() {
+        let rawUrl = (shortcutUrlInput ? shortcutUrlInput.value : '').trim();
+        if (!rawUrl) return;
+
+        const validUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : 'https://' + rawUrl;
+        let host = '';
+        try { host = new URL(validUrl).hostname; } catch(_) { host = rawUrl; }
+
+        let name = (shortcutTitleInput ? shortcutTitleInput.value : '').trim();
+        if (!name) {
+            const cleanHost = host.replace(/^www\./i, '').split('.')[0];
+            name = cleanHost.charAt(0).toUpperCase() + cleanHost.slice(1);
+        }
+
+        let list = getSavedShortcuts();
+        const normNew = validUrl.replace(/\/$/, '');
+
+        if (editingOriginalUrl) {
+            const normOrig = editingOriginalUrl.replace(/\/$/, '');
+            const idx = list.findIndex(s => (s.url || '').replace(/\/$/, '') === normOrig);
+            if (idx !== -1) {
+                list[idx].name = name;
+                list[idx].url = validUrl;
+                list[idx].sub = host;
+            } else {
+                list.push({ name, url: validUrl, sub: host });
+            }
+        } else {
+            list = list.filter(s => (s.url || '').replace(/\/$/, '') !== normNew);
+            list.push({ name, url: validUrl, sub: host });
+        }
+
+        saveShortcutsList(list);
+        closeShortcutModal();
+        renderShortcuts();
+    }
+
+    if (shortcutUrlInput) {
+        shortcutUrlInput.oninput = updateShortcutPreview;
+        shortcutUrlInput.onkeydown = (e) => { if (e.key === 'Enter') saveShortcutAction(); };
+    }
+    if (shortcutTitleInput) {
+        shortcutTitleInput.oninput = updateShortcutPreview;
+        shortcutTitleInput.onkeydown = (e) => { if (e.key === 'Enter') saveShortcutAction(); };
+    }
+    if (btnSaveShortcut) btnSaveShortcut.onclick = saveShortcutAction;
+    if (btnCancelShortcut) btnCancelShortcut.onclick = closeShortcutModal;
+    if (btnCloseShortcutModal) btnCloseShortcutModal.onclick = closeShortcutModal;
+    if (shortcutModal) {
+        shortcutModal.onclick = (e) => {
+            if (e.target === shortcutModal) closeShortcutModal();
+        };
     }
 
     function renderShortcuts() {
         if (!shortcutsContainer) return;
-        const allShortcuts = getCombinedShortcuts();
+        const allShortcuts = getSavedShortcuts();
 
         const tilesHtml = allShortcuts.map((s) => {
             let hostname = '';
@@ -542,12 +668,13 @@
             const firstLetter = (s.name || 'W').charAt(0).toUpperCase();
 
             return `
-                <div class="shortcut-tile" data-url="${s.url}" title="${s.name}">
+                <div class="shortcut-tile" data-url="${s.url}" data-name="${s.name}" title="${s.name}">
                     <div class="shortcut-icon-card" style="background-color: ${s.iconBg || 'rgba(43,42,51,0.85)'}">
                         <img src="${faviconUrl}" class="shortcut-favicon-img" alt="${s.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         <div class="shortcut-fallback-icon" style="display: none;">
                             ${s.iconSvg ? s.iconSvg : `<span class="shortcut-letter">${firstLetter}</span>`}
                         </div>
+                        <button class="shortcut-edit-btn" data-url="${s.url}" data-name="${s.name}" title="Edit Shortcut">✎</button>
                         <button class="shortcut-del-btn" data-url="${s.url}" title="Remove Shortcut">&times;</button>
                     </div>
                     <span class="shortcut-label">${s.name}</span>
@@ -572,137 +699,40 @@
 
         // Navigation click handlers
         shortcutsContainer.querySelectorAll('.shortcut-tile:not(.add-shortcut-tile)').forEach(tile => {
-            tile.addEventListener('click', (e) => {
-                if (e.target.classList.contains('shortcut-del-btn')) return;
+            tile.onclick = (e) => {
+                if (e.target.closest('.shortcut-del-btn') || e.target.closest('.shortcut-edit-btn')) return;
                 const url = tile.getAttribute('data-url');
                 if (url) navigateTo(url);
-            });
+            };
         });
 
-        // Delete handlers for all shortcuts
+        // Edit handlers
+        shortcutsContainer.querySelectorAll('.shortcut-edit-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const u = btn.getAttribute('data-url');
+                const n = btn.getAttribute('data-name');
+                openShortcutModal(true, { name: n, url: u });
+            };
+        });
+
+        // Delete handlers
         shortcutsContainer.querySelectorAll('.shortcut-del-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.onclick = (e) => {
                 e.stopPropagation();
                 const toDel = btn.getAttribute('data-url');
                 const norm = (toDel || '').replace(/\/$/, '');
-
-                // 1. Add to removed set
-                try {
-                    let removed = JSON.parse(localStorage.getItem('fokk_removed_shortcuts') || '[]');
-                    if (!removed.includes(norm)) removed.push(norm);
-                    localStorage.setItem('fokk_removed_shortcuts', JSON.stringify(removed));
-                } catch (_) {}
-
-                // 2. Also remove from custom list if present
-                try {
-                    let custom = JSON.parse(localStorage.getItem('fokk_desktop_shortcuts') || '[]');
-                    custom = custom.filter(c => (c.url || '').replace(/\/$/, '') !== norm);
-                    localStorage.setItem('fokk_desktop_shortcuts', JSON.stringify(custom));
-                    localStorage.setItem('fokk_custom_shortcuts', JSON.stringify(custom));
-                } catch (_) {}
-
+                let list = getSavedShortcuts();
+                list = list.filter(s => (s.url || '').replace(/\/$/, '') !== norm);
+                saveShortcutsList(list);
                 renderShortcuts();
-            });
+            };
         });
 
-        // Add Shortcut Tile Modal Trigger
+        // Add Tile click handler
         const addBtn = document.getElementById('btnAddShortcutTile');
-        const modal = document.getElementById('addShortcutModal');
-        const titleInput = document.getElementById('shortcutTitleInput');
-        const urlInput = document.getElementById('shortcutUrlInput');
-        const previewImg = document.getElementById('shortcutPreviewImg');
-        const previewFallback = document.getElementById('shortcutPreviewFallback');
-        const previewName = document.getElementById('previewName');
-        const previewUrl = document.getElementById('previewUrl');
-        const btnCancel = document.getElementById('btnCancelShortcut');
-        const btnSave = document.getElementById('btnSaveShortcut');
-        const btnClose = document.getElementById('btnCloseShortcutModal');
-
-        if (addBtn && modal) {
-            function updatePreview() {
-                const rawUrl = (urlInput.value || '').trim();
-                const rawTitle = (titleInput.value || '').trim();
-
-                if (!rawUrl) {
-                    previewUrl.textContent = 'example.com';
-                    previewImg.style.display = 'none';
-                    previewFallback.style.display = 'flex';
-                    previewFallback.textContent = rawTitle ? rawTitle.charAt(0).toUpperCase() : 'W';
-                    previewName.textContent = rawTitle || 'Shortcut Name';
-                    return;
-                }
-
-                let host = rawUrl.replace(/^https?:\/\//i, '').split('/')[0];
-                previewUrl.textContent = host;
-
-                const autoTitle = host.replace(/^www\./i, '').split('.')[0];
-                const displayName = rawTitle || (autoTitle ? autoTitle.charAt(0).toUpperCase() + autoTitle.slice(1) : 'Shortcut');
-                previewName.textContent = displayName;
-                previewFallback.textContent = displayName.charAt(0).toUpperCase();
-
-                const faviconUrl = `https://www.google.com/s2/favicons?domain=${host}&sz=128`;
-                previewImg.src = faviconUrl;
-                previewImg.onload = () => {
-                    previewImg.style.display = 'block';
-                    previewFallback.style.display = 'none';
-                };
-                previewImg.onerror = () => {
-                    previewImg.style.display = 'none';
-                    previewFallback.style.display = 'flex';
-                };
-            }
-
-            addBtn.onclick = () => {
-                titleInput.value = '';
-                urlInput.value = '';
-                updatePreview();
-                modal.classList.remove('hidden');
-                setTimeout(() => urlInput.focus(), 50);
-            };
-
-            urlInput.oninput = updatePreview;
-            titleInput.oninput = updatePreview;
-
-            btnCancel.onclick = () => modal.classList.add('hidden');
-            if (btnClose) btnClose.onclick = () => modal.classList.add('hidden');
-
-            modal.onclick = (e) => {
-                if (e.target === modal) modal.classList.add('hidden');
-            };
-
-            btnSave.onclick = () => {
-                let rawUrl = (urlInput.value || '').trim();
-                if (!rawUrl) return;
-
-                const validUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : 'https://' + rawUrl;
-                let host = '';
-                try { host = new URL(validUrl).hostname; } catch(_) { host = rawUrl; }
-
-                let name = (titleInput.value || '').trim();
-                if (!name) {
-                    const cleanHost = host.replace(/^www\./i, '').split('.')[0];
-                    name = cleanHost.charAt(0).toUpperCase() + cleanHost.slice(1);
-                }
-
-                // If previously in removed list, un-remove it
-                try {
-                    let removed = JSON.parse(localStorage.getItem('fokk_removed_shortcuts') || '[]');
-                    const norm = validUrl.replace(/\/$/, '');
-                    removed = removed.filter(u => u !== norm);
-                    localStorage.setItem('fokk_removed_shortcuts', JSON.stringify(removed));
-                } catch (_) {}
-
-                // Save to custom shortcuts
-                try {
-                    let custom = JSON.parse(localStorage.getItem('fokk_desktop_shortcuts') || '[]');
-                    custom.push({ name, url: validUrl, sub: host, isCustom: true });
-                    localStorage.setItem('fokk_desktop_shortcuts', JSON.stringify(custom));
-                    localStorage.setItem('fokk_custom_shortcuts', JSON.stringify(custom));
-                } catch (_) {}
-
-                modal.classList.add('hidden');
-                renderShortcuts();
-            };
+        if (addBtn) {
+            addBtn.onclick = () => openShortcutModal(false);
         }
     }
 
