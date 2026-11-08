@@ -13,13 +13,24 @@
     "dist:all": "electron-builder --linux deb AppImage --win zip -c.win.signAndEditExecutable=false --mac zip",
     "dist": "electron-builder -wl"
   },
-  "keywords": ["browser", "adblock", "privacy", "chromium", "fokk"],
+  "keywords": [
+    "browser",
+    "adblock",
+    "privacy",
+    "chromium",
+    "fokk"
+  ],
   "homepage": "https://github.com/Kimmojiraja/fokk-project",
   "author": "Fokk Shield Team <rajakimmoji@gmail.com>",
   "license": "MIT",
   "build": {
     "appId": "com.adshield.fokk",
     "productName": "Fokk Browser",
+    "publish": {
+      "provider": "github",
+      "owner": "Kimmojiraja",
+      "repo": "fokk-project"
+    },
     "directories": {
       "output": "dist"
     },
@@ -48,17 +59,25 @@
       }
     ],
     "linux": {
-      "target": ["deb", "AppImage"],
+      "target": [
+        "deb",
+        "AppImage"
+      ],
       "category": "Network;WebBrowser",
       "icon": "assets/icon.png",
       "maintainer": "Fokk Shield Team <rajakimmoji@gmail.com>"
     },
     "win": {
-      "target": ["nsis", "portable"],
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "assets/icon.png"
     },
     "mac": {
-      "target": ["zip"],
+      "target": [
+        "zip"
+      ],
       "category": "public.app-category.productivity",
       "icon": "assets/icon.png"
     },
@@ -70,5 +89,8 @@
   "devDependencies": {
     "electron": "^30.0.9",
     "electron-builder": "^24.13.3"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
   }
 }

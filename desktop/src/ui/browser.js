@@ -1128,21 +1128,164 @@ function openFeatureHub(hubId) {
                 <div>
                     <h3 style="color: #FFF; font-size: 18px;">Fokk Browser Desktop</h3>
                     <div style="color: var(--fokk-cyan); font-size: 12px; font-weight: 700;">Version 1.0.0 · Rust Shield Edition</div>
-                    <div style="color: var(--text-secondary); font-size: 11px;">Chromium 124 / Electron 30</div>
+                    <div style="color: var(--text-secondary); font-size: 11px;">Chromium 124 / Electron 30 · Multi-Platform</div>
                 </div>
             </div>
+
+            <!-- In-App 1-Click Update Center -->
+            <div class="update-center-card">
+                <div class="update-card-header">
+                    <div class="update-status-wrap">
+                        <span class="update-dot" id="updateDot"></span>
+                        <div>
+                            <div class="update-main-title" id="updateMainTitle">Fokk Browser is up to date</div>
+                            <div class="update-sub-title" id="updateSubTitle">Current version 1.0.0 is the official release</div>
+                        </div>
+                    </div>
+                    <button id="btnCheckUpdate" class="btn-update-action" title="Check for latest releases from GitHub">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/></svg>
+                        <span>Check for Updates</span>
+                    </button>
+                </div>
+
+                <div id="updateDownloadBox" class="update-download-box hidden">
+                    <div class="update-progress-info">
+                        <span id="updateProgressText">Downloading update...</span>
+                        <span id="updateProgressPercent">0%</span>
+                    </div>
+                    <div class="update-progress-track">
+                        <div class="update-progress-bar" id="updateProgressBar"></div>
+                    </div>
+                </div>
+
+                <div id="updateActionBox" class="update-action-box hidden">
+                    <div class="update-notes-preview" id="updateNotesPreview"></div>
+                    <button id="btnApplyUpdate" class="btn-install-update">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span id="btnApplyUpdateText">Update Now (1-Click)</span>
+                    </button>
+                </div>
+            </div>
+
             <p style="font-size: 12.5px; line-height: 1.6; color: var(--text-secondary); margin-bottom: 14px;">
                 Fokk Browser is an ultra-fast, zero-compromise desktop web browser engineered with built-in network adblocking, canvas cloaking, DNS privacy, and distraction-free tools.
             </p>
-            <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px;">
-                <div style="font-size: 12px; font-weight: 700; color: #FFF; margin-bottom: 4px;">Source & Community</div>
-                <div style="font-size: 11.5px; color: var(--fokk-cyan); cursor: pointer;" id="linkRepo">github.com/Kimmojiraja/fokk-project</div>
+            <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 12px; font-weight: 700; color: #FFF; margin-bottom: 2px;">Official Repository</div>
+                    <div style="font-size: 11.5px; color: var(--fokk-cyan); cursor: pointer;" id="linkRepo">github.com/Kimmojiraja/fokk-project</div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-secondary);"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
         `;
+
         document.getElementById('linkRepo').onclick = () => {
             createTab('https://github.com/Kimmojiraja/fokk-project');
             featureHubModal.classList.add('hidden');
         };
+
+        // Wire 1-Click Update Controls
+        let updateTargetInfo = null;
+        let downloadedFilePath = null;
+
+        const btnCheckUpdate = document.getElementById('btnCheckUpdate');
+        const updateDot = document.getElementById('updateDot');
+        const updateMainTitle = document.getElementById('updateMainTitle');
+        const updateSubTitle = document.getElementById('updateSubTitle');
+        const updateDownloadBox = document.getElementById('updateDownloadBox');
+        const updateProgressBar = document.getElementById('updateProgressBar');
+        const updateProgressText = document.getElementById('updateProgressText');
+        const updateProgressPercent = document.getElementById('updateProgressPercent');
+        const updateActionBox = document.getElementById('updateActionBox');
+        const updateNotesPreview = document.getElementById('updateNotesPreview');
+        const btnApplyUpdate = document.getElementById('btnApplyUpdate');
+        const btnApplyUpdateText = document.getElementById('btnApplyUpdateText');
+
+        btnCheckUpdate.onclick = async () => {
+            btnCheckUpdate.disabled = true;
+            updateDot.className = 'update-dot checking';
+            updateMainTitle.textContent = 'Checking for updates...';
+            updateSubTitle.textContent = 'Connecting to GitHub Releases...';
+
+            try {
+                const res = await ipcRenderer.invoke('fokk-check-update');
+                btnCheckUpdate.disabled = false;
+
+                if (res && res.available) {
+                    updateTargetInfo = res;
+                    updateDot.className = 'update-dot available';
+                    updateMainTitle.textContent = `New Update Available: v${res.latestVersion}`;
+                    updateSubTitle.textContent = `Current v${res.currentVersion} · Click below to update`;
+
+                    updateActionBox.classList.remove('hidden');
+                    if (res.releaseNotes) {
+                        updateNotesPreview.textContent = res.releaseNotes.substring(0, 180) + '...';
+                        updateNotesPreview.style.display = 'block';
+                    }
+                    btnApplyUpdateText.textContent = `Update to v${res.latestVersion} (1-Click)`;
+                } else {
+                    updateDot.className = 'update-dot';
+                    updateMainTitle.textContent = 'You are on the latest version';
+                    updateSubTitle.textContent = `Version ${res.currentVersion || '1.0.0'} is up to date`;
+                    updateActionBox.classList.add('hidden');
+                    showToast('Fokk Browser is fully up to date!');
+                }
+            } catch (e) {
+                btnCheckUpdate.disabled = false;
+                updateDot.className = 'update-dot';
+                updateMainTitle.textContent = 'Could not check for updates';
+                updateSubTitle.textContent = e.message || 'Network error';
+            }
+        };
+
+        btnApplyUpdate.onclick = async () => {
+            if (downloadedFilePath) {
+                btnApplyUpdate.disabled = true;
+                btnApplyUpdateText.textContent = 'Restarting and installing update...';
+                await ipcRenderer.invoke('fokk-install-update', { filePath: downloadedFilePath });
+                return;
+            }
+
+            if (!updateTargetInfo || !updateTargetInfo.downloadUrl) return;
+
+            btnApplyUpdate.disabled = true;
+            updateDownloadBox.classList.remove('hidden');
+            updateProgressText.textContent = `Downloading v${updateTargetInfo.latestVersion}...`;
+
+            try {
+                const downloadRes = await ipcRenderer.invoke('fokk-start-update', {
+                    downloadUrl: updateTargetInfo.downloadUrl,
+                    fileName: updateTargetInfo.fileName
+                });
+
+                if (downloadRes && downloadRes.success) {
+                    downloadedFilePath = downloadRes.filePath;
+                    updateDownloadBox.classList.add('hidden');
+                    updateDot.className = 'update-dot ready';
+                    updateMainTitle.textContent = `v${updateTargetInfo.latestVersion} Downloaded!`;
+                    updateSubTitle.textContent = 'Ready to apply. Click below to restart.';
+                    btnApplyUpdate.disabled = false;
+                    btnApplyUpdateText.textContent = 'Restart & Install Update (1-Click)';
+                    btnApplyUpdate.classList.add('btn-restart-ready');
+                    showToast('Update downloaded! Ready to install.');
+                }
+            } catch (err) {
+                btnApplyUpdate.disabled = false;
+                updateDownloadBox.classList.add('hidden');
+                showToast(`Update download failed: ${err.message}`);
+            }
+        };
+
+        // Track live download progress
+        ipcRenderer.on('fokk-update-progress', (event, p) => {
+            if (updateProgressBar && updateProgressPercent) {
+                updateProgressBar.style.width = `${p.percent}%`;
+                updateProgressPercent.textContent = `${p.percent}%`;
+                const mbTrans = (p.transferred / (1024 * 1024)).toFixed(1);
+                const mbTot = (p.total / (1024 * 1024)).toFixed(1);
+                updateProgressText.textContent = `Downloading update: ${mbTrans} MB / ${mbTot} MB`;
+            }
+        });
     }
 
     featureHubModal.classList.remove('hidden');
