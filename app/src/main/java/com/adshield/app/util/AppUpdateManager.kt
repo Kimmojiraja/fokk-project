@@ -52,9 +52,10 @@ object AppUpdateManager {
                 latestName = json.optString("versionName", currentName)
                 downloadUrl = json.optString("downloadUrl", "")
                 changelog = json.optString("changelog", changelog)
-                metadataLoaded = true
-            } catch (e: Exception) {
-                // Fallback to GitHub Release API
+            } catch (_: Exception) {}
+
+            // If version.json did not yield a newer version or failed, check GitHub Release API
+            if (latestCode <= currentCode || downloadUrl.isBlank()) {
                 try {
                     val conn = URL(GITHUB_RELEASE_API).openConnection() as HttpURLConnection
                     conn.connectTimeout = 5000
