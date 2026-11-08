@@ -33,6 +33,7 @@ class AdBlockEngine {
             'advertising.com'
         ];
         this.blockedCount = 0;
+        this.recentBlockedUrls = new Map();
         this.init();
     }
 
@@ -108,12 +109,28 @@ class AdBlockEngine {
         this.customBlockedDomains = new Set((domains || []).map(d => d.toLowerCase().trim()));
     }
 
+    recordBlock(url) {
+        const now = Date.now();
+        const last = this.recentBlockedUrls.get(url);
+        // Only increment count if not repeatedly spammed within last 500ms
+        if (!last || (now - last) > 500) {
+            this.blockedCount++;
+            this.recentBlockedUrls.set(url, now);
+            if (this.recentBlockedUrls.size > 300) {
+                for (const [k, v] of this.recentBlockedUrls) {
+                    if (now - v > 5000) this.recentBlockedUrls.delete(k);
+                }
+            }
+        }
+        return true;
+    }
+
     shouldBlock(url, resourceType) {
         if (!url || typeof url !== 'string') return false;
         const lowerUrl = url.toLowerCase();
 
         // Never block internal app resources
-        if (lowerUrl.startsWith('file:') || lowerUrl.startsWith('data:') || lowerUrl.startsWith('devtools:')) {
+        if (lowerUrl.startsWith('file:') || lowerUrl.startsWith('data:') || lowerUrl.startsWith('devtools:') || lowerUrl.startsWith('chrome:')) {
             return false;
         }
 
@@ -139,8 +156,7 @@ class AdBlockEngine {
 
             // Check Custom Blacklisted domains
             if (this.customBlockedDomains.has(host)) {
-                this.blockedCount++;
-                return true;
+                return this.recordBlock(url);
             }
         } catch (_) {}
 
@@ -152,8 +168,7 @@ class AdBlockEngine {
                 lowerUrl.includes('get_midroll_info') ||
                 lowerUrl.includes('doubleclick.net');
             if (isYtAd && !isMedia) {
-                this.blockedCount++;
-                return true;
+                return this.recordBlock(url);
             }
             return false;
         }
@@ -167,8 +182,7 @@ class AdBlockEngine {
 
             // Check Set of curated domains
             if (this.blockedDomains.has(host)) {
-                this.blockedCount++;
-                return true;
+                return this.recordBlock(url);
             }
 
             // Check parent domain
@@ -176,8 +190,7 @@ class AdBlockEngine {
             if (parts.length > 2) {
                 const parentDomain = parts.slice(1).join('.');
                 if (this.blockedDomains.has(parentDomain)) {
-                    this.blockedCount++;
-                    return true;
+                    return this.recordBlock(url);
                 }
             }
         } catch (_) {}
@@ -185,8 +198,7 @@ class AdBlockEngine {
         // Check keyword patterns
         for (const kw of this.blockedKeywords) {
             if (lowerUrl.includes(kw)) {
-                this.blockedCount++;
-                return true;
+                return this.recordBlock(url);
             }
         }
 

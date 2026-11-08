@@ -29,15 +29,43 @@ const DOH_PROVIDERS = {
     google: 'https://dns.google/dns-query'
 };
 
+const CHROME_USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
+let statsUpdateTimer = null;
+function broadcastStatsThrottled() {
+    if (statsUpdateTimer) return;
+    statsUpdateTimer = setTimeout(() => {
+        statsUpdateTimer = null;
+        const stats = adblock.getStats();
+        webContents.getAllWebContents().forEach(wc => {
+            try { wc.send('fokk-stats-updated', stats); } catch (_) {}
+        });
+    }, 250);
+}
+
 function setupAdblockingForSession(sess) {
-    if (!sess) return;
+    if (!sess || sess.__fokk_configured) return;
+    sess.__fokk_configured = true;
+
+    try {
+        sess.setUserAgent(CHROME_USER_AGENT);
+    } catch (_) {}
+
+    sess.webRequest.onBeforeSendHeaders((details, callback) => {
+        const headers = { ...details.requestHeaders };
+        // Ensure clean Google Chrome User-Agent is presented (fixes WhatsApp Web device linking)
+        headers['User-Agent'] = CHROME_USER_AGENT;
+        if (headers['sec-ch-ua'] || details.url.includes('whatsapp.com')) {
+            headers['sec-ch-ua'] = '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"';
+            headers['sec-ch-ua-mobile'] = '?0';
+            headers['sec-ch-ua-platform'] = '"Linux"';
+        }
+        callback({ requestHeaders: headers });
+    });
+
     sess.webRequest.onBeforeRequest((details, callback) => {
         if (shieldEnabled && adblock.shouldBlock(details.url, details.resourceType)) {
-            // Broadcast live stats update to all windows
-            const stats = adblock.getStats();
-            webContents.getAllWebContents().forEach(wc => {
-                try { wc.send('fokk-stats-updated', stats); } catch (_) {}
-            });
+            broadcastStatsThrottled();
             callback({ cancel: true });
         } else {
             callback({ cancel: false });
@@ -301,6 +329,7 @@ ipcMain.handle('fokk-pick-wallpaper', async () => {
 
 // Application Lifecycle
 app.whenReady().then(() => {
+    app.userAgentFallback = CHROME_USER_AGENT;
     createWindow();
 
     // Configure AdGuard DoH default out-of-the-box (matching mobile Android DnsOverHttpsEngine)

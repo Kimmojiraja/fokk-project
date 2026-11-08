@@ -221,6 +221,7 @@ body {
     justify-content: center;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
     transition: all 0.18s ease;
+    position: relative;
 }
 
 .shortcut-tile:hover .shortcut-icon-card {
@@ -229,9 +230,62 @@ body {
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
 
+.shortcut-favicon-img {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    object-fit: contain;
+}
+
+.shortcut-fallback-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .shortcut-icon-card svg {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
+}
+
+.shortcut-letter {
+    font-size: 19px;
+    font-weight: 700;
+    color: #FFF;
+}
+
+.shortcut-del-btn {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #EF4444;
+    color: #FFF;
+    border: none;
+    cursor: pointer;
+    font-size: 11px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.shortcut-tile:hover .shortcut-del-btn {
+    display: flex;
+}
+
+.add-shortcut-card {
+    border: 1px dashed rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.add-shortcut-card:hover {
+    border-color: var(--fokk-cyan);
+    color: var(--fokk-cyan);
 }
 
 .shortcut-label {

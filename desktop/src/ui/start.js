@@ -415,38 +415,43 @@
         }
     }
 
-    // Search Engine Definitions (Bing Default like Mobile)
+    // Search Engine Definitions (Matching Image 3 Reference)
     const SEARCH_ENGINES = {
-        bing: {
-            name: 'Microsoft Bing',
-            url: 'https://www.bing.com/search?q=',
-            iconSvg: '<svg width="20" height="20" viewBox="0 0 24 24"><path fill="#008373" d="M5 3v18l7-4V7.5L8.5 6V3H5zm9 5l-2 1.2V14l4.5 2.5 3.5-2V10l-6-2z"/><path fill="#00A88F" d="M12 7.5V17l4.5 2.5 3.5-2V10l-8-2.5z"/></svg>'
-        },
         google: {
-            name: 'Google Search',
+            name: 'Google',
             url: 'https://www.google.com/search?q=',
-            iconSvg: '<svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.04h3.88c2.27-2.09 3.66-5.17 3.66-9.14z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.04c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.27 21.43 7.35 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.28c-.24-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28V6.59H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.41l4.03-3.13z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.27 2.57 1.25 6.59l4.03 3.13c.95-2.83 3.6-4.97 6.72-4.97z"/></svg>'
+            iconSvg: '<svg width="22" height="22" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.04h3.88c2.27-2.09 3.66-5.17 3.66-9.14z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.04c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.27 21.43 7.35 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.28c-.24-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28V6.59H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.41l4.03-3.13z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.27 2.57 1.25 6.59l4.03 3.13c.95-2.83 3.6-4.97 6.72-4.97z"/></svg>'
+        },
+        bing: {
+            name: 'Bing',
+            url: 'https://www.bing.com/search?q=',
+            iconSvg: '<svg width="22" height="22" viewBox="0 0 32 32"><defs><linearGradient id="bingStartLg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00BCF2"/><stop offset="100%" stop-color="#0078D4"/></linearGradient></defs><path fill="url(#bingStartLg)" d="M8 3v21.5c0 1.2 1 2.2 2.2 2.3 3.5.3 8.5.5 12.5-3.2 3.6-3.4 3.7-8.8 1-12.8L16.5 6v9.5c0 .8-.7 1.5-1.5 1.5-.7 0-1.3-.5-1.5-1.2l-.5-1.6V3c0-.8-.7-1.5-1.5-1.5S8 2.2 8 3z"/></svg>'
         },
         brave: {
-            name: 'Brave Search',
+            name: 'Brave',
             url: 'https://search.brave.com/search?q=',
-            iconSvg: '<svg width="20" height="20" viewBox="0 0 24 24"><path fill="#FB542B" d="M12 2L4 5.5v5.3c0 5.4 3.4 10.4 8 11.7 4.6-1.3 8-6.3 8-11.7V5.5L12 2zm3.8 14.1l-2.4-1.2-1.4.9 1.4-.9-2.4 1.2-1.4-1.6 3.8-.4 3.8.4-1.4 1.6zM7.5 10l1.7-.8 1 1.7-2.7-.9zm9 0l-2.7.9 1-1.7 1.7.8z"/></svg>'
+            iconSvg: '<svg width="22" height="22" viewBox="0 0 32 32"><path fill="#FF3300" d="M16 2l-10 4.2v8.5c0 7.2 4.3 13.8 10 16.3 5.7-2.5 10-9.1 10-16.3V6.2L16 2z"/><path fill="#FFF" d="M16 8l-4.5 2.5 1.4 6 3.1-1.5 3.1 1.5 1.4-6L16 8zm0 10.5l-3.2 2 1.2 4 2-1.2 2 1.2 1.2-4-3.2-2z"/><path fill="#FF7700" d="M12.5 13.5l3.5-1.8 3.5 1.8-1 4.5-2.5-1.2-2.5 1.2-1-4.5z"/></svg>'
         },
         duckduckgo: {
             name: 'DuckDuckGo',
             url: 'https://duckduckgo.com/?q=',
-            iconSvg: '<svg width="20" height="20" viewBox="0 0 24 24"><path fill="#DE5833" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 3.5c1.93 0 3.5 1.57 3.5 3.5 0 .88-.33 1.68-.86 2.3l2.86 1.2-.5 1.5-3.32-1.39C14.07 13.06 13.09 13.5 12 13.5c-.75 0-1.44-.22-2.03-.6l-1.47 1.47 2.12 2.12-1.41 1.41-3.54-3.53 1.41-1.42.71.71c-.5-.73-.79-1.61-.79-2.56 0-2.48 2.02-4.5 4.5-4.5z"/><circle cx="14" cy="8" r="1" fill="#FFF"/></svg>'
+            iconSvg: '<svg width="22" height="22" viewBox="0 0 32 32"><circle cx="16" cy="16" r="15" fill="#DE5833"/><path fill="#FFFFFF" d="M16 6c-3.9 0-7 3.1-7 7 0 2.2 1 4.1 2.6 5.4-.1.6-.4 1.9-1.6 3.1 1.8.1 3.5-.7 4.6-2 .5.1.9.1 1.4.1 3.9 0 7-3.1 7-7s-3.1-6.6-7-6.6z"/><circle cx="13.5" cy="11.5" r="1.5" fill="#333333"/><path fill="#F9A825" d="M17.5 14.5c0 0 3.5.5 5 2.5-1.5 1-4 1.5-6.5 1 0 0 2.5-1 1.5-3.5z"/><path fill="#4CAF50" d="M14 23.5l2-1.5 2 1.5-2 1.5-2-1.5z"/></svg>'
+        },
+        startpage: {
+            name: 'Startpage',
+            url: 'https://www.startpage.com/sp/search?q=',
+            iconSvg: '<svg width="22" height="22" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#1A1C24"/><path fill="#3661FF" d="M7 14c0-4.4 3.6-8 8-8s8 3.6 8 8-3.6 8-8 8c-1.8 0-3.5-.6-4.8-1.7l-4.5 4.5-1.4-1.4 4.5-4.5C7.6 17.5 7 15.8 7 14zm8-5.5c-3 0-5.5 2.5-5.5 5.5s2.5 5.5 5.5 5.5 5.5-2.5 5.5-5.5-2.5-5.5-5.5-5.5z"/><path d="M7 25.5c3.5-1.8 8.5-1.8 12 0" stroke="#6366F1" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg>'
         },
         ecosia: {
             name: 'Ecosia',
             url: 'https://www.ecosia.org/search?q=',
-            iconSvg: '<svg width="20" height="20" viewBox="0 0 24 24"><path fill="#009688" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>'
+            iconSvg: '<svg width="22" height="22" viewBox="0 0 32 32"><path fill="#48B25A" d="M16 4C10.5 4 6 8.5 6 14c0 3.2 1.5 6 3.8 7.8v.2c0 .5.2 1 .5 1.4.3.4.7.6 1.2.6h9c.5 0 .9-.2 1.2-.6.3-.4.5-.9.5-1.4v-.2C24.5 20 26 17.2 26 14c0-5.5-4.5-10-10-10z"/><path fill="#FFFFFF" d="M16 16v8m-2.5-4l2.5-3 2.5 3" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
         }
     };
 
     function getActiveEngine() {
-        const id = localStorage.getItem('fokk_search_engine') || 'bing';
-        return SEARCH_ENGINES[id] || SEARCH_ENGINES.bing;
+        const id = localStorage.getItem('fokk_search_engine') || 'google';
+        return SEARCH_ENGINES[id] || SEARCH_ENGINES.google;
     }
 
     function updateSearchEngineUI() {
@@ -482,25 +487,118 @@
         });
     }
 
-    // 4. Render 8 Shortcuts (Firefox Style)
+    // 4. Render Shortcuts (High-Res Favicons + Custom User Shortcuts)
+    function getCombinedShortcuts() {
+        let custom = [];
+        try {
+            const raw = localStorage.getItem('fokk_desktop_shortcuts') || localStorage.getItem('fokk_custom_shortcuts');
+            if (raw) custom = JSON.parse(raw);
+        } catch (_) {}
+
+        const seenUrls = new Set(DEFAULT_SHORTCUTS.map(s => s.url.replace(/\/$/, '')));
+        const validCustom = [];
+
+        for (const c of custom) {
+            const u = (c.url || '').replace(/\/$/, '');
+            if (u && !seenUrls.has(u)) {
+                seenUrls.add(u);
+                let host = '';
+                try { host = new URL(c.url).hostname; } catch(_) { host = c.url; }
+                validCustom.push({
+                    name: c.name || c.title || host.replace('www.', ''),
+                    url: c.url,
+                    sub: host,
+                    isCustom: true
+                });
+            }
+        }
+        return [...DEFAULT_SHORTCUTS, ...validCustom];
+    }
+
     function renderShortcuts() {
         if (!shortcutsContainer) return;
-        shortcutsContainer.innerHTML = DEFAULT_SHORTCUTS.map(s => `
-            <div class="shortcut-tile" data-url="${s.url}" title="${s.name}">
-                <div class="shortcut-icon-card" style="background-color: ${s.iconBg}">
-                    ${s.iconSvg}
-                </div>
-                <span class="shortcut-label">${s.name}</span>
-                ${s.sub ? `<span class="shortcut-sub">${s.sub}</span>` : ''}
-            </div>
-        `).join('');
+        const allShortcuts = getCombinedShortcuts();
 
-        shortcutsContainer.querySelectorAll('.shortcut-tile').forEach(tile => {
-            tile.addEventListener('click', () => {
+        const tilesHtml = allShortcuts.map((s, idx) => {
+            let hostname = '';
+            try { hostname = new URL(s.url).hostname; } catch(_) { hostname = s.url; }
+            const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`;
+            const firstLetter = (s.name || 'W').charAt(0).toUpperCase();
+
+            return `
+                <div class="shortcut-tile" data-url="${s.url}" title="${s.name}">
+                    <div class="shortcut-icon-card" style="background-color: ${s.iconBg || 'rgba(43,42,51,0.85)'}">
+                        <img src="${faviconUrl}" class="shortcut-favicon-img" alt="${s.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="shortcut-fallback-icon" style="display: none;">
+                            ${s.iconSvg ? s.iconSvg : `<span class="shortcut-letter">${firstLetter}</span>`}
+                        </div>
+                        ${s.isCustom ? `<button class="shortcut-del-btn" data-url="${s.url}" title="Remove Shortcut">&times;</button>` : ''}
+                    </div>
+                    <span class="shortcut-label">${s.name}</span>
+                    ${s.sub ? `<span class="shortcut-sub">${s.sub}</span>` : ''}
+                </div>
+            `;
+        }).join('');
+
+        const addTileHtml = `
+            <div class="shortcut-tile add-shortcut-tile" id="btnAddShortcutTile" title="Add Custom Shortcut">
+                <div class="shortcut-icon-card add-shortcut-card">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                </div>
+                <span class="shortcut-label">Add Tile</span>
+            </div>
+        `;
+
+        shortcutsContainer.innerHTML = tilesHtml + addTileHtml;
+
+        // Navigation click handlers
+        shortcutsContainer.querySelectorAll('.shortcut-tile:not(.add-shortcut-tile)').forEach(tile => {
+            tile.addEventListener('click', (e) => {
+                if (e.target.classList.contains('shortcut-del-btn')) return;
                 const url = tile.getAttribute('data-url');
                 if (url) navigateTo(url);
             });
         });
+
+        // Delete handlers for custom shortcuts
+        shortcutsContainer.querySelectorAll('.shortcut-del-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const toDel = btn.getAttribute('data-url');
+                try {
+                    let custom = JSON.parse(localStorage.getItem('fokk_desktop_shortcuts') || '[]');
+                    custom = custom.filter(c => c.url !== toDel);
+                    localStorage.setItem('fokk_desktop_shortcuts', JSON.stringify(custom));
+                    localStorage.setItem('fokk_custom_shortcuts', JSON.stringify(custom));
+                } catch (_) {}
+                renderShortcuts();
+            });
+        });
+
+        // Add Shortcut Tile Handler
+        const addBtn = document.getElementById('btnAddShortcutTile');
+        if (addBtn) {
+            addBtn.addEventListener('click', () => {
+                const name = prompt('Shortcut Name:');
+                if (!name) return;
+                const rawUrl = prompt('Shortcut URL (e.g. https://github.com):');
+                if (!rawUrl) return;
+                const validUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : 'https://' + rawUrl;
+
+                try {
+                    let custom = JSON.parse(localStorage.getItem('fokk_desktop_shortcuts') || '[]');
+                    let host = '';
+                    try { host = new URL(validUrl).hostname; } catch(_) { host = validUrl; }
+                    custom.push({ name, url: validUrl, sub: host });
+                    localStorage.setItem('fokk_desktop_shortcuts', JSON.stringify(custom));
+                    localStorage.setItem('fokk_custom_shortcuts', JSON.stringify(custom));
+                } catch (_) {}
+                renderShortcuts();
+            });
+        }
     }
 
     // 5. Render Stories (Firefox Style Grid - 8 Default or 16 Extended)
