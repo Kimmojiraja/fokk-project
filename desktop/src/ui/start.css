@@ -126,23 +126,29 @@ body {
 
 .firefox-search-box {
     width: 100%;
-    height: 48px;
-    background: rgba(43, 42, 51, 0.88);
-    backdrop-filter: blur(24px);
-    border: 1px solid var(--firefox-border);
-    border-radius: 8px;
+    height: 50px;
+    background: rgba(16, 16, 20, 0.94);
+    backdrop-filter: blur(28px);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 26px;
     display: flex;
     align-items: center;
-    padding: 0 14px;
+    padding: 0 18px;
     gap: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-    transition: all 0.2s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transition: all 0.22s ease;
+}
+
+.firefox-search-box:hover {
+    background: rgba(22, 22, 28, 0.96);
+    border-color: rgba(255, 255, 255, 0.16);
+    box-shadow: 0 10px 36px rgba(0, 0, 0, 0.65);
 }
 
 .firefox-search-box:focus-within {
     border-color: var(--accent-cyan);
-    box-shadow: 0 0 0 1px var(--accent-cyan), 0 8px 24px rgba(0, 0, 0, 0.5);
-    background: rgba(43, 42, 51, 0.98);
+    box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.28), 0 12px 40px rgba(0, 0, 0, 0.75);
+    background: #0d0d11;
 }
 
 .search-engine-icon {
@@ -221,6 +227,7 @@ body {
     justify-content: center;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
     transition: all 0.18s ease;
+    position: relative;
 }
 
 .shortcut-tile:hover .shortcut-icon-card {
@@ -229,9 +236,81 @@ body {
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
 
+.shortcut-favicon-img {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    object-fit: contain;
+}
+
+.shortcut-fallback-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .shortcut-icon-card svg {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
+}
+
+.shortcut-letter {
+    font-size: 19px;
+    font-weight: 700;
+    color: #FFF;
+}
+
+.shortcut-del-btn {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #EF4444;
+    color: #FFF;
+    border: none;
+    cursor: pointer;
+    font-size: 11px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.shortcut-edit-btn {
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #0284C7;
+    color: #FFF;
+    border: none;
+    cursor: pointer;
+    font-size: 10px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.shortcut-tile:hover .shortcut-del-btn,
+.shortcut-tile:hover .shortcut-edit-btn {
+    display: flex;
+}
+
+.add-shortcut-card {
+    border: 1px dashed rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.add-shortcut-card:hover {
+    border-color: var(--fokk-cyan);
+    color: var(--fokk-cyan);
 }
 
 .shortcut-label {
@@ -433,33 +512,135 @@ body {
     transform: rotate(180deg);
 }
 
-/* Floating Bottom-Right Pencil Customize Button (Firefox Style) */
-.floating-pencil-btn {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: rgba(43, 42, 51, 0.92);
-    backdrop-filter: blur(16px);
-    border: 1px solid var(--firefox-border);
+/* Custom Shortcut Modal */
+.shortcut-modal-card {
+    max-width: 440px;
+    width: 90%;
+}
+
+.shortcut-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+}
+
+.modal-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.modal-field label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #9ca3af;
+}
+
+.modal-input {
+    width: 100%;
+    height: 42px;
+    background: rgba(18, 18, 24, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 0 14px;
     color: #ffffff;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.modal-input:focus {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+    background: rgba(22, 22, 30, 0.98);
+}
+
+.shortcut-preview-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+}
+
+.shortcut-preview-card {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: rgba(43, 42, 51, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    transition: all 0.2s ease;
-    z-index: 9999;
-    pointer-events: auto;
+    flex-shrink: 0;
 }
 
-.floating-pencil-btn:hover {
-    background: rgba(60, 59, 72, 1);
-    border-color: var(--accent-cyan);
-    color: var(--accent-cyan);
-    transform: scale(1.08);
+.shortcut-preview-text {
+    flex: 1;
+    overflow: hidden;
+}
+
+.preview-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.preview-url {
+    font-size: 12px;
+    color: #9ca3af;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #d1d5db;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+}
+
+.btn-primary {
+    background: var(--accent-cyan);
+    border: none;
+    color: #0b0f19;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-primary:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 0 14px rgba(6, 182, 212, 0.4);
 }
 
 /* Wallpaper Studio Modal */
@@ -617,3 +798,189 @@ body {
     font-weight: 600;
     color: #ffffff;
 }
+
+/* ==========================================================================
+   Cohesive Light Theme Architecture (Start Page)
+   ========================================================================== */
+body.theme-light {
+    --firefox-dark-base: #F8FAFC;
+    --firefox-card-bg: rgba(255, 255, 255, 0.95);
+    --firefox-card-hover: #FFFFFF;
+    --firefox-border: rgba(0, 0, 0, 0.08);
+    --firefox-border-hover: rgba(0, 0, 0, 0.16);
+    --text-white: #0F172A;
+    --text-light: #1E293B;
+    --text-muted: #64748B;
+    --accent-cyan: #0284C7;
+    background-color: #F8FAFC;
+    color: #0F172A;
+}
+
+body.theme-light .wallpaper-overlay {
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.65) 0%, rgba(248, 250, 252, 0.88) 100%);
+}
+
+body.theme-light .brand-name {
+    color: #0F172A;
+}
+
+body.theme-light .firefox-search-box {
+    background: #FFFFFF !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06) !important;
+}
+
+body.theme-light .firefox-search-box:focus-within {
+    border-color: var(--accent-cyan) !important;
+    box-shadow: 0 4px 22px rgba(2, 132, 199, 0.18) !important;
+}
+
+body.theme-light .firefox-search-input {
+    color: #0F172A !important;
+}
+
+body.theme-light .firefox-search-input::placeholder {
+    color: #94A3B8 !important;
+}
+
+body.theme-light .search-arrow-btn {
+    color: #64748B;
+}
+
+body.theme-light .search-arrow-btn:hover {
+    color: #0F172A;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.theme-light .shortcut-icon-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+body.theme-light .shortcut-tile:hover .shortcut-icon-card {
+    background: #F8FAFC;
+    border-color: rgba(0, 0, 0, 0.16);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+}
+
+body.theme-light .add-shortcut-card {
+    border: 1px dashed rgba(0, 0, 0, 0.25);
+    color: rgba(0, 0, 0, 0.6);
+}
+
+body.theme-light .add-shortcut-card:hover {
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+}
+
+body.theme-light .shortcut-label {
+    color: #0F172A;
+    text-shadow: none;
+}
+
+body.theme-light .shortcut-letter {
+    color: #0F172A;
+}
+
+body.theme-light .firefox-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+body.theme-light .firefox-card:hover {
+    background: #FFFFFF;
+    border-color: rgba(0, 0, 0, 0.16);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+body.theme-light .card-headline {
+    color: #0F172A;
+}
+
+body.theme-light .card-source-bar {
+    color: #64748B;
+}
+
+body.theme-light .region-dropdown {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    color: #334155;
+}
+
+body.theme-light .btn-more-stories {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    color: #334155;
+}
+
+body.theme-light .btn-more-stories:hover {
+    background: #F1F5F9;
+    color: #0F172A;
+}
+
+body.theme-light .modal-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
+}
+
+body.theme-light .modal-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+body.theme-light .modal-title-wrap h3 {
+    color: #0F172A;
+}
+
+body.theme-light .modal-title-wrap p {
+    color: #64748B;
+}
+
+body.theme-light .modal-field label {
+    color: #64748B;
+}
+
+body.theme-light .modal-input {
+    background: #F8FAFC;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    color: #0F172A;
+}
+
+body.theme-light .shortcut-preview-row {
+    background: #F8FAFC;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+body.theme-light .shortcut-preview-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+body.theme-light .preview-name {
+    color: #0F172A;
+}
+
+body.theme-light .preview-url {
+    color: #64748B;
+}
+
+body.theme-light .btn-secondary {
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    color: #334155;
+}
+
+body.theme-light .btn-secondary:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #0F172A;
+}
+
+body.theme-light .btn-modal-close {
+    color: #64748B;
+}
+
+body.theme-light .btn-modal-close:hover {
+    color: #0F172A;
+}
+

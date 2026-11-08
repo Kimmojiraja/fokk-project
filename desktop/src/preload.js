@@ -115,6 +115,9 @@ contextBridge.exposeInMainWorld('FokkShieldBridge', {
         }
         return fileData;
     },
+    triggerAvatarPicker: async () => {
+        return await ipcRenderer.invoke('fokk-pick-avatar');
+    },
 
     // Custom Shortcuts Management
     getCustomShortcuts: () => {
@@ -126,6 +129,20 @@ contextBridge.exposeInMainWorld('FokkShieldBridge', {
             list.push({ title, url, id: 'c_' + Date.now() });
             localStorage.setItem('fokk_custom_shortcuts', JSON.stringify(list));
         } catch (_) {}
+    },
+
+    // In-App 1-Click Auto-Updates
+    checkForUpdates: async () => {
+        return await ipcRenderer.invoke('fokk-check-update');
+    },
+    startUpdateDownload: async (info) => {
+        return await ipcRenderer.invoke('fokk-download-update', info);
+    },
+    installUpdate: async (filePath) => {
+        return await ipcRenderer.invoke('fokk-install-update', { filePath });
+    },
+    onUpdateProgress: (cb) => {
+        ipcRenderer.on('fokk-update-progress', (event, data) => cb(data));
     },
 
     // Utilities

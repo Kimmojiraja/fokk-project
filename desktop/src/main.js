@@ -1,6 +1,8 @@
-const { app, BrowserWindow, ipcMain, session, nativeImage, webContents } = require('electron');
+const { app, BrowserWindow, ipcMain, session, nativeImage, webContents, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
+const { spawn } = require('child_process');
 const AdBlockEngine = require('./adblock');
 const newsService = require('./news');
 
@@ -29,19 +31,89 @@ const DOH_PROVIDERS = {
     google: 'https://dns.google/dns-query'
 };
 
+const CHROME_USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
+let statsUpdateTimer = null;
+function broadcastStatsThrottled() {
+    if (statsUpdateTimer) return;
+    statsUpdateTimer = setTimeout(() => {
+        statsUpdateTimer = null;
+        const stats = adblock.getStats();
+        webContents.getAllWebContents().forEach(wc => {
+            try { wc.send('fokk-stats-updated', stats); } catch (_) {}
+        });
+    }, 250);
+}
+
+const downloadItems = [];
+
+function broadcastDownloadUpdate(dl) {
+    webContents.getAllWebContents().forEach(wc => {
+        try { wc.send('fokk-download-update', dl); } catch (_) {}
+    });
+}
+
 function setupAdblockingForSession(sess) {
-    if (!sess) return;
+    if (!sess || sess.__fokk_configured) return;
+    sess.__fokk_configured = true;
+
+    try {
+        sess.setUserAgent(CHROME_USER_AGENT);
+    } catch (_) {}
+
+    sess.webRequest.onBeforeSendHeaders((details, callback) => {
+        const headers = { ...details.requestHeaders };
+        // Ensure clean Google Chrome User-Agent is presented (fixes WhatsApp Web device linking)
+        headers['User-Agent'] = CHROME_USER_AGENT;
+        if (headers['sec-ch-ua'] || details.url.includes('whatsapp.com')) {
+            headers['sec-ch-ua'] = '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"';
+            headers['sec-ch-ua-mobile'] = '?0';
+            headers['sec-ch-ua-platform'] = '"Linux"';
+        }
+        callback({ requestHeaders: headers });
+    });
+
     sess.webRequest.onBeforeRequest((details, callback) => {
         if (shieldEnabled && adblock.shouldBlock(details.url, details.resourceType)) {
-            // Broadcast live stats update to all windows
-            const stats = adblock.getStats();
-            webContents.getAllWebContents().forEach(wc => {
-                try { wc.send('fokk-stats-updated', stats); } catch (_) {}
-            });
+            broadcastStatsThrottled();
             callback({ cancel: true });
         } else {
             callback({ cancel: false });
         }
+    });
+
+    sess.on('will-download', (event, item) => {
+        const id = 'dl_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        const fileName = item.getFilename();
+        const totalBytes = item.getTotalBytes();
+        const record = {
+            id,
+            fileName,
+            totalBytes,
+            receivedBytes: 0,
+            savePath: item.getSavePath(),
+            state: 'progressing',
+            startTime: Date.now()
+        };
+        downloadItems.unshift(record);
+        if (downloadItems.length > 50) downloadItems.pop();
+        broadcastDownloadUpdate(record);
+
+        item.on('updated', (e, state) => {
+            record.receivedBytes = item.getReceivedBytes();
+            record.totalBytes = item.getTotalBytes();
+            record.savePath = item.getSavePath();
+            record.state = state;
+            broadcastDownloadUpdate(record);
+        });
+
+        item.on('done', (e, state) => {
+            record.receivedBytes = item.getReceivedBytes();
+            record.savePath = item.getSavePath();
+            record.state = state;
+            record.endTime = Date.now();
+            broadcastDownloadUpdate(record);
+        });
     });
 }
 
@@ -251,10 +323,18 @@ ipcMain.handle('fokk-get-torrent-url', () => {
 // 7. Session Burn & Clear Browsing Data
 ipcMain.handle('fokk-burn-session', async () => {
     try {
-        await session.defaultSession.clearStorageData({
+        const defaultSess = session.defaultSession;
+        const persistSess = session.fromPartition('persist:fokk_default_session');
+        const clearOpts = {
             storages: ['cookies', 'localstorage', 'cache', 'shadercache', 'websql', 'indexdb', 'serviceworkers', 'cachestorage']
-        });
-        await session.defaultSession.clearCache();
+        };
+        await Promise.all([
+            defaultSess.clearStorageData(clearOpts).catch(() => {}),
+            defaultSess.clearCache().catch(() => {}),
+            persistSess.clearStorageData(clearOpts).catch(() => {}),
+            persistSess.clearCache().catch(() => {})
+        ]);
+        downloadItems.length = 0;
         return { success: true };
     } catch (e) {
         return { success: false, error: e.message };
@@ -264,16 +344,72 @@ ipcMain.handle('fokk-burn-session', async () => {
 ipcMain.handle('fokk-clear-data', async (event, options) => {
     try {
         await session.defaultSession.clearStorageData(options || {});
+        try {
+            await session.fromPartition('persist:fokk_default_session').clearStorageData(options || {});
+        } catch (_) {}
         return { success: true };
     } catch (e) {
         return { success: false, error: e.message };
     }
 });
 
-// 8. Custom Wallpaper Picker
+// 7b. Downloads Manager Handlers
+ipcMain.handle('fokk-get-downloads', () => {
+    return downloadItems;
+});
+
+ipcMain.handle('fokk-open-download-file', async (event, filePath) => {
+    if (!filePath || !fs.existsSync(filePath)) return { success: false, error: 'File not found on disk' };
+    const err = await shell.openPath(filePath);
+    return { success: !err, error: err };
+});
+
+ipcMain.handle('fokk-show-in-folder', async (event, filePath) => {
+    if (filePath && fs.existsSync(filePath)) {
+        shell.showItemInFolder(filePath);
+        return { success: true };
+    }
+    const dlFolder = app.getPath('downloads');
+    shell.openPath(dlFolder);
+    return { success: true };
+});
+
+ipcMain.handle('fokk-open-downloads-folder', async () => {
+    const dlFolder = app.getPath('downloads');
+    await shell.openPath(dlFolder);
+    return { success: true };
+});
+
+ipcMain.handle('fokk-clear-downloads', () => {
+    downloadItems.length = 0;
+    return { success: true };
+});
+
+// 8. Custom Wallpaper & Avatar Pickers
 let customWallpaperBase64 = '';
 ipcMain.on('fokk-get-wallpaper-data', (event) => {
     event.returnValue = customWallpaperBase64;
+});
+
+ipcMain.handle('fokk-pick-avatar', async () => {
+    if (!mainWindow) return null;
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title: 'Choose Profile Avatar',
+        filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'] }],
+        properties: ['openFile']
+    });
+
+    if (!result.canceled && result.filePaths.length > 0) {
+        try {
+            const filePath = result.filePaths[0];
+            const ext = path.extname(filePath).replace('.', '') || 'png';
+            const data = fs.readFileSync(filePath).toString('base64');
+            return `data:image/${ext === 'svg' ? 'svg+xml' : ext};base64,${data}`;
+        } catch (e) {
+            console.error('[Avatar] Error reading file:', e);
+        }
+    }
+    return null;
 });
 
 ipcMain.handle('fokk-pick-wallpaper', async () => {
@@ -299,8 +435,170 @@ ipcMain.handle('fokk-pick-wallpaper', async () => {
     return null;
 });
 
+// 9. In-App Single-Click Auto-Updater (electron-updater + GitHub Releases API)
+let autoUpdater = null;
+try {
+    const eu = require('electron-updater');
+    autoUpdater = eu.autoUpdater;
+    autoUpdater.autoDownload = false;
+    autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.on('download-progress', (p) => {
+        webContents.getAllWebContents().forEach(wc => {
+            try { wc.send('fokk-update-progress', { percent: Math.round(p.percent), transferred: p.transferred, total: p.total }); } catch(_) {}
+        });
+    });
+    autoUpdater.on('update-downloaded', () => {
+        webContents.getAllWebContents().forEach(wc => {
+            try { wc.send('fokk-update-downloaded'); } catch(_) {}
+        });
+    });
+} catch (_) {}
+
+function compareVersions(v1, v2) {
+    const p1 = (v1 || '0').replace(/^v/i, '').split('.').map(x => parseInt(x, 10) || 0);
+    const p2 = (v2 || '0').replace(/^v/i, '').split('.').map(x => parseInt(x, 10) || 0);
+    for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
+        const a = p1[i] || 0;
+        const b = p2[i] || 0;
+        if (a > b) return 1;
+        if (a < b) return -1;
+    }
+    return 0;
+}
+
+function fetchJson(url) {
+    return new Promise((resolve, reject) => {
+        const req = https.get(url, { headers: { 'User-Agent': 'FokkBrowser-Updater', 'Accept': 'application/vnd.github.v3+json' } }, (res) => {
+            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                return fetchJson(res.headers.location).then(resolve).catch(reject);
+            }
+            if (res.statusCode !== 200) {
+                return reject(new Error(`HTTP ${res.statusCode}`));
+            }
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                try { resolve(JSON.parse(data)); } catch(e) { reject(e); }
+            });
+        });
+        req.on('error', reject);
+        req.setTimeout(10000, () => { req.destroy(); reject(new Error('Timeout')); });
+    });
+}
+
+ipcMain.handle('fokk-check-update', async () => {
+    const currentVersion = app.getVersion() || '1.0.0';
+    try {
+        const release = await fetchJson('https://api.github.com/repos/Kimmojiraja/fokk-project/releases/latest');
+        const latestTag = release.tag_name || '';
+        const latestVersion = latestTag.replace(/^v/i, '');
+        const isNewer = compareVersions(latestVersion, currentVersion) > 0;
+
+        // Find platform asset
+        const assets = release.assets || [];
+        let matchedAsset = null;
+        if (process.platform === 'linux') {
+            matchedAsset = assets.find(a => a.name.endsWith('.AppImage')) || assets.find(a => a.name.endsWith('.deb'));
+        } else if (process.platform === 'win32') {
+            matchedAsset = assets.find(a => a.name.endsWith('-win.zip') || a.name.endsWith('.zip') || a.name.endsWith('.exe'));
+        } else if (process.platform === 'darwin') {
+            matchedAsset = assets.find(a => a.name.endsWith('-mac.zip') || a.name.endsWith('.dmg') || a.name.endsWith('.zip'));
+        }
+
+        return {
+            available: isNewer,
+            currentVersion,
+            latestVersion,
+            releaseName: release.name || latestTag,
+            releaseNotes: release.body || '',
+            publishedAt: release.published_at || '',
+            downloadUrl: matchedAsset ? matchedAsset.browser_download_url : (release.html_url || 'https://github.com/Kimmojiraja/fokk-project/releases/latest'),
+            fileName: matchedAsset ? matchedAsset.name : `fokk-browser-${latestVersion}`,
+            fileSize: matchedAsset ? matchedAsset.size : 0
+        };
+    } catch (err) {
+        return {
+            available: false,
+            currentVersion,
+            error: err.message
+        };
+    }
+});
+
+ipcMain.handle('fokk-start-update', async (event, { downloadUrl, fileName }) => {
+    return new Promise((resolve, reject) => {
+        try {
+            const updatesDir = path.join(app.getPath('userData'), 'updates');
+            if (!fs.existsSync(updatesDir)) fs.mkdirSync(updatesDir, { recursive: true });
+            const targetPath = path.join(updatesDir, fileName || 'FokkBrowser-Update');
+
+            function download(url) {
+                https.get(url, { headers: { 'User-Agent': 'FokkBrowser-Updater' } }, (res) => {
+                    if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                        return download(res.headers.location);
+                    }
+                    if (res.statusCode !== 200) {
+                        return reject(new Error(`Download failed with HTTP ${res.statusCode}`));
+                    }
+                    const total = parseInt(res.headers['content-length'] || '0', 10);
+                    let transferred = 0;
+                    const fileStream = fs.createWriteStream(targetPath);
+
+                    res.on('data', (chunk) => {
+                        transferred += chunk.length;
+                        const percent = total > 0 ? Math.round((transferred / total) * 100) : 0;
+                        try {
+                            event.sender.send('fokk-update-progress', { percent, transferred, total });
+                        } catch (_) {}
+                    });
+
+                    fileStream.on('finish', () => {
+                        fileStream.close(() => {
+                            if (process.platform === 'linux') {
+                                try { fs.chmodSync(targetPath, 0o755); } catch (_) {}
+                            }
+                            resolve({ success: true, filePath: targetPath });
+                        });
+                    });
+
+                    res.pipe(fileStream);
+                }).on('error', (err) => {
+                    reject(err);
+                });
+            }
+
+            download(downloadUrl);
+        } catch (e) {
+            reject(e);
+        }
+    });
+});
+
+ipcMain.handle('fokk-install-update', async (event, { filePath }) => {
+    if (autoUpdater && autoUpdater.quitAndInstall) {
+        try {
+            autoUpdater.quitAndInstall();
+            return { success: true };
+        } catch (_) {}
+    }
+
+    if (filePath && fs.existsSync(filePath)) {
+        if (process.platform === 'linux' && filePath.endsWith('.AppImage')) {
+            const child = spawn(filePath, [], { detached: true, stdio: 'ignore' });
+            child.unref();
+            app.quit();
+            return { success: true };
+        } else {
+            shell.openPath(filePath);
+            return { success: true };
+        }
+    }
+    return { success: false };
+});
+
 // Application Lifecycle
 app.whenReady().then(() => {
+    app.userAgentFallback = CHROME_USER_AGENT;
     createWindow();
 
     // Configure AdGuard DoH default out-of-the-box (matching mobile Android DnsOverHttpsEngine)

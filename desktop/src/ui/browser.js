@@ -37,37 +37,41 @@ const btnClose = document.getElementById('btnClose');
 const START_PAGE_URL = ipcRenderer.sendSync('fokk-get-start-page-url');
 const PRELOAD_SCRIPT_PATH = ipcRenderer.sendSync('fokk-get-preload-path');
 
-// Search Engine Registry (Authentic Vector SVGs, Bing Default as like mobile)
+// Search Engine Registry (Exact Vector SVGs matching mobile design reference)
 const OMNIBOX_ENGINES = {
-    bing: {
-        name: 'Microsoft Bing',
-        searchUrl: 'https://www.bing.com/search?q=',
-        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#008373" d="M5 3v18l7-4V7.5L8.5 6V3H5zm9 5l-2 1.2V14l4.5 2.5 3.5-2V10l-6-2z"/><path fill="#00A88F" d="M12 7.5V17l4.5 2.5 3.5-2V10l-8-2.5z"/></svg>'
-    },
     google: {
-        name: 'Google Search',
+        name: 'Google',
         searchUrl: 'https://www.google.com/search?q=',
-        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.04h3.88c2.27-2.09 3.66-5.17 3.66-9.14z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.04c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.27 21.43 7.35 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.28c-.24-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28V6.59H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.41l4.03-3.13z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.27 2.57 1.25 6.59l4.03 3.13c.95-2.83 3.6-4.97 6.72-4.97z"/></svg>'
+        iconSvg: '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.04h3.88c2.27-2.09 3.66-5.17 3.66-9.14z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.04c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.27 21.43 7.35 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.28c-.24-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28V6.59H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.41l4.03-3.13z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.27 2.57 1.25 6.59l4.03 3.13c.95-2.83 3.6-4.97 6.72-4.97z"/></svg>'
+    },
+    bing: {
+        name: 'Bing',
+        searchUrl: 'https://www.bing.com/search?q=',
+        iconSvg: '<svg width="18" height="18" viewBox="0 0 32 32"><defs><linearGradient id="bingLg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00BCF2"/><stop offset="100%" stop-color="#0078D4"/></linearGradient></defs><path fill="url(#bingLg)" d="M8 3v21.5c0 1.2 1 2.2 2.2 2.3 3.5.3 8.5.5 12.5-3.2 3.6-3.4 3.7-8.8 1-12.8L16.5 6v9.5c0 .8-.7 1.5-1.5 1.5-.7 0-1.3-.5-1.5-1.2l-.5-1.6V3c0-.8-.7-1.5-1.5-1.5S8 2.2 8 3z"/></svg>'
     },
     brave: {
-        name: 'Brave Search',
+        name: 'Brave',
         searchUrl: 'https://search.brave.com/search?q=',
-        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#FB542B" d="M12 2L4 5.5v5.3c0 5.4 3.4 10.4 8 11.7 4.6-1.3 8-6.3 8-11.7V5.5L12 2zm3.8 14.1l-2.4-1.2-1.4.9 1.4-.9-2.4 1.2-1.4-1.6 3.8-.4 3.8.4-1.4 1.6zM7.5 10l1.7-.8 1 1.7-2.7-.9zm9 0l-2.7.9 1-1.7 1.7.8z"/></svg>'
+        iconSvg: '<svg width="18" height="18" viewBox="0 0 32 32"><path fill="#FF3300" d="M16 2l-10 4.2v8.5c0 7.2 4.3 13.8 10 16.3 5.7-2.5 10-9.1 10-16.3V6.2L16 2z"/><path fill="#FFF" d="M16 8l-4.5 2.5 1.4 6 3.1-1.5 3.1 1.5 1.4-6L16 8zm0 10.5l-3.2 2 1.2 4 2-1.2 2 1.2 1.2-4-3.2-2z"/><path fill="#FF7700" d="M12.5 13.5l3.5-1.8 3.5 1.8-1 4.5-2.5-1.2-2.5 1.2-1-4.5z"/></svg>'
     },
     duckduckgo: {
         name: 'DuckDuckGo',
         searchUrl: 'https://duckduckgo.com/?q=',
-        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#DE5833" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 3.5c1.93 0 3.5 1.57 3.5 3.5 0 .88-.33 1.68-.86 2.3l2.86 1.2-.5 1.5-3.32-1.39C14.07 13.06 13.09 13.5 12 13.5c-.75 0-1.44-.22-2.03-.6l-1.47 1.47 2.12 2.12-1.41 1.41-3.54-3.53 1.41-1.42.71.71c-.5-.73-.79-1.61-.79-2.56 0-2.48 2.02-4.5 4.5-4.5z"/><circle cx="14" cy="8" r="1" fill="#FFF"/></svg>'
+        iconSvg: '<svg width="18" height="18" viewBox="0 0 32 32"><circle cx="16" cy="16" r="15" fill="#DE5833"/><path fill="#FFFFFF" d="M16 6c-3.9 0-7 3.1-7 7 0 2.2 1 4.1 2.6 5.4-.1.6-.4 1.9-1.6 3.1 1.8.1 3.5-.7 4.6-2 .5.1.9.1 1.4.1 3.9 0 7-3.1 7-7s-3.1-6.6-7-6.6z"/><circle cx="13.5" cy="11.5" r="1.5" fill="#333333"/><path fill="#F9A825" d="M17.5 14.5c0 0 3.5.5 5 2.5-1.5 1-4 1.5-6.5 1 0 0 2.5-1 1.5-3.5z"/><path fill="#4CAF50" d="M14 23.5l2-1.5 2 1.5-2 1.5-2-1.5z"/></svg>'
+    },
+    startpage: {
+        name: 'Startpage',
+        searchUrl: 'https://www.startpage.com/sp/search?q=',
+        iconSvg: '<svg width="18" height="18" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#1A1C24"/><path fill="#3661FF" d="M7 14c0-4.4 3.6-8 8-8s8 3.6 8 8-3.6 8-8 8c-1.8 0-3.5-.6-4.8-1.7l-4.5 4.5-1.4-1.4 4.5-4.5C7.6 17.5 7 15.8 7 14zm8-5.5c-3 0-5.5 2.5-5.5 5.5s2.5 5.5 5.5 5.5 5.5-2.5 5.5-5.5-2.5-5.5-5.5-5.5z"/><path d="M7 25.5c3.5-1.8 8.5-1.8 12 0" stroke="#6366F1" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg>'
     },
     ecosia: {
         name: 'Ecosia',
         searchUrl: 'https://www.ecosia.org/search?q=',
-        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24"><path fill="#00A389" d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17h8v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7zm-1 16h2v3h-2v-3z"/></svg>'
+        iconSvg: '<svg width="18" height="18" viewBox="0 0 32 32"><path fill="#48B25A" d="M16 4C10.5 4 6 8.5 6 14c0 3.2 1.5 6 3.8 7.8v.2c0 .5.2 1 .5 1.4.3.4.7.6 1.2.6h9c.5 0 .9-.2 1.2-.6.3-.4.5-.9.5-1.4v-.2C24.5 20 26 17.2 26 14c0-5.5-4.5-10-10-10z"/><path fill="#FFFFFF" d="M16 16v8m-2.5-4l2.5-3 2.5 3" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     }
 };
 
-// Bing is default like mobile
-let currentEngine = localStorage.getItem('fokk_search_engine') || 'bing';
+let currentEngine = localStorage.getItem('fokk_search_engine') || 'google';
 
 // Clean Professional Toast Notifications (Zero Emojis)
 function showToast(message, isAlert = false) {
@@ -115,15 +119,50 @@ function createTab(url = START_PAGE_URL, options = {}) {
     webview.setAttribute('src', url);
     webview.setAttribute('preload', PRELOAD_SCRIPT_PATH);
     webview.setAttribute('allowpopups', 'true');
+    webview.setAttribute('useragent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
     webview.setAttribute('webpreferences', 'contextIsolation=yes, javascript=yes');
     if (isPrivate) {
         webview.setAttribute('partition', 'fokk_incognito_' + Date.now());
+    } else {
+        webview.setAttribute('partition', 'persist:fokk_default_session');
+    }
+
+    function recordHistoryItem(navUrl, navTitle) {
+        if (isPrivate || !navUrl || navUrl.startsWith('file:') || navUrl.startsWith('fokk:')) return;
+        try {
+            let hist = JSON.parse(localStorage.getItem('fokk_browsing_history') || '[]');
+            if (hist.length > 0 && hist[0].url === navUrl && (Date.now() - hist[0].time < 60000)) {
+                return;
+            }
+            hist.unshift({
+                id: Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                url: navUrl,
+                title: navTitle || navUrl,
+                time: Date.now()
+            });
+            if (hist.length > 1000) hist.pop();
+            localStorage.setItem('fokk_browsing_history', JSON.stringify(hist));
+        } catch (_) {}
     }
 
     webview.addEventListener('did-start-loading', () => {
+        const t = tabs.find(x => x.id === tabId);
+        if (t) t.blockedCount = 0;
         if (activeTabId === tabId) {
             btnReload.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+            if (shieldCountText) shieldCountText.textContent = '0';
         }
+    });
+
+    webview.addEventListener('dom-ready', () => {
+        const currentTheme = localStorage.getItem('fokk_theme') || 'dark';
+        const isLight = currentTheme === 'light';
+        webview.executeJavaScript(`
+            if (document.body) {
+                document.body.classList.toggle('theme-light', ${isLight});
+                try { localStorage.setItem('fokk_theme', '${currentTheme}'); } catch(_) {}
+            }
+        `).catch(() => {});
     });
 
     webview.addEventListener('did-stop-loading', () => {
@@ -139,6 +178,9 @@ function createTab(url = START_PAGE_URL, options = {}) {
         if (titleEl && e.title) {
             titleEl.textContent = (isPrivate ? '[Private] ' : '') + e.title;
         }
+        if (!isPrivate && webview.getURL) {
+            recordHistoryItem(webview.getURL(), e.title);
+        }
     });
 
     webview.addEventListener('page-favicon-updated', (e) => {
@@ -153,6 +195,10 @@ function createTab(url = START_PAGE_URL, options = {}) {
             updateOmnibox(e.url);
             updateNavState(webview);
         }
+        if (!isPrivate) {
+            const currentTitle = (webview.getTitle ? webview.getTitle() : '') || e.url;
+            recordHistoryItem(e.url, currentTitle);
+        }
     });
 
     webview.addEventListener('new-window', (e) => {
@@ -161,7 +207,7 @@ function createTab(url = START_PAGE_URL, options = {}) {
 
     viewsContainer.appendChild(webview);
 
-    tabs.push({ id: tabId, el: tabEl, webview: webview, isPrivate: isPrivate });
+    tabs.push({ id: tabId, el: tabEl, webview: webview, isPrivate: isPrivate, blockedCount: 0 });
     activateTab(tabId);
 }
 
@@ -173,6 +219,10 @@ function activateTab(tabId) {
             t.webview.classList.add('active');
             updateOmnibox(t.webview.getURL ? t.webview.getURL() : '');
             updateNavState(t.webview);
+            if (shieldCountText) {
+                const u = t.webview.getURL ? t.webview.getURL() : '';
+                shieldCountText.textContent = (u.startsWith('http') && t.blockedCount) ? t.blockedCount : '0';
+            }
         } else {
             t.el.classList.remove('active');
             t.webview.classList.remove('active');
@@ -404,8 +454,49 @@ if (menuNavBack) menuNavBack.onclick = () => btnBack.click();
 if (menuNavForward) menuNavForward.onclick = () => btnForward.click();
 if (menuNavReload) menuNavReload.onclick = () => btnReload.click();
 if (menuNavHome) menuNavHome.onclick = () => btnHome.click();
-if (menuNavHistory) menuNavHistory.onclick = () => openFeatureHub('privacy');
-if (menuNavDownloads) menuNavDownloads.onclick = () => showToast('Downloads directory: ~/Downloads');
+if (menuNavHistory) menuNavHistory.onclick = () => openFeatureHub('history');
+if (menuNavDownloads) menuNavDownloads.onclick = () => openFeatureHub('downloads');
+
+// User Profile (Shadow Falcon & Custom Avatar)
+const menuAvatarWrap = document.getElementById('menuAvatarWrap');
+const menuAvatarImg = document.getElementById('menuAvatarImg');
+const menuUsernameText = document.getElementById('menuUsernameText');
+const btnEditUsername = document.getElementById('btnEditUsername');
+
+function loadUserProfile() {
+    const savedName = localStorage.getItem('fokk_user_name') || 'Shadow Falcon';
+    const savedAvatar = localStorage.getItem('fokk_user_avatar');
+
+    if (menuUsernameText) menuUsernameText.textContent = savedName;
+    if (menuAvatarImg && savedAvatar) {
+        menuAvatarImg.src = savedAvatar;
+    }
+}
+loadUserProfile();
+
+if (menuAvatarWrap) {
+    menuAvatarWrap.onclick = async () => {
+        desktopBrowserMenu.classList.add('hidden');
+        try {
+            const avatarData = await ipcRenderer.invoke('fokk-pick-avatar');
+            if (avatarData) {
+                localStorage.setItem('fokk_user_avatar', avatarData);
+                if (menuAvatarImg) menuAvatarImg.src = avatarData;
+                showToast('Profile avatar updated');
+            }
+        } catch (e) {
+            showToast('Unable to update avatar: ' + e.message);
+        }
+    };
+}
+
+if (btnEditUsername) {
+    btnEditUsername.onclick = (e) => {
+        e.stopPropagation();
+        desktopBrowserMenu.classList.add('hidden');
+        openFeatureHub('edit-profile');
+    };
+}
 
 // Shield Toggle in Menu
 const menuShieldToggle = document.getElementById('menuShieldToggle');
@@ -548,19 +639,41 @@ if (actTorrent) {
     };
 }
 
-if (actForceDark) {
-    actForceDark.onclick = () => {
-        const active = getActiveWebview();
-        if (!active) return;
-        isForcedDark = !isForcedDark;
-        desktopBrowserMenu.classList.add('hidden');
-        if (isForcedDark) {
-            active.insertCSS('html { filter: invert(90%) hue-rotate(180deg) !important; background: #121212 !important; } img, video, iframe, canvas { filter: invert(100%) hue-rotate(180deg) !important; }');
-            showToast('Dark Mode Forced');
-        } else {
-            active.reload();
-            showToast('Standard Theme Restored');
+// Theme Switcher (Dark & Light)
+const actThemeToggle = document.getElementById('actThemeToggle');
+const actThemeToggleText = document.getElementById('actThemeToggleText');
+
+function applyTheme(themeName) {
+    const isLight = themeName === 'light';
+    document.body.classList.toggle('theme-light', isLight);
+    if (actThemeToggleText) {
+        actThemeToggleText.textContent = isLight ? 'Dark Mode' : 'Light Mode';
+    }
+    localStorage.setItem('fokk_theme', themeName);
+
+    // Sync to all webviews (including Start Page)
+    tabs.forEach(t => {
+        if (t.webview) {
+            t.webview.executeJavaScript(`
+                if (document.body) {
+                    document.body.classList.toggle('theme-light', ${isLight});
+                    try { localStorage.setItem('fokk_theme', '${themeName}'); } catch(_) {}
+                }
+            `).catch(() => {});
         }
+    });
+}
+
+const currentGlobalTheme = localStorage.getItem('fokk_theme') || 'dark';
+applyTheme(currentGlobalTheme);
+
+if (actThemeToggle) {
+    actThemeToggle.onclick = () => {
+        desktopBrowserMenu.classList.add('hidden');
+        const cur = localStorage.getItem('fokk_theme') || 'dark';
+        const next = cur === 'light' ? 'dark' : 'light';
+        applyTheme(next);
+        showToast(next === 'light' ? 'Light Theme Applied' : 'Stealth Dark Mode Restored');
     };
 }
 
@@ -660,23 +773,249 @@ if (btnVisuals) {
     btnVisuals.addEventListener('click', () => openFeatureHub('visuals'));
 }
 if (btnDownloadsNav) {
-    btnDownloadsNav.addEventListener('click', () => showToast('Downloads directory: ~/Downloads'));
+    btnDownloadsNav.addEventListener('click', () => openFeatureHub('downloads'));
 }
 
 function openFeatureHub(hubId) {
     if (!featureHubModal || !featureModalBody) return;
 
-    if (hubId === 'general') {
+    if (hubId === 'history') {
+        featureModalTitle.textContent = 'Browsing History';
+        let historyList = [];
+        try {
+            historyList = JSON.parse(localStorage.getItem('fokk_browsing_history') || '[]');
+        } catch (_) {}
+
+        function renderHistoryList(filterQuery = '') {
+            const filtered = filterQuery
+                ? historyList.filter(h => (h.title && h.title.toLowerCase().includes(filterQuery)) || (h.url && h.url.toLowerCase().includes(filterQuery)))
+                : historyList;
+
+            let itemsHtml = '';
+            if (filtered.length === 0) {
+                itemsHtml = `
+                    <div style="text-align: center; padding: 36px 16px; color: var(--text-secondary); font-size: 13px;">
+                        ${filterQuery ? 'No history matching "' + filterQuery + '"' : 'Zero browsing history recorded yet. Visited sites will appear here.'}
+                    </div>
+                `;
+            } else {
+                itemsHtml = filtered.map(h => {
+                    const timeStr = new Date(h.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' · ' + new Date(h.time).toLocaleDateString();
+                    let domain = '';
+                    try { domain = new URL(h.url).hostname; } catch(_) { domain = h.url; }
+                    const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+
+                    return `
+                        <div class="history-item-row" data-id="${h.id}" data-url="${h.url}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.15s ease;">
+                            <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
+                                <img src="${faviconUrl}" style="width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;" onerror="this.style.display='none'">
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-size: 13px; font-weight: 600; color: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${h.title || domain}</div>
+                                    <div style="font-size: 11px; color: var(--fokk-cyan); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${h.url}</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                                <span style="font-size: 11px; color: var(--text-secondary);">${timeStr}</span>
+                                <button class="btn-delete-history-item" data-id="${h.id}" title="Remove from History" style="background: none; border: none; color: #FF5252; cursor: pointer; font-size: 16px; padding: 0 4px; line-height: 1;">&times;</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            const container = document.getElementById('historyListContainer');
+            if (container) {
+                container.innerHTML = itemsHtml;
+                container.querySelectorAll('.history-item-row').forEach(row => {
+                    row.onclick = (e) => {
+                        if (e.target.classList.contains('btn-delete-history-item')) return;
+                        const u = row.getAttribute('data-url');
+                        if (u) {
+                            createTab(u);
+                            featureHubModal.classList.add('hidden');
+                        }
+                    };
+                });
+                container.querySelectorAll('.btn-delete-history-item').forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        const id = btn.getAttribute('data-id');
+                        historyList = historyList.filter(x => x.id !== id);
+                        localStorage.setItem('fokk_browsing_history', JSON.stringify(historyList));
+                        renderHistoryList(document.getElementById('inputSearchHistory') ? document.getElementById('inputSearchHistory').value.trim().toLowerCase() : '');
+                    };
+                });
+            }
+        }
+
+        featureModalBody.innerHTML = `
+            <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+                <input type="text" id="inputSearchHistory" class="modal-input" placeholder="Search history by title or URL..." style="flex: 1;">
+                <button class="modal-btn secondary" id="btnClearAllHistory" style="padding: 0 16px; white-space: nowrap;">Clear All</button>
+            </div>
+            <div id="historyListContainer" style="max-height: 400px; overflow-y: auto; padding-right: 4px;"></div>
+        `;
+
+        renderHistoryList('');
+
+        const searchInput = document.getElementById('inputSearchHistory');
+        if (searchInput) {
+            searchInput.oninput = (e) => renderHistoryList(e.target.value.trim().toLowerCase());
+        }
+
+        const btnClear = document.getElementById('btnClearAllHistory');
+        if (btnClear) {
+            btnClear.onclick = () => {
+                historyList = [];
+                localStorage.removeItem('fokk_browsing_history');
+                renderHistoryList('');
+                showToast('Browsing history cleared');
+            };
+        }
+
+    } else if (hubId === 'downloads') {
+        featureModalTitle.textContent = 'Downloads Manager';
+
+        async function renderDownloadsList() {
+            let list = [];
+            try {
+                list = await ipcRenderer.invoke('fokk-get-downloads');
+            } catch (_) {}
+
+            let html = '';
+            if (!list || list.length === 0) {
+                html = `
+                    <div style="text-align: center; padding: 40px 16px; color: var(--text-secondary); font-size: 13px;">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="margin-bottom: 10px; opacity: 0.6;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <div>No recent downloads found in this session.</div>
+                        <div style="font-size: 11.5px; margin-top: 8px; color: var(--fokk-cyan); cursor: pointer; text-decoration: underline;" id="linkOpenDlDir">Open ~/Downloads Folder</div>
+                    </div>
+                `;
+            } else {
+                html = list.map(d => {
+                    const mbTotal = (d.totalBytes / (1024 * 1024)).toFixed(1);
+                    const mbReceived = (d.receivedBytes / (1024 * 1024)).toFixed(1);
+                    const isDone = d.state === 'completed';
+                    const isProgress = d.state === 'progressing';
+
+                    return `
+                        <div class="download-item-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--fokk-cyan)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <div style="font-size: 13px; font-weight: 600; color: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${d.fileName}</div>
+                                </div>
+                                <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 700; ${isDone ? 'background: rgba(16,185,129,0.15); color: #10B981;' : (isProgress ? 'background: rgba(0,229,255,0.15); color: var(--fokk-cyan);' : 'background: rgba(239,68,68,0.15); color: #EF4444;')}">${d.state.toUpperCase()}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: var(--text-secondary); margin-top: 4px;">
+                                <span>${isProgress ? `${mbReceived} MB / ${mbTotal} MB` : `${mbTotal} MB`}</span>
+                                <div style="display: flex; gap: 8px;">
+                                    ${isDone ? `<button class="modal-btn secondary btn-open-dl" data-path="${d.savePath}" style="padding: 3px 10px; font-size: 11px;">Open File</button>` : ''}
+                                    <button class="modal-btn secondary btn-folder-dl" data-path="${d.savePath}" style="padding: 3px 10px; font-size: 11px;">Show in Folder</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            const container = document.getElementById('downloadsListContainer');
+            if (container) {
+                container.innerHTML = html;
+                const linkDir = document.getElementById('linkOpenDlDir');
+                if (linkDir) {
+                    linkDir.onclick = () => ipcRenderer.invoke('fokk-open-downloads-folder');
+                }
+                container.querySelectorAll('.btn-open-dl').forEach(btn => {
+                    btn.onclick = () => {
+                        const p = btn.getAttribute('data-path');
+                        if (p) ipcRenderer.invoke('fokk-open-download-file', p);
+                    };
+                });
+                container.querySelectorAll('.btn-folder-dl').forEach(btn => {
+                    btn.onclick = () => {
+                        const p = btn.getAttribute('data-path');
+                        ipcRenderer.invoke('fokk-show-in-folder', p);
+                    };
+                });
+            }
+        }
+
+        featureModalBody.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                <button class="modal-btn secondary" id="btnOpenDownloadsFolder" style="display: flex; align-items: center; gap: 6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    <span>Open Downloads Folder</span>
+                </button>
+                <button class="modal-btn secondary" id="btnClearDownloadsList" style="color: #FF5252;">Clear List</button>
+            </div>
+            <div id="downloadsListContainer" style="max-height: 400px; overflow-y: auto; padding-right: 4px;"></div>
+        `;
+
+        renderDownloadsList();
+
+        document.getElementById('btnOpenDownloadsFolder').onclick = () => {
+            ipcRenderer.invoke('fokk-open-downloads-folder');
+        };
+        document.getElementById('btnClearDownloadsList').onclick = async () => {
+            await ipcRenderer.invoke('fokk-clear-downloads');
+            renderDownloadsList();
+            showToast('Downloads list cleared');
+        };
+
+    } else if (hubId === 'edit-profile') {
+        featureModalTitle.textContent = 'Edit Profile';
+        const curName = localStorage.getItem('fokk_user_name') || 'Shadow Falcon';
+        const curAvatar = localStorage.getItem('fokk_user_avatar') || 'icon.png';
+
+        featureModalBody.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 14px; margin-bottom: 20px;">
+                <div style="position: relative; width: 72px; height: 72px; border-radius: 50%; overflow: hidden; border: 2px solid var(--fokk-cyan); box-shadow: 0 4px 20px rgba(0,229,255,0.35); cursor: pointer;" id="modalAvatarPreviewWrap" title="Click to choose new photo">
+                    <img id="modalAvatarPreview" src="${curAvatar}" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <button class="modal-btn secondary" id="btnModalPickAvatar" style="font-size: 11.5px; padding: 4px 14px;">Change Avatar Picture</button>
+            </div>
+            <div class="modal-form-group">
+                <label class="modal-form-label">Username</label>
+                <input type="text" id="inputEditUsername" class="modal-input" value="${curName}" placeholder="Enter display username">
+            </div>
+            <button class="modal-btn" id="btnSaveUserProfile" style="margin-top: 16px;">Save Profile</button>
+        `;
+
+        let pendingAvatar = curAvatar;
+
+        async function pickAvatar() {
+            const res = await ipcRenderer.invoke('fokk-pick-avatar');
+            if (res) {
+                pendingAvatar = res;
+                document.getElementById('modalAvatarPreview').src = res;
+            }
+        }
+
+        document.getElementById('btnModalPickAvatar').onclick = pickAvatar;
+        document.getElementById('modalAvatarPreviewWrap').onclick = pickAvatar;
+
+        document.getElementById('btnSaveUserProfile').onclick = () => {
+            const newName = (document.getElementById('inputEditUsername').value || '').trim() || 'Shadow Falcon';
+            localStorage.setItem('fokk_user_name', newName);
+            if (pendingAvatar) localStorage.setItem('fokk_user_avatar', pendingAvatar);
+            loadUserProfile();
+            featureHubModal.classList.add('hidden');
+            showToast('Profile updated successfully');
+        };
+
+    } else if (hubId === 'general') {
         featureModalTitle.textContent = 'General & Search Engines';
         featureModalBody.innerHTML = `
             <div class="modal-form-group">
                 <label class="modal-form-label">Default Search Engine</label>
                 <span class="modal-form-sub">Active search engine for omnibox and home page search</span>
                 <select id="selDefaultEngine" class="modal-select">
-                    <option value="bing" ${currentEngine==='bing'?'selected':''}>Microsoft Bing (Default)</option>
-                    <option value="google" ${currentEngine==='google'?'selected':''}>Google Search</option>
-                    <option value="brave" ${currentEngine==='brave'?'selected':''}>Brave Search</option>
+                    <option value="google" ${currentEngine==='google'?'selected':''}>Google</option>
+                    <option value="bing" ${currentEngine==='bing'?'selected':''}>Bing</option>
+                    <option value="brave" ${currentEngine==='brave'?'selected':''}>Brave</option>
                     <option value="duckduckgo" ${currentEngine==='duckduckgo'?'selected':''}>DuckDuckGo</option>
+                    <option value="startpage" ${currentEngine==='startpage'?'selected':''}>Startpage</option>
                     <option value="ecosia" ${currentEngine==='ecosia'?'selected':''}>Ecosia</option>
                 </select>
             </div>
@@ -1115,21 +1454,164 @@ function openFeatureHub(hubId) {
                 <div>
                     <h3 style="color: #FFF; font-size: 18px;">Fokk Browser Desktop</h3>
                     <div style="color: var(--fokk-cyan); font-size: 12px; font-weight: 700;">Version 1.0.0 · Rust Shield Edition</div>
-                    <div style="color: var(--text-secondary); font-size: 11px;">Chromium 124 / Electron 30</div>
+                    <div style="color: var(--text-secondary); font-size: 11px;">Chromium 124 / Electron 30 · Multi-Platform</div>
                 </div>
             </div>
+
+            <!-- In-App 1-Click Update Center -->
+            <div class="update-center-card">
+                <div class="update-card-header">
+                    <div class="update-status-wrap">
+                        <span class="update-dot" id="updateDot"></span>
+                        <div>
+                            <div class="update-main-title" id="updateMainTitle">Fokk Browser is up to date</div>
+                            <div class="update-sub-title" id="updateSubTitle">Current version 1.0.0 is the official release</div>
+                        </div>
+                    </div>
+                    <button id="btnCheckUpdate" class="btn-update-action" title="Check for latest releases from GitHub">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/></svg>
+                        <span>Check for Updates</span>
+                    </button>
+                </div>
+
+                <div id="updateDownloadBox" class="update-download-box hidden">
+                    <div class="update-progress-info">
+                        <span id="updateProgressText">Downloading update...</span>
+                        <span id="updateProgressPercent">0%</span>
+                    </div>
+                    <div class="update-progress-track">
+                        <div class="update-progress-bar" id="updateProgressBar"></div>
+                    </div>
+                </div>
+
+                <div id="updateActionBox" class="update-action-box hidden">
+                    <div class="update-notes-preview" id="updateNotesPreview"></div>
+                    <button id="btnApplyUpdate" class="btn-install-update">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span id="btnApplyUpdateText">Update Now (1-Click)</span>
+                    </button>
+                </div>
+            </div>
+
             <p style="font-size: 12.5px; line-height: 1.6; color: var(--text-secondary); margin-bottom: 14px;">
                 Fokk Browser is an ultra-fast, zero-compromise desktop web browser engineered with built-in network adblocking, canvas cloaking, DNS privacy, and distraction-free tools.
             </p>
-            <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px;">
-                <div style="font-size: 12px; font-weight: 700; color: #FFF; margin-bottom: 4px;">Source & Community</div>
-                <div style="font-size: 11.5px; color: var(--fokk-cyan); cursor: pointer;" id="linkRepo">github.com/Kimmojiraja/fokk-project</div>
+            <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 12px; font-weight: 700; color: #FFF; margin-bottom: 2px;">Official Repository</div>
+                    <div style="font-size: 11.5px; color: var(--fokk-cyan); cursor: pointer;" id="linkRepo">github.com/Kimmojiraja/fokk-project</div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-secondary);"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
         `;
+
         document.getElementById('linkRepo').onclick = () => {
             createTab('https://github.com/Kimmojiraja/fokk-project');
             featureHubModal.classList.add('hidden');
         };
+
+        // Wire 1-Click Update Controls
+        let updateTargetInfo = null;
+        let downloadedFilePath = null;
+
+        const btnCheckUpdate = document.getElementById('btnCheckUpdate');
+        const updateDot = document.getElementById('updateDot');
+        const updateMainTitle = document.getElementById('updateMainTitle');
+        const updateSubTitle = document.getElementById('updateSubTitle');
+        const updateDownloadBox = document.getElementById('updateDownloadBox');
+        const updateProgressBar = document.getElementById('updateProgressBar');
+        const updateProgressText = document.getElementById('updateProgressText');
+        const updateProgressPercent = document.getElementById('updateProgressPercent');
+        const updateActionBox = document.getElementById('updateActionBox');
+        const updateNotesPreview = document.getElementById('updateNotesPreview');
+        const btnApplyUpdate = document.getElementById('btnApplyUpdate');
+        const btnApplyUpdateText = document.getElementById('btnApplyUpdateText');
+
+        btnCheckUpdate.onclick = async () => {
+            btnCheckUpdate.disabled = true;
+            updateDot.className = 'update-dot checking';
+            updateMainTitle.textContent = 'Checking for updates...';
+            updateSubTitle.textContent = 'Connecting to GitHub Releases...';
+
+            try {
+                const res = await ipcRenderer.invoke('fokk-check-update');
+                btnCheckUpdate.disabled = false;
+
+                if (res && res.available) {
+                    updateTargetInfo = res;
+                    updateDot.className = 'update-dot available';
+                    updateMainTitle.textContent = `New Update Available: v${res.latestVersion}`;
+                    updateSubTitle.textContent = `Current v${res.currentVersion} · Click below to update`;
+
+                    updateActionBox.classList.remove('hidden');
+                    if (res.releaseNotes) {
+                        updateNotesPreview.textContent = res.releaseNotes.substring(0, 180) + '...';
+                        updateNotesPreview.style.display = 'block';
+                    }
+                    btnApplyUpdateText.textContent = `Update to v${res.latestVersion} (1-Click)`;
+                } else {
+                    updateDot.className = 'update-dot';
+                    updateMainTitle.textContent = 'You are on the latest version';
+                    updateSubTitle.textContent = `Version ${res.currentVersion || '1.0.0'} is up to date`;
+                    updateActionBox.classList.add('hidden');
+                    showToast('Fokk Browser is fully up to date!');
+                }
+            } catch (e) {
+                btnCheckUpdate.disabled = false;
+                updateDot.className = 'update-dot';
+                updateMainTitle.textContent = 'Could not check for updates';
+                updateSubTitle.textContent = e.message || 'Network error';
+            }
+        };
+
+        btnApplyUpdate.onclick = async () => {
+            if (downloadedFilePath) {
+                btnApplyUpdate.disabled = true;
+                btnApplyUpdateText.textContent = 'Restarting and installing update...';
+                await ipcRenderer.invoke('fokk-install-update', { filePath: downloadedFilePath });
+                return;
+            }
+
+            if (!updateTargetInfo || !updateTargetInfo.downloadUrl) return;
+
+            btnApplyUpdate.disabled = true;
+            updateDownloadBox.classList.remove('hidden');
+            updateProgressText.textContent = `Downloading v${updateTargetInfo.latestVersion}...`;
+
+            try {
+                const downloadRes = await ipcRenderer.invoke('fokk-start-update', {
+                    downloadUrl: updateTargetInfo.downloadUrl,
+                    fileName: updateTargetInfo.fileName
+                });
+
+                if (downloadRes && downloadRes.success) {
+                    downloadedFilePath = downloadRes.filePath;
+                    updateDownloadBox.classList.add('hidden');
+                    updateDot.className = 'update-dot ready';
+                    updateMainTitle.textContent = `v${updateTargetInfo.latestVersion} Downloaded!`;
+                    updateSubTitle.textContent = 'Ready to apply. Click below to restart.';
+                    btnApplyUpdate.disabled = false;
+                    btnApplyUpdateText.textContent = 'Restart & Install Update (1-Click)';
+                    btnApplyUpdate.classList.add('btn-restart-ready');
+                    showToast('Update downloaded! Ready to install.');
+                }
+            } catch (err) {
+                btnApplyUpdate.disabled = false;
+                updateDownloadBox.classList.add('hidden');
+                showToast(`Update download failed: ${err.message}`);
+            }
+        };
+
+        // Track live download progress
+        ipcRenderer.on('fokk-update-progress', (event, p) => {
+            if (updateProgressBar && updateProgressPercent) {
+                updateProgressBar.style.width = `${p.percent}%`;
+                updateProgressPercent.textContent = `${p.percent}%`;
+                const mbTrans = (p.transferred / (1024 * 1024)).toFixed(1);
+                const mbTot = (p.total / (1024 * 1024)).toFixed(1);
+                updateProgressText.textContent = `Downloading update: ${mbTrans} MB / ${mbTot} MB`;
+            }
+        });
     }
 
     featureHubModal.classList.remove('hidden');
@@ -1175,8 +1657,16 @@ window.addEventListener('keydown', (e) => {
 
 // Real-time AdBlock Stats from Electron Main Process
 ipcRenderer.on('fokk-stats-updated', (event, stats) => {
-    if (shieldCountText && stats && typeof stats.blockedCount === 'number') {
-        shieldCountText.textContent = stats.blockedCount;
+    const active = tabs.find(t => t.id === activeTabId);
+    if (active && active.webview) {
+        const u = (typeof active.webview.getURL === 'function' ? active.webview.getURL() : '') || '';
+        if (u.startsWith('http')) {
+            active.blockedCount = (active.blockedCount || 0) + 1;
+            if (shieldCountText) shieldCountText.textContent = active.blockedCount;
+        } else {
+            active.blockedCount = 0;
+            if (shieldCountText) shieldCountText.textContent = '0';
+        }
     }
 });
 
