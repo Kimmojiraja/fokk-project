@@ -229,6 +229,17 @@ function createTab(url = START_PAGE_URL, options = {}) {
         }
     });
 
+    webview.addEventListener('did-navigate-in-page', (e) => {
+        if (activeTabId === tabId) {
+            updateOmnibox(e.url);
+            updateNavState(webview);
+        }
+        if (!isPrivate) {
+            const currentTitle = (webview.getTitle ? webview.getTitle() : '') || e.url;
+            recordHistoryItem(e.url, currentTitle);
+        }
+    });
+
     webview.addEventListener('new-window', (e) => {
         if (e.disposition === 'new-window' || (e.options && (e.options.width || e.options.height))) {
             return;

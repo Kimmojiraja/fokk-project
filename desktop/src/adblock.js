@@ -688,39 +688,7 @@ class AdBlockEngine {
             const batch = unique.slice(i, i + 30);
             chunks.push(batch.join(',\n') + ' { display: none !important; visibility: hidden !important; height: 0 !important; min-height: 0 !important; max-height: 0 !important; pointer-events: none !important; }');
         }
-        // YouTube: hide the mini-guide sidebar (72px icon nav strip) and expand page content to full width.
-        // We use visibility:hidden + width:0 instead of display:none so YouTube's polymer observer
-        // doesn't fire layout callbacks that could reset masthead or CSS variables.
-        // We also explicitly preserve the masthead logo/branding so it stays visible.
-        if (isYouTube) {
-            const ytLayoutFix = [
-                "/* Fokk: hide YouTube mini-guide sidebar */",
-                "ytd-mini-guide-renderer {",
-                "    visibility: hidden !important;",
-                "    width: 0 !important;",
-                "    min-width: 0 !important;",
-                "    overflow: hidden !important;",
-                "    padding: 0 !important;",
-                "    pointer-events: none !important;",
-                "}",
-                "/* Shift page content to left=0 since mini-guide is gone */",
-                "ytd-app[mini-guide-visible] #page-manager,",
-                "ytd-app #page-manager {",
-                "    margin-left: 0 !important;",
-                "}",
-                "/* Always keep the YouTube logo and masthead left panel visible */",
-                "ytd-masthead, ytd-masthead #start, ytd-masthead #start ytd-logo, ytd-masthead #start #logo {",
-                "    visibility: visible !important;",
-                "    display: flex !important;",
-                "    opacity: 1 !important;",
-                "}",
-                "ytd-logo, #logo.ytd-masthead {",
-                "    display: flex !important;",
-                "    visibility: visible !important;",
-                "}"
-            ].join("\n");
-            chunks.push(ytLayoutFix);
-        }
+
 
         return chunks.join('\n\n');
     }
