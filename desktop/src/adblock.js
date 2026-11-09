@@ -31,7 +31,7 @@ class AdBlockEngine {
         this.blockedDomains = new Set();
         this.whitelistedDomains = new Set();
         this.customBlockedDomains = new Set();
-        this.blockedPaths = [];
+        this.blockedPaths = new Map(); // Map<domain, string[]>
         this.genericCosmeticRules = [];
         this.domainCosmeticRules = new Map();
         this.blockedKeywords = [
@@ -201,7 +201,19 @@ class AdBlockEngine {
             '/wp-content/plugins/adrotate',
             '/wp-content/plugins/advanced-ads',
             'prebid.js',
-            'prebid.org'
+            'prebid.org',
+            // AMP ads
+            '/v0/amp-ad',
+            'amp-ad-0.1.js',
+            'amp-sticky-ad',
+            // Additional trackers
+            'google-analytics.com/analytics.js',
+            'google-analytics.com/ga.js',
+            'google-analytics.com/collect',
+            'googletagmanager.com/gtag',
+            '/ptracking',
+            '/ad_break',
+            'ad_type=instream'
         ];
         this.blockedCount = 0;
         this.recentBlockedUrls = new Map();
@@ -216,7 +228,20 @@ class AdBlockEngine {
                 const lines = fs.readFileSync(rulesPath, 'utf8').split('\n');
                 for (let i = 0; i < lines.length; i++) {
                     const trimmed = lines[i].trim();
-                    if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('@@')) continue;
+                    if (!trimmed) continue;
+
+                    // Handle whitelist (@@) rules - parse into whitelistedDomains
+                    if (trimmed.startsWith('@@||') && trimmed.includes('^')) {
+                        // Extract whitelisted domain (between @@|| and first ^ or $ or /)
+                        let wRule = trimmed.substring(4);
+                        let wDelim = wRule.search(/[\^\$\/]/);
+                        const wDom = (wDelim !== -1 ? wRule.substring(0, wDelim) : wRule).toLowerCase().trim();
+                        if (wDom && wDom.length > 2 && !wDom.includes('*') && wDom.includes('.')) {
+                            this.whitelistedDomains.add(wDom);
+                        }
+                        continue;
+                    }
+                    if (trimmed.startsWith('!') || trimmed.startsWith('@@')) continue;
 
                     if (trimmed.startsWith('||')) {
                         let rule = trimmed.substring(2);
@@ -228,14 +253,21 @@ class AdBlockEngine {
                                 break;
                             }
                         }
-                        const dom = (delimIdx !== -1 ? rule.substring(0, delimIdx) : rule).toLowerCase().trim();
-                        if (dom && dom.length > 3 && !dom.includes('*') && dom.includes('.')) {
-                            this.blockedDomains.add(dom);
-                        }
-                        if (delimIdx !== -1 && rule[delimIdx] === '/') {
+                        if (delimIdx === -1) continue;
+                        const dom = rule.substring(0, delimIdx).toLowerCase().trim();
+                        // FIX: Only add to blockedDomains when delimiter is '^' (pure domain block)
+                        // Path-based rules (delimiter='/') must NOT pollute blockedDomains with legitimate roots like google.com
+                        if (rule[delimIdx] === '^') {
+                            if (dom && dom.length > 3 && !dom.includes('*') && dom.includes('.')) {
+                                this.blockedDomains.add(dom);
+                            }
+                        } else if (rule[delimIdx] === '/') {
+                            // Store path paired with its domain to avoid false positives on generic paths
                             const pathPart = rule.substring(delimIdx).replace(/[\^\$].*$/, '').toLowerCase().trim();
-                            if (pathPart.length > 2 && !pathPart.includes('*')) {
-                                this.blockedPaths.push(pathPart);
+                            if (pathPart.length > 2 && !pathPart.includes('*') && dom && dom.includes('.')) {
+                                let paths = this.blockedPaths.get(dom);
+                                if (!paths) { paths = []; this.blockedPaths.set(dom, paths); }
+                                paths.push(pathPart);
                             }
                         }
                     } else if (trimmed.startsWith('##')) {
@@ -364,28 +396,8 @@ class AdBlockEngine {
             host = parsed.hostname.toLowerCase();
         } catch (_) {}
 
-        // Check Whitelist first across all parent domains
-        if (host) {
-            let curW = host;
-            while (curW) {
-                if (this.whitelistedDomains.has(curW)) return false;
-                const dot = curW.indexOf('.');
-                if (dot === -1) break;
-                curW = curW.substring(dot + 1);
-            }
-
-            // Check Custom Blacklisted domains across parent domains
-            let curC = host;
-            while (curC) {
-                if (this.customBlockedDomains.has(curC)) return this.recordBlock(url);
-                const dot = curC.indexOf('.');
-                if (dot === -1) break;
-                curC = curC.substring(dot + 1);
-            }
-        }
-
-        // YouTube internal requests isolation
-        // Crucial: check host is actually youtube to avoid false matches on query params containing youtube.com
+        // YouTube internal requests isolation - MUST run before whitelist walk
+        // youtube.com is in the curated whitelist (for video content), but its ad endpoints must still be blocked.
         const isYtHost = host === 'youtube.com' || host.endsWith('.youtube.com') || host === 'youtu.be' || host.endsWith('.youtu.be');
         if (isYtHost) {
             const isYtAd = lowerUrl.includes('/pagead/') ||
@@ -404,7 +416,48 @@ class AdBlockEngine {
             if (isYtAd && !isMedia) {
                 return this.recordBlock(url);
             }
-            return false;
+            return false; // All other youtube.com requests (video, thumbnails, guide) are allowed
+        }
+
+        // Critical-safe domains: exact hostname AND parent domain walk (payments, auth, CDNs)
+        // These are small, well-known and don't have tracking subdomains that need blocking.
+        const CRITICAL_SAFE_PARENTS = new Set([
+            'paypal.com', 'paypalobjects.com', 'stripe.com', 'stripe.network',
+            'razorpay.com', 'visa.com', 'mastercard.com', 'americanexpress.com', 'plaid.com',
+            'gstatic.com', 'googleapis.com', 'googlevideo.com', 'ytimg.com', 'ggpht.com',
+            'googleusercontent.com', 'accounts.google.com', 'pay.google.com',
+            'whatsapp.com', 'whatsapp.net', 'web.whatsapp.com',
+            'wikipedia.org', 'wikimedia.org',
+            'github.com', 'githubusercontent.com',
+            'apple.com', 'icloud.com',
+            'microsoft.com', 'azure.com', 'windows.com', 'live.com', 'outlook.com',
+            'amazon.com', 'amazon.co.uk', 'amazon.de', 'amazon.in', 'amazon.ca',
+            'amazonaws.com', 'cloudfront.net',
+            'recaptcha.net', 'hcaptcha.com'
+        ]);
+        if (host) {
+            let curSafe = host;
+            while (curSafe) {
+                if (CRITICAL_SAFE_PARENTS.has(curSafe)) return false;
+                const dot = curSafe.indexOf('.');
+                if (dot === -1) break;
+                curSafe = curSafe.substring(dot + 1);
+            }
+        }
+
+        // Curated @@ whitelist: EXACT hostname match only (no parent walk)
+        // Prevents tracking subdomains like bat.bing.com from inheriting bing.com's whitelist status.
+        if (host && this.whitelistedDomains.has(host)) return false;
+
+        // Check Custom Blacklisted domains (user-defined) across parent domains
+        if (host) {
+            let curC = host;
+            while (curC) {
+                if (this.customBlockedDomains.has(curC)) return this.recordBlock(url);
+                const dot = curC.indexOf('.');
+                if (dot === -1) break;
+                curC = curC.substring(dot + 1);
+            }
         }
 
         // Twitter / X ad endpoints
@@ -443,10 +496,21 @@ class AdBlockEngine {
             }
         }
 
-        // Check curated ad path patterns
-        for (let i = 0; i < this.blockedPaths.length; i++) {
-            if (lowerUrl.includes(this.blockedPaths[i])) {
-                return this.recordBlock(url);
+        // Check curated ad path patterns (domain + path pairing to avoid false positives)
+        if (host && this.blockedPaths.size > 0) {
+            let pathHost = host;
+            while (pathHost) {
+                const paths = this.blockedPaths.get(pathHost);
+                if (paths) {
+                    for (let i = 0; i < paths.length; i++) {
+                        if (lowerUrl.includes(paths[i])) {
+                            return this.recordBlock(url);
+                        }
+                    }
+                }
+                const dotIdx2 = pathHost.indexOf('.');
+                if (dotIdx2 === -1) break;
+                pathHost = pathHost.substring(dotIdx2 + 1);
             }
         }
 
