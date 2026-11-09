@@ -1,7 +1,13 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webFrame } = require('electron');
 
-// Expose FokkShieldBridge to webviews matching the mobile Android JavaScriptInterface
-contextBridge.exposeInMainWorld('FokkShieldBridge', {
+const isInternalPage = window.location.protocol === 'file:' || 
+                       window.location.protocol === 'fokk:' ||
+                       window.location.hostname === 'localhost' ||
+                       window.location.hostname === '127.0.0.1';
+
+if (isInternalPage) {
+    // Expose FokkShieldBridge to webviews matching the mobile Android JavaScriptInterface
+    contextBridge.exposeInMainWorld('FokkShieldBridge', {
     isAndroidNative: () => false,
     isDesktopNative: () => true,
 
@@ -30,11 +36,16 @@ contextBridge.exposeInMainWorld('FokkShieldBridge', {
 
     // Search Engine & Omnibox Sync
     getSearchEngine: () => {
-        return localStorage.getItem('fokk_search_engine') || 'bing';
+        try {
+            return ipcRenderer.sendSync('fokk-get-search-engine') || localStorage.getItem('fokk_search_engine') || 'bing';
+        } catch (_) {
+            return localStorage.getItem('fokk_search_engine') || 'bing';
+        }
     },
     setSearchEngine: (engKey) => {
-        localStorage.setItem('fokk_search_engine', (engKey || 'bing').toLowerCase());
-        ipcRenderer.send('fokk-set-search-engine', engKey);
+        const val = (engKey || 'bing').toLowerCase();
+        try { localStorage.setItem('fokk_search_engine', val); } catch (_) {}
+        ipcRenderer.send('fokk-set-search-engine', val);
     },
     openSearchEngineDialog: () => {
         ipcRenderer.send('fokk-open-engine-dialog');
@@ -145,6 +156,11 @@ contextBridge.exposeInMainWorld('FokkShieldBridge', {
         ipcRenderer.on('fokk-update-progress', (event, data) => cb(data));
     },
 
+    // Google Session Sync Stub (foreign cookie import disabled)
+    syncGoogleSession: async () => {
+        return { success: false, error: 'Session sync disabled to maintain cookie integrity' };
+    },
+
     // Utilities
     vibrate: () => {},
     toast: (msg) => {
@@ -152,7 +168,7 @@ contextBridge.exposeInMainWorld('FokkShieldBridge', {
     }
 });
 
-// Forward push events from main process to webview pages
+// Forward push events from main process to internal webview pages
 ipcRenderer.on('fokk-live-news-pushed', (event, { category, region, jsonStr }) => {
     try {
         const parsed = JSON.parse(jsonStr);
@@ -164,3 +180,80 @@ ipcRenderer.on('fokk-live-news-pushed', (event, { category, region, jsonStr }) =
         window.onLiveNewsReceived(category, region, jsonStr);
     }
 });
+
+ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
+    try {
+        localStorage.setItem('fokk_search_engine', engineId);
+    } catch (_) {}
+    try {
+        window.dispatchEvent(new CustomEvent('fokk-search-engine-change', { detail: { engineId } }));
+    } catch (_) {}
+    try {
+        if (typeof window.updateSearchEngineUI === 'function') {
+            window.updateSearchEngineUI(engineId);
+        }
+    } catch (_) {}
+});
+} else {
+    // Universal Standard Chromium Runtime Environment for all external websites
+    try {
+        webFrame.executeJavaScriptInIsolatedWorld(0, [
+            {
+                code: `
+                    // Authentic window.chrome object matching real Google Chrome / Brave
+                    if (!window.chrome) {
+                        window.chrome = {};
+                    }
+                    if (!window.chrome.app) {
+                        window.chrome.app = {
+                            isInstalled: false,
+                            InstallState: { DISABLED: 'disabled', INSTALLED: 'installed', NOT_INSTALLED: 'not_installed' },
+                            RunningState: { CANNOT_RUN: 'cannot_run', READY_TO_RUN: 'ready_to_run', RUNNING: 'running' },
+                            getIsInstalled: function() { return false; },
+                            getDetails: function() { return null; },
+                            runningState: function() { return 'cannot_run'; }
+                        };
+                    }
+                    if (!window.chrome.csi) {
+                        window.chrome.csi = function() {
+                            return {
+                                startE: Date.now(),
+                                onloadT: Date.now(),
+                                pageT: (performance && performance.now) ? performance.now() : 0,
+                                tran: 15
+                            };
+                        };
+                    }
+                    if (!window.chrome.loadTimes) {
+                        window.chrome.loadTimes = function() {
+                            var nowSec = Date.now() / 1000;
+                            return {
+                                requestTime: nowSec,
+                                startLoadTime: nowSec,
+                                commitLoadTime: nowSec,
+                                finishDocumentLoadTime: nowSec,
+                                finishLoadTime: nowSec,
+                                firstPaintTime: nowSec,
+                                firstPaintAfterLoadTime: 0,
+                                navigationType: 'Other',
+                                wasFetchedViaSpdy: true,
+                                wasNpnNegotiated: true,
+                                npnNegotiatedProtocol: 'h2',
+                                wasAlternateProtocolAvailable: false,
+                                connectionInfo: 'h2'
+                            };
+                        };
+                    }
+
+                    // Clean navigator.webdriver fallback
+                    try {
+                        if (navigator.webdriver) {
+                            delete Object.getPrototypeOf(navigator).webdriver;
+                        }
+                    } catch (_) {}
+                `
+            }
+        ]);
+    } catch (_) {}
+}
+
