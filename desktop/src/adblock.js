@@ -688,6 +688,24 @@ class AdBlockEngine {
             const batch = unique.slice(i, i + 30);
             chunks.push(batch.join(',\n') + ' { display: none !important; visibility: hidden !important; height: 0 !important; min-height: 0 !important; max-height: 0 !important; pointer-events: none !important; }');
         }
+        // YouTube: hide the mini-guide sidebar (72px icon nav strip) so videos fill full width
+        if (isYouTube) {
+            const ytLayoutFix = [
+                "ytd-mini-guide-renderer {",
+                "    display: none !important;",
+                "    width: 0 !important;",
+                "    min-width: 0 !important;",
+                "}",
+                "ytd-app[mini-guide-visible] #page-manager {",
+                "    margin-left: 0 !important;",
+                "}",
+                "ytd-masthead #start {",
+                "    margin-left: 8px !important;",
+                "}"
+            ].join("\n");
+            chunks.push(ytLayoutFix);
+        }
+
         return chunks.join('\n\n');
     }
 
