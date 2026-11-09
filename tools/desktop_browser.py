@@ -12,7 +12,8 @@ from pathlib import Path
 # Configure audio backend for PulseAudio / PipeWire on Linux
 os.environ["ALSA_PLUGIN_DIR"] = "/usr/lib/x86_64-linux-gnu/alsa-lib"
 os.environ["ALSA_CONFIG_PATH"] = "/usr/share/alsa/alsa.conf"
-os.environ["PULSE_SERVER"] = f"unix:/run/user/{os.getuid()}/pulse/native"
+if hasattr(os, "getuid"):
+    os.environ["PULSE_SERVER"] = f"unix:/run/user/{os.getuid()}/pulse/native"
 
 # Add Chromium flags before QApplication initializes
 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox"

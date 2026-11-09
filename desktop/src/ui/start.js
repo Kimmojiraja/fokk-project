@@ -529,6 +529,8 @@
             let targetUrl = '';
             if (/^https?:\/\//i.test(query)) {
                 targetUrl = query;
+            } else if (/^localhost(:\d+)?(\/.*)?$/i.test(query) || /^127\.0\.0\.1(:\d+)?(\/.*)?$/i.test(query)) {
+                targetUrl = 'http://' + query;
             } else if (query.includes('.') && !query.includes(' ')) {
                 targetUrl = 'https://' + query;
             } else {

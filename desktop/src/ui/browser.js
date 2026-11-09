@@ -96,6 +96,17 @@ function showToast(message, isAlert = false) {
     }, 2800);
 }
 
+// Helper to load in active tab or create tab if none exist
+function loadUrlInActiveTab(url) {
+    const active = getActiveWebview();
+    if (active) {
+        active.loadURL(url);
+    } else {
+        createTab(url);
+    }
+}
+window.loadUrlInActiveTab = loadUrlInActiveTab;
+
 // 1. Tab Creation & Management
 function createTab(url = START_PAGE_URL, options = {}) {
     tabCounter++;
@@ -402,6 +413,8 @@ urlInput.addEventListener('keydown', (e) => {
         let targetUrl = '';
         if (/^https?:\/\//i.test(query)) {
             targetUrl = query;
+        } else if (/^localhost(:\d+)?(\/.*)?$/i.test(query) || /^127\.0\.0\.1(:\d+)?(\/.*)?$/i.test(query)) {
+            targetUrl = 'http://' + query;
         } else if (query.includes('.') && !query.includes(' ') && !query.endsWith('.')) {
             targetUrl = 'https://' + query;
         } else {
@@ -782,7 +795,7 @@ if (actAddShortcut) {
     };
 }
 
-if (actBookmarks) actBookmarks.onclick = () => { openFeatureHub('privacy'); desktopBrowserMenu.classList.add('hidden'); };
+if (actBookmarks) actBookmarks.onclick = () => { openFeatureHub('bookmarks'); desktopBrowserMenu.classList.add('hidden'); };
 
 // Zoom Controls
 const btnZoomIn = document.getElementById('btnZoomIn');
@@ -839,7 +852,110 @@ if (btnDownloadsNav) {
 function openFeatureHub(hubId) {
     if (!featureHubModal || !featureModalBody) return;
 
-    if (hubId === 'history') {
+    if (hubId === 'bookmarks') {
+        featureModalTitle.textContent = 'Bookmarks Manager';
+        let bookmarkList = [];
+        try {
+            bookmarkList = JSON.parse(localStorage.getItem('fokk_bookmarks') || '[]');
+        } catch (_) {}
+
+        function renderBookmarkList(filterQuery = '') {
+            const filtered = filterQuery
+                ? bookmarkList.filter(b => (b.title && b.title.toLowerCase().includes(filterQuery.toLowerCase())) || (b.url && b.url.toLowerCase().includes(filterQuery.toLowerCase())))
+                : bookmarkList;
+
+            let itemsHtml = '';
+            if (filtered.length === 0) {
+                itemsHtml = `
+                    <div style="text-align: center; padding: 40px 10px; color: var(--text-secondary);">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="opacity: 0.4; margin-bottom: 10px;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                        <p style="font-size: 13px;">${filterQuery ? 'No bookmarks match your search' : 'No bookmarks saved yet'}</p>
+                        <p style="font-size: 11.5px; opacity: 0.7; margin-top: 4px;">Use the bookmark icon or Ctrl+D on any web page to save it</p>
+                    </div>
+                `;
+            } else {
+                itemsHtml = filtered.map(b => {
+                    let domain = '';
+                    try { domain = new URL(b.url).hostname; } catch (_) {}
+                    const dateStr = b.time ? new Date(b.time).toLocaleDateString() : '';
+                    return `
+                        <div class="history-item-row" data-url="${b.url}">
+                            <div class="history-item-left">
+                                <img src="https://www.google.com/s2/favicons?domain=${domain}&sz=32" class="history-favicon" onerror="this.src='icon.png'">
+                                <div class="history-item-meta">
+                                    <span class="history-item-title" title="${b.title || b.url}">${b.title || b.url}</span>
+                                    <span class="history-item-url">${b.url}</span>
+                                </div>
+                            </div>
+                            <div class="history-item-right">
+                                <span class="history-item-time">${dateStr}</span>
+                                <button class="btn-del-bookmark" data-url="${b.url}" title="Remove Bookmark">&times;</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            featureModalBody.innerHTML = `
+                <div class="history-toolbar">
+                    <input type="text" id="inputSearchBookmarks" class="history-search-input" placeholder="Search bookmarks..." value="${filterQuery}">
+                    <button class="modal-btn secondary" id="btnClearAllBookmarks" style="font-size: 11.5px; padding: 4px 10px;">Clear All</button>
+                </div>
+                <div class="history-list-wrap">
+                    ${itemsHtml}
+                </div>
+            `;
+
+            const searchInput = document.getElementById('inputSearchBookmarks');
+            if (searchInput) {
+                searchInput.oninput = (e) => renderBookmarkList(e.target.value);
+                if (filterQuery) {
+                    searchInput.focus();
+                    searchInput.setSelectionRange(filterQuery.length, filterQuery.length);
+                }
+            }
+
+            const clearBtn = document.getElementById('btnClearAllBookmarks');
+            if (clearBtn) {
+                clearBtn.onclick = () => {
+                    bookmarkList = [];
+                    localStorage.setItem('fokk_bookmarks', '[]');
+                    renderBookmarkList();
+                    if (btnBookmarkOmni) btnBookmarkOmni.classList.remove('active');
+                    showToast('All bookmarks cleared');
+                };
+            }
+
+            featureModalBody.querySelectorAll('.history-item-row').forEach(row => {
+                row.onclick = (e) => {
+                    if (e.target.closest('.btn-del-bookmark')) return;
+                    const u = row.getAttribute('data-url');
+                    if (u) {
+                        createTab(u);
+                        featureHubModal.classList.add('hidden');
+                    }
+                };
+            });
+
+            featureModalBody.querySelectorAll('.btn-del-bookmark').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const u = btn.getAttribute('data-url');
+                    bookmarkList = bookmarkList.filter(x => x.url !== u);
+                    localStorage.setItem('fokk_bookmarks', JSON.stringify(bookmarkList));
+                    const curSearch = document.getElementById('inputSearchBookmarks') ? document.getElementById('inputSearchBookmarks').value : '';
+                    renderBookmarkList(curSearch);
+                    const activeW = getActiveWebview();
+                    if (activeW && activeW.getURL() === u && btnBookmarkOmni) {
+                        btnBookmarkOmni.classList.remove('active');
+                    }
+                    showToast('Bookmark removed');
+                };
+            });
+        }
+
+        renderBookmarkList();
+    } else if (hubId === 'history') {
         featureModalTitle.textContent = 'Browsing History';
         let historyList = [];
         try {
@@ -1281,6 +1397,10 @@ function openFeatureHub(hubId) {
             if (document.getElementById('cCookies').checked) storages.push('cookies');
             if (document.getElementById('cCache').checked) storages.push('cache');
             if (document.getElementById('cStorage').checked) storages.push('localstorage', 'indexdb');
+
+            if (document.getElementById('cHistory').checked) {
+                localStorage.removeItem('fokk_browsing_history');
+            }
 
             await ipcRenderer.invoke('fokk-clear-data', { storages });
             featureHubModal.classList.add('hidden');

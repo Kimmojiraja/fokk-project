@@ -136,9 +136,17 @@ if (isInternalPage) {
     },
     saveCustomShortcut: (title, url) => {
         try {
+            const id = 'c_' + Date.now();
+            let domain = '';
+            try { domain = new URL(url.startsWith('http') ? url : 'https://' + url).hostname; } catch (_) {}
+            const item = { id, name: title, title, url, sub: domain };
             const list = JSON.parse(localStorage.getItem('fokk_custom_shortcuts') || '[]');
-            list.push({ title, url, id: 'c_' + Date.now() });
+            list.push(item);
             localStorage.setItem('fokk_custom_shortcuts', JSON.stringify(list));
+
+            const desktopList = JSON.parse(localStorage.getItem('fokk_desktop_shortcuts') || '[]');
+            desktopList.push(item);
+            localStorage.setItem('fokk_desktop_shortcuts', JSON.stringify(desktopList));
         } catch (_) {}
     },
 
@@ -147,7 +155,7 @@ if (isInternalPage) {
         return await ipcRenderer.invoke('fokk-check-update');
     },
     startUpdateDownload: async (info) => {
-        return await ipcRenderer.invoke('fokk-download-update', info);
+        return await ipcRenderer.invoke('fokk-start-update', info);
     },
     installUpdate: async (filePath) => {
         return await ipcRenderer.invoke('fokk-install-update', { filePath });

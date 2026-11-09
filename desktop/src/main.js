@@ -166,6 +166,11 @@ function createWindow() {
 
         if (type === 'webview') {
             setupAdblockingForSession(contents.session);
+            contents.on('did-navigate', () => {
+                if (shieldEnabled) {
+                    adblock.injectCosmeticFilters(contents);
+                }
+            });
             contents.on('dom-ready', () => {
                 if (shieldEnabled) {
                     adblock.injectCosmeticFilters(contents);
@@ -211,6 +216,11 @@ function createWindow() {
         if (type === 'window' && mainWindow && contents !== mainWindow.webContents) {
             setupAdblockingForSession(contents.session);
             try { contents.session.setUserAgent(CHROME_USER_AGENT); } catch (_) {}
+            contents.on('did-navigate', () => {
+                if (shieldEnabled) {
+                    adblock.injectCosmeticFilters(contents);
+                }
+            });
             contents.on('dom-ready', () => {
                 if (shieldEnabled) {
                     adblock.injectCosmeticFilters(contents);
@@ -267,8 +277,50 @@ ipcMain.on('fokk-win-close', () => {
 // 2. Tab Navigation & Bridge Handlers
 ipcMain.on('fokk-open-url', (event, url) => {
     if (mainWindow) {
-        mainWindow.webContents.executeJavaScript(`if (typeof createTab === 'function') createTab(${JSON.stringify(url)});`);
+        mainWindow.webContents.executeJavaScript(`
+            if (typeof loadUrlInActiveTab === 'function') {
+                loadUrlInActiveTab(${JSON.stringify(url)});
+            } else if (typeof createTab === 'function') {
+                createTab(${JSON.stringify(url)});
+            }
+        `);
     }
+});
+
+ipcMain.on('fokk-toggle-reader', () => {
+    if (mainWindow) {
+        mainWindow.webContents.executeJavaScript(`if (typeof toggleReaderMode === 'function') toggleReaderMode();`);
+    }
+});
+
+ipcMain.on('fokk-open-engine-dialog', () => {
+    if (mainWindow) {
+        mainWindow.webContents.executeJavaScript(`if (typeof openFeatureHub === 'function') openFeatureHub('general');`);
+    }
+});
+
+ipcMain.on('fokk-open-tabs', () => {
+    if (mainWindow) {
+        mainWindow.webContents.executeJavaScript(`
+            if (typeof desktopBrowserMenu !== 'undefined' && desktopBrowserMenu) {
+                desktopBrowserMenu.classList.toggle('hidden');
+            }
+        `);
+    }
+});
+
+ipcMain.on('fokk-save-offline-page', () => {
+    if (mainWindow) {
+        mainWindow.webContents.executeJavaScript(`
+            if (typeof btnBookmarkOmni !== 'undefined' && btnBookmarkOmni) {
+                btnBookmarkOmni.click();
+            }
+        `);
+    }
+});
+
+ipcMain.on('fokk-get-search-suggestions', (event, query) => {
+    event.returnValue = '[]';
 });
 
 ipcMain.on('fokk-open-new-tab', () => {
@@ -701,7 +753,12 @@ ipcMain.handle('fokk-check-update', async () => {
     }
 });
 
-ipcMain.handle('fokk-start-update', async (event, { downloadUrl, fileName }) => {
+ipcMain.handle('fokk-download-update', async (event, args) => {
+    // Alias to ensure 100% compatibility with any caller invoking fokk-download-update
+    return startUpdateDownloadInternal(event, args || {});
+});
+
+async function startUpdateDownloadInternal(event, { downloadUrl, fileName }) {
     return new Promise((resolve, reject) => {
         try {
             const updatesDir = path.join(app.getPath('userData'), 'updates');
@@ -748,6 +805,10 @@ ipcMain.handle('fokk-start-update', async (event, { downloadUrl, fileName }) => 
             reject(e);
         }
     });
+}
+
+ipcMain.handle('fokk-start-update', async (event, args) => {
+    return startUpdateDownloadInternal(event, args || {});
 });
 
 ipcMain.handle('fokk-install-update', async (event, { filePath }) => {
