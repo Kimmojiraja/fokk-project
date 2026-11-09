@@ -1,38 +1,207 @@
 const fs = require('fs');
 const path = require('path');
 
+function isValidSelector(sel) {
+    if (!sel || typeof sel !== 'string') return false;
+    const s = sel.trim();
+    if (s.length < 2) return false;
+    // Discard uBlock scriptlet rules, procedural filters, and invalid CSS syntax
+    if (s.startsWith('+') || s.startsWith('^') || s.startsWith('@') || s.startsWith('!')) return false;
+    if (s.includes('+js(')) return false;
+    if (s.includes(':upward(')) return false;
+    if (s.includes(':has-text(')) return false;
+    if (s.includes(':xpath(')) return false;
+    if (s.includes(':matches-')) return false;
+    if (s.includes(':watch-attr(')) return false;
+    if (s.includes(':min-text-length(')) return false;
+    if (s.includes('[-ext-')) return false;
+    // Check balanced brackets and parens
+    const openBrackets = (s.match(/\[/g) || []).length;
+    const closeBrackets = (s.match(/\]/g) || []).length;
+    if (openBrackets !== closeBrackets) return false;
+    const openParens = (s.match(/\(/g) || []).length;
+    const closeParens = (s.match(/\)/g) || []).length;
+    if (openParens !== closeParens) return false;
+    return true;
+}
+
 class AdBlockEngine {
     constructor(assetsDir) {
         this.assetsDir = assetsDir;
         this.blockedDomains = new Set();
         this.whitelistedDomains = new Set();
         this.customBlockedDomains = new Set();
+        this.blockedPaths = [];
         this.genericCosmeticRules = [];
         this.domainCosmeticRules = new Map();
         this.blockedKeywords = [
-            '/pagead/',
-            '/api/stats/ads',
-            'ad_break',
+            // Major ad networks & ad servers
             'doubleclick.net',
             'googlesyndication.com',
             'googleadservices.com',
+            'google-analytics.com',
+            'googletagmanager.com',
+            'googletagservices.com',
+            'partner.googleadservices.com',
             'taboola.com',
+            'taboolasyndication.com',
             'outbrain.com',
+            'outbrainimg.com',
             'criteo.com',
+            'criteo.net',
             'amazon-adsystem.com',
+            'adnxs.com',
+            'ib.adnxs.com',
+            'rubiconproject.com',
+            'pubmatic.com',
+            'openx.net',
+            'smartadserver.com',
+            'casalemedia.com',
+            'yieldmo.com',
+            'revcontent.com',
+            'mgid.com',
+            'media.net',
+            'ezoic.net',
+            'ezoic.com',
+            'mediavine.com',
+            'adthrive.com',
+            'scorecardresearch.com',
+            'quantserve.com',
+            'inmobi.com',
+            'moatads.com',
+            'adsafeprotected.com',
+            'sharethrough.com',
+            'triplelift.com',
+            '33across.com',
+            'sovrn.com',
+            'indexexchange.com',
+            'lijit.com',
+            'bidswitch.net',
+            'contextweb.com',
+            'emxdgt.com',
+            'rhythmone.com',
+            'spotxchange.com',
+            'undertone.com',
+            'rlcdn.com',
+            'demdex.net',
+            'bluekai.com',
+            'krxd.net',
+            'omtrdc.net',
+            'adsrvr.org',
+            'mxpnl.com',
+            'mixpanel.com',
+            'segment.io',
+            'segment.com',
+            'amplitude.com',
+            'hotjar.com',
+            'fullstory.com',
+            'mouseflow.com',
+            'logrocket.com',
+            'clarity.ms',
+            'chartbeat.com',
+            'carbonads.net',
+            'carbonads.com',
+            'buysellads.com',
+            'buysellads.net',
+            'adcolony.com',
+            'ironsrc.com',
+            'admob.com',
+            'adlightning.com',
+            'adsymptotic.com',
+            'agkn.com',
+            'adblade.com',
+            'adkernel.com',
+            'adtechus.com',
+            'smartclip.net',
+            'teads.tv',
+            'connatix.com',
+            'anyclip.com',
+            'exco.com',
+            'exponential.com',
+            'adition.com',
+            'adsupply.com',
+            'admanmedia.com',
+            'zergnet.com',
+            'postrelease.com',
+            'nativeads.com',
             'exoclick.com',
             'trafficjunky.com',
+            'trafficjunky.net',
             'juicyads.com',
             'popcash.net',
             'popads.net',
             'adsterra.com',
-            'rubiconproject.com',
-            'adnxs.com',
-            'smartadserver.com',
-            'scorecardresearch.com',
-            'yandex.ru/ads',
-            'adroll.com',
-            'advertising.com'
+            'monetag.com',
+            'propellerads.com',
+            'clickadu.com',
+            'hilltopads.com',
+            'admaven.com',
+            'twinred.com',
+            'trafficstars.com',
+            'trafficfactory.com',
+            'ero-advertising.com',
+            'livejasmin.com',
+            'doublepimp.com',
+            'ad-score.com',
+            'adglare.com',
+            'adbutler.com',
+            'adcovery.com',
+            'adextent.com',
+            'adfactor.nl',
+            'adfalcon.com',
+            'adflex.co.uk',
+            'adfrontiers.com',
+            'adgear.com',
+            'adhigh.net',
+            'adhost.com',
+            'adknife.com',
+            'admagnet.net',
+            'admixer.net',
+            'adoperator.com',
+            'adoptim.com',
+            'adotmob.com',
+            'adperium.com',
+            'adpushup.com',
+            'adrevolver.com',
+            'adriver.ru',
+            'adrta.com',
+            'ads-twitter.com',
+            'adskeeper.co.uk',
+            'adserver01.de',
+            'adside.com',
+            'adsnative.com',
+            'adspeed.com',
+            'adspirit.de',
+            'adtile.me',
+            'adup-tech.com',
+            'advangelists.com',
+            'adventori.com',
+            'adverline.com',
+            'adzerk.net',
+            'bat.bing.com',
+            // Ad script & request paths
+            '/pagead/',
+            '/pagead2/',
+            '/api/stats/ads',
+            '/gampad/',
+            '/adsbygoogle',
+            'adsbygoogle.js',
+            '/adservice.',
+            '/adservices.',
+            '/adserver.',
+            '/adserver/',
+            '/adclick.',
+            '/adbanner.',
+            '/advertisement.',
+            '/advertisements/',
+            '/sponsor_ads/',
+            '/sponsored_post',
+            '/wp-content/plugins/ad-',
+            '/wp-content/plugins/adsense-',
+            '/wp-content/plugins/adrotate',
+            '/wp-content/plugins/advanced-ads',
+            'prebid.js',
+            'prebid.org'
         ];
         this.blockedCount = 0;
         this.recentBlockedUrls = new Map();
@@ -49,24 +218,39 @@ class AdBlockEngine {
                     const trimmed = lines[i].trim();
                     if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('@@')) continue;
 
-                    if (trimmed.startsWith('||') && trimmed.includes('^')) {
-                        const domain = trimmed.substring(2, trimmed.indexOf('^')).toLowerCase();
-                        if (domain && domain.length > 3 && !domain.includes('/')) {
-                            this.blockedDomains.add(domain);
+                    if (trimmed.startsWith('||')) {
+                        let rule = trimmed.substring(2);
+                        let delimIdx = -1;
+                        for (let j = 0; j < rule.length; j++) {
+                            const c = rule[j];
+                            if (c === '^' || c === '/' || c === '$') {
+                                delimIdx = j;
+                                break;
+                            }
+                        }
+                        const dom = (delimIdx !== -1 ? rule.substring(0, delimIdx) : rule).toLowerCase().trim();
+                        if (dom && dom.length > 3 && !dom.includes('*') && dom.includes('.')) {
+                            this.blockedDomains.add(dom);
+                        }
+                        if (delimIdx !== -1 && rule[delimIdx] === '/') {
+                            const pathPart = rule.substring(delimIdx).replace(/[\^\$].*$/, '').toLowerCase().trim();
+                            if (pathPart.length > 2 && !pathPart.includes('*')) {
+                                this.blockedPaths.push(pathPart);
+                            }
                         }
                     } else if (trimmed.startsWith('##')) {
                         const sel = trimmed.substring(2).trim();
-                        if (sel && !sel.includes(':has-text') && !sel.includes(':xpath')) {
+                        if (isValidSelector(sel)) {
                             this.genericCosmeticRules.push(sel);
                         }
                     } else if (trimmed.includes('##') && !trimmed.startsWith('#')) {
                         const parts = trimmed.split('##');
-                        const domains = parts[0].split(',');
                         const sel = parts[1].trim();
-                        if (sel && !sel.includes(':has-text') && !sel.includes(':xpath')) {
+                        if (isValidSelector(sel)) {
+                            const domains = parts[0].split(',');
                             for (let j = 0; j < domains.length; j++) {
-                                const d = domains[j].trim().toLowerCase();
-                                if (d) {
+                                const d = domains[j].replace(/#.*$/, '').trim().toLowerCase();
+                                if (d && d.includes('.')) {
                                     let arr = this.domainCosmeticRules.get(d);
                                     if (!arr) {
                                         arr = [];
@@ -174,35 +358,49 @@ class AdBlockEngine {
             lowerUrl.includes('.m4s') ||
             lowerUrl.includes('googlevideo.com/videoplayback');
 
-        // Check Whitelist first
+        let host = '';
         try {
             const parsed = new URL(url);
-            const host = parsed.hostname.toLowerCase();
-
-            if (this.whitelistedDomains.has(host)) return false;
-            const parts = host.split('.');
-            if (parts.length > 2) {
-                const parentDomain = parts.slice(1).join('.');
-                if (this.whitelistedDomains.has(parentDomain)) return false;
-            }
-
-            // Check Custom Blacklisted domains
-            if (this.customBlockedDomains.has(host)) {
-                return this.recordBlock(url);
-            }
+            host = parsed.hostname.toLowerCase();
         } catch (_) {}
 
-        // YouTube ad endpoints isolation
-        if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
+        // Check Whitelist first across all parent domains
+        if (host) {
+            let curW = host;
+            while (curW) {
+                if (this.whitelistedDomains.has(curW)) return false;
+                const dot = curW.indexOf('.');
+                if (dot === -1) break;
+                curW = curW.substring(dot + 1);
+            }
+
+            // Check Custom Blacklisted domains across parent domains
+            let curC = host;
+            while (curC) {
+                if (this.customBlockedDomains.has(curC)) return this.recordBlock(url);
+                const dot = curC.indexOf('.');
+                if (dot === -1) break;
+                curC = curC.substring(dot + 1);
+            }
+        }
+
+        // YouTube internal requests isolation
+        // Crucial: check host is actually youtube to avoid false matches on query params containing youtube.com
+        const isYtHost = host === 'youtube.com' || host.endsWith('.youtube.com') || host === 'youtu.be' || host.endsWith('.youtu.be');
+        if (isYtHost) {
             const isYtAd = lowerUrl.includes('/pagead/') ||
                 lowerUrl.includes('/api/stats/ads') ||
+                lowerUrl.includes('/api/stats/qoe') ||
+                lowerUrl.includes('/api/stats/atr') ||
+                lowerUrl.includes('/ptracking') ||
                 lowerUrl.includes('ad_break') ||
                 lowerUrl.includes('get_midroll_info') ||
                 lowerUrl.includes('doubleclick.net') ||
                 lowerUrl.includes('googleads.g.doubleclick.net') ||
                 lowerUrl.includes('googlesyndication.com') ||
                 lowerUrl.includes('static.doubleclick.net') ||
-                lowerUrl.includes('adservice.google.com');
+                lowerUrl.includes('adservice.google.com') ||
+                lowerUrl.includes('/youtubei/v1/player/ad_break');
             if (isYtAd && !isMedia) {
                 return this.recordBlock(url);
             }
@@ -210,45 +408,51 @@ class AdBlockEngine {
         }
 
         // Twitter / X ad endpoints
-        if (lowerUrl.includes('twitter.com') || lowerUrl.includes('x.com')) {
+        if (host.includes('twitter.com') || host.includes('x.com')) {
             const isXAd = lowerUrl.includes('ads-api.twitter.com') ||
                 lowerUrl.includes('analytics.twitter.com') ||
                 lowerUrl.includes('ads-twitter.com') ||
                 lowerUrl.includes('static.ads-twitter.com') ||
-                lowerUrl.includes('/i/api/1.1/promoted_trend');
+                lowerUrl.includes('/i/api/1.1/promoted_trend') ||
+                lowerUrl.includes('/i/api/2/promoted_trend');
             if (isXAd) return this.recordBlock(url);
         }
 
         // Instagram / Meta ad endpoints
-        if (lowerUrl.includes('instagram.com') || lowerUrl.includes('facebook.com')) {
+        if (host.includes('instagram.com') || host.includes('facebook.com')) {
             const isMetaAd = lowerUrl.includes('logging_client_events') ||
                 lowerUrl.includes('connect.facebook.net') ||
                 lowerUrl.includes('pixel.facebook.com') ||
-                lowerUrl.includes('an.facebook.com');
+                lowerUrl.includes('an.facebook.com') ||
+                lowerUrl.includes('ads.facebook.com');
             if (isMetaAd) return this.recordBlock(url);
         }
 
         if (isMedia) return false;
 
-        // Extract hostname and full subdomain walk
-        try {
-            const parsed = new URL(url);
-            const host = parsed.hostname.toLowerCase();
-
+        // Subdomain walk against full blocklist (checks exact host and all suffixes)
+        if (host) {
             let current = host;
-            while (current.includes('.')) {
+            while (current) {
                 if (this.blockedDomains.has(current)) {
                     return this.recordBlock(url);
                 }
                 const dotIdx = current.indexOf('.');
+                if (dotIdx === -1) break;
                 current = current.substring(dotIdx + 1);
-                if (!current.includes('.')) break;
             }
-        } catch (_) {}
+        }
 
-        // Check keyword patterns
-        for (const kw of this.blockedKeywords) {
-            if (lowerUrl.includes(kw)) {
+        // Check curated ad path patterns
+        for (let i = 0; i < this.blockedPaths.length; i++) {
+            if (lowerUrl.includes(this.blockedPaths[i])) {
+                return this.recordBlock(url);
+            }
+        }
+
+        // Check ad keyword patterns
+        for (let i = 0; i < this.blockedKeywords.length; i++) {
+            if (lowerUrl.includes(this.blockedKeywords[i])) {
                 return this.recordBlock(url);
             }
         }
@@ -269,43 +473,64 @@ class AdBlockEngine {
         const selectors = [];
         if (hostname) {
             let cur = hostname.toLowerCase();
-            while (cur.includes('.')) {
+            while (cur) {
                 const rules = this.domainCosmeticRules.get(cur);
                 if (rules && rules.length > 0) selectors.push(...rules);
                 const dotIdx = cur.indexOf('.');
+                if (dotIdx === -1) break;
                 cur = cur.substring(dotIdx + 1);
-                if (!cur.includes('.')) break;
             }
         }
 
-        // Dedicated first-class sponsored & ad rules for major platforms
+        // First-class cosmetic selectors for major search and social platforms
         if (hostname.includes('google.')) {
             selectors.push(
                 '#tads', '#tadsb', '#bottomads', '.uEierd', '[data-text-ad]',
-                'div[aria-label="Ads"]', 'div[aria-label="Sponsored"]', 'div:has(> [data-text-ad])',
-                'div:has(> div > [data-text-ad])', '.commercial-unit-mobile-bottom', '.commercial-unit-desktop-top'
+                'div[aria-label="Ads"]', 'div[aria-label="Sponsored"]',
+                'div:has(> [data-text-ad])', 'div:has(> div > [data-text-ad])',
+                'div:has(> div > div > [data-text-ad])',
+                '.commercial-unit-desktop-top', '.commercial-unit-desktop-rhs',
+                '.commercial-unit-mobile-top', '.commercial-unit-mobile-bottom',
+                '.pla-unit', '.pla-unit-container', '.cu-container',
+                'div[data-rw] > div:has([data-text-ad])', 'div[data-hveid]:has([data-text-ad])',
+                '.ads-ad', '.ads-fr', '.ads-visurl', '.shopping-carousel-container',
+                'div[data-pla="1"]', 'div[aria-label="Shopping results"]',
+                '.commercial-unit', '#tvcap', 'div[data-attrid="wa:/description"]:has([data-text-ad])',
+                '.mnr-c.pla-unit'
             );
         } else if (hostname.includes('bing.')) {
             selectors.push(
-                '.b_ad', '.b_adSlug', '.b_adBottom', '.text-ads-container', 'a[href*="/aclick?ld="]',
-                'li:has(.b_ad)', 'li:has(.b_adSlug)', 'div[aria-label="Sponsored"]', 'cs-native-ad-card'
+                'li.b_ad', '.b_ad', '.b_adSlug', '.b_adBottom', '.b_adTop', '.b_adLastChild',
+                '.ads-container', '[data-tag="adSlot"]', '.text-ads-container', 'a[href*="/aclick?ld="]',
+                'li:has(.b_ad)', 'li:has(.b_adSlug)', 'div[aria-label="Sponsored"]',
+                'cs-native-ad-card', '.pa_carousel', 'li.b_algo:has(.b_adSlug)',
+                'li.b_algo:has(a[href*="/aclick?"])'
             );
         } else if (hostname.includes('youtube.') || hostname.includes('youtu.be')) {
             selectors.push(
                 '#masthead-ad', 'ytd-ad-slot-renderer', 'ytd-in-feed-ad-layout-renderer',
                 'ytd-banner-promo-renderer', 'ytd-promoted-video-renderer', 'ytd-display-ad-renderer',
-                'ytd-statement-banner-renderer', '.ytd-action-companion-ad-renderer', 'ytd-mealbar-promo-renderer',
+                'ytd-statement-banner-renderer', '.ytd-action-companion-ad-renderer',
+                'ytd-companion-slot-renderer', 'ytd-mealbar-promo-renderer',
                 'ytd-promoted-sparkles-web-renderer', 'ytd-promoted-sparkles-text-search-renderer',
-                'ytd-compact-promoted-video-renderer', 'ytd-compact-promoted-item-renderer', 'ytd-search-pyv-renderer',
+                'ytd-compact-promoted-video-renderer', 'ytd-compact-promoted-item-renderer',
+                'ytd-search-pyv-renderer',
                 'ytd-rich-section-renderer:has(ytd-statement-banner-renderer)',
-                'ytd-rich-item-renderer:has(ytd-ad-slot-renderer)', 'ytd-rich-item-renderer:has(ytd-in-feed-ad-layout-renderer)',
-                'ytd-rich-item-renderer:has(#ad-badge)', 'ytd-rich-item-renderer:has(.badge-shape-wiz--thumbnail-badge)',
-                'ytd-rich-item-renderer:has([aria-label*="Sponsored" i])', 'ytd-rich-item-renderer:has(.badge-style-type-ad)',
-                'ytd-video-renderer:has(ytd-ad-slot-renderer)', 'ytd-video-renderer:has([aria-label*="Sponsored" i])',
-                'ytd-video-renderer:has(.badge-style-type-ad)', 'ytd-reel-video-renderer:has(ytd-ad-slot-renderer)',
-                'ytd-reel-video-renderer:has(.ytd-ad-slot-renderer)', '.ytp-ad-overlay-container',
-                '.ytp-ad-message-container', '.ytp-ad-text', '.ytp-ad-preview-text', '.ytp-ad-progress-list',
+                'ytd-rich-item-renderer:has(ytd-ad-slot-renderer)',
+                'ytd-rich-item-renderer:has(ytd-in-feed-ad-layout-renderer)',
+                'ytd-rich-item-renderer:has(#ad-badge)',
+                'ytd-rich-item-renderer:has(.badge-shape-wiz--thumbnail-badge)',
+                'ytd-rich-item-renderer:has([aria-label*="Sponsored" i])',
+                'ytd-rich-item-renderer:has(.badge-style-type-ad)',
+                'ytd-video-renderer:has(ytd-ad-slot-renderer)',
+                'ytd-video-renderer:has([aria-label*="Sponsored" i])',
+                'ytd-video-renderer:has(.badge-style-type-ad)',
+                'ytd-reel-video-renderer:has(ytd-ad-slot-renderer)',
+                'ytd-reel-video-renderer:has(.ytd-ad-slot-renderer)',
+                '.ytp-ad-overlay-container', '.ytp-ad-message-container', '.ytp-ad-text',
+                '.ytp-ad-preview-text', '.ytp-ad-progress-list', '.ytp-ad-module', '#player-ads',
                 'div[class*="ad-showing"] .ytp-ad-text', '#shopping-timely-shelf',
+                'ytd-merch-shelf-renderer',
                 '#shorts-inner-container > .ytd-shorts:has(> .ytd-reel-video-renderer > ytd-ad-slot-renderer)',
                 '#contents > ytd-rich-item-renderer:has(> ytd-ad-slot-renderer)',
                 'ytd-rich-item-renderer:has(> #content > ytd-ad-slot-renderer)',
@@ -313,20 +538,76 @@ class AdBlockEngine {
             );
         } else if (hostname.includes('amazon.')) {
             selectors.push(
+                'div[data-component-type="s-impression-logger"]', '.AdHolder', '.adsWrapper',
+                'div[cel_widget_id*="SP-"]', 'div[cel_widget_id*="SEARCH_RESULTS_SPONSORED_PRODUCTS"]',
+                'div[data-component-type*="sponsored"]',
+                '.s-result-item[data-asin]:has(span.puis-sponsored-label-text)',
+                'div[data-asin]:has(span.puis-sponsored-label-text)',
+                'div[data-asin]:has(span[aria-label*="Sponsored" i])',
+                'div:has(> span.puis-sponsored-label-text)', '.puis-sponsored-label-text',
+                'div[data-component-type="sp-sponsored-result"]',
                 '.a-cardui[class*="_new-detail-faceout-box_"]:has(.dynamicSponsoredLabelClass)',
                 'div[class*="SponsoredProducts"]', 'div[data-a-carousel-options*="isSponsoredProduct"]',
-                'div[data-component-type="sp-sponsored-result"]', 'div[class*="sp-result-item"]'
+                'div[class*="sp-result-item"]', '#ad', '#ad-desktop-atf', '#ad-desktop-btf',
+                '#sponsoredProducts2_feature_div', '#sponsoredProducts_feature_div', '#sp_detail', '#sp_detail2',
+                '#hsaSponsoredProducts', '#ape_Detail_hero-quick-promo_Desktop_placement',
+                '#ape_Detail_auto-load-middle-1_Desktop_placement'
+            );
+        } else if (hostname.includes('reddit.')) {
+            selectors.push(
+                'shreddit-comment-ad', 'shreddit-ad-post', '[data-promoted=true]',
+                '.promoted-custom-collection-item', '[promoted=true]', '.PromotedLink',
+                'shreddit-async-loader[bundlename="feed_ads"]', 'div[data-adclicklocation]'
+            );
+        } else if (hostname.includes('linkedin.')) {
+            selectors.push(
+                '.feed-shared-update-v2:has(.update-components-promo__label)',
+                'div[data-feed-type="SPONSORED"]', '.ad-banner-container', '.sponsored-content'
             );
         }
 
-        // Global curated generic ad selectors
+        // Global generic ad & banner selectors
+        selectors.push(
+            'ins.adsbygoogle', '.adsbygoogle', '[id^="div-gpt-ad"]', '[id^="google_ads_iframe"]', '[data-google-query-id]',
+            'iframe[src*="doubleclick.net"]', 'iframe[src*="googlesyndication.com"]', 'iframe[src*="adnxs.com"]',
+            'iframe[src*="rubiconproject.com"]', 'iframe[src*="pubmatic.com"]', 'iframe[src*="openx.net"]',
+            'iframe[src*="smartadserver.com"]', 'iframe[src*="criteo.com"]', 'iframe[src*="outbrain.com"]',
+            'iframe[src*="taboola.com"]', 'iframe[src*="revcontent.com"]', 'iframe[src*="amazon-adsystem.com"]',
+            'iframe[src*="exoclick.com"]', 'iframe[src*="trafficjunky.net"]', 'iframe[src*="juicyads.com"]',
+            'iframe[src*="popads.net"]', 'iframe[src*="adsterra.com"]', 'iframe[src*="monetag.com"]', 'iframe[id*="google_ads"]',
+            'div[id^="ad-"]', 'div[id^="ad_"]', 'div[id^="google_ads_"]', 'div[id^="dfp-ad-"]', 'div[id*="advertisement"]',
+            'div[id^="adslot"]', 'div[id*="ad-slot"]', 'div[id*="ad-container"]', 'div[id*="ad-wrapper"]', 'div[id*="ad-banner"]',
+            'div[class*="native-ad"]', 'div[class*="taboola"]', 'div[class*="outbrain"]', 'div[class*="mgid"]',
+            'div[class*="revcontent"]', 'div[class*="sponsored-post"]', 'div[class*="sponsored-content"]',
+            'div[class*="ad-container"]', 'div[class*="ad-wrapper"]', 'div[class*="ad-box"]', 'div[class*="ad-slot"]',
+            'div[class*="ad-unit"]', 'div[class*="ad-banner"]', 'div[class*="ad_banner"]', 'div[class*="ad-placement"]',
+            'div[class*="ad_placement"]', 'div[class*="ad-placeholder"]',
+            '.ad-banner', '.ad-container', '.ad-box', '.ad-wrapper', '.ad-slot', '.ad-holder', '.ad-unit', '.ad-frame',
+            '.ad-layer', '.ad-leaderboard', '.ad-sidebar', '.ad-placeholder', '.ad-module', '.ad-notice', '.ad-sponsor',
+            '.ad-spot', '.banner-ad', '.banner_ad', '.banner-ads', '.sponsor-banner', '.sponsored-post', '.sponsored-content',
+            '.sponsored-link', '.sponsored-item', '.sponsored-feed', '.exo-native-widget', '.tj_ads', '.juicy-ad',
+            '.popunder-overlay', '.click-trap', '.anti-adblock', '.adblock-overlay', '.adblock-modal', '.adblock-backdrop',
+            'div[data-ad-unit]', 'div[data-dfp-ad]', 'div[data-ad-slot]', 'div[data-ad-unit-id]', 'div[data-native-ad]',
+            '.smartbanner', '.app-banner', '[class*="smartbanner"]', '[class*="open-in-app"]', '[class*="openInApp"]',
+            '[id*="open-in-app"]', 'div[data-testid="upsell-banner"]', 'xpromo-app-selector',
+            'shreddit-async-loader[bundlename="bottom_sheet"]'
+        );
+
         if (this.genericCosmeticRules && this.genericCosmeticRules.length > 0) {
             selectors.push(...this.genericCosmeticRules);
         }
 
-        if (selectors.length === 0) return '';
-        const unique = Array.from(new Set(selectors));
-        return unique.join(',\n') + ' { display: none !important; visibility: hidden !important; height: 0 !important; min-height: 0 !important; }';
+        const validSelectors = selectors.filter(isValidSelector);
+        if (validSelectors.length === 0) return '';
+        const unique = Array.from(new Set(validSelectors));
+
+        // Group selectors into batches of 30 to guarantee resilient parsing across all Chromium environments
+        const chunks = [];
+        for (let i = 0; i < unique.length; i += 30) {
+            const batch = unique.slice(i, i + 30);
+            chunks.push(batch.join(',\n') + ' { display: none !important; visibility: hidden !important; height: 0 !important; min-height: 0 !important; max-height: 0 !important; pointer-events: none !important; }');
+        }
+        return chunks.join('\n\n');
     }
 
     injectCosmeticFilters(webContents) {
@@ -408,26 +689,25 @@ class AdBlockEngine {
                             }
                         } catch(_) {}
 
-                        // 3. Instant Video Ad Skip Trigger
+                        // 3. Instant Video Ad Skip Trigger (uBlock Origin Compatible Defusers)
                         function defuseVideoAd() {
-                            const video = document.querySelector('video.html5-main-video') || document.querySelector('video');
-                            const isAd = document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay') ||
-                                         document.querySelector('.video-ads:not(:empty)');
-                            if (isAd && video) {
-                                const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+                            const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+                            const isAdActive = !!document.querySelector('.html5-video-player.ad-showing, .html5-video-player.ad-interrupting, .ad-showing video, .ad-interrupting video');
+                            if (isAdActive) {
                                 if (player && typeof player.skipAd === 'function') {
                                     try { player.skipAd(); } catch (_) {}
                                 }
-                                if (!isNaN(video.duration) && isFinite(video.duration) && video.duration > 0) {
+                                const video = (player && player.querySelector('video')) || document.querySelector('video.html5-main-video') || document.querySelector('video');
+                                if (video && !isNaN(video.duration) && isFinite(video.duration) && video.duration > 0) {
                                     try { video.currentTime = video.duration; } catch (_) {}
                                 }
-                                const skipBtns = document.querySelectorAll(
-                                    '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button, .ytp-ad-skip-button-container button'
-                                );
-                                skipBtns.forEach(btn => {
-                                    try { btn.click(); } catch (_) {}
-                                });
                             }
+                            const skipBtns = document.querySelectorAll(
+                                '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button, .ytp-ad-skip-button-container button'
+                            );
+                            skipBtns.forEach(btn => {
+                                try { btn.click(); } catch (_) {}
+                            });
                         }
 
                         setInterval(defuseVideoAd, 150);
@@ -460,7 +740,6 @@ class AdBlockEngine {
                 } catch (e) {}
             `;
             webContents.executeJavaScript(ytCleanScript).catch(() => {});
-            return;
         }
 
         if (isTwitter) {
@@ -484,7 +763,6 @@ class AdBlockEngine {
                 } catch(e) {}
             `;
             webContents.executeJavaScript(xCleanScript).catch(() => {});
-            return;
         }
 
         if (isInstagram) {
@@ -506,9 +784,86 @@ class AdBlockEngine {
                 } catch(e) {}
             `;
             webContents.executeJavaScript(igCleanScript).catch(() => {});
-            return;
         }
 
+        // Universal Procedural Ad Observer & Empty Placeholder Scrubber (all pages)
+        const universalObserverScript = `
+            try {
+                if (!window.__fokk_observer_installed) {
+                    window.__fokk_observer_installed = true;
+
+                    function cleanAdNodes() {
+                        // 1. Collapse empty or blocked ad containers & iframes
+                        const adContainers = document.querySelectorAll(
+                            'ins.adsbygoogle, [id^="div-gpt-ad"], [id^="google_ads_iframe"], [data-ad-slot], [data-ad-unit], [data-dfp-ad], div[class*="ad-container"], div[class*="ad-wrapper"], div[class*="ad-slot"], div[class*="ad-banner"], div[class*="sponsored-post"]'
+                        );
+                        for (let i = 0; i < adContainers.length; i++) {
+                            const node = adContainers[i];
+                            if (node.style.display !== 'none') {
+                                node.style.setProperty('display', 'none', 'important');
+                                node.style.setProperty('height', '0px', 'important');
+                                node.style.setProperty('min-height', '0px', 'important');
+                                node.style.setProperty('max-height', '0px', 'important');
+                                node.style.setProperty('margin', '0px', 'important');
+                                node.style.setProperty('padding', '0px', 'important');
+                            }
+                        }
+
+                        // 2. Hide Google Search and Bing sponsored result cards
+                        const searchAds = document.querySelectorAll(
+                            '#tads, #tadsb, #bottomads, .uEierd, [data-text-ad], li.b_ad, .b_ad, [data-tag="adSlot"], cs-native-ad-card'
+                        );
+                        for (let i = 0; i < searchAds.length; i++) {
+                            const sNode = searchAds[i];
+                            if (sNode.style.display !== 'none') {
+                                sNode.style.setProperty('display', 'none', 'important');
+                            }
+                        }
+
+                        // 3. Amazon Sponsored Results Scrubber
+                        const amazonSponsored = document.querySelectorAll(
+                            '.s-result-item[data-asin]:has(span.puis-sponsored-label-text), div[data-asin]:has(span.puis-sponsored-label-text), div[data-component-type="sp-sponsored-result"]'
+                        );
+                        for (let i = 0; i < amazonSponsored.length; i++) {
+                            const aNode = amazonSponsored[i];
+                            if (aNode.style.display !== 'none') {
+                                aNode.style.setProperty('display', 'none', 'important');
+                            }
+                        }
+
+                        // 4. Defuse Anti-Adblock modal traps & restore body scrolling
+                        if (document.body && document.body.style && document.body.style.overflow === 'hidden') {
+                            const modal = document.querySelector('.adblock-overlay, .tp-backdrop, .fc-dialog-container, div[class*="adblock-modal"]');
+                            if (modal) {
+                                modal.remove();
+                                document.body.style.setProperty('overflow', 'auto', 'important');
+                            }
+                        }
+                    }
+
+                    // Initial run
+                    cleanAdNodes();
+
+                    // Throttled MutationObserver
+                    let cleanTimer = null;
+                    const observer = new MutationObserver(() => {
+                        if (cleanTimer) return;
+                        cleanTimer = requestAnimationFrame(() => {
+                            cleanTimer = null;
+                            cleanAdNodes();
+                        });
+                    });
+
+                    const target = document.body || document.documentElement;
+                    if (target) {
+                        observer.observe(target, { childList: true, subtree: true });
+                    }
+                }
+            } catch(e) {}
+        `;
+        webContents.executeJavaScript(universalObserverScript).catch(() => {});
+
+        // Inject deep AdShield engine scripts (with built-in domain safety guards)
         const combined = `
             try {
                 if (!window.__fokk_injected) {
