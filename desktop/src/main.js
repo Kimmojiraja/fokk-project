@@ -1,10 +1,14 @@
-const { app, BrowserWindow, ipcMain, session, nativeImage, webContents, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, session, nativeImage, webContents, dialog, shell, nativeTheme } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const { spawn } = require('child_process');
 const AdBlockEngine = require('./adblock');
 const newsService = require('./news');
+
+// Universal Stealth & Anti-Automation Flags (matching Brave / Un-automated Chromium)
+app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
+app.commandLine.appendSwitch('disable-features', 'ThirdPartyStoragePartitioning');
 
 // Paths
 const devAssetsDir = path.resolve(__dirname, '..', '..', 'app', 'src', 'main', 'assets');
@@ -65,7 +69,7 @@ function setupAdblockingForSession(sess) {
         const headers = { ...details.requestHeaders };
         // Ensure clean Google Chrome User-Agent is presented (fixes WhatsApp Web device linking)
         headers['User-Agent'] = CHROME_USER_AGENT;
-        if (headers['sec-ch-ua'] || details.url.includes('whatsapp.com')) {
+        if (!headers['sec-ch-ua'] || details.url.includes('whatsapp.com')) {
             headers['sec-ch-ua'] = '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"';
             headers['sec-ch-ua-mobile'] = '?0';
             headers['sec-ch-ua-platform'] = '"Linux"';
@@ -75,6 +79,14 @@ function setupAdblockingForSession(sess) {
 
     sess.webRequest.onBeforeRequest((details, callback) => {
         if (shieldEnabled && adblock.shouldBlock(details.url, details.resourceType)) {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                try {
+                    mainWindow.webContents.send('fokk-blocked-item', {
+                        webContentsId: details.webContentsId,
+                        url: details.url
+                    });
+                } catch (_) {}
+            }
             broadcastStatsThrottled();
             callback({ cancel: true });
         } else {
@@ -148,14 +160,77 @@ function createWindow() {
     // Setup network adblocker on default session
     setupAdblockingForSession(session.defaultSession);
 
-    // Inject cosmetic ad defusers on webviews across all partitions
+    // Inject cosmetic ad defusers and configure universal popup/OAuth handling
     app.on('web-contents-created', (event, contents) => {
-        if (contents.getType() === 'webview') {
+        const type = contents.getType();
+
+        if (type === 'webview') {
             setupAdblockingForSession(contents.session);
             contents.on('dom-ready', () => {
                 if (shieldEnabled) {
                     adblock.injectCosmeticFilters(contents);
                 }
+            });
+            contents.on('did-navigate-in-page', () => {
+                if (shieldEnabled) {
+                    adblock.injectCosmeticFilters(contents);
+                }
+            });
+
+            // Universal Window Open & OAuth Popup Handler matching Brave / Firefox
+            contents.setWindowOpenHandler((details) => {
+                const hasDimensions = details.features && (details.features.includes('width=') || details.features.includes('height='));
+                const isPopup = details.disposition === 'new-window' || hasDimensions;
+
+                if (isPopup) {
+                    return {
+                        action: 'allow',
+                        overrideBrowserWindowOptions: {
+                            width: 600,
+                            height: 720,
+                            autoHideMenuBar: true,
+                            backgroundColor: '#090A0C',
+                            webPreferences: {
+                                contextIsolation: true,
+                                nodeIntegration: false,
+                                sandbox: true
+                            }
+                        }
+                    };
+                }
+
+                // Standard link navigations (target="_blank") open as a new tab
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.executeJavaScript(`if (typeof createTab === 'function') createTab(${JSON.stringify(details.url)});`);
+                }
+                return { action: 'deny' };
+            });
+        }
+
+        // Child popup windows (OAuth dialogs, payment gateways, popups)
+        if (type === 'window' && mainWindow && contents !== mainWindow.webContents) {
+            setupAdblockingForSession(contents.session);
+            try { contents.session.setUserAgent(CHROME_USER_AGENT); } catch (_) {}
+            contents.on('dom-ready', () => {
+                if (shieldEnabled) {
+                    adblock.injectCosmeticFilters(contents);
+                }
+            });
+            contents.on('did-navigate-in-page', () => {
+                if (shieldEnabled) {
+                    adblock.injectCosmeticFilters(contents);
+                }
+            });
+            contents.setWindowOpenHandler(() => {
+                return {
+                    action: 'allow',
+                    overrideBrowserWindowOptions: {
+                        width: 600,
+                        height: 720,
+                        autoHideMenuBar: true,
+                        backgroundColor: '#090A0C'
+                    }
+                };
             });
         }
     });
@@ -232,6 +307,61 @@ ipcMain.on('fokk-open-hub', (event, hubId) => {
 
 ipcMain.on('fokk-get-tab-count', (event) => {
     event.returnValue = mainWindow ? 1 : 0;
+});
+
+// 2b. Native Theme Synchronization (Controls prefers-color-scheme across all websites)
+ipcMain.on('fokk-set-theme', (event, theme) => {
+    const themeSource = (theme === 'light') ? 'light' : 'dark';
+    nativeTheme.themeSource = themeSource;
+    webContents.getAllWebContents().forEach(wc => {
+        try { wc.send('fokk-theme-changed', themeSource); } catch (_) {}
+    });
+});
+
+ipcMain.on('fokk-get-theme', (event) => {
+    event.returnValue = nativeTheme.themeSource;
+});
+
+// 2c. Global Search Engine Synchronization & Persistence
+let activeSearchEngine = 'bing';
+function getEngineConfigFile() {
+    try {
+        return path.join(app.getPath('userData'), 'fokk_engine.json');
+    } catch (_) {
+        return null;
+    }
+}
+
+function loadSavedSearchEngine() {
+    try {
+        const file = getEngineConfigFile();
+        if (file && fs.existsSync(file)) {
+            const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
+            if (saved && saved.engine && typeof saved.engine === 'string') {
+                activeSearchEngine = saved.engine.toLowerCase();
+            }
+        }
+    } catch (_) {}
+}
+
+ipcMain.on('fokk-set-search-engine', (event, engineId) => {
+    if (engineId && typeof engineId === 'string') {
+        activeSearchEngine = engineId.toLowerCase();
+        try {
+            const file = getEngineConfigFile();
+            if (file) {
+                fs.writeFileSync(file, JSON.stringify({ engine: activeSearchEngine }), 'utf8');
+            }
+        } catch (_) {}
+        webContents.getAllWebContents().forEach(wc => {
+            try { wc.send('fokk-search-engine-updated', activeSearchEngine); } catch (_) {}
+        });
+    }
+});
+
+ipcMain.on('fokk-get-search-engine', (event) => {
+    loadSavedSearchEngine();
+    event.returnValue = activeSearchEngine;
 });
 
 // 3. Live News Feeds
@@ -351,6 +481,11 @@ ipcMain.handle('fokk-clear-data', async (event, options) => {
     } catch (e) {
         return { success: false, error: e.message };
     }
+});
+
+// 7a. Google & YouTube Session Security Guard (prevents foreign cookie jar corruption)
+ipcMain.handle('fokk-sync-google-session', async () => {
+    return { success: false, error: 'Foreign session import disabled to maintain cookie integrity' };
 });
 
 // 7b. Downloads Manager Handlers
@@ -656,6 +791,23 @@ app.whenReady().then(() => {
     ['global', 'in', 'uk', 'ca', 'de', 'au'].forEach(reg => {
         newsService.getLiveNews('all', reg).catch(() => {});
     });
+
+    // Ensure any previously corrupted foreign Google session cookies are cleared
+    try {
+        const persistSess = session.fromPartition('persist:fokk_default_session');
+        const googleHosts = ['google.com', 'google.co.uk', 'accounts.google.com', 'youtube.com', 'google.co.in'];
+        googleHosts.forEach(host => {
+            persistSess.cookies.get({ domain: host }).then(cookies => {
+                if (cookies && cookies.length > 0) {
+                    cookies.forEach(c => {
+                        // Purge corrupted Firefox tokens (AEC, NID, __Host-GAPS, LSID, etc.)
+                        const u = 'https://' + (c.domain.startsWith('.') ? c.domain.slice(1) : c.domain) + c.path;
+                        persistSess.cookies.remove(u, c.name).catch(() => {});
+                    });
+                }
+            }).catch(() => {});
+        });
+    } catch (_) {}
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();

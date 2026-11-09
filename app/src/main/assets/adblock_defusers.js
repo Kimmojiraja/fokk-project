@@ -16,9 +16,12 @@
                           host === 'instagram.com' || host.endsWith('.instagram.com') ||
                           host === 'threads.net' || host.endsWith('.threads.net') ||
                           host === 'facebook.com' || host.endsWith('.facebook.com') ||
-                          href.includes('//x.com') || href.includes('//twitter.com');
+                          host === 'youtube.com' || host.endsWith('.youtube.com') ||
+                          host === 'youtu.be' || host.endsWith('.youtu.be') ||
+                          href.includes('//x.com') || href.includes('//twitter.com') ||
+                          href.includes('//youtube.com') || href.includes('//youtu.be');
     if (isFragileSocial) {
-        return; // Zero tampering on X (Twitter), Instagram, etc.
+        return; // Zero tampering on YouTube, X (Twitter), Instagram, etc.
     }
     window.__fokk_defusers_active = true;
 

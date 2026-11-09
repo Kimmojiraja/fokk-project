@@ -144,8 +144,53 @@
             color: #F8FAFC;
             word-break: break-all;
         }
+
+        /* Light Theme Overrides */
+        @media (prefers-color-scheme: light) {
+            body { background-color: #F8FAFC; color: #0F172A; }
+            .header { border-bottom-color: #E2E8F0; }
+            .title { color: #0F172A; }
+            .subtitle { color: #64748B; }
+            .video-container { background: #000; border-color: #CBD5E1; }
+            .stats-card { background: #FFFFFF; border-color: #CBD5E1; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+            .torrent-name { color: #0F172A; }
+            .stat-item { background: #F8FAFC; border-color: #E2E8F0; }
+            .stat-label { color: #64748B; }
+            .progress-bar-bg { background: #E2E8F0; }
+        }
+
+        body.theme-light {
+            background-color: #F8FAFC !important;
+            color: #0F172A !important;
+        }
+        body.theme-light .header { border-bottom-color: #E2E8F0; }
+        body.theme-light .title { color: #0F172A; }
+        body.theme-light .subtitle { color: #64748B; }
+        body.theme-light .video-container { background: #000; border-color: #CBD5E1; }
+        body.theme-light .stats-card { background: #FFFFFF; border-color: #CBD5E1; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+        body.theme-light .torrent-name { color: #0F172A; }
+        body.theme-light .stat-item { background: #F8FAFC; border-color: #E2E8F0; }
+        body.theme-light .stat-label { color: #64748B; }
+        body.theme-light .progress-bar-bg { background: #E2E8F0; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+    <script>
+        (function() {
+            function syncTheme() {
+                const saved = localStorage.getItem('fokk_theme');
+                if (saved === 'light' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+                    document.body.classList.add('theme-light');
+                } else {
+                    document.body.classList.remove('theme-light');
+                }
+            }
+            syncTheme();
+            window.addEventListener('storage', syncTheme);
+            if (window.matchMedia) {
+                window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', syncTheme);
+            }
+        })();
+    </script>
 </head>
 <body>
     <div class="header">

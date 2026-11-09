@@ -3,6 +3,16 @@
 (function() {
     'use strict';
 
+    // Immediate Theme Initialization
+    try {
+        const savedTheme = localStorage.getItem('fokk_theme') || 'dark';
+        if (savedTheme === 'light') {
+            document.body.classList.add('theme-light');
+        } else {
+            document.body.classList.remove('theme-light');
+        }
+    } catch (_) {}
+
     // 1. Curated 4K Wallpapers (Pre-installed Sailboat Collection + Landscapes)
     const CURATED_WALLPAPERS = [
         {
@@ -450,19 +460,61 @@
     };
 
     function getActiveEngine() {
-        const id = localStorage.getItem('fokk_search_engine') || 'google';
-        return SEARCH_ENGINES[id] || SEARCH_ENGINES.google;
+        let id = 'bing';
+        try {
+            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.getSearchEngine === 'function') {
+                id = window.FokkShieldBridge.getSearchEngine() || id;
+            } else {
+                id = localStorage.getItem('fokk_search_engine') || id;
+            }
+        } catch (_) {
+            id = localStorage.getItem('fokk_search_engine') || 'bing';
+        }
+        id = (id || 'bing').toLowerCase();
+        return SEARCH_ENGINES[id] || SEARCH_ENGINES.bing;
     }
 
-    function updateSearchEngineUI() {
+    function updateSearchEngineUI(engineId) {
+        if (engineId && SEARCH_ENGINES[engineId.toLowerCase()]) {
+            try {
+                localStorage.setItem('fokk_search_engine', engineId.toLowerCase());
+            } catch (_) {}
+        }
         const engine = getActiveEngine();
         if (searchEngineIcon) {
             searchEngineIcon.innerHTML = engine.iconSvg;
-            searchEngineIcon.title = engine.name;
+            searchEngineIcon.title = `${engine.name} (Click to switch engine)`;
         }
         if (searchInput) {
             searchInput.placeholder = `Search with ${engine.name} or enter address`;
         }
+    }
+
+    // Expose on window for webview script injection & preload bridge
+    window.updateSearchEngineUI = updateSearchEngineUI;
+
+    // Listen for custom bridge event
+    window.addEventListener('fokk-search-engine-change', (e) => {
+        if (e.detail && e.detail.engineId) {
+            updateSearchEngineUI(e.detail.engineId);
+        }
+    });
+
+    // Interactive Search Engine Switcher on Icon Click
+    if (searchEngineIcon) {
+        searchEngineIcon.style.cursor = 'pointer';
+        searchEngineIcon.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const keys = Object.keys(SEARCH_ENGINES);
+            const cur = getActiveEngine();
+            const curKey = keys.find(k => SEARCH_ENGINES[k].name === cur.name) || 'bing';
+            const nextIdx = (keys.indexOf(curKey) + 1) % keys.length;
+            const nextKey = keys[nextIdx];
+            updateSearchEngineUI(nextKey);
+            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.setSearchEngine === 'function') {
+                window.FokkShieldBridge.setSearchEngine(nextKey);
+            }
+        });
     }
 
     // 3. Search Bar Handling
@@ -483,7 +535,7 @@
                 targetUrl = getActiveEngine().url + encodeURIComponent(query);
             }
 
-            navigateTo(targetUrl);
+            window.location.href = targetUrl;
         });
     }
 
@@ -736,6 +788,115 @@
         }
     }
 
+    // Helper to produce authentic branded publisher badges
+    function getPublisherBadge(sourceName, sourceIcon, storyUrl) {
+        if (sourceIcon && typeof sourceIcon === 'string' && sourceIcon.trim().length > 0) {
+            return `<img class="source-icon" src="${sourceIcon}" alt="" onerror="this.outerHTML=''">`;
+        }
+
+        const name = (sourceName || '').toLowerCase().trim();
+        const url = (storyUrl || '').toLowerCase();
+
+        // 1. BBC
+        if (name.includes('bbc') || url.includes('bbc.')) {
+            return `<span class="source-badge-icon" style="background:#B91C1C;color:#FFF;font-size:8px;font-weight:900;letter-spacing:0.5px;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">BBC</span>`;
+        }
+        // 2. CNN
+        if (name.includes('cnn') || url.includes('cnn.')) {
+            return `<span class="source-badge-icon" style="background:#CC0000;color:#FFF;font-size:8.5px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">CNN</span>`;
+        }
+        // 3. NPR
+        if (name.includes('npr') || url.includes('npr.')) {
+            return `<span class="source-badge-icon" style="background:#0F172A;color:#FFF;font-size:8px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;border-left:2px solid #3B82F6;border-right:2px solid #EF4444;">npr</span>`;
+        }
+        // 4. ABC
+        if (name.includes('abc') || url.includes('abcnews.')) {
+            return `<span class="source-badge-icon" style="background:#000000;color:#FFF;font-size:9px;font-weight:800;width:17px;height:17px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;">abc</span>`;
+        }
+        // 5. Mint
+        if (name.includes('mint') || url.includes('livemint.')) {
+            return `<span class="source-badge-icon" style="background:#FF9900;color:#000;font-size:8.5px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">mint</span>`;
+        }
+        // 6. Business Standard
+        if (name.includes('business standard') || name === 'bs' || url.includes('business-standard.')) {
+            return `<span class="source-badge-icon" style="background:#A51C30;color:#FFF;font-size:8.5px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">BS</span>`;
+        }
+        // 7. The Hindu
+        if (name.includes('the hindu') || url.includes('thehindu.')) {
+            return `<span class="source-badge-icon" style="background:#1E3A8A;color:#FFF;font-size:8.5px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">TH</span>`;
+        }
+        // 8. The Indian Express
+        if (name.includes('indian express') || url.includes('indianexpress.')) {
+            return `<span class="source-badge-icon" style="background:#DC2626;color:#FFF;font-size:8.5px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">IE</span>`;
+        }
+        // 9. The Telegraph
+        if (name.includes('telegraph') || url.includes('telegraphindia.')) {
+            return `<span class="source-badge-icon" style="background:#334155;color:#FFF;font-size:8.5px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">TT</span>`;
+        }
+        // 10. The Economic Times
+        if (name.includes('economic times') || url.includes('economictimes.')) {
+            return `<span class="source-badge-icon" style="background:#B91C1C;color:#FFF;font-size:8.5px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">ET</span>`;
+        }
+        // 11. Reuters
+        if (name.includes('reuters') || url.includes('reuters.')) {
+            return `<span class="source-badge-icon" style="background:#F97316;color:#FFF;font-size:9px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">R</span>`;
+        }
+        // 12. TechCrunch
+        if (name.includes('techcrunch') || url.includes('techcrunch.')) {
+            return `<span class="source-badge-icon" style="background:#00A562;color:#FFF;font-size:8.5px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">TC</span>`;
+        }
+        // 13. Wired
+        if (name.includes('wired') || url.includes('wired.')) {
+            return `<span class="source-badge-icon" style="background:#111827;color:#FFF;font-size:9px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">W</span>`;
+        }
+        // 14. NDTV
+        if (name.includes('ndtv') || url.includes('ndtv.')) {
+            return `<span class="source-badge-icon" style="background:#E11D48;color:#FFF;font-size:7.5px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">NDTV</span>`;
+        }
+        // 15. Associated Press / AP
+        if (name.includes('associated press') || name.includes('ap news') || url.includes('apnews.')) {
+            return `<span class="source-badge-icon" style="background:#000000;color:#FFF;font-size:8.5px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;border-top:2px solid #EF4444;">AP</span>`;
+        }
+        // 16. The Guardian
+        if (name.includes('guardian') || url.includes('theguardian.')) {
+            return `<span class="source-badge-icon" style="background:#052962;color:#FFF;font-size:9px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">G</span>`;
+        }
+        // 17. Bloomberg
+        if (name.includes('bloomberg') || url.includes('bloomberg.')) {
+            return `<span class="source-badge-icon" style="background:#1D4ED8;color:#FFF;font-size:9px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">B</span>`;
+        }
+        // 18. Firstpost
+        if (name.includes('firstpost') || url.includes('firstpost.')) {
+            return `<span class="source-badge-icon" style="background:#D97706;color:#FFF;font-size:8.5px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">FP</span>`;
+        }
+        // 19. Space.com
+        if (name.includes('space.com') || url.includes('space.com')) {
+            return `<span class="source-badge-icon" style="background:#2563EB;color:#FFF;font-size:9px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">S</span>`;
+        }
+        // 20. Free Press Journal
+        if (name.includes('free press') || url.includes('freepressjournal.')) {
+            return `<span class="source-badge-icon" style="background:#DC2626;color:#FFF;font-size:9px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">F</span>`;
+        }
+        // 21. Business Line
+        if (name.includes('business line') || url.includes('thehindubusinessline.')) {
+            return `<span class="source-badge-icon" style="background:#2563EB;color:#FFF;font-size:8px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">BL</span>`;
+        }
+        // 22. Mid-Day
+        if (name.includes('mid-day') || url.includes('mid-day.')) {
+            return `<span class="source-badge-icon" style="background:#0284C7;color:#FFF;font-size:8px;font-weight:900;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">MD</span>`;
+        }
+
+        // Generic fallback with derived color
+        const colors = ['#0284C7', '#7C3AED', '#059669', '#DC2626', '#D97706', '#4F46E5', '#0D9488'];
+        let hash = 0;
+        const cleanName = (sourceName || 'News').trim();
+        for (let i = 0; i < cleanName.length; i++) hash = (hash * 31 + cleanName.charCodeAt(i)) & 0xffff;
+        const color = colors[Math.abs(hash) % colors.length];
+        const initials = cleanName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'N';
+
+        return `<span class="source-badge-icon" style="background:${color};color:#FFF;font-size:8.5px;font-weight:800;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">${initials}</span>`;
+    }
+
     // 5. Render Stories (Firefox Style Grid - 8 Default or 16 Extended)
     function renderStories(items) {
         if (!storiesGrid) return;
@@ -745,6 +906,7 @@
         storiesGrid.innerHTML = list.map((story, idx) => {
             const fallbackImg = DEFAULT_STORY_IMAGES[idx % DEFAULT_STORY_IMAGES.length];
             const imgSrc = story.image || story.img || fallbackImg;
+            const badgeHtml = getPublisherBadge(story.source, story.sourceIcon, story.url);
             return `
                 <div class="firefox-card" data-url="${story.url}">
                     <div class="card-img-wrap">
@@ -753,7 +915,7 @@
                     <div class="card-body">
                         <h3 class="card-headline">${story.title}</h3>
                         <div class="card-source-bar">
-                            ${story.sourceIcon ? `<img class="source-icon" src="${story.sourceIcon}" alt="">` : ''}
+                            ${badgeHtml}
                             <span class="source-name">${story.source || 'News'}</span>
                         </div>
                     </div>

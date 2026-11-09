@@ -64,7 +64,7 @@
         "AppImage"
       ],
       "category": "Network;WebBrowser",
-      "icon": "assets/icon.png",
+      "icon": "build/icons",
       "maintainer": "Fokk Shield Team <rajakimmoji@gmail.com>"
     },
     "win": {

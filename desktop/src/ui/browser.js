@@ -71,7 +71,12 @@ const OMNIBOX_ENGINES = {
     }
 };
 
-let currentEngine = localStorage.getItem('fokk_search_engine') || 'google';
+let currentEngine = 'bing';
+try {
+    currentEngine = ipcRenderer.sendSync('fokk-get-search-engine') || localStorage.getItem('fokk_search_engine') || 'bing';
+} catch (_) {
+    currentEngine = localStorage.getItem('fokk_search_engine') || 'bing';
+}
 
 // Clean Professional Toast Notifications (Zero Emojis)
 function showToast(message, isAlert = false) {
@@ -147,7 +152,10 @@ function createTab(url = START_PAGE_URL, options = {}) {
 
     webview.addEventListener('did-start-loading', () => {
         const t = tabs.find(x => x.id === tabId);
-        if (t) t.blockedCount = 0;
+        if (t) {
+            t.blockedCount = 0;
+            if (t.blockedUrls) t.blockedUrls.clear();
+        }
         if (activeTabId === tabId) {
             btnReload.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
             if (shieldCountText) shieldCountText.textContent = '0';
@@ -157,12 +165,21 @@ function createTab(url = START_PAGE_URL, options = {}) {
     webview.addEventListener('dom-ready', () => {
         const currentTheme = localStorage.getItem('fokk_theme') || 'dark';
         const isLight = currentTheme === 'light';
-        webview.executeJavaScript(`
-            if (document.body) {
-                document.body.classList.toggle('theme-light', ${isLight});
-                try { localStorage.setItem('fokk_theme', '${currentTheme}'); } catch(_) {}
-            }
-        `).catch(() => {});
+        const u = webview.getURL ? webview.getURL() : '';
+        if (!u || u.startsWith('file:') || u.startsWith('fokk:')) {
+            webview.executeJavaScript(`
+                if (document.body) {
+                    document.body.classList.toggle('theme-light', ${isLight});
+                    try { localStorage.setItem('fokk_theme', '${currentTheme}'); } catch(_) {}
+                }
+                try {
+                    localStorage.setItem('fokk_search_engine', '${currentEngine}');
+                    if (typeof window.updateSearchEngineUI === 'function') {
+                        window.updateSearchEngineUI('${currentEngine}');
+                    }
+                } catch(_) {}
+            `).catch(() => {});
+        }
     });
 
     webview.addEventListener('did-stop-loading', () => {
@@ -202,12 +219,15 @@ function createTab(url = START_PAGE_URL, options = {}) {
     });
 
     webview.addEventListener('new-window', (e) => {
+        if (e.disposition === 'new-window' || (e.options && (e.options.width || e.options.height))) {
+            return;
+        }
         createTab(e.url, { isPrivate });
     });
 
     viewsContainer.appendChild(webview);
 
-    tabs.push({ id: tabId, el: tabEl, webview: webview, isPrivate: isPrivate, blockedCount: 0 });
+    tabs.push({ id: tabId, el: tabEl, webview: webview, isPrivate: isPrivate, blockedCount: 0, blockedUrls: new Set() });
     activateTab(tabId);
 }
 
@@ -312,7 +332,8 @@ const omniboxEngineDropdown = document.getElementById('omniboxEngineDropdown');
 function setOmniboxEngine(engineId) {
     if (!OMNIBOX_ENGINES[engineId]) return;
     currentEngine = engineId;
-    localStorage.setItem('fokk_search_engine', engineId);
+    try { localStorage.setItem('fokk_search_engine', engineId); } catch (_) {}
+    try { ipcRenderer.send('fokk-set-search-engine', engineId); } catch (_) {}
 
     if (omniboxEngineIcon) {
         omniboxEngineIcon.innerHTML = OMNIBOX_ENGINES[engineId].iconSvg;
@@ -327,13 +348,34 @@ function setOmniboxEngine(engineId) {
 
     // Also notify active start pages to update their search placeholder
     tabs.forEach(t => {
-        t.webview.executeJavaScript(`
-            if (typeof updateSearchEngineUI === 'function') {
-                updateSearchEngineUI('${engineId}');
-            }
-        `).catch(() => {});
+        if (t.webview) {
+            t.webview.executeJavaScript(`
+                try {
+                    localStorage.setItem('fokk_search_engine', '${engineId}');
+                    if (typeof window.updateSearchEngineUI === 'function') {
+                        window.updateSearchEngineUI('${engineId}');
+                    }
+                } catch (_) {}
+            `).catch(() => {});
+        }
     });
 }
+
+ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
+    if (engineId && OMNIBOX_ENGINES[engineId] && engineId !== currentEngine) {
+        currentEngine = engineId;
+        try { localStorage.setItem('fokk_search_engine', engineId); } catch (_) {}
+        if (omniboxEngineIcon) {
+            omniboxEngineIcon.innerHTML = OMNIBOX_ENGINES[engineId].iconSvg;
+        }
+        updateOmnibox(getActiveWebview()?.getURL?.() || '');
+        if (omniboxEngineDropdown) {
+            omniboxEngineDropdown.querySelectorAll('.engine-item').forEach(item => {
+                item.classList.toggle('selected', item.getAttribute('data-engine') === engineId);
+            });
+        }
+    }
+});
 
 if (omniboxEngineSelector && omniboxEngineDropdown) {
     omniboxEngineSelector.addEventListener('click', (e) => {
@@ -649,17 +691,35 @@ function applyTheme(themeName) {
     if (actThemeToggleText) {
         actThemeToggleText.textContent = isLight ? 'Dark Mode' : 'Light Mode';
     }
+    const themeIconSvg = actThemeToggle ? actThemeToggle.querySelector('svg') : null;
+    if (themeIconSvg) {
+        if (isLight) {
+            // Moon icon to switch to dark mode
+            themeIconSvg.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>';
+        } else {
+            // Sun icon to switch to light mode
+            themeIconSvg.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+        }
+    }
     localStorage.setItem('fokk_theme', themeName);
 
-    // Sync to all webviews (including Start Page)
+    // Notify Electron main process to update nativeTheme (prefers-color-scheme across all websites)
+    try {
+        ipcRenderer.send('fokk-set-theme', themeName);
+    } catch (_) {}
+
+    // Sync theme class strictly to internal pages (start.html, etc.)
     tabs.forEach(t => {
         if (t.webview) {
-            t.webview.executeJavaScript(`
-                if (document.body) {
-                    document.body.classList.toggle('theme-light', ${isLight});
-                    try { localStorage.setItem('fokk_theme', '${themeName}'); } catch(_) {}
-                }
-            `).catch(() => {});
+            const u = t.webview.getURL ? t.webview.getURL() : '';
+            if (!u || u.startsWith('file:') || u.startsWith('fokk:')) {
+                t.webview.executeJavaScript(`
+                    if (document.body) {
+                        document.body.classList.toggle('theme-light', ${isLight});
+                        try { localStorage.setItem('fokk_theme', '${themeName}'); } catch(_) {}
+                    }
+                `).catch(() => {});
+            }
         }
     });
 }
@@ -673,7 +733,7 @@ if (actThemeToggle) {
         const cur = localStorage.getItem('fokk_theme') || 'dark';
         const next = cur === 'light' ? 'dark' : 'light';
         applyTheme(next);
-        showToast(next === 'light' ? 'Light Theme Applied' : 'Stealth Dark Mode Restored');
+        showToast(next === 'light' ? 'Light Theme Applied' : 'Dark Mode Restored');
     };
 }
 
@@ -1655,15 +1715,46 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
-// Real-time AdBlock Stats from Electron Main Process
+// Real-time Targeted Block Event Handler (deduplicated per tab)
+ipcRenderer.on('fokk-blocked-item', (event, data) => {
+    if (!data || !data.url) return;
+    let targetTab = null;
+    if (data.webContentsId) {
+        targetTab = tabs.find(t => {
+            try {
+                return t.webview && typeof t.webview.getWebContentsId === 'function' && t.webview.getWebContentsId() === data.webContentsId;
+            } catch (_) { return false; }
+        });
+    }
+    if (!targetTab) {
+        targetTab = tabs.find(t => t.id === activeTabId);
+    }
+    if (!targetTab) return;
+
+    if (!targetTab.blockedUrls) targetTab.blockedUrls = new Set();
+
+    let key = data.url;
+    try {
+        const u = new URL(data.url);
+        key = u.origin + u.pathname;
+    } catch (_) {}
+
+    if (!targetTab.blockedUrls.has(key)) {
+        targetTab.blockedUrls.add(key);
+        targetTab.blockedCount = targetTab.blockedUrls.size;
+        if (targetTab.id === activeTabId && shieldCountText) {
+            const currentUrl = (typeof targetTab.webview.getURL === 'function' ? targetTab.webview.getURL() : '') || '';
+            shieldCountText.textContent = currentUrl.startsWith('http') ? String(targetTab.blockedCount) : '0';
+        }
+    }
+});
+
+// Real-time Global AdBlock Stats from Electron Main Process
 ipcRenderer.on('fokk-stats-updated', (event, stats) => {
     const active = tabs.find(t => t.id === activeTabId);
     if (active && active.webview) {
         const u = (typeof active.webview.getURL === 'function' ? active.webview.getURL() : '') || '';
-        if (u.startsWith('http')) {
-            active.blockedCount = (active.blockedCount || 0) + 1;
-            if (shieldCountText) shieldCountText.textContent = active.blockedCount;
-        } else {
+        if (!u.startsWith('http')) {
             active.blockedCount = 0;
             if (shieldCountText) shieldCountText.textContent = '0';
         }

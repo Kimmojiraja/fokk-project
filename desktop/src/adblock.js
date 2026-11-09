@@ -7,6 +7,8 @@ class AdBlockEngine {
         this.blockedDomains = new Set();
         this.whitelistedDomains = new Set();
         this.customBlockedDomains = new Set();
+        this.genericCosmeticRules = [];
+        this.domainCosmeticRules = new Map();
         this.blockedKeywords = [
             '/pagead/',
             '/api/stats/ads',
@@ -38,21 +40,45 @@ class AdBlockEngine {
     }
 
     init() {
-        // 1. Curated Adblock Rules
+        // 1. Curated Adblock Rules (Network domains + Cosmetic rules)
         const rulesPath = path.join(this.assetsDir, 'adblock_rules_curated.txt');
         if (fs.existsSync(rulesPath)) {
             try {
                 const lines = fs.readFileSync(rulesPath, 'utf8').split('\n');
-                for (const line of lines) {
-                    const trimmed = line.trim();
+                for (let i = 0; i < lines.length; i++) {
+                    const trimmed = lines[i].trim();
+                    if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('@@')) continue;
+
                     if (trimmed.startsWith('||') && trimmed.includes('^')) {
                         const domain = trimmed.substring(2, trimmed.indexOf('^')).toLowerCase();
                         if (domain && domain.length > 3 && !domain.includes('/')) {
                             this.blockedDomains.add(domain);
                         }
+                    } else if (trimmed.startsWith('##')) {
+                        const sel = trimmed.substring(2).trim();
+                        if (sel && !sel.includes(':has-text') && !sel.includes(':xpath')) {
+                            this.genericCosmeticRules.push(sel);
+                        }
+                    } else if (trimmed.includes('##') && !trimmed.startsWith('#')) {
+                        const parts = trimmed.split('##');
+                        const domains = parts[0].split(',');
+                        const sel = parts[1].trim();
+                        if (sel && !sel.includes(':has-text') && !sel.includes(':xpath')) {
+                            for (let j = 0; j < domains.length; j++) {
+                                const d = domains[j].trim().toLowerCase();
+                                if (d) {
+                                    let arr = this.domainCosmeticRules.get(d);
+                                    if (!arr) {
+                                        arr = [];
+                                        this.domainCosmeticRules.set(d, arr);
+                                    }
+                                    arr.push(sel);
+                                }
+                            }
+                        }
                     }
                 }
-                console.log(`[AdBlock] Loaded ${this.blockedDomains.size} curated domain block rules.`);
+                console.log(`[AdBlock] Loaded ${this.blockedDomains.size} domains, ${this.genericCosmeticRules.length} generic cosmetic rules, and ${this.domainCosmeticRules.size} domain-specific rules.`);
             } catch (err) {
                 console.error('[AdBlock] Error reading curated rules:', err);
             }
@@ -111,14 +137,20 @@ class AdBlockEngine {
 
     recordBlock(url) {
         const now = Date.now();
-        const last = this.recentBlockedUrls.get(url);
-        // Only increment count if not repeatedly spammed within last 500ms
-        if (!last || (now - last) > 500) {
+        let key = url;
+        try {
+            const u = new URL(url);
+            key = u.origin + u.pathname;
+        } catch (_) {}
+
+        const last = this.recentBlockedUrls.get(key);
+        // Deduplicate and suppress repeated retry loops of the same endpoint within 30 seconds
+        if (!last || (now - last) > 30000) {
             this.blockedCount++;
-            this.recentBlockedUrls.set(url, now);
-            if (this.recentBlockedUrls.size > 300) {
+            this.recentBlockedUrls.set(key, now);
+            if (this.recentBlockedUrls.size > 500) {
                 for (const [k, v] of this.recentBlockedUrls) {
-                    if (now - v > 5000) this.recentBlockedUrls.delete(k);
+                    if (now - v > 60000) this.recentBlockedUrls.delete(k);
                 }
             }
         }
@@ -198,23 +230,19 @@ class AdBlockEngine {
 
         if (isMedia) return false;
 
-        // Extract hostname
+        // Extract hostname and full subdomain walk
         try {
             const parsed = new URL(url);
             const host = parsed.hostname.toLowerCase();
 
-            // Check Set of curated domains
-            if (this.blockedDomains.has(host)) {
-                return this.recordBlock(url);
-            }
-
-            // Check parent domain
-            const parts = host.split('.');
-            if (parts.length > 2) {
-                const parentDomain = parts.slice(1).join('.');
-                if (this.blockedDomains.has(parentDomain)) {
+            let current = host;
+            while (current.includes('.')) {
+                if (this.blockedDomains.has(current)) {
                     return this.recordBlock(url);
                 }
+                const dotIdx = current.indexOf('.');
+                current = current.substring(dotIdx + 1);
+                if (!current.includes('.')) break;
             }
         } catch (_) {}
 
@@ -232,92 +260,167 @@ class AdBlockEngine {
         return {
             blocked: this.blockedCount,
             blockedCount: this.blockedCount,
-            activeRules: this.blockedDomains.size + this.customBlockedDomains.size + this.blockedKeywords.length,
+            activeRules: this.blockedDomains.size + this.customBlockedDomains.size + this.genericCosmeticRules.length + this.domainCosmeticRules.size,
             defusersEnabled: true
         };
+    }
+
+    getCosmeticCSS(hostname) {
+        const selectors = [];
+        if (hostname) {
+            let cur = hostname.toLowerCase();
+            while (cur.includes('.')) {
+                const rules = this.domainCosmeticRules.get(cur);
+                if (rules && rules.length > 0) selectors.push(...rules);
+                const dotIdx = cur.indexOf('.');
+                cur = cur.substring(dotIdx + 1);
+                if (!cur.includes('.')) break;
+            }
+        }
+
+        // Dedicated first-class sponsored & ad rules for major platforms
+        if (hostname.includes('google.')) {
+            selectors.push(
+                '#tads', '#tadsb', '#bottomads', '.uEierd', '[data-text-ad]',
+                'div[aria-label="Ads"]', 'div[aria-label="Sponsored"]', 'div:has(> [data-text-ad])',
+                'div:has(> div > [data-text-ad])', '.commercial-unit-mobile-bottom', '.commercial-unit-desktop-top'
+            );
+        } else if (hostname.includes('bing.')) {
+            selectors.push(
+                '.b_ad', '.b_adSlug', '.b_adBottom', '.text-ads-container', 'a[href*="/aclick?ld="]',
+                'li:has(.b_ad)', 'li:has(.b_adSlug)', 'div[aria-label="Sponsored"]', 'cs-native-ad-card'
+            );
+        } else if (hostname.includes('youtube.') || hostname.includes('youtu.be')) {
+            selectors.push(
+                '#masthead-ad', 'ytd-ad-slot-renderer', 'ytd-in-feed-ad-layout-renderer',
+                'ytd-banner-promo-renderer', 'ytd-promoted-video-renderer', 'ytd-display-ad-renderer',
+                'ytd-statement-banner-renderer', '.ytd-action-companion-ad-renderer', 'ytd-mealbar-promo-renderer',
+                'ytd-promoted-sparkles-web-renderer', 'ytd-promoted-sparkles-text-search-renderer',
+                'ytd-compact-promoted-video-renderer', 'ytd-compact-promoted-item-renderer', 'ytd-search-pyv-renderer',
+                'ytd-rich-section-renderer:has(ytd-statement-banner-renderer)',
+                'ytd-rich-item-renderer:has(ytd-ad-slot-renderer)', 'ytd-rich-item-renderer:has(ytd-in-feed-ad-layout-renderer)',
+                'ytd-rich-item-renderer:has(#ad-badge)', 'ytd-rich-item-renderer:has(.badge-shape-wiz--thumbnail-badge)',
+                'ytd-rich-item-renderer:has([aria-label*="Sponsored" i])', 'ytd-rich-item-renderer:has(.badge-style-type-ad)',
+                'ytd-video-renderer:has(ytd-ad-slot-renderer)', 'ytd-video-renderer:has([aria-label*="Sponsored" i])',
+                'ytd-video-renderer:has(.badge-style-type-ad)', 'ytd-reel-video-renderer:has(ytd-ad-slot-renderer)',
+                'ytd-reel-video-renderer:has(.ytd-ad-slot-renderer)', '.ytp-ad-overlay-container',
+                '.ytp-ad-message-container', '.ytp-ad-text', '.ytp-ad-preview-text', '.ytp-ad-progress-list',
+                'div[class*="ad-showing"] .ytp-ad-text', '#shopping-timely-shelf',
+                '#shorts-inner-container > .ytd-shorts:has(> .ytd-reel-video-renderer > ytd-ad-slot-renderer)',
+                '#contents > ytd-rich-item-renderer:has(> ytd-ad-slot-renderer)',
+                'ytd-rich-item-renderer:has(> #content > ytd-ad-slot-renderer)',
+                '.ytd-rich-grid-renderer:has(ytd-ad-slot-renderer)'
+            );
+        } else if (hostname.includes('amazon.')) {
+            selectors.push(
+                '.a-cardui[class*="_new-detail-faceout-box_"]:has(.dynamicSponsoredLabelClass)',
+                'div[class*="SponsoredProducts"]', 'div[data-a-carousel-options*="isSponsoredProduct"]',
+                'div[data-component-type="sp-sponsored-result"]', 'div[class*="sp-result-item"]'
+            );
+        }
+
+        // Global curated generic ad selectors
+        if (this.genericCosmeticRules && this.genericCosmeticRules.length > 0) {
+            selectors.push(...this.genericCosmeticRules);
+        }
+
+        if (selectors.length === 0) return '';
+        const unique = Array.from(new Set(selectors));
+        return unique.join(',\n') + ' { display: none !important; visibility: hidden !important; height: 0 !important; min-height: 0 !important; }';
     }
 
     injectCosmeticFilters(webContents) {
         if (!webContents || webContents.isDestroyed()) return;
         const currentUrl = (webContents.getURL ? webContents.getURL() : '').toLowerCase();
-        const isYouTube = currentUrl.includes('youtube.com') || currentUrl.includes('youtu.be');
-        const isTwitter = currentUrl.includes('twitter.com') || currentUrl.includes('x.com');
-        const isInstagram = currentUrl.includes('instagram.com');
+        let hostname = '';
+        try { hostname = new URL(currentUrl).hostname.toLowerCase(); } catch(_) {}
+
+        // 1. Instant Native Chromium CSS Injection (applies across initial load and dynamic elements)
+        const cosmeticCss = this.getCosmeticCSS(hostname);
+        if (cosmeticCss) {
+            webContents.insertCSS(cosmeticCss).catch(() => {});
+        }
+
+        const isYouTube = hostname.includes('youtube.com') || hostname.includes('youtu.be');
+        const isTwitter = hostname.includes('twitter.com') || hostname.includes('x.com');
+        const isInstagram = hostname.includes('instagram.com');
 
         if (isYouTube) {
-            // Targeted YouTube Ultra-Shield Adblock (uBlock Origin pattern):
-            // 1. CSS Ad Cleanup
-            // 2. JSON Player Response Sanitizer (strips adPlacements, playerAds, and adSlots)
-            // 3. Native Skip Trigger (Zero playback speed manipulation / zero 16x tampering)
-            // ZERO tampering with Element.prototype.getBoundingClientRect/offsetHeight, preserving YouTube logo, sidebar, and player settings menu.
+            // Targeted YouTube Ultra-Shield Adblock (uBlock Origin Architecture):
+            // 1. CSS Ad Cleanup (Already injected natively via insertCSS above)
+            // 2. Initial + In-Flight SPA Player Response Sanitizer (strips adPlacements, playerAds, and adSlots)
+            //    Safely targets player responses only, NEVER touching /youtubei/v1/guide (preserves sidebar & logos)
+            // 3. Instant Video Ad Skip Trigger (0ms ad jump & auto skip button click)
+            // 4. Procedural Sponsored Card Scrubber (cleans home feed, search, and shorts)
             const ytCleanScript = `
                 try {
                     if (!window.__fokk_yt_cleaned) {
                         window.__fokk_yt_cleaned = true;
 
-                        // 1. CSS Ad Cleanup
-                        const style = document.createElement('style');
-                        style.id = '__fokk_yt_style';
-                        style.textContent = \`
-                            #masthead-ad,
-                            ytd-ad-slot-renderer,
-                            ytd-in-feed-ad-layout-renderer,
-                            ytd-banner-promo-renderer,
-                            ytd-promoted-video-renderer,
-                            ytd-display-ad-renderer,
-                            ytd-statement-banner-renderer,
-                            .ytd-action-companion-ad-renderer,
-                            ytd-mealbar-promo-renderer,
-                            ytd-rich-item-renderer:has(ytd-ad-slot-renderer),
-                            ytd-rich-item-renderer:has(ytd-in-feed-ad-layout-renderer),
-                            ytd-rich-item-renderer:has([aria-label*="Sponsored" i]),
-                            ytd-rich-item-renderer:has(.badge-style-type-ad),
-                            ytd-video-renderer:has([aria-label*="Sponsored" i]),
-                            ytd-video-renderer:has(.badge-style-type-ad),
-                            .ytp-ad-overlay-container,
-                            .ytp-ad-message-container,
-                            .ytp-ad-text,
-                            .ytp-ad-preview-text,
-                            .ytp-ad-progress-list,
-                            div[class*="ad-showing"] .ytp-ad-text {
-                                display: none !important;
-                            }
-                        \`;
-                        (document.head || document.documentElement).appendChild(style);
-
-                        // 2. Player Response Stripper
                         const sanitizeYtObject = (obj) => {
                             if (!obj || typeof obj !== 'object') return obj;
                             if (obj.adPlacements) delete obj.adPlacements;
                             if (obj.playerAds) delete obj.playerAds;
                             if (obj.adSlots) delete obj.adSlots;
-                            if (obj.playerResponse) {
-                                if (obj.playerResponse.adPlacements) delete obj.playerResponse.adPlacements;
-                                if (obj.playerResponse.playerAds) delete obj.playerResponse.playerAds;
-                                if (obj.playerResponse.adSlots) delete obj.playerResponse.adSlots;
+                            if (obj.adBreaks) delete obj.adBreaks;
+                            if (obj.adPlacementConfig) delete obj.adPlacementConfig;
+                            if (obj.playerConfig && obj.playerConfig.adConfig) delete obj.playerConfig.adConfig;
+                            if (obj.playerResponse && typeof obj.playerResponse === 'object') {
+                                sanitizeYtObject(obj.playerResponse);
                             }
                             return obj;
                         };
 
+                        // 1. Initial Page Load
                         if (window.ytInitialPlayerResponse) {
                             sanitizeYtObject(window.ytInitialPlayerResponse);
                         }
+                        try {
+                            let _ytInitialPlayerResponse = window.ytInitialPlayerResponse;
+                            Object.defineProperty(window, 'ytInitialPlayerResponse', {
+                                get: () => _ytInitialPlayerResponse,
+                                set: (val) => {
+                                    _ytInitialPlayerResponse = sanitizeYtObject(val);
+                                },
+                                configurable: true
+                            });
+                        } catch(_) {}
 
-                        const origParse = JSON.parse;
-                        JSON.parse = function() {
-                            const res = origParse.apply(this, arguments);
-                            try { return sanitizeYtObject(res); } catch(_) { return res; }
-                        };
+                        // 2. SPA Navigations: Intercept Response.prototype.json strictly for player responses
+                        // Does NOT intercept /youtubei/v1/guide, leaving YouTube sidebar & drawer 100% untouched!
+                        try {
+                            if (window.Response && Response.prototype && Response.prototype.json) {
+                                const origJson = Response.prototype.json;
+                                Response.prototype.json = async function() {
+                                    const data = await origJson.apply(this, arguments);
+                                    try {
+                                        if (data && typeof data === 'object') {
+                                            if (data.adPlacements || data.playerAds || data.adSlots || data.adBreaks || (data.playerConfig && data.playerConfig.adConfig)) {
+                                                sanitizeYtObject(data);
+                                            }
+                                            if (data.playerResponse && typeof data.playerResponse === 'object') {
+                                                sanitizeYtObject(data.playerResponse);
+                                            }
+                                        }
+                                    } catch(_) {}
+                                    return data;
+                                };
+                            }
+                        } catch(_) {}
 
-                        // 3. Clean uBlock Origin Skip Trigger (Zero speed tampering or 16x manipulation)
+                        // 3. Instant Video Ad Skip Trigger
                         function defuseVideoAd() {
-                            const isAd = document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay');
-                            if (isAd || document.querySelector('.video-ads:not(:empty)')) {
+                            const video = document.querySelector('video.html5-main-video') || document.querySelector('video');
+                            const isAd = document.querySelector('.ad-showing, .ad-interrupting, .ytp-ad-player-overlay') ||
+                                         document.querySelector('.video-ads:not(:empty)');
+                            if (isAd && video) {
                                 const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
                                 if (player && typeof player.skipAd === 'function') {
                                     try { player.skipAd(); } catch (_) {}
                                 }
-
+                                if (!isNaN(video.duration) && isFinite(video.duration) && video.duration > 0) {
+                                    try { video.currentTime = video.duration; } catch (_) {}
+                                }
                                 const skipBtns = document.querySelectorAll(
                                     '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button, .ytp-ad-skip-button-container button'
                                 );
@@ -328,9 +431,31 @@ class AdBlockEngine {
                         }
 
                         setInterval(defuseVideoAd, 150);
-
-                        // Hook video events cleanly
                         document.addEventListener('play', () => defuseVideoAd(), true);
+                        document.addEventListener('timeupdate', () => defuseVideoAd(), true);
+
+                        // 4. Procedural Sponsored Card Scrubber (Home, Search Results, Up Next, & Shorts)
+                        function scrubSponsoredCards() {
+                            const candidates = document.querySelectorAll('ytd-rich-item-renderer, ytd-video-renderer, ytd-reel-video-renderer, ytd-compact-video-renderer');
+                            for (let i = 0; i < candidates.length; i++) {
+                                const el = candidates[i];
+                                if (el.style.display === 'none') continue;
+                                if (el.querySelector('ytd-ad-slot-renderer, ytd-in-feed-ad-layout-renderer, .badge-style-type-ad, #ad-badge, [aria-label*="Sponsored" i]')) {
+                                    el.style.setProperty('display', 'none', 'important');
+                                    continue;
+                                }
+                                const badges = el.querySelectorAll('badge-shape-wiz, .ytd-badge-supported-renderer, span');
+                                for (let b = 0; b < badges.length; b++) {
+                                    const txt = (badges[b].textContent || '').trim().toLowerCase();
+                                    if (txt === 'sponsored' || txt === 'ad' || txt === 'promoted') {
+                                        el.style.setProperty('display', 'none', 'important');
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        setInterval(scrubSponsoredCards, 350);
                     }
                 } catch (e) {}
             `;

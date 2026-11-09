@@ -2,8 +2,12 @@ name: Build & Release Desktop Browser (Linux, Windows, macOS)
 
 on:
   push:
+    branches:
+      - 'main'
+      - 'feature/*'
     paths:
       - 'desktop/**'
+      - 'app/src/main/assets/**'
       - '.github/workflows/build-desktop.yml'
     tags:
       - 'desktop-v*'
