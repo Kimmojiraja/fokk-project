@@ -546,119 +546,136 @@ class AdBlockEngine {
             }
         }
 
-        // First-class cosmetic selectors for major search and social platforms
-        if (hostname.includes('google.')) {
+        const isYouTube = hostname.includes('youtube.') || hostname.includes('youtu.be');
+
+        if (isYouTube) {
+            // Highly targeted YouTube ad selectors only.
+            // NEVER inject generic ad selectors (div[class*="ad-"], .ad-module, etc.) on YouTube:
+            // they collide with YouTube's WebComponents/Polymer masthead, search box, and feed containers.
             selectors.push(
-                '#tads', '#tadsb', '#bottomads', '.uEierd', '[data-text-ad]',
-                'div[aria-label="Ads"]', 'div[aria-label="Sponsored"]',
-                'div:has(> [data-text-ad])', 'div:has(> div > [data-text-ad])',
-                'div:has(> div > div > [data-text-ad])',
-                '.commercial-unit-desktop-top', '.commercial-unit-desktop-rhs',
-                '.commercial-unit-mobile-top', '.commercial-unit-mobile-bottom',
-                '.pla-unit', '.pla-unit-container', '.cu-container',
-                'div[data-rw] > div:has([data-text-ad])', 'div[data-hveid]:has([data-text-ad])',
-                '.ads-ad', '.ads-fr', '.ads-visurl', '.shopping-carousel-container',
-                'div[data-pla="1"]', 'div[aria-label="Shopping results"]',
-                '.commercial-unit', '#tvcap', 'div[data-attrid="wa:/description"]:has([data-text-ad])',
-                '.mnr-c.pla-unit'
-            );
-        } else if (hostname.includes('bing.')) {
-            selectors.push(
-                'li.b_ad', '.b_ad', '.b_adSlug', '.b_adBottom', '.b_adTop', '.b_adLastChild',
-                '.ads-container', '[data-tag="adSlot"]', '.text-ads-container', 'a[href*="/aclick?ld="]',
-                'li:has(.b_ad)', 'li:has(.b_adSlug)', 'div[aria-label="Sponsored"]',
-                'cs-native-ad-card', '.pa_carousel', 'li.b_algo:has(.b_adSlug)',
-                'li.b_algo:has(a[href*="/aclick?"])'
-            );
-        } else if (hostname.includes('youtube.') || hostname.includes('youtu.be')) {
-            selectors.push(
-                '#masthead-ad', 'ytd-ad-slot-renderer', 'ytd-in-feed-ad-layout-renderer',
-                'ytd-banner-promo-renderer', 'ytd-promoted-video-renderer', 'ytd-display-ad-renderer',
-                'ytd-statement-banner-renderer', '.ytd-action-companion-ad-renderer',
-                'ytd-companion-slot-renderer', 'ytd-mealbar-promo-renderer',
-                'ytd-promoted-sparkles-web-renderer', 'ytd-promoted-sparkles-text-search-renderer',
-                'ytd-compact-promoted-video-renderer', 'ytd-compact-promoted-item-renderer',
+                '#masthead-ad',
+                'ytd-ad-slot-renderer',
+                'ytd-in-feed-ad-layout-renderer',
+                'ytd-banner-promo-renderer',
+                'ytd-promoted-video-renderer',
+                'ytd-display-ad-renderer',
+                'ytd-statement-banner-renderer',
+                '.ytd-action-companion-ad-renderer',
+                'ytd-companion-slot-renderer',
+                'ytd-mealbar-promo-renderer',
+                'ytd-promoted-sparkles-web-renderer',
+                'ytd-promoted-sparkles-text-search-renderer',
+                'ytd-compact-promoted-video-renderer',
+                'ytd-compact-promoted-item-renderer',
                 'ytd-search-pyv-renderer',
-                'ytd-rich-section-renderer:has(ytd-statement-banner-renderer)',
-                'ytd-rich-item-renderer:has(ytd-ad-slot-renderer)',
+                'ytd-rich-item-renderer:has(> #content > ytd-ad-slot-renderer)',
+                'ytd-rich-item-renderer:has(> ytd-ad-slot-renderer)',
+                '#contents > ytd-rich-item-renderer:has(> ytd-ad-slot-renderer)',
                 'ytd-rich-item-renderer:has(ytd-in-feed-ad-layout-renderer)',
                 'ytd-rich-item-renderer:has(#ad-badge)',
-                'ytd-rich-item-renderer:has(.badge-shape-wiz--thumbnail-badge)',
-                'ytd-rich-item-renderer:has([aria-label*="Sponsored" i])',
                 'ytd-rich-item-renderer:has(.badge-style-type-ad)',
                 'ytd-video-renderer:has(ytd-ad-slot-renderer)',
                 'ytd-video-renderer:has([aria-label*="Sponsored" i])',
                 'ytd-video-renderer:has(.badge-style-type-ad)',
                 'ytd-reel-video-renderer:has(ytd-ad-slot-renderer)',
                 'ytd-reel-video-renderer:has(.ytd-ad-slot-renderer)',
-                '.ytp-ad-overlay-container', '.ytp-ad-message-container', '.ytp-ad-text',
-                '.ytp-ad-preview-text', '.ytp-ad-progress-list', '.ytp-ad-module', '#player-ads',
-                'div[class*="ad-showing"] .ytp-ad-text', '#shopping-timely-shelf',
-                'ytd-merch-shelf-renderer',
                 '#shorts-inner-container > .ytd-shorts:has(> .ytd-reel-video-renderer > ytd-ad-slot-renderer)',
-                '#contents > ytd-rich-item-renderer:has(> ytd-ad-slot-renderer)',
-                'ytd-rich-item-renderer:has(> #content > ytd-ad-slot-renderer)',
-                '.ytd-rich-grid-renderer:has(ytd-ad-slot-renderer)'
+                '.ytp-ad-module',
+                '.ytp-ad-overlay-container',
+                '.ytp-ad-message-container',
+                '.ytp-ad-text',
+                '.ytp-ad-preview-text',
+                '.ytp-ad-progress-list',
+                '#player-ads',
+                'div[class*="ad-showing"] .ytp-ad-text',
+                '#shopping-timely-shelf',
+                'ytd-merch-shelf-renderer'
             );
-        } else if (hostname.includes('amazon.')) {
-            selectors.push(
-                'div[data-component-type="s-impression-logger"]', '.AdHolder', '.adsWrapper',
-                'div[cel_widget_id*="SP-"]', 'div[cel_widget_id*="SEARCH_RESULTS_SPONSORED_PRODUCTS"]',
-                'div[data-component-type*="sponsored"]',
-                '.s-result-item[data-asin]:has(span.puis-sponsored-label-text)',
-                'div[data-asin]:has(span.puis-sponsored-label-text)',
-                'div[data-asin]:has(span[aria-label*="Sponsored" i])',
-                'div:has(> span.puis-sponsored-label-text)', '.puis-sponsored-label-text',
-                'div[data-component-type="sp-sponsored-result"]',
-                '.a-cardui[class*="_new-detail-faceout-box_"]:has(.dynamicSponsoredLabelClass)',
-                'div[class*="SponsoredProducts"]', 'div[data-a-carousel-options*="isSponsoredProduct"]',
-                'div[class*="sp-result-item"]', '#ad', '#ad-desktop-atf', '#ad-desktop-btf',
-                '#sponsoredProducts2_feature_div', '#sponsoredProducts_feature_div', '#sp_detail', '#sp_detail2',
-                '#hsaSponsoredProducts', '#ape_Detail_hero-quick-promo_Desktop_placement',
-                '#ape_Detail_auto-load-middle-1_Desktop_placement'
-            );
-        } else if (hostname.includes('reddit.')) {
-            selectors.push(
-                'shreddit-comment-ad', 'shreddit-ad-post', '[data-promoted=true]',
-                '.promoted-custom-collection-item', '[promoted=true]', '.PromotedLink',
-                'shreddit-async-loader[bundlename="feed_ads"]', 'div[data-adclicklocation]'
-            );
-        } else if (hostname.includes('linkedin.')) {
-            selectors.push(
-                '.feed-shared-update-v2:has(.update-components-promo__label)',
-                'div[data-feed-type="SPONSORED"]', '.ad-banner-container', '.sponsored-content'
-            );
-        }
+        } else {
+            // First-class cosmetic selectors for other major platforms
+            if (hostname.includes('google.')) {
+                selectors.push(
+                    '#tads', '#tadsb', '#bottomads', '.uEierd', '[data-text-ad]',
+                    'div[aria-label="Ads"]', 'div[aria-label="Sponsored"]',
+                    'div:has(> [data-text-ad])', 'div:has(> div > [data-text-ad])',
+                    'div:has(> div > div > [data-text-ad])',
+                    '.commercial-unit-desktop-top', '.commercial-unit-desktop-rhs',
+                    '.commercial-unit-mobile-top', '.commercial-unit-mobile-bottom',
+                    '.pla-unit', '.pla-unit-container', '.cu-container',
+                    'div[data-rw] > div:has([data-text-ad])', 'div[data-hveid]:has([data-text-ad])',
+                    '.ads-ad', '.ads-fr', '.ads-visurl', '.shopping-carousel-container',
+                    'div[data-pla="1"]', 'div[aria-label="Shopping results"]',
+                    '.commercial-unit', '#tvcap', 'div[data-attrid="wa:/description"]:has([data-text-ad])',
+                    '.mnr-c.pla-unit'
+                );
+            } else if (hostname.includes('bing.')) {
+                selectors.push(
+                    'li.b_ad', '.b_ad', '.b_adSlug', '.b_adBottom', '.b_adTop', '.b_adLastChild',
+                    '.ads-container', '[data-tag="adSlot"]', '.text-ads-container', 'a[href*="/aclick?ld="]',
+                    'li:has(.b_ad)', 'li:has(.b_adSlug)', 'div[aria-label="Sponsored"]',
+                    'cs-native-ad-card', '.pa_carousel', 'li.b_algo:has(.b_adSlug)',
+                    'li.b_algo:has(a[href*="/aclick?"])'
+                );
+            } else if (hostname.includes('amazon.')) {
+                selectors.push(
+                    'div[data-component-type="s-impression-logger"]', '.AdHolder', '.adsWrapper',
+                    'div[cel_widget_id*="SP-"]', 'div[cel_widget_id*="SEARCH_RESULTS_SPONSORED_PRODUCTS"]',
+                    'div[data-component-type*="sponsored"]',
+                    '.s-result-item[data-asin]:has(span.puis-sponsored-label-text)',
+                    'div[data-asin]:has(span.puis-sponsored-label-text)',
+                    'div[data-asin]:has(span[aria-label*="Sponsored" i])',
+                    'div:has(> span.puis-sponsored-label-text)', '.puis-sponsored-label-text',
+                    'div[data-component-type="sp-sponsored-result"]',
+                    '.a-cardui[class*="_new-detail-faceout-box_"]:has(.dynamicSponsoredLabelClass)',
+                    'div[class*="SponsoredProducts"]', 'div[data-a-carousel-options*="isSponsoredProduct"]',
+                    'div[class*="sp-result-item"]', '#ad', '#ad-desktop-atf', '#ad-desktop-btf',
+                    '#sponsoredProducts2_feature_div', '#sponsoredProducts_feature_div', '#sp_detail', '#sp_detail2',
+                    '#hsaSponsoredProducts', '#ape_Detail_hero-quick-promo_Desktop_placement',
+                    '#ape_Detail_auto-load-middle-1_Desktop_placement'
+                );
+            } else if (hostname.includes('reddit.')) {
+                selectors.push(
+                    'shreddit-comment-ad', 'shreddit-ad-post', '[data-promoted=true]',
+                    '.promoted-custom-collection-item', '[promoted=true]', '.PromotedLink',
+                    'shreddit-async-loader[bundlename="feed_ads"]', 'div[data-adclicklocation]'
+                );
+            } else if (hostname.includes('linkedin.')) {
+                selectors.push(
+                    '.feed-shared-update-v2:has(.update-components-promo__label)',
+                    'div[data-feed-type="SPONSORED"]', '.ad-banner-container', '.sponsored-content'
+                );
+            }
 
-        // Global generic ad & banner selectors
-        selectors.push(
-            'ins.adsbygoogle', '.adsbygoogle', '[id^="div-gpt-ad"]', '[id^="google_ads_iframe"]', '[data-google-query-id]',
-            'iframe[src*="doubleclick.net"]', 'iframe[src*="googlesyndication.com"]', 'iframe[src*="adnxs.com"]',
-            'iframe[src*="rubiconproject.com"]', 'iframe[src*="pubmatic.com"]', 'iframe[src*="openx.net"]',
-            'iframe[src*="smartadserver.com"]', 'iframe[src*="criteo.com"]', 'iframe[src*="outbrain.com"]',
-            'iframe[src*="taboola.com"]', 'iframe[src*="revcontent.com"]', 'iframe[src*="amazon-adsystem.com"]',
-            'iframe[src*="exoclick.com"]', 'iframe[src*="trafficjunky.net"]', 'iframe[src*="juicyads.com"]',
-            'iframe[src*="popads.net"]', 'iframe[src*="adsterra.com"]', 'iframe[src*="monetag.com"]', 'iframe[id*="google_ads"]',
-            'div[id^="ad-"]', 'div[id^="ad_"]', 'div[id^="google_ads_"]', 'div[id^="dfp-ad-"]', 'div[id*="advertisement"]',
-            'div[id^="adslot"]', 'div[id*="ad-slot"]', 'div[id*="ad-container"]', 'div[id*="ad-wrapper"]', 'div[id*="ad-banner"]',
-            'div[class*="native-ad"]', 'div[class*="taboola"]', 'div[class*="outbrain"]', 'div[class*="mgid"]',
-            'div[class*="revcontent"]', 'div[class*="sponsored-post"]', 'div[class*="sponsored-content"]',
-            'div[class*="ad-container"]', 'div[class*="ad-wrapper"]', 'div[class*="ad-box"]', 'div[class*="ad-slot"]',
-            'div[class*="ad-unit"]', 'div[class*="ad-banner"]', 'div[class*="ad_banner"]', 'div[class*="ad-placement"]',
-            'div[class*="ad_placement"]', 'div[class*="ad-placeholder"]',
-            '.ad-banner', '.ad-container', '.ad-box', '.ad-wrapper', '.ad-slot', '.ad-holder', '.ad-unit', '.ad-frame',
-            '.ad-layer', '.ad-leaderboard', '.ad-sidebar', '.ad-placeholder', '.ad-module', '.ad-notice', '.ad-sponsor',
-            '.ad-spot', '.banner-ad', '.banner_ad', '.banner-ads', '.sponsor-banner', '.sponsored-post', '.sponsored-content',
-            '.sponsored-link', '.sponsored-item', '.sponsored-feed', '.exo-native-widget', '.tj_ads', '.juicy-ad',
-            '.popunder-overlay', '.click-trap', '.anti-adblock', '.adblock-overlay', '.adblock-modal', '.adblock-backdrop',
-            'div[data-ad-unit]', 'div[data-dfp-ad]', 'div[data-ad-slot]', 'div[data-ad-unit-id]', 'div[data-native-ad]',
-            '.smartbanner', '.app-banner', '[class*="smartbanner"]', '[class*="open-in-app"]', '[class*="openInApp"]',
-            '[id*="open-in-app"]', 'div[data-testid="upsell-banner"]', 'xpromo-app-selector',
-            'shreddit-async-loader[bundlename="bottom_sheet"]'
-        );
+            // Global generic ad & banner selectors (for all non-YouTube websites)
+            selectors.push(
+                'ins.adsbygoogle', '.adsbygoogle', '[id^="div-gpt-ad"]', '[id^="google_ads_iframe"]', '[data-google-query-id]',
+                'iframe[src*="doubleclick.net"]', 'iframe[src*="googlesyndication.com"]', 'iframe[src*="adnxs.com"]',
+                'iframe[src*="rubiconproject.com"]', 'iframe[src*="pubmatic.com"]', 'iframe[src*="openx.net"]',
+                'iframe[src*="smartadserver.com"]', 'iframe[src*="criteo.com"]', 'iframe[src*="outbrain.com"]',
+                'iframe[src*="taboola.com"]', 'iframe[src*="revcontent.com"]', 'iframe[src*="amazon-adsystem.com"]',
+                'iframe[src*="exoclick.com"]', 'iframe[src*="trafficjunky.net"]', 'iframe[src*="juicyads.com"]',
+                'iframe[src*="popads.net"]', 'iframe[src*="adsterra.com"]', 'iframe[src*="monetag.com"]', 'iframe[id*="google_ads"]',
+                'div[id^="ad-"]', 'div[id^="ad_"]', 'div[id^="google_ads_"]', 'div[id^="dfp-ad-"]', 'div[id*="advertisement"]',
+                'div[id^="adslot"]', 'div[id*="ad-slot"]', 'div[id*="ad-container"]', 'div[id*="ad-wrapper"]', 'div[id*="ad-banner"]',
+                'div[class*="native-ad"]', 'div[class*="taboola"]', 'div[class*="outbrain"]', 'div[class*="mgid"]',
+                'div[class*="revcontent"]', 'div[class*="sponsored-post"]', 'div[class*="sponsored-content"]',
+                'div[class*="ad-container"]', 'div[class*="ad-wrapper"]', 'div[class*="ad-box"]', 'div[class*="ad-slot"]',
+                'div[class*="ad-unit"]', 'div[class*="ad-banner"]', 'div[class*="ad_banner"]', 'div[class*="ad-placement"]',
+                'div[class*="ad_placement"]', 'div[class*="ad-placeholder"]',
+                '.ad-banner', '.ad-container', '.ad-box', '.ad-wrapper', '.ad-slot', '.ad-holder', '.ad-unit', '.ad-frame',
+                '.ad-layer', '.ad-leaderboard', '.ad-sidebar', '.ad-placeholder', '.ad-module', '.ad-notice', '.ad-sponsor',
+                '.ad-spot', '.banner-ad', '.banner_ad', '.banner-ads', '.sponsor-banner', '.sponsored-post', '.sponsored-content',
+                '.sponsored-link', '.sponsored-item', '.sponsored-feed', '.exo-native-widget', '.tj_ads', '.juicy-ad',
+                '.popunder-overlay', '.click-trap', '.anti-adblock', '.adblock-overlay', '.adblock-modal', '.adblock-backdrop',
+                'div[data-ad-unit]', 'div[data-dfp-ad]', 'div[data-ad-slot]', 'div[data-ad-unit-id]', 'div[data-native-ad]',
+                '.smartbanner', '.app-banner', '[class*="smartbanner"]', '[class*="open-in-app"]', '[class*="openInApp"]',
+                '[id*="open-in-app"]', 'div[data-testid="upsell-banner"]', 'xpromo-app-selector',
+                'shreddit-async-loader[bundlename="bottom_sheet"]'
+            );
 
-        if (this.genericCosmeticRules && this.genericCosmeticRules.length > 0) {
-            selectors.push(...this.genericCosmeticRules);
+            if (this.genericCosmeticRules && this.genericCosmeticRules.length > 0) {
+                selectors.push(...this.genericCosmeticRules);
+            }
         }
 
         const validSelectors = selectors.filter(isValidSelector);
@@ -788,10 +805,10 @@ class AdBlockEngine {
                                     el.style.setProperty('display', 'none', 'important');
                                     continue;
                                 }
-                                const badges = el.querySelectorAll('badge-shape-wiz, .ytd-badge-supported-renderer, span');
+                                const badges = el.querySelectorAll('.badge-style-type-ad, .ytd-badge-supported-renderer');
                                 for (let b = 0; b < badges.length; b++) {
                                     const txt = (badges[b].textContent || '').trim().toLowerCase();
-                                    if (txt === 'sponsored' || txt === 'ad' || txt === 'promoted') {
+                                    if (txt === 'sponsored' || txt === 'promoted') {
                                         el.style.setProperty('display', 'none', 'important');
                                         break;
                                     }
@@ -804,6 +821,7 @@ class AdBlockEngine {
                 } catch (e) {}
             `;
             webContents.executeJavaScript(ytCleanScript).catch(() => {});
+            return;
         }
 
         if (isTwitter) {
@@ -827,6 +845,7 @@ class AdBlockEngine {
                 } catch(e) {}
             `;
             webContents.executeJavaScript(xCleanScript).catch(() => {});
+            return;
         }
 
         if (isInstagram) {
@@ -848,6 +867,7 @@ class AdBlockEngine {
                 } catch(e) {}
             `;
             webContents.executeJavaScript(igCleanScript).catch(() => {});
+            return;
         }
 
         // Universal Procedural Ad Observer & Empty Placeholder Scrubber (all pages)
