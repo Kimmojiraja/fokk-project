@@ -2192,8 +2192,8 @@ const COMMAND_HUD_REGISTRY = [
     {
         id: 'cmd-contributing',
         category: 'Information & Legal',
-        title: 'Contributing & Business Model',
-        sub: 'Support independent zero-ad privacy, plans & tiers',
+        title: 'Fokk Pro ($4.79/mo) & Contributing',
+        sub: 'Sustainable zero-ad model, offline license & support',
         shortcut: '',
         iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
         action: () => { createTab(uiPageUrl('fokk_contributing.html')); }
