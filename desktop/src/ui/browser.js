@@ -472,6 +472,10 @@ if (btnMenu && desktopBrowserMenu) {
     btnMenu.addEventListener('click', (e) => {
         e.stopPropagation();
         desktopBrowserMenu.classList.toggle('hidden');
+        if (vpnPopover) {
+            vpnPopover.classList.add('hidden');
+            if (btnVpnToggle) btnVpnToggle.classList.remove('active');
+        }
     });
 
     document.addEventListener('click', (e) => {
@@ -480,6 +484,10 @@ if (btnMenu && desktopBrowserMenu) {
         }
         if (omniboxEngineDropdown && !omniboxEngineSelector.contains(e.target)) {
             omniboxEngineDropdown.classList.add('hidden');
+        }
+        if (vpnPopover && !vpnPopover.contains(e.target) && btnVpnToggle && !btnVpnToggle.contains(e.target)) {
+            vpnPopover.classList.add('hidden');
+            if (btnVpnToggle) btnVpnToggle.classList.remove('active');
         }
     });
 }
@@ -837,6 +845,14 @@ if (btnDownloadsNav) {
 }
 
 function openFeatureHub(hubId) {
+    if (hubId === 'vpn') {
+        if (vpnPopover) {
+            vpnPopover.classList.toggle('hidden');
+            if (btnVpnToggle) btnVpnToggle.classList.toggle('active', !vpnPopover.classList.contains('hidden'));
+        }
+        return;
+    }
+
     if (!featureHubModal || !featureModalBody) return;
 
     if (hubId === 'history') {
@@ -1760,6 +1776,301 @@ ipcRenderer.on('fokk-stats-updated', (event, stats) => {
         }
     }
 });
+
+// ==========================================================================
+// Fokk Shield Tunnel (Privacy VPN & Relay) UI Controller
+// ==========================================================================
+const btnVpnToggle = document.getElementById('btnVpnToggle');
+const vpnStatusDot = document.getElementById('vpnStatusDot');
+const vpnPopover = document.getElementById('vpnPopover');
+const vpnStatusPill = document.getElementById('vpnStatusPill');
+const vpnRadarRing = document.getElementById('vpnRadarRing');
+const btnVpnPower = document.getElementById('btnVpnPower');
+const vpnPowerLabel = document.getElementById('vpnPowerLabel');
+const vpnPowerSub = document.getElementById('vpnPowerSub');
+const vpnMetricIp = document.getElementById('vpnMetricIp');
+const vpnMetricLocation = document.getElementById('vpnMetricLocation');
+const vpnMetricProtocol = document.getElementById('vpnMetricProtocol');
+const vpnMetricPing = document.getElementById('vpnMetricPing');
+const vpnProtocolPicker = document.getElementById('vpnProtocolPicker');
+const vpnCustomConfigWrap = document.getElementById('vpnCustomConfigWrap');
+const vpnCustomInput = document.getElementById('vpnCustomInput');
+const btnSaveCustomVpn = document.getElementById('btnSaveCustomVpn');
+const vpnKillSwitchCheck = document.getElementById('vpnKillSwitchCheck');
+
+function renderProtocolPicker(locations, activeMode) {
+    if (!vpnProtocolPicker || !Array.isArray(locations)) return;
+    vpnProtocolPicker.innerHTML = locations.map(loc => {
+        const isActive = loc.id === activeMode;
+        return `
+            <div class="vpn-proto-card ${isActive ? 'active' : ''}" data-mode="${loc.id}">
+                <div class="vpn-proto-icon-box" style="background: ${loc.color}15; border: 1px solid ${loc.color}30;">
+                    ${loc.iconSvg || ''}
+                </div>
+                <div class="vpn-proto-body">
+                    <div class="vpn-proto-name-row">
+                        <span class="vpn-proto-name">${loc.name}</span>
+                        <span class="vpn-proto-badge" style="background: ${loc.color}20; color: ${loc.color}; border: 1px solid ${loc.color}40;">${loc.badge || 'PRO'}</span>
+                    </div>
+                    <div class="vpn-proto-desc">${loc.description || loc.protocol}</div>
+                </div>
+                <div class="vpn-proto-radio">
+                    <span class="vpn-proto-radio-dot"></span>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Wire clicks on each protocol card
+    vpnProtocolPicker.querySelectorAll('.vpn-proto-card').forEach(card => {
+        card.addEventListener('click', async () => {
+            const modeId = card.getAttribute('data-mode');
+            if (!modeId) return;
+
+            vpnProtocolPicker.querySelectorAll('.vpn-proto-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+
+            if (vpnCustomConfigWrap) {
+                const isCustom = modeId === 'custom';
+                vpnCustomConfigWrap.classList.toggle('hidden', !isCustom);
+                if (isCustom && vpnCustomInput) {
+                    setTimeout(() => vpnCustomInput.focus(), 60);
+                }
+            }
+
+            try {
+                await ipcRenderer.invoke('fokk-vpn-set-mode', modeId);
+                if (modeId === 'tor') {
+                    showToast('Stealth Onion Relay: 100% Zero-Config Built-In');
+                } else if (modeId === 'warp') {
+                    showToast('Cloudflare WARP: WireGuard on port 40001');
+                } else if (modeId === 'auto') {
+                    showToast('Auto Anycast Relay: Auto-detects fastest path');
+                } else {
+                    showToast('Custom Relay: Enter your proxy or WireGuard config');
+                }
+            } catch (_) {}
+        });
+    });
+}
+
+function updateVpnUI(status) {
+    if (!status) return;
+
+    const state = status.state || 'disconnected';
+    const isConn = state === 'connected';
+    const isConnecting = state === 'connecting';
+    const isErr = state === 'error';
+
+    // 1. Toolbar Status Dot & Active State
+    if (vpnStatusDot) {
+        vpnStatusDot.className = 'vpn-status-dot ' + state;
+    }
+    if (btnVpnToggle) {
+        btnVpnToggle.classList.toggle('active', isConn || (vpnPopover && !vpnPopover.classList.contains('hidden')));
+        btnVpnToggle.title = isConn
+            ? `Fokk Shield Tunnel: Connected (${status.virtualCountry || 'Anycast'})`
+            : isConnecting
+            ? 'Fokk Shield Tunnel: Connecting...'
+            : 'Fokk Shield Tunnel — Zero-Log Privacy VPN';
+    }
+
+    // 2. Popover Status Pill
+    if (vpnStatusPill) {
+        vpnStatusPill.className = 'vpn-status-pill ' + state;
+        vpnStatusPill.textContent = isConn ? 'Protected' : isConnecting ? 'Connecting...' : isErr ? 'No Relay' : 'Disconnected';
+    }
+
+    // 3. Power Button & Radar Ring
+    if (btnVpnPower) {
+        btnVpnPower.className = 'vpn-power-btn ' + state;
+    }
+    if (vpnRadarRing) {
+        vpnRadarRing.className = 'vpn-radar-ring ' + state;
+    }
+    if (vpnPowerLabel) {
+        if (isErr && status.errorMessage) {
+            let errorHtml = `<span style="color:#F87171;font-size:11px;display:block;text-align:center;line-height:1.4;margin-bottom:6px;">${status.errorMessage}</span>`;
+            if (status.activeMode === 'warp') {
+                errorHtml += `<button id="btnQuickSwitchOnion" style="background:#7C3AED;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:10.5px;font-weight:700;cursor:pointer;margin-top:2px;">Switch to Built-in Stealth Onion</button>`;
+            } else if (status.activeMode === 'custom' && (!status.customConfig || !status.customConfig.trim())) {
+                errorHtml += `<button id="btnFocusCustomInput" style="background:#10B981;color:#000;border:none;border-radius:6px;padding:4px 10px;font-size:10.5px;font-weight:700;cursor:pointer;margin-top:2px;">Paste Proxy Below</button>`;
+            }
+            vpnPowerLabel.innerHTML = errorHtml;
+
+            const btnSwitch = document.getElementById('btnQuickSwitchOnion');
+            if (btnSwitch) {
+                btnSwitch.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    await ipcRenderer.invoke('fokk-vpn-set-mode', 'tor');
+                    await ipcRenderer.invoke('fokk-vpn-toggle');
+                });
+            }
+            const btnFocus = document.getElementById('btnFocusCustomInput');
+            if (btnFocus) {
+                btnFocus.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (vpnCustomInput) vpnCustomInput.focus();
+                });
+            }
+        } else {
+            vpnPowerLabel.textContent = isConn ? 'Connected — Tunnel Active' : isConnecting ? 'Detecting Relay...' : 'Tap to Connect';
+        }
+    }
+    if (vpnPowerSub) {
+        vpnPowerSub.textContent = isConn 
+            ? 'Encrypted Multi-Hop Relay Active'
+            : isConnecting 
+            ? 'Establishing Onion Circuit...'
+            : 'Zero-Cost Stealth Privacy';
+    }
+
+    // 4. Metrics
+    if (vpnMetricIp) {
+        vpnMetricIp.textContent = status.virtualIp || (isConn ? '100% Masked' : 'Direct (Real IP Exposed)');
+        vpnMetricIp.className = 'metric-val ' + (isConn ? 'masked' : isConnecting ? 'connecting' : 'unmasked');
+    }
+    if (vpnMetricLocation) vpnMetricLocation.textContent = status.virtualCountry || status.location?.region || 'Local Direct';
+    if (vpnMetricProtocol) vpnMetricProtocol.textContent = status.location?.protocol || 'Tor Onion Routing';
+    if (vpnMetricPing) vpnMetricPing.textContent = (status.ping || 0) + ' ms';
+
+    // 5. Active Protocol Card Selection
+    if (vpnProtocolPicker && status.activeMode) {
+        vpnProtocolPicker.querySelectorAll('.vpn-proto-card').forEach(card => {
+            const matches = card.getAttribute('data-mode') === status.activeMode;
+            card.classList.toggle('active', matches);
+        });
+    }
+
+    if (vpnCustomConfigWrap) {
+        vpnCustomConfigWrap.classList.toggle('hidden', status.activeMode !== 'custom');
+    }
+    if (vpnCustomInput && status.customConfig && !vpnCustomInput.value) {
+        vpnCustomInput.value = status.customConfig;
+    }
+
+    // 6. Kill Switch
+    if (vpnKillSwitchCheck && typeof status.killSwitch === 'boolean') {
+        vpnKillSwitchCheck.checked = status.killSwitch;
+    }
+}
+
+function initVpnUI() {
+    let initialStatus = null;
+    let locations = [];
+    try {
+        initialStatus = ipcRenderer.sendSync('fokk-vpn-get-status');
+        locations = ipcRenderer.sendSync('fokk-vpn-get-locations');
+    } catch (_) {}
+
+    // Populate Luxury Protocol Picker Cards (ZERO EMOJIS)
+    if (Array.isArray(locations) && locations.length > 0) {
+        renderProtocolPicker(locations, initialStatus ? initialStatus.activeMode : 'tor');
+    }
+
+    if (initialStatus) {
+        updateVpnUI(initialStatus);
+    }
+
+    // Toggle Popover Visibility
+    if (btnVpnToggle && vpnPopover) {
+        btnVpnToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const willOpen = vpnPopover.classList.contains('hidden');
+            vpnPopover.classList.toggle('hidden');
+            btnVpnToggle.classList.toggle('active', willOpen);
+            if (desktopBrowserMenu) desktopBrowserMenu.classList.add('hidden');
+            if (omniboxEngineDropdown) omniboxEngineDropdown.classList.add('hidden');
+        });
+    }
+
+    if (window.process && window.process.argv && window.process.argv.includes('--open-vpn-popover')) {
+        setTimeout(() => {
+            if (vpnPopover && btnVpnToggle) {
+                vpnPopover.classList.remove('hidden');
+                btnVpnToggle.classList.add('active');
+            }
+        }, 350);
+    }
+
+    // Connect / Disconnect Power Button
+    if (btnVpnPower) {
+        btnVpnPower.addEventListener('click', async () => {
+            // Auto-save custom proxy if typed in textarea
+            if (vpnCustomConfigWrap && !vpnCustomConfigWrap.classList.contains('hidden') && vpnCustomInput) {
+                const text = vpnCustomInput.value.trim();
+                if (text) {
+                    try { await ipcRenderer.invoke('fokk-vpn-set-custom', text); } catch (_) {}
+                }
+            }
+
+            if (vpnPowerLabel) vpnPowerLabel.textContent = 'Routing...';
+            if (vpnRadarRing) vpnRadarRing.className = 'vpn-radar-ring connecting';
+            try {
+                const res = await ipcRenderer.invoke('fokk-vpn-toggle');
+                if (res && res.status) {
+                    updateVpnUI(res.status);
+                    if (res.status.state === 'connected') {
+                        showToast(`Tunnel Connected: ${res.status.virtualCountry || 'Encrypted'}`);
+                    } else if (res.status.state === 'error' && res.status.errorMessage) {
+                        showToast(res.status.errorMessage);
+                    } else {
+                        showToast('Tunnel Disconnected (Direct Traffic)');
+                    }
+                }
+            } catch (err) {
+                showToast('VPN Error: ' + err.message);
+            }
+        });
+    }
+
+    // Save Custom Config
+    if (btnSaveCustomVpn && vpnCustomInput) {
+        btnSaveCustomVpn.addEventListener('click', async () => {
+            const cfg = vpnCustomInput.value.trim();
+            if (!cfg) {
+                showToast('Please paste a WireGuard config or SOCKS5 URL');
+                return;
+            }
+            try {
+                await ipcRenderer.invoke('fokk-vpn-set-custom', cfg);
+                showToast('Custom Relay Config Saved: ' + cfg);
+            } catch (_) {}
+        });
+    }
+
+    // Custom Preset Chips
+    if (vpnCustomConfigWrap && vpnCustomInput) {
+        vpnCustomConfigWrap.querySelectorAll('.vpn-chip-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const val = btn.getAttribute('data-val');
+                if (val) {
+                    vpnCustomInput.value = val;
+                    ipcRenderer.invoke('fokk-vpn-set-custom', val).catch(() => {});
+                    showToast('Preset loaded: ' + val);
+                }
+            });
+        });
+    }
+
+    // Kill Switch Toggle
+    if (vpnKillSwitchCheck) {
+        vpnKillSwitchCheck.addEventListener('change', async (e) => {
+            try {
+                await ipcRenderer.invoke('fokk-vpn-set-killswitch', e.target.checked);
+                showToast(e.target.checked ? 'Kill-Switch Enabled' : 'Kill-Switch Disabled');
+            } catch (_) {}
+        });
+    }
+
+    // Listen to real-time status broadcasts from Main process
+    ipcRenderer.on('fokk-vpn-status-changed', (event, status) => {
+        updateVpnUI(status);
+    });
+}
+initVpnUI();
 
 // Initialize Initial Tab
 createTab(START_PAGE_URL);

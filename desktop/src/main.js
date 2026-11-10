@@ -5,10 +5,17 @@ const https = require('https');
 const { spawn } = require('child_process');
 const AdBlockEngine = require('./adblock');
 const newsService = require('./news');
+const { VpnEngine } = require('./vpn_engine');
 
 // Universal Stealth & Anti-Automation Flags (matching Brave / Un-automated Chromium)
 app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
 app.commandLine.appendSwitch('disable-features', 'ThirdPartyStoragePartitioning');
+app.commandLine.appendSwitch('no-sandbox');
+
+// Zero-Leak Network & IP Protection (Blocks QUIC & WebRTC from bypassing SOCKS proxy)
+app.commandLine.appendSwitch('disable-quic');
+app.commandLine.appendSwitch('disable-webrtc-multiple-routes');
+app.commandLine.appendSwitch('enforce-webrtc-ip-permission-check');
 
 // Paths
 const devAssetsDir = path.resolve(__dirname, '..', '..', 'app', 'src', 'main', 'assets');
@@ -23,6 +30,15 @@ const ICON_PATH = fs.existsSync(path.join(__dirname, 'ui', 'icon.png'))
 let mainWindow = null;
 let shieldEnabled = true;
 const adblock = new AdBlockEngine(ASSETS_DIR);
+let vpnEngine = null;
+try {
+    vpnEngine = new VpnEngine(app.getPath('userData'));
+    vpnEngine.on('status-changed', (status) => {
+        webContents.getAllWebContents().forEach(wc => {
+            try { wc.send('fokk-vpn-status-changed', status); } catch (_) {}
+        });
+    });
+} catch (_) {}
 
 // Authentic DNS-over-HTTPS providers matching com.adshield.app.model.DnsOverHttpsEngine
 const DOH_PROVIDERS = {
@@ -60,6 +76,10 @@ function broadcastDownloadUpdate(dl) {
 function setupAdblockingForSession(sess) {
     if (!sess || sess.__fokk_configured) return;
     sess.__fokk_configured = true;
+
+    if (vpnEngine) {
+        vpnEngine.registerSession(sess);
+    }
 
     try {
         sess.setUserAgent(CHROME_USER_AGENT);
@@ -157,8 +177,22 @@ function createWindow() {
 
     mainWindow.loadFile(path.join(__dirname, 'ui', 'browser.html'));
 
-    // Setup network adblocker on default session
+    if (process.argv.includes('--open-vpn')) {
+        mainWindow.webContents.once('did-finish-load', () => {
+            setTimeout(() => {
+                mainWindow.webContents.executeJavaScript(`
+                    const b = document.getElementById('btnVpnToggle');
+                    if (b) b.click();
+                `);
+            }, 700);
+        });
+    }
+
+    // Setup network adblocker and VPN engine on default and persistent sessions
     setupAdblockingForSession(session.defaultSession);
+    try {
+        setupAdblockingForSession(session.fromPartition('persist:fokk_default_session'));
+    } catch (_) {}
 
     // Inject cosmetic ad defusers and configure universal popup/OAuth handling
     app.on('web-contents-created', (event, contents) => {
@@ -433,6 +467,35 @@ ipcMain.on('fokk-set-doh', (event, providerKey) => {
     } catch (e) {
         console.error('[DoH] Failed to configure host resolver:', e);
     }
+});
+
+// 5b. Fokk Shield Tunnel (Privacy VPN & Relay)
+ipcMain.on('fokk-vpn-get-status', (event) => {
+    event.returnValue = vpnEngine ? vpnEngine.getStatus() : { state: 'disconnected' };
+});
+
+ipcMain.on('fokk-vpn-get-locations', (event) => {
+    event.returnValue = vpnEngine ? vpnEngine.getLocations() : [];
+});
+
+ipcMain.handle('fokk-vpn-toggle', async () => {
+    if (!vpnEngine) return { success: false, error: 'VPN Engine not initialized' };
+    return await vpnEngine.toggle();
+});
+
+ipcMain.handle('fokk-vpn-set-mode', async (event, modeId) => {
+    if (!vpnEngine) return false;
+    return await vpnEngine.setMode(modeId);
+});
+
+ipcMain.handle('fokk-vpn-set-killswitch', (event, enabled) => {
+    if (vpnEngine) vpnEngine.setKillSwitch(enabled);
+    return true;
+});
+
+ipcMain.handle('fokk-vpn-set-custom', (event, config) => {
+    if (vpnEngine) vpnEngine.setCustomConfig(config);
+    return true;
 });
 
 // 6. Scripts Serving (Reader Mode & Smart AI Summarizer from APK assets)

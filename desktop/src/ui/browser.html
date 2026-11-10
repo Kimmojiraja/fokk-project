@@ -95,7 +95,15 @@
             </button>
         </div>
 
-        <div class="extra-actions">
+            <button class="nav-btn vpn-toggle-btn" id="btnVpnToggle" title="Fokk Shield Tunnel — Zero-Log Privacy VPN">
+                <svg class="vpn-quantum-glyph" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L3.5 7v10L12 22l8.5-5V7L12 2z" stroke="currentColor" stroke-width="1.9"/>
+                    <circle cx="12" cy="12" r="4.8" stroke="currentColor" stroke-width="1.6" stroke-dasharray="7 2.5"/>
+                    <circle cx="12" cy="12" r="2" fill="currentColor"/>
+                    <path d="M12 2v3.5M12 18.5v3.5M3.5 7l3 1.8M17.5 15.2l3 1.8M3.5 17l3-1.8M17.5 8.8l3-1.8" stroke="currentColor" stroke-width="1.4" opacity="0.75"/>
+                </svg>
+                <span class="vpn-status-dot disconnected" id="vpnStatusDot"></span>
+            </button>
             <button class="nav-btn" id="btnVisuals" title="Visuals & 4K Wallpapers">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
             </button>
@@ -243,6 +251,17 @@
             <svg class="hub-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
 
+        <div class="menu-hub-item" data-hub="vpn" id="menuItemVpn">
+            <div class="hub-icon-box" style="color: #00E5FF;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><rect x="9" y="11" width="6" height="5" rx="1" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M10 11V9a2 2 0 1 1 4 0v2" stroke="currentColor" stroke-width="1.8"/></svg>
+            </div>
+            <div class="hub-text">
+                <div class="hub-title">Fokk Shield Tunnel (VPN)</div>
+                <div class="hub-sub">Zero-log WireGuard & Tor encrypted relay</div>
+            </div>
+            <svg class="hub-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+
         <div class="menu-hub-item" data-hub="media">
             <div class="hub-icon-box">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect width="14" height="14" x="1" y="5" rx="2" ry="2"/></svg>
@@ -318,6 +337,111 @@
                 <div class="hub-sub">Manifesto, GitHub, Version 1.0.0</div>
             </div>
             <svg class="hub-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+    </div>
+
+    <!-- 3b. Fokk Shield Tunnel (Privacy VPN) Popover -->
+    <div id="vpnPopover" class="vpn-popover hidden">
+        <div class="vpn-popover-header">
+            <div class="vpn-header-left">
+                <div class="vpn-brand-icon">
+                    <svg class="vpn-quantum-glyph" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2L3.5 7v10L12 22l8.5-5V7L12 2z" stroke="currentColor" stroke-width="1.9"/>
+                        <circle cx="12" cy="12" r="4.8" stroke="currentColor" stroke-width="1.6" stroke-dasharray="7 2.5"/>
+                        <circle cx="12" cy="12" r="2.2" fill="currentColor"/>
+                        <path d="M12 2v3.5M12 18.5v3.5M3.5 7l3 1.8M17.5 15.2l3 1.8M3.5 17l3-1.8M17.5 8.8l3-1.8" stroke="currentColor" stroke-width="1.4" opacity="0.75"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="vpn-title">Fokk Shield Tunnel</div>
+                    <div class="vpn-subtitle">Zero-Log Stealth Relay</div>
+                </div>
+            </div>
+            <span class="vpn-status-pill disconnected" id="vpnStatusPill">Disconnected</span>
+        </div>
+
+        <div class="vpn-power-section">
+            <div class="vpn-power-chassis">
+                <div class="vpn-radar-ring" id="vpnRadarRing"></div>
+                <button class="vpn-power-btn" id="btnVpnPower" title="Toggle Shield Tunnel">
+                    <svg class="vpn-power-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+                        <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+                        <line x1="12" y1="2" x2="12" y2="12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="vpn-power-info">
+                <div class="vpn-power-label" id="vpnPowerLabel">Tap to Connect</div>
+                <div class="vpn-power-sub" id="vpnPowerSub">Zero-Cost Stealth Privacy</div>
+            </div>
+        </div>
+
+        <div class="vpn-metrics-card">
+            <div class="vpn-metric-row">
+                <span class="metric-label">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    Virtual IP
+                </span>
+                <span class="metric-val unmasked" id="vpnMetricIp">Direct (Real IP Exposed)</span>
+            </div>
+            <div class="vpn-metric-row">
+                <span class="metric-label">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                    Location
+                </span>
+                <span class="metric-val" id="vpnMetricLocation">Local Direct</span>
+            </div>
+            <div class="vpn-metric-row">
+                <span class="metric-label">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+                    Protocol
+                </span>
+                <span class="metric-val" id="vpnMetricProtocol">Tor Onion Routing</span>
+            </div>
+            <div class="vpn-metric-row">
+                <span class="metric-label">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    Ping Latency
+                </span>
+                <span class="metric-val highlight" id="vpnMetricPing">0 ms</span>
+            </div>
+        </div>
+
+        <div class="vpn-location-section">
+            <div class="vpn-section-header-row">
+                <span class="vpn-section-label">Privacy Relay Protocol</span>
+                <span class="vpn-section-badge">100% Free</span>
+            </div>
+            <div class="vpn-protocol-picker" id="vpnProtocolPicker">
+                <!-- Dynamically populated luxury cards: Onion, Auto, WARP, Custom with high-precision SVGs -->
+            </div>
+        </div>
+
+        <div id="vpnCustomConfigWrap" class="vpn-custom-wrap hidden">
+            <div class="vpn-custom-header">
+                <label class="vpn-section-label" for="vpnCustomInput">Custom SOCKS5 / WireGuard</label>
+                <div class="vpn-custom-chips">
+                    <button class="vpn-chip-btn" type="button" data-val="127.0.0.1:1080">SOCKS 1080</button>
+                    <button class="vpn-chip-btn" type="button" data-val="127.0.0.1:9050">Tor 9050</button>
+                    <button class="vpn-chip-btn" type="button" data-val="127.0.0.1:8080">HTTP 8080</button>
+                </div>
+            </div>
+            <textarea id="vpnCustomInput" class="vpn-custom-textarea" placeholder="Paste proxy (e.g. 127.0.0.1:1080) or WireGuard .conf profile"></textarea>
+            <div class="vpn-custom-footer">
+                <span class="vpn-custom-tip">Enter any local proxy or WireGuard config</span>
+                <button id="btnSaveCustomVpn" class="btn-save-custom-vpn">Save & Apply</button>
+            </div>
+        </div>
+
+        <div class="vpn-footer-toggle">
+            <div class="vpn-toggle-text">
+                <span class="vpn-toggle-name">Kill-Switch Protection</span>
+                <span class="vpn-toggle-sub">Block all web leaks if tunnel drops</span>
+            </div>
+            <label class="vpn-switch">
+                <input type="checkbox" id="vpnKillSwitchCheck" checked>
+                <span class="vpn-slider"></span>
+            </label>
         </div>
     </div>
 

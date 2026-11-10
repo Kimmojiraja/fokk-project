@@ -36,7 +36,11 @@
     },
     "files": [
       "src/**/*",
-      "assets/**/*"
+      "assets/**/*",
+      "bin/**/*"
+    ],
+    "asarUnpack": [
+      "bin/**/*"
     ],
     "extraResources": [
       {
