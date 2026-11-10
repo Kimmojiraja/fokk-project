@@ -110,8 +110,8 @@ body {
 }
 
 .brand-logo-badge:hover {
-    transform: scale(1.05);
-    box-shadow: 0 6px 24px rgba(0, 229, 255, 0.35);
+    transform: scale(1.03);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 .brand-app-logo {
@@ -127,7 +127,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    filter: drop-shadow(0 4px 14px rgba(0, 229, 255, 0.4));
+    filter: none;
 }
 
 .brand-name {
@@ -140,9 +140,118 @@ body {
 
 /* Search Box (Firefox Style) */
 .firefox-search-wrap {
+    position: relative;
+    z-index: 50;
     width: 100%;
     max-width: 660px;
     margin-bottom: 34px;
+}
+
+/* Real-Time Search Suggestions Dropdown */
+.search-suggestions-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: rgba(18, 19, 26, 0.96);
+    backdrop-filter: blur(28px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    padding: 6px 0;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 100;
+    animation: suggestionsFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.search-suggestions-dropdown.hidden {
+    display: none !important;
+}
+
+@keyframes suggestionsFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.search-suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 18px;
+    margin: 2px 6px;
+    border-radius: 12px;
+    cursor: pointer;
+    color: #e2e8f0;
+    font-size: 14.5px;
+    transition: background 0.12s ease, color 0.12s ease;
+    user-select: none;
+}
+
+.search-suggestion-item:hover,
+.search-suggestion-item.active {
+    background: rgba(255, 255, 255, 0.08);
+    color: #00e5ff;
+}
+
+.search-suggestion-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.45);
+    flex-shrink: 0;
+    transition: color 0.12s ease;
+}
+
+.search-suggestion-item:hover .search-suggestion-icon,
+.search-suggestion-item.active .search-suggestion-icon {
+    color: #00e5ff;
+}
+
+.search-suggestion-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+}
+
+.search-suggestion-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.3);
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: all 0.15s ease;
+}
+
+.search-suggestion-item:hover .search-suggestion-arrow,
+.search-suggestion-item.active .search-suggestion-arrow {
+    opacity: 1;
+    transform: translateX(0);
+    color: #00e5ff;
+}
+
+/* Incognito styling for search suggestions */
+body.incognito-stealth-mode .search-suggestions-dropdown {
+    background: rgba(14, 15, 20, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.75);
+}
+
+body.incognito-stealth-mode .search-suggestion-item:hover,
+body.incognito-stealth-mode .search-suggestion-item.active {
+    background: rgba(168, 85, 247, 0.12);
+    color: #C084FC;
+}
+
+body.incognito-stealth-mode .search-suggestion-item:hover .search-suggestion-icon,
+body.incognito-stealth-mode .search-suggestion-item.active .search-suggestion-icon,
+body.incognito-stealth-mode .search-suggestion-item:hover .search-suggestion-arrow,
+body.incognito-stealth-mode .search-suggestion-item.active .search-suggestion-arrow {
+    color: #C084FC;
 }
 
 .firefox-search-box {
@@ -236,20 +345,20 @@ body {
 }
 
 .stealth-hat-badge {
-    width: 76px;
-    height: 76px;
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(168, 85, 247, 0.22) 0%, rgba(168, 85, 247, 0.05) 70%, transparent 100%);
-    border: 1.5px solid rgba(168, 85, 247, 0.38);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: 16px;
-    box-shadow: 0 0 32px rgba(168, 85, 247, 0.3), inset 0 0 16px rgba(168, 85, 247, 0.15);
+    box-shadow: none !important;
 }
 
 .stealth-hat-badge svg {
-    filter: drop-shadow(0 2px 8px rgba(168, 85, 247, 0.45));
+    filter: none !important;
 }
 
 .stealth-hero-title {
@@ -302,26 +411,33 @@ body {
 /* Incognito Stealth Full Screen Theme */
 body.incognito-stealth-mode .wallpaper-bg {
     background-image: none !important;
-    background-color: #07080b !important;
+    background-color: #08090C !important;
 }
 
 body.incognito-stealth-mode .wallpaper-overlay {
-    background: radial-gradient(circle at 50% 28%, rgba(168, 85, 247, 0.12) 0%, rgba(7, 8, 11, 0.96) 65%) !important;
+    background: #08090C !important;
 }
 
 body.incognito-stealth-mode .brand-logo-badge {
-    border-color: rgba(168, 85, 247, 0.45) !important;
-    box-shadow: 0 0 24px rgba(168, 85, 247, 0.3) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    box-shadow: none !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+body.incognito-stealth-mode .brand-logo-badge:hover {
+    box-shadow: none !important;
+    transform: scale(1.03);
 }
 
 body.incognito-stealth-mode .firefox-search-box {
-    border-color: rgba(168, 85, 247, 0.35) !important;
-    box-shadow: 0 4px 22px rgba(168, 85, 247, 0.14) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+    background: rgba(18, 19, 24, 0.96) !important;
 }
 
 body.incognito-stealth-mode .firefox-search-box:focus-within {
-    border-color: #C084FC !important;
-    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.25), 0 4px 24px rgba(168, 85, 247, 0.2) !important;
+    border-color: rgba(192, 132, 252, 0.55) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
 }
 
 body.incognito-stealth-mode #shortcutsContainer {

@@ -279,6 +279,7 @@
     const wallpaperBg = document.getElementById('wallpaperBg');
     const searchForm = document.getElementById('desktopSearchForm');
     const searchInput = document.getElementById('desktopSearchInput');
+    const suggestionsDropdown = document.getElementById('searchSuggestionsDropdown');
     const searchEngineIcon = document.getElementById('searchEngineIcon');
     const shortcutsContainer = document.getElementById('shortcutsContainer');
     const storiesGrid = document.getElementById('storiesGrid');
@@ -517,33 +518,204 @@
         });
     }
 
-    // 3. Search Bar Handling
+    // 3. Search Bar Handling & Real-Time Auto-Suggestions
+    function executeSearch(rawQuery) {
+        const query = (rawQuery || '').trim();
+        if (!query) return;
+
+        let targetUrl = '';
+        if (/^https?:\/\//i.test(query)) {
+            targetUrl = query;
+        } else if (/^localhost(:\d+)?(\/.*)?$/i.test(query) || /^127\.0\.0\.1(:\d+)?(\/.*)?$/i.test(query)) {
+            targetUrl = 'http://' + query;
+        } else if (query.includes('.') && !query.includes(' ')) {
+            targetUrl = 'https://' + query;
+        } else {
+            targetUrl = getActiveEngine().url + encodeURIComponent(query);
+        }
+
+        if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openUrl === 'function') {
+            window.FokkShieldBridge.openUrl(targetUrl);
+        } else {
+            window.location.href = targetUrl;
+        }
+    }
+
     if (searchForm && searchInput) {
         updateSearchEngineUI();
 
+        let activeSuggestionIndex = -1;
+        let currentSuggestions = [];
+        let debounceTimer = null;
+        let lastQueriedText = '';
+        let originalTypedText = '';
+
+        function escapeSuggestionHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str || '';
+            return div.innerHTML;
+        }
+
+        function hideSuggestions() {
+            activeSuggestionIndex = -1;
+            currentSuggestions = [];
+            if (suggestionsDropdown) {
+                suggestionsDropdown.classList.add('hidden');
+                suggestionsDropdown.innerHTML = '';
+            }
+        }
+
+        function updateActiveSuggestion(items) {
+            items.forEach((it, idx) => {
+                if (idx === activeSuggestionIndex) {
+                    it.classList.add('active');
+                    searchInput.value = currentSuggestions[idx] || originalTypedText;
+                    try { it.scrollIntoView({ block: 'nearest' }); } catch (_) {}
+                } else {
+                    it.classList.remove('active');
+                }
+            });
+        }
+
+        function renderSuggestions(suggestions, query) {
+            if (!suggestionsDropdown || !suggestions || suggestions.length === 0) {
+                hideSuggestions();
+                return;
+            }
+
+            currentSuggestions = suggestions;
+            activeSuggestionIndex = -1;
+            suggestionsDropdown.innerHTML = '';
+
+            suggestions.forEach((itemText, idx) => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'search-suggestion-item';
+                itemEl.setAttribute('role', 'option');
+                itemEl.setAttribute('data-index', idx);
+                itemEl.innerHTML = `
+                    <span class="search-suggestion-icon">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                            <circle cx="11" cy="11" r="7"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                    </span>
+                    <span class="search-suggestion-text">${escapeSuggestionHtml(itemText)}</span>
+                    <span class="search-suggestion-arrow">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="7" y1="17" x2="17" y2="7"/>
+                            <polyline points="7 7 17 7 17 17"/>
+                        </svg>
+                    </span>
+                `;
+
+                // Prevent blur on mouse down
+                itemEl.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                });
+
+                itemEl.addEventListener('click', () => {
+                    searchInput.value = itemText;
+                    hideSuggestions();
+                    executeSearch(itemText);
+                });
+
+                suggestionsDropdown.appendChild(itemEl);
+            });
+
+            suggestionsDropdown.classList.remove('hidden');
+        }
+
+        async function requestSuggestions(text) {
+            const query = (text || '').trim();
+            if (!query || /^https?:\/\//i.test(query) || (query.includes('.') && !query.includes(' '))) {
+                hideSuggestions();
+                return;
+            }
+
+            lastQueriedText = query;
+            try {
+                let list = [];
+                if (window.FokkShieldBridge && typeof window.FokkShieldBridge.fetchSearchSuggestions === 'function') {
+                    list = await window.FokkShieldBridge.fetchSearchSuggestions(query);
+                } else if (window.FokkShieldBridge && typeof window.FokkShieldBridge.getSearchSuggestions === 'function') {
+                    list = await window.FokkShieldBridge.getSearchSuggestions(query);
+                }
+
+                if (searchInput.value.trim() !== lastQueriedText) {
+                    return; // Input changed while waiting
+                }
+
+                if (Array.isArray(list) && list.length > 0) {
+                    renderSuggestions(list, query);
+                } else {
+                    hideSuggestions();
+                }
+            } catch (_) {
+                hideSuggestions();
+            }
+        }
+
+        searchInput.addEventListener('input', () => {
+            originalTypedText = searchInput.value;
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                requestSuggestions(searchInput.value);
+            }, 120);
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            if (!suggestionsDropdown || suggestionsDropdown.classList.contains('hidden') || currentSuggestions.length === 0) {
+                return;
+            }
+
+            const items = suggestionsDropdown.querySelectorAll('.search-suggestion-item');
+            if (!items.length) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length;
+                updateActiveSuggestion(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (activeSuggestionIndex <= 0) {
+                    activeSuggestionIndex = -1;
+                    searchInput.value = originalTypedText;
+                    items.forEach(it => it.classList.remove('active'));
+                } else {
+                    activeSuggestionIndex--;
+                    updateActiveSuggestion(items);
+                }
+            } else if (e.key === 'Escape') {
+                hideSuggestions();
+            } else if (e.key === 'Enter') {
+                if (activeSuggestionIndex >= 0 && currentSuggestions[activeSuggestionIndex]) {
+                    e.preventDefault();
+                    const selected = currentSuggestions[activeSuggestionIndex];
+                    searchInput.value = selected;
+                    hideSuggestions();
+                    executeSearch(selected);
+                }
+            }
+        });
+
+        searchInput.addEventListener('focus', () => {
+            if (searchInput.value.trim().length > 0 && currentSuggestions.length > 0) {
+                if (suggestionsDropdown) suggestionsDropdown.classList.remove('hidden');
+            } else if (searchInput.value.trim().length > 0) {
+                requestSuggestions(searchInput.value);
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.firefox-search-wrap')) {
+                hideSuggestions();
+            }
+        });
+
         searchForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const query = searchInput.value.trim();
-            if (!query) return;
-
-            let targetUrl = '';
-            if (/^https?:\/\//i.test(query)) {
-                targetUrl = query;
-            } else if (/^localhost(:\d+)?(\/.*)?$/i.test(query) || /^127\.0\.0\.1(:\d+)?(\/.*)?$/i.test(query)) {
-                targetUrl = 'http://' + query;
-            } else if (query.includes('.') && !query.includes(' ')) {
-                targetUrl = 'https://' + query;
-            } else {
-                targetUrl = getActiveEngine().url + encodeURIComponent(query);
-            }
-
-            // Prefer the bridge so the URL loads inside the tab system (not just navigating
-            // the webview away from the start page while losing history/tab state).
-            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openUrl === 'function') {
-                window.FokkShieldBridge.openUrl(targetUrl);
-            } else {
-                window.location.href = targetUrl;
-            }
+            hideSuggestions();
+            executeSearch(searchInput.value);
         });
     }
 

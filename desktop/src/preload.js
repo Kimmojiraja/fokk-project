@@ -50,8 +50,19 @@ if (isInternalPage) {
     openSearchEngineDialog: () => {
         ipcRenderer.send('fokk-open-engine-dialog');
     },
-    getSearchSuggestions: (query) => {
-        return ipcRenderer.sendSync('fokk-get-search-suggestions', query);
+    getSearchSuggestions: async (query) => {
+        try {
+            return await ipcRenderer.invoke('fokk-get-search-suggestions', query);
+        } catch (_) {
+            return [];
+        }
+    },
+    fetchSearchSuggestions: async (query) => {
+        try {
+            return await ipcRenderer.invoke('fokk-get-search-suggestions', query);
+        } catch (_) {
+            return [];
+        }
     },
 
     // Browser Feature Hubs

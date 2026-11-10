@@ -353,8 +353,80 @@ ipcMain.on('fokk-save-offline-page', () => {
     }
 });
 
-ipcMain.on('fokk-get-search-suggestions', (event, query) => {
-    event.returnValue = '[]';
+/**
+ * Fetches real-time search auto-suggestions from OpenSearch providers (Google with Bing fallback).
+ * @param {string} query
+ * @returns {Promise<string[]>}
+ */
+function fetchSearchSuggestions(query) {
+    return new Promise((resolve) => {
+        if (!query || typeof query !== 'string' || !query.trim()) {
+            return resolve([]);
+        }
+        const clean = query.trim();
+        // Do not query for URL addresses or single-word domain names
+        if (/^https?:\/\//i.test(clean) || (clean.includes('.') && !clean.includes(' '))) {
+            return resolve([]);
+        }
+
+        const requestSuggestions = (url) => {
+            return new Promise((resInner) => {
+                const req = https.get(url, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+                    }
+                }, (resp) => {
+                    if (resp.statusCode < 200 || resp.statusCode >= 300) {
+                        return resInner([]);
+                    }
+                    let data = '';
+                    resp.setEncoding('utf8');
+                    resp.on('data', chunk => { data += chunk; });
+                    resp.on('end', () => {
+                        try {
+                            const parsed = JSON.parse(data);
+                            if (Array.isArray(parsed) && Array.isArray(parsed[1])) {
+                                return resInner(parsed[1].filter(s => typeof s === 'string').slice(0, 8));
+                            }
+                            resInner([]);
+                        } catch (_) {
+                            resInner([]);
+                        }
+                    });
+                });
+                req.on('error', () => resInner([]));
+                req.setTimeout(1800, () => {
+                    req.destroy();
+                    resInner([]);
+                });
+            });
+        };
+
+        const googleUrl = 'https://suggestqueries.google.com/complete/search?client=chrome&q=' + encodeURIComponent(clean);
+        requestSuggestions(googleUrl).then((results) => {
+            if (results && results.length > 0) {
+                return resolve(results);
+            }
+            // Fallback to Bing OpenSearch
+            const bingUrl = 'https://api.bing.com/osjson.aspx?query=' + encodeURIComponent(clean);
+            return requestSuggestions(bingUrl).then((bingResults) => {
+                resolve(bingResults || []);
+            });
+        }).catch(() => resolve([]));
+    });
+}
+
+ipcMain.handle('fokk-get-search-suggestions', async (event, query) => {
+    return await fetchSearchSuggestions(query);
+});
+
+ipcMain.on('fokk-get-search-suggestions', async (event, query) => {
+    try {
+        const list = await fetchSearchSuggestions(query);
+        event.returnValue = JSON.stringify(list);
+    } catch (_) {
+        event.returnValue = '[]';
+    }
 });
 
 ipcMain.on('fokk-open-new-tab', () => {

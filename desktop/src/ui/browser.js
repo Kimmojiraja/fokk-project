@@ -37,8 +37,8 @@ const btnClose = document.getElementById('btnClose');
 const START_PAGE_URL = ipcRenderer.sendSync('fokk-get-start-page-url');
 const PRELOAD_SCRIPT_PATH = ipcRenderer.sendSync('fokk-get-preload-path');
 
-// Authentic Incognito Stealth Vector Icon (matches official Android ic_incognito.xml)
-const INCOGNITO_FAVICON_SVG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M6 11.5 L7.8 4.8 C8.2 3.8 9.5 3.8 12 3.8 C14.5 3.8 15.8 3.8 16.2 4.8 L18 11.5 Z" fill="%23C084FC" stroke="none"/><path d="M2.5 12 C6.5 10.5 17.5 10.5 21.5 12" stroke="%23C084FC" stroke-width="2.2" stroke-linecap="round"/><circle cx="8" cy="16.5" r="2.8" stroke="%23C084FC" stroke-width="2" fill="none"/><circle cx="16" cy="16.5" r="2.8" stroke="%23C084FC" stroke-width="2" fill="none"/><path d="M10.8 16.5 Q12 15.2 13.2 16.5" stroke="%23C084FC" stroke-width="2" fill="none"/></svg>';
+// Authentic Incognito Stealth Vector Icon (URL-encoded data URI to prevent attribute quote breaks)
+const INCOGNITO_FAVICON_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M6 11.5 L7.8 4.8 C8.2 3.8 9.5 3.8 12 3.8 C14.5 3.8 15.8 3.8 16.2 4.8 L18 11.5 Z" fill="#C084FC" stroke="none"/><path d="M2.5 12 C6.5 10.5 17.5 10.5 21.5 12" stroke="#C084FC" stroke-width="2.2" stroke-linecap="round"/><circle cx="8" cy="16.5" r="2.8" stroke="#C084FC" stroke-width="2" fill="none"/><circle cx="16" cy="16.5" r="2.8" stroke="#C084FC" stroke-width="2" fill="none"/><path d="M10.8 16.5 Q12 15.2 13.2 16.5" stroke="#C084FC" stroke-width="2" fill="none"/></svg>');
 
 // Search Engine Registry (Exact Vector SVGs matching mobile design reference)
 const OMNIBOX_ENGINES = {
@@ -218,7 +218,13 @@ function createTab(url = START_PAGE_URL, options = {}) {
     webview.addEventListener('page-title-updated', (e) => {
         const titleEl = document.getElementById('title_' + tabId);
         if (titleEl && e.title) {
-            titleEl.textContent = (isPrivate ? '[Private] ' : '') + e.title;
+            const currentUrl = (webview.getURL ? webview.getURL() : '') || '';
+            const isStartPage = currentUrl.includes('start.html') || currentUrl.startsWith('file:') || !currentUrl || e.title === 'New Tab' || e.title === 'Incognito';
+            if (isPrivate) {
+                titleEl.textContent = isStartPage ? 'Incognito' : e.title;
+            } else {
+                titleEl.textContent = e.title;
+            }
         }
         if (!isPrivate && webview.getURL) {
             recordHistoryItem(webview.getURL(), e.title);
