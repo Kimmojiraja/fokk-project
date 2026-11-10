@@ -765,6 +765,52 @@ body.incognito-stealth-mode #incognitoStealthHero {
     flex-shrink: 0;
 }
 
+.stories-carousel-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.stories-arrow-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(18, 20, 30, 0.9);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stories-arrow-btn.prev {
+    left: -12px;
+}
+
+.stories-arrow-btn.next {
+    right: -12px;
+}
+
+.stories-arrow-btn:hover {
+    background: rgba(30, 34, 52, 0.98);
+    border-color: rgba(0, 229, 255, 0.6);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 229, 255, 0.3);
+    transform: translateY(-50%) scale(1.08);
+}
+
+.stories-arrow-btn.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%) scale(0.8);
+}
+
 /* Modern Single-Row Horizontally Scrollable Stories Grid */
 .firefox-stories-grid {
     display: flex;
@@ -774,10 +820,10 @@ body.incognito-stealth-mode #incognitoStealthHero {
     overflow-y: hidden;
     padding: 6px 6px 18px 6px;
     width: 100%;
-    scroll-snap-type: x proximity;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
     -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
 }
 
 .firefox-stories-grid::-webkit-scrollbar {
@@ -802,7 +848,6 @@ body.incognito-stealth-mode #incognitoStealthHero {
     max-width: 315px;
     height: 345px;
     flex-shrink: 0;
-    scroll-snap-align: start;
     background: rgba(22, 24, 34, 0.82);
     backdrop-filter: blur(28px);
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1552,5 +1597,51 @@ body.theme-light .btn-modal-close {
 
 body.theme-light .btn-modal-close:hover {
     color: #0F172A;
+}
+
+/* Footer Links Bar */
+.firefox-footer-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 36px;
+    margin-bottom: 24px;
+    padding: 8px 20px;
+    background: rgba(18, 20, 28, 0.55);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 100px;
+}
+
+.footer-link {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.footer-link:hover {
+    color: #00E5FF;
+    text-decoration: underline;
+}
+
+.footer-dot {
+    color: rgba(255, 255, 255, 0.25);
+    font-size: 10px;
+}
+
+body.theme-light .firefox-footer-bar {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+body.theme-light .footer-link {
+    color: #64748b;
+}
+
+body.theme-light .footer-link:hover {
+    color: #0284c7;
 }
 

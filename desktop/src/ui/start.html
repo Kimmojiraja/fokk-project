@@ -98,9 +98,21 @@
                 </div>
             </div>
 
-            <!-- Editorial card grid -->
-            <div class="firefox-stories-grid" id="storiesGrid">
-                <!-- Injected via start.js -->
+            <!-- Editorial card grid carousel wrap -->
+            <div class="stories-carousel-wrap">
+                <button type="button" id="btnStoriesPrev" class="stories-arrow-btn prev hidden" aria-label="Scroll left">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                </button>
+                <div class="firefox-stories-grid" id="storiesGrid">
+                    <!-- Injected via start.js -->
+                </div>
+                <button type="button" id="btnStoriesNext" class="stories-arrow-btn next" aria-label="Scroll right">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                </button>
             </div>
 
             <!-- View More Stories Expansion Container -->
@@ -113,6 +125,17 @@
                 </button>
             </div>
         </section>
+
+        <!-- Footer Links (About, Privacy, Contributing, License) -->
+        <footer class="firefox-footer-bar">
+            <a href="fokk_about.html" class="footer-link">About Fokk</a>
+            <span class="footer-dot">•</span>
+            <a href="fokk_privacy.html" class="footer-link">Privacy &amp; Disclaimers</a>
+            <span class="footer-dot">•</span>
+            <a href="fokk_contributing.html" class="footer-link">Contributing &amp; Business Model</a>
+            <span class="footer-dot">•</span>
+            <a href="fokk_license.html" class="footer-link">License</a>
+        </footer>
     </div>
 
     <!-- Add Custom Shortcut Modal -->

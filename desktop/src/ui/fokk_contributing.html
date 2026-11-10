@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Support Fokk — Contributing & Business Model</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+html,body{background:#090b14;color:#fff;min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:3px}
+.page-wrap{max-width:960px;margin:0 auto;padding:48px 32px 80px}
+
+/* Header */
+.hero{text-align:center;padding:56px 0 52px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:56px}
+.hero-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#00E5FF;margin-bottom:16px}
+.hero-title{font-size:40px;font-weight:850;letter-spacing:-1px;margin-bottom:14px;background:linear-gradient(135deg,#fff 40%,rgba(0,229,255,0.9));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-sub{font-size:16px;line-height:1.65;color:rgba(255,255,255,0.55);max-width:620px;margin:0 auto}
+
+/* Sections */
+.section{margin-bottom:52px}
+.section-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#00E5FF;margin-bottom:20px}
+.section-title{font-size:24px;font-weight:750;letter-spacing:-0.4px;margin-bottom:10px}
+.section-desc{font-size:14px;line-height:1.65;color:rgba(255,255,255,0.55);margin-bottom:24px}
+
+/* Pricing tiers */
+.tiers-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:720px){.tiers-grid{grid-template-columns:1fr}}
+.tier-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:28px 24px;position:relative;display:flex;flex-direction:column}
+.tier-card.featured{background:linear-gradient(135deg,rgba(0,229,255,0.07),rgba(139,92,246,0.05));border-color:rgba(0,229,255,0.35)}
+.tier-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#00E5FF,#8B5CF6);color:#000;font-size:10.5px;font-weight:800;letter-spacing:0.5px;padding:4px 14px;border-radius:100px;white-space:nowrap}
+.tier-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.tier-name{font-size:18px;font-weight:800;margin-bottom:4px}
+.tier-price{font-size:30px;font-weight:900;letter-spacing:-1px;margin-bottom:2px}
+.tier-price span{font-size:14px;font-weight:400;color:rgba(255,255,255,0.45);letter-spacing:0}
+.tier-desc{font-size:12.5px;color:rgba(255,255,255,0.45);margin-bottom:20px;line-height:1.5}
+.tier-features{list-style:none;display:flex;flex-direction:column;gap:9px;flex:1;margin-bottom:22px}
+.tier-features li{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:rgba(255,255,255,0.72)}
+.tier-features li svg{flex-shrink:0;margin-top:1px}
+.tier-btn{display:block;text-align:center;padding:11px 0;border-radius:11px;font-size:13.5px;font-weight:700;cursor:pointer;transition:all 0.2s;border:none;text-decoration:none;width:100%}
+.tier-btn-primary{background:linear-gradient(135deg,#00E5FF,#0EA5E9);color:#000}
+.tier-btn-primary:hover{box-shadow:0 8px 24px rgba(0,229,255,0.35);transform:translateY(-1px)}
+.tier-btn-secondary{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.15)}
+.tier-btn-secondary:hover{background:rgba(255,255,255,0.14);transform:translateY(-1px)}
+.tier-btn-outline{background:transparent;color:#00E5FF;border:1px solid rgba(0,229,255,0.4)}
+.tier-btn-outline:hover{background:rgba(0,229,255,0.1);transform:translateY(-1px)}
+
+/* Revenue model cards */
+.model-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media(max-width:600px){.model-grid{grid-template-columns:1fr}}
+.model-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px}
+.model-card-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.model-title{font-size:14px;font-weight:700;margin-bottom:5px}
+.model-desc{font-size:12px;line-height:1.55;color:rgba(255,255,255,0.5)}
+
+/* Crypto */
+.crypto-grid{display:flex;flex-direction:column;gap:10px}
+.crypto-row{display:flex;align-items:center;gap:14px;padding:14px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px}
+.crypto-symbol{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.crypto-name{font-size:13px;font-weight:700;margin-bottom:1px}
+.crypto-addr{font-size:11px;color:rgba(255,255,255,0.4);font-family:monospace;word-break:break-all}
+.btn-copy{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);color:#fff;padding:5px 12px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0}
+.btn-copy:hover{background:rgba(0,229,255,0.15);border-color:rgba(0,229,255,0.35);color:#00E5FF}
+
+/* GH Sponsor tiers */
+.sponsor-tiers{display:flex;flex-direction:column;gap:10px}
+.sponsor-row{display:flex;align-items:center;gap:14px;padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:13px;justify-content:space-between}
+.sponsor-left{display:flex;align-items:center;gap:14px}
+.sponsor-badge{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0}
+.sponsor-tier-name{font-size:14px;font-weight:700;margin-bottom:3px}
+.sponsor-perks{font-size:11.5px;color:rgba(255,255,255,0.45)}
+.sponsor-price{font-size:17px;font-weight:800;color:#00E5FF;white-space:nowrap}
+
+/* Alert box */
+.ethics-box{background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.2);border-radius:14px;padding:22px 24px;display:flex;gap:16px;align-items:flex-start}
+.ethics-icon{width:42px;height:42px;border-radius:11px;background:rgba(0,229,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.ethics-title{font-size:14.5px;font-weight:750;margin-bottom:6px}
+.ethics-text{font-size:13px;line-height:1.6;color:rgba(255,255,255,0.6)}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-label">Sustaining Independent Privacy Software</div>
+    <h1 class="hero-title">Support Fokk's Independence</h1>
+    <p class="hero-sub">Fokk Browser has zero ads, zero trackers, and zero telemetry. It is built and maintained by a small team of privacy advocates. Without community support, independent privacy software cannot survive. Here's exactly how we sustain the project — transparently.</p>
+  </div>
+
+  <!-- Ethics statement -->
+  <div class="section">
+    <div class="ethics-box">
+      <div class="ethics-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div>
+        <div class="ethics-title">Our Commitment to You</div>
+        <div class="ethics-text">We will never sell your data, insert advertising, enable tracking SDKs, or accept revenue from surveillance-based businesses. All revenue models listed here are opt-in, transparent, and do not compromise your privacy in any way. The free tier of Fokk Browser remains genuinely free, forever — with zero feature restrictions on core browsing.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pricing tiers -->
+  <div class="section">
+    <div class="section-label">Plans & Tiers</div>
+    <div class="section-title">Built for Everyone</div>
+    <div class="section-desc">The core browser is free forever. Optional plans sustain development and unlock advanced power-user features.</div>
+
+    <div class="tiers-grid">
+      <!-- Free -->
+      <div class="tier-card">
+        <div class="tier-icon" style="background:rgba(255,255,255,0.06)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2.2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+        </div>
+        <div class="tier-name">Fokk Free</div>
+        <div class="tier-price">$0<span> / forever</span></div>
+        <div class="tier-desc">Full private browsing, forever free. No credit card, no account required.</div>
+        <ul class="tier-features">
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Full privacy browser with adblocker</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Incognito stealth mode</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>DNS-over-HTTPS privacy tunnel</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>50,000+ tracker domains blocked</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Split-view dual browsing</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Tab memory hibernation</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Open source — auditable code</li>
+        </ul>
+        <a class="tier-btn tier-btn-secondary" href="https://github.com/Kimmojiraja/fokk-project/releases" target="_blank">Download Free</a>
+      </div>
+
+      <!-- Pro — featured -->
+      <div class="tier-card featured">
+        <div class="tier-badge">Most Popular</div>
+        <div class="tier-icon" style="background:rgba(0,229,255,0.1)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div class="tier-name" style="color:#00E5FF">Fokk Pro</div>
+        <div class="tier-price">$3.99<span> / month</span></div>
+        <div class="tier-desc">Power-user features and VPN bandwidth for those who want to go further.</div>
+        <ul class="tier-features">
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Free</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Unlimited VPN bandwidth (zero-log)</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Cloud bookmark & history sync</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Premium wallpaper packs (4K)</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Priority support queue (48hr SLA)</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Early access to new features</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Fokk Pro badge &amp; supporter recognition</li>
+        </ul>
+        <a class="tier-btn tier-btn-primary" href="https://github.com/sponsors/Kimmojiraja" target="_blank">Get Fokk Pro</a>
+      </div>
+
+      <!-- Teams -->
+      <div class="tier-card">
+        <div class="tier-icon" style="background:rgba(139,92,246,0.1)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="tier-name">Fokk Teams</div>
+        <div class="tier-price">$8<span> / seat/month</span></div>
+        <div class="tier-desc">Enterprise-grade privacy browser with centralized management for organizations.</div>
+        <ul class="tier-features">
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Fokk Pro</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Centralized admin dashboard</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Compliance &amp; audit reports</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Custom branding &amp; policies</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Dedicated account manager</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>SSO / SAML integration</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Priority 24hr SLA support</li>
+        </ul>
+        <a class="tier-btn tier-btn-outline" href="mailto:fokk-teams@proton.me" target="_blank">Contact Sales</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- How we sustain -->
+  <div class="section">
+    <div class="section-label">How We're Funded</div>
+    <div class="section-title">Sustainable Without Compromising Users</div>
+    <div class="section-desc">Unlike ad-funded browsers, Fokk uses only privacy-respecting revenue streams. No data is sold, no profiles are built, no ads are displayed.</div>
+
+    <div class="model-grid">
+      <div class="model-card">
+        <div class="model-card-icon" style="background:rgba(0,229,255,0.1)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <div class="model-title">GitHub Sponsors & Open Collective</div>
+        <div class="model-desc">Individual and corporate sponsorships through GitHub Sponsors. All sponsors are listed publicly. No corporate sponsor gains influence over product decisions.</div>
+      </div>
+      <div class="model-card">
+        <div class="model-card-icon" style="background:rgba(16,185,129,0.1)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <div class="model-title">Fokk Pro & Teams Subscriptions</div>
+        <div class="model-desc">Optional paid tiers providing power-user features. Subscription revenue directly funds developer salaries, server costs, and security audits.</div>
+      </div>
+      <div class="model-card">
+        <div class="model-card-icon" style="background:rgba(234,179,8,0.1)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EAB308" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <div class="model-title">Privacy-Respecting Search Revenue</div>
+        <div class="model-desc">Optional rev-share partnerships with Kagi, Brave Search, and DuckDuckGo — only if you choose them as your default search engine. Zero data is shared with these partners beyond the search query you type.</div>
+      </div>
+      <div class="model-card">
+        <div class="model-card-icon" style="background:rgba(139,92,246,0.1)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2.2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+        </div>
+        <div class="model-title">Open Source Grants</div>
+        <div class="model-desc">Applications to open-source sustainability funds (NLnet Foundation, Mozilla Open Source Support, Sovereign Tech Fund) to fund long-term security and infrastructure work.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GitHub Sponsor Tiers -->
+  <div class="section">
+    <div class="section-label">GitHub Sponsor Tiers</div>
+    <div class="sponsor-tiers">
+      <div class="sponsor-row">
+        <div class="sponsor-left">
+          <div class="sponsor-badge" style="background:rgba(205,127,50,0.15);color:#CD7F32">B</div>
+          <div>
+            <div class="sponsor-tier-name">Bronze Supporter</div>
+            <div class="sponsor-perks">Name in contributors list · Sponsor badge · Project updates</div>
+          </div>
+        </div>
+        <div class="sponsor-price">$5 / mo</div>
+      </div>
+      <div class="sponsor-row">
+        <div class="sponsor-left">
+          <div class="sponsor-badge" style="background:rgba(192,192,192,0.15);color:#C0C0C0">S</div>
+          <div>
+            <div class="sponsor-tier-name">Silver Supporter</div>
+            <div class="sponsor-perks">All Bronze perks · Early feature access · Priority bug reporting · Discord supporter role</div>
+          </div>
+        </div>
+        <div class="sponsor-price">$25 / mo</div>
+      </div>
+      <div class="sponsor-row">
+        <div class="sponsor-left">
+          <div class="sponsor-badge" style="background:rgba(255,215,0,0.15);color:#FFD700">G</div>
+          <div>
+            <div class="sponsor-tier-name">Gold Sponsor</div>
+            <div class="sponsor-perks">All Silver perks · Logo placement on README · Monthly call with core team · Feature vote weight</div>
+          </div>
+        </div>
+        <div class="sponsor-price">$100 / mo</div>
+      </div>
+      <div class="sponsor-row">
+        <div class="sponsor-left">
+          <div class="sponsor-badge" style="background:rgba(0,229,255,0.15);color:#00E5FF">P</div>
+          <div>
+            <div class="sponsor-tier-name">Platinum Sponsor (Corporate)</div>
+            <div class="sponsor-perks">All Gold perks · Dedicated support · Roadmap influence · Public recognition as founding sponsor</div>
+          </div>
+        </div>
+        <div class="sponsor-price">$500 / mo</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Crypto Section -->
+  <div class="section">
+    <div class="section-label">Direct Crypto Support</div>
+    <div class="section-desc">Anonymous, decentralized one-time contributions are welcome. Sending crypto directly bypasses platform fees.</div>
+    <div class="crypto-grid">
+      <div class="crypto-row">
+        <div class="crypto-symbol" style="background:rgba(247,147,26,0.12);color:#F7931A">BTC</div>
+        <div style="flex:1;min-width:0">
+          <div class="crypto-name">Bitcoin</div>
+          <div class="crypto-addr">bc1qwxnv6uphj0ke8q50gdx6ew8j3lgvwhk6k2kaet</div>
+        </div>
+        <button class="btn-copy" onclick="copyAddr(this,'bc1qwxnv6uphj0ke8q50gdx6ew8j3lgvwhk6k2kaet','BTC')">Copy</button>
+      </div>
+      <div class="crypto-row">
+        <div class="crypto-symbol" style="background:rgba(98,126,234,0.12);color:#627EEA">ETH</div>
+        <div style="flex:1;min-width:0">
+          <div class="crypto-name">Ethereum</div>
+          <div class="crypto-addr">0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525</div>
+        </div>
+        <button class="btn-copy" onclick="copyAddr(this,'0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525','ETH')">Copy</button>
+      </div>
+      <div class="crypto-row">
+        <div class="crypto-symbol" style="background:rgba(20,241,149,0.12);color:#14F195">SOL</div>
+        <div style="flex:1;min-width:0">
+          <div class="crypto-name">Solana</div>
+          <div class="crypto-addr">DqgAgDj4PjvR4K1wtYfpaZuYNeNZgj2fQoKnXApWKuTj</div>
+        </div>
+        <button class="btn-copy" onclick="copyAddr(this,'DqgAgDj4PjvR4K1wtYfpaZuYNeNZgj2fQoKnXApWKuTj','SOL')">Copy</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+function copyAddr(btn, addr, name) {
+  navigator.clipboard.writeText(addr).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.style.color = '#10B981';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
+  });
+}
+</script>
+</body>
+</html>
