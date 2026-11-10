@@ -150,7 +150,8 @@ function createTab(url = START_PAGE_URL, options = {}) {
     webview.setAttribute('preload', PRELOAD_SCRIPT_PATH);
     webview.setAttribute('allowpopups', 'true');
     webview.setAttribute('useragent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
-    webview.setAttribute('webpreferences', 'contextIsolation=yes, javascript=yes');
+    webview.setAttribute('webpreferences', 'contextIsolation=yes, javascript=yes, backgroundThrottling=no');
+    webview.style.backgroundColor = '#090A0C';
     if (isPrivate) {
         webview.setAttribute('partition', 'fokk_incognito_' + Date.now());
     } else {
@@ -291,14 +292,16 @@ function activateTab(tabId) {
     }
 
     tabs.forEach(t => {
+        let currentTabUrl = '';
+        try { currentTabUrl = (typeof t.webview.getURL === 'function') ? t.webview.getURL() : ''; } catch (_) {}
+
         if (t.id === tabId) {
             t.el.classList.add('active');
             t.webview.classList.add('active');
-            updateOmnibox(t.webview.getURL ? t.webview.getURL() : '');
+            updateOmnibox(currentTabUrl);
             updateNavState(t.webview);
             if (shieldCountText) {
-                const u = t.webview.getURL ? t.webview.getURL() : '';
-                shieldCountText.textContent = (u.startsWith('http') && t.blockedCount) ? t.blockedCount : '0';
+                shieldCountText.textContent = (currentTabUrl.startsWith('http') && t.blockedCount) ? t.blockedCount : '0';
             }
         } else {
             t.el.classList.remove('active');
@@ -330,8 +333,13 @@ function closeTab(tabId) {
 
 function updateNavState(webview) {
     if (!webview || typeof webview.canGoBack !== 'function') return;
-    btnBack.disabled = !webview.canGoBack();
-    btnForward.disabled = !webview.canGoForward();
+    try {
+        btnBack.disabled = !webview.canGoBack();
+        btnForward.disabled = !webview.canGoForward();
+    } catch (_) {
+        btnBack.disabled = true;
+        btnForward.disabled = true;
+    }
 }
 
 function updateOmnibox(rawUrl) {
@@ -2582,14 +2590,20 @@ function toggleSplitView() {
         splitSecondaryTabId = null;
         tabs.forEach(t => {
             t.webview.style.width = '';
+            t.webview.classList.remove('split-primary', 'split-secondary');
             t.webview.style.display = t.id === activeTabId ? 'flex' : 'none';
         });
         showToast('Split View Disabled');
         return;
     }
 
+    viewsContainer.classList.add('split-view-active');
+    if (splitDivider) splitDivider.classList.remove('hidden');
+
     if (tabs.length < 2) {
+        const curActive = activeTabId;
         createTab(START_PAGE_URL);
+        activeTabId = curActive;
     }
 
     const other = tabs.find(t => t.id !== activeTabId);
@@ -2597,8 +2611,6 @@ function toggleSplitView() {
         splitSecondaryTabId = other.id;
     }
 
-    viewsContainer.classList.add('split-view-active');
-    if (splitDivider) splitDivider.classList.remove('hidden');
     updateSplitLayout();
     showToast('Split View Active (Side-by-Side Dual Browsing)');
 }
@@ -2606,16 +2618,20 @@ function toggleSplitView() {
 function updateSplitLayout() {
     if (!isSplitViewActive) return;
     const primary = tabs.find(t => t.id === activeTabId);
-    const secondary = tabs.find(t => t.id === splitSecondaryTabId) || tabs.find(t => t.id !== activeTabId);
+    let secondary = tabs.find(t => t.id === splitSecondaryTabId);
+    if (!secondary || secondary === primary) {
+        secondary = tabs.find(t => t.id !== activeTabId);
+        if (secondary) splitSecondaryTabId = secondary.id;
+    }
 
     tabs.forEach(t => {
         if (t === primary) {
-            t.webview.style.display = 'inline-flex';
+            t.webview.style.display = 'flex';
             t.webview.style.width = `calc(${splitRatio * 100}% - 3px)`;
             t.webview.classList.add('split-primary');
             t.webview.classList.remove('split-secondary');
         } else if (t === secondary) {
-            t.webview.style.display = 'inline-flex';
+            t.webview.style.display = 'flex';
             t.webview.style.width = `calc(${(1 - splitRatio) * 100}% - 3px)`;
             t.webview.classList.add('split-secondary');
             t.webview.classList.remove('split-primary');

@@ -136,6 +136,8 @@ class DesktopNewsService {
         const itemRegex = /<item[\s\S]*?<\/item>/gi;
         const titleRegex = /<title(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i;
         const linkRegex = /<link(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i;
+        const descRegex = /<description(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i;
+        const pubDateRegex = /<pubDate(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/pubDate>/i;
         const descImgRegex = /<img[^>]+src=["']([^"']+)["']/i;
 
         let match;
@@ -160,6 +162,38 @@ class DesktopNewsService {
             const lMatch = linkRegex.exec(content);
             const link = lMatch ? lMatch[1].trim() : '';
             if (!link || !link.startsWith('http')) continue;
+
+            // Extract real live article snippet/description
+            let snippet = '';
+            const dMatch = descRegex.exec(content);
+            if (dMatch) {
+                snippet = dMatch[1]
+                    .replace(/<[^>]+>/g, '')
+                    .replace(/&amp;/g, '&')
+                    .replace(/&quot;/g, '"')
+                    .replace(/&#39;/g, "'")
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                if (snippet.toLowerCase() === title.toLowerCase()) snippet = '';
+                if (snippet.length > 160) snippet = snippet.slice(0, 157) + '...';
+            }
+
+            // Extract real live publication time
+            let timeAgo = 'Live';
+            const pMatch = pubDateRegex.exec(content);
+            if (pMatch) {
+                try {
+                    const d = new Date(pMatch[1].trim());
+                    if (!isNaN(d.getTime())) {
+                        const diffMin = Math.round((Date.now() - d.getTime()) / 60000);
+                        if (diffMin < 60) timeAgo = `${Math.max(1, diffMin)}m ago`;
+                        else if (diffMin < 1440) timeAgo = `${Math.floor(diffMin / 60)}h ago`;
+                        else timeAgo = `${Math.floor(diffMin / 1440)}d ago`;
+                    }
+                } catch (_) {}
+            }
 
             // Extract highest-resolution image available across all media tags
             let img = '';
@@ -200,8 +234,10 @@ class DesktopNewsService {
 
             items.push({
                 title,
+                snippet,
+                description: snippet,
                 source: srcName,
-                time: 'Live',
+                time: timeAgo,
                 category: category || 'all',
                 region: region || 'global',
                 url: link,

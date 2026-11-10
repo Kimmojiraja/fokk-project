@@ -18,6 +18,10 @@ app.commandLine.appendSwitch('disable-quic');
 app.commandLine.appendSwitch('disable-webrtc-multiple-routes');
 app.commandLine.appendSwitch('enforce-webrtc-ip-permission-check');
 
+// Anti-White-Flash & Resilient Windows Compositing
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+
 // Paths
 const devAssetsDir = path.resolve(__dirname, '..', '..', 'app', 'src', 'main', 'assets');
 const packagedAssetsDir = path.join(process.resourcesPath || '', 'assets');
@@ -186,7 +190,8 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
-            webviewTag: true
+            webviewTag: true,
+            backgroundThrottling: false
         }
     });
 

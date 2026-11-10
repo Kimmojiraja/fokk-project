@@ -157,57 +157,73 @@
     const PRIMARY_STORIES = [
         {
             title: "After accusing Govinda of infidelity, Sunita Ahuja confident about their reunion: '40-year-old marriage'",
+            snippet: "Sunita Ahuja opened up on her journey with actor Govinda, affirming mutual respect and confidence in their four-decade partnership.",
             source: "The Indian Express",
             sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23EA580C'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='14' font-weight='bold' fill='white' text-anchor='middle'>IE</text></svg>",
+            time: "24m ago",
             url: "https://indianexpress.com",
             image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80"
         },
         {
             title: "'Hollywood Se Bhi Better Hai...': Sunny Deol Urges Every Indian To Watch Ramayana, Praises Film's VFX",
+            snippet: "Sunny Deol applauded the cutting-edge visual effects in the upcoming magnum opus, expressing pride in indigenous cinematic craft.",
             source: "Free Press Journal",
             sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23DC2626'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='14' font-weight='bold' fill='white' text-anchor='middle'>F</text></svg>",
+            time: "48m ago",
             url: "https://freepressjournal.in",
             image: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80"
         },
         {
             title: "NSE EGR trading hits record 2.27 lakh units on Dhanteras festival surge",
+            snippet: "Electronic Gold Receipts on the National Stock Exchange registered unprecedented trading volume amid buoyant festive demand across India.",
             source: "Business Line",
             sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563EB'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='13' font-weight='bold' fill='white' text-anchor='middle'>bl.</text></svg>",
+            time: "1h ago",
             url: "https://thehindubusinessline.com",
             image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=600&q=80"
         },
         {
             title: "Ramayana: Kajal Aggarwal on playing Mandodari, says, 'Some roles are bigger than screen time'",
+            snippet: "Actor Kajal Aggarwal shared insights on embracing mythological characters and prioritizing emotional depth over duration.",
             source: "Mid-Day",
             sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230284C7'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='13' font-weight='bold' fill='white' text-anchor='middle'>MD</text></svg>",
+            time: "2h ago",
             url: "https://mid-day.com",
             image: "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=600&q=80"
         },
         {
             title: "Chemicals to capital goods: What is driving India's push to indigenise 100 critical industrial components",
+            snippet: "A strategic industrial roadmap accelerates domestic manufacturing for essential machinery parts, reducing supply-chain import dependency.",
             source: "The Indian Express",
             sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23EA580C'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='14' font-weight='bold' fill='white' text-anchor='middle'>IE</text></svg>",
+            time: "3h ago",
             url: "https://indianexpress.com",
             image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80"
         },
         {
             title: "No 'Patiala Peg' for fans: Four Diljit Dosanjh songs barred from upcoming concert tour",
+            snippet: "Concert organizers confirmed setlist revisions following local regulatory advisories regarding beverage references in live performance tracks.",
             source: "The Telegraph",
             sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23475569'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='14' font-weight='bold' fill='white' text-anchor='middle'>T</text></svg>",
+            time: "3h ago",
             url: "https://telegraphindia.com",
             image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80"
         },
         {
             title: "iPhone 18 Pro and iPhone 17 Pro: 5 camera tips for stunning low-light festival photography and cinematic video",
+            snippet: "Master Night mode, computational exposure bracketing, and cinematic focus tracking for crisp handheld shots in ambient evening light.",
             source: "Wion News",
             sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23059669'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='13' font-weight='bold' fill='white' text-anchor='middle'>WN</text></svg>",
+            time: "4h ago",
             url: "https://wionews.com",
             image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=80"
         },
         {
             title: "UK plans facial recognition surveillance network to track visa overstayers and border compliance",
+            snippet: "The Home Office outlines automated biometric screening protocols across transportation hubs to streamline immigration enforcement.",
             source: "Firstpost",
             sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23D97706'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='14' font-weight='bold' fill='white' text-anchor='middle'>FP</text></svg>",
+            time: "5h ago",
             url: "https://firstpost.com",
             image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=80"
         }
@@ -217,57 +233,73 @@
     const EXTENDED_STORIES = [
         {
             title: "ISRO gears up for Gaganyaan uncrewed orbital mission with advanced crew escape module test",
+            snippet: "Space agency engineers conduct final high-altitude parachute and abort simulation trials ahead of India's maiden crewed spaceflight program.",
             source: "NDTV News",
             sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E11D48'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='11' font-weight='bold' fill='white' text-anchor='middle'>NDTV</text></svg>",
+            time: "2h ago",
             url: "https://ndtv.com",
             image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=600&q=80"
         },
         {
             title: "Global markets rally as semiconductor fabrication investments cross $500B milestone",
+            snippet: "Foundry expansions in the US, Europe, and Asia drive silicon equipment bookings as artificial intelligence hardware orders soar.",
             source: "Reuters",
             sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23F97316'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='14' font-weight='bold' fill='white' text-anchor='middle'>R</text></svg>",
+            time: "3h ago",
             url: "https://reuters.com",
             image: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80"
         },
         {
             title: "DeepSeek releases open-source reasoning model architecture rivaling proprietary LLMs",
+            snippet: "New benchmark reports showcase high-efficiency chain-of-thought mathematical reasoning with dramatically lower inference memory footprint.",
             source: "TechCrunch",
             sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310B981'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='13' font-weight='bold' fill='white' text-anchor='middle'>TC</text></svg>",
+            time: "4h ago",
             url: "https://techcrunch.com",
             image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=600&q=80"
         },
         {
             title: "Cybersecurity researchers uncover zero-click Bluetooth vulnerability impacting millions of legacy devices",
+            snippet: "Security advisory urges prompt patch deployment across connected peripherals to mitigate packet injection attack vectors.",
             source: "Wired",
             sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000000'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='14' font-weight='bold' fill='white' text-anchor='middle'>W</text></svg>",
+            time: "5h ago",
             url: "https://wired.com",
             image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=600&q=80"
         },
         {
             title: "Renewable energy overtakes fossil fuel capacity across European power grid in landmark quarter",
+            snippet: "Wind and solar output combined reached unprecedented parity on European transmission grids, accelerating net-zero decarbonization timelines.",
             source: "BBC News",
             sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23B91C1C'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='11' font-weight='bold' fill='white' text-anchor='middle'>BBC</text></svg>",
+            time: "6h ago",
             url: "https://bbc.com/news",
             image: "https://images.unsplash.com/photo-1466611653911-95081537e5b7?auto=format&fit=crop&w=600&q=80"
         },
         {
             title: "James Webb Space Telescope detects atmospheric water signatures on nearby habitable-zone exoplanet",
+            snippet: "Spectroscopic transmission data provides compelling evidence for steam atmospheres on rocky worlds orbiting distant M-dwarf stars.",
             source: "Space.com",
             sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233B82F6'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='14' font-weight='bold' fill='white' text-anchor='middle'>S</text></svg>",
+            time: "7h ago",
             url: "https://space.com",
             image: "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=600&q=80"
         },
         {
             title: "Electric vehicle battery breakthrough achieves 1,000 km range with 10-minute fast charging",
+            snippet: "Solid-state electrolyte cells demonstrate exceptional thermal stability and lifecycle retention in commercial lab trial validations.",
             source: "Electrek",
             sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2314B8A6'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='14' font-weight='bold' fill='white' text-anchor='middle'>E</text></svg>",
+            time: "8h ago",
             url: "https://electrek.co",
             image: "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=600&q=80"
         },
         {
             title: "Rust language adoption surges across Linux kernel and Chromium infrastructure for memory safety",
+            snippet: "Major open-source ecosystems expand first-class support for memory-safe driver and subsystem components to eliminate buffer overrun exploits.",
             source: "Ars Technica",
             sourceIcon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23F43F5E'><rect width='24' height='24' rx='4'/><text x='12' y='17' font-size='13' font-weight='bold' fill='white' text-anchor='middle'>ars</text></svg>",
+            time: "9h ago",
             url: "https://arstechnica.com",
             image: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80"
         }
@@ -1056,10 +1088,29 @@
         // Smooth mouse-wheel horizontal scrolling for shortcuts
         if (!shortcutsContainer.__wheelBound) {
             shortcutsContainer.__wheelBound = true;
+            let targetShortcutsScroll = shortcutsContainer.scrollLeft;
+            let isShortcutsScrolling = false;
+
+            function stepShortcuts() {
+                const diff = targetShortcutsScroll - shortcutsContainer.scrollLeft;
+                if (Math.abs(diff) > 0.5) {
+                    shortcutsContainer.scrollLeft += diff * 0.25;
+                    requestAnimationFrame(stepShortcuts);
+                } else {
+                    shortcutsContainer.scrollLeft = targetShortcutsScroll;
+                    isShortcutsScrolling = false;
+                }
+            }
+
             shortcutsContainer.addEventListener('wheel', (e) => {
-                if (e.deltaY !== 0) {
-                    shortcutsContainer.scrollLeft += e.deltaY;
+                const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+                if (delta !== 0) {
                     e.preventDefault();
+                    targetShortcutsScroll = Math.max(0, Math.min(shortcutsContainer.scrollWidth - shortcutsContainer.clientWidth, targetShortcutsScroll + delta * 1.3));
+                    if (!isShortcutsScrolling) {
+                        isShortcutsScrolling = true;
+                        requestAnimationFrame(stepShortcuts);
+                    }
                 }
             }, { passive: false });
         }
@@ -1204,9 +1255,12 @@
                     </div>
                     <div class="card-body">
                         <h3 class="card-headline">${story.title}</h3>
+                        ${story.snippet ? `<p class="card-snippet">${story.snippet}</p>` : ''}
                         <div class="card-source-bar">
                             ${badgeHtml}
                             <span class="source-name">${story.source || 'News'}</span>
+                            <span class="source-time-dot">•</span>
+                            <span class="source-time">${story.time || 'Live'}</span>
                         </div>
                     </div>
                 </div>
@@ -1220,13 +1274,32 @@
             });
         });
 
-        // Smooth mouse-wheel horizontal scrolling for stories row
+        // Buttery Smooth Horizontal Wheel Scrolling (Glitch-Free & Momentum-Assisted)
         if (!storiesGrid.__wheelBound) {
             storiesGrid.__wheelBound = true;
+            let targetStoriesScroll = storiesGrid.scrollLeft;
+            let isStoriesScrolling = false;
+
+            function stepStories() {
+                const diff = targetStoriesScroll - storiesGrid.scrollLeft;
+                if (Math.abs(diff) > 0.5) {
+                    storiesGrid.scrollLeft += diff * 0.25;
+                    requestAnimationFrame(stepStories);
+                } else {
+                    storiesGrid.scrollLeft = targetStoriesScroll;
+                    isStoriesScrolling = false;
+                }
+            }
+
             storiesGrid.addEventListener('wheel', (e) => {
-                if (e.deltaY !== 0) {
-                    storiesGrid.scrollLeft += e.deltaY;
+                const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+                if (delta !== 0) {
                     e.preventDefault();
+                    targetStoriesScroll = Math.max(0, Math.min(storiesGrid.scrollWidth - storiesGrid.clientWidth, targetStoriesScroll + delta * 1.3));
+                    if (!isStoriesScrolling) {
+                        isStoriesScrolling = true;
+                        requestAnimationFrame(stepStories);
+                    }
                 }
             }, { passive: false });
         }
