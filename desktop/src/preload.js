@@ -301,6 +301,101 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                             delete Object.getPrototypeOf(navigator).webdriver;
                         }
                     } catch (_) {}
+
+                    // =========================================================================
+                    // Fokk Pro Advanced Privacy Cloaker (Canvas, WebGL, AudioContext & Hardware)
+                    // =========================================================================
+                    (function() {
+                        'use strict';
+                        const seed = Math.floor(Math.random() * 10) + 1;
+
+                        // 1. Canvas Fingerprint Noise Injection (toDataURL & getImageData)
+                        try {
+                            const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
+                            HTMLCanvasElement.prototype.toDataURL = function(...args) {
+                                try {
+                                    const ctx = this.getContext('2d');
+                                    if (ctx && this.width > 0 && this.height > 0) {
+                                        const imgData = ctx.getImageData(0, 0, Math.min(this.width, 16), Math.min(this.height, 16));
+                                        for (let i = 0; i < imgData.data.length; i += 8) {
+                                            imgData.data[i] = (imgData.data[i] ^ (seed & 1));
+                                        }
+                                        ctx.putImageData(imgData, 0, 0);
+                                    }
+                                } catch (_) {}
+                                return origToDataURL.apply(this, args);
+                            };
+
+                            const origGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+                            CanvasRenderingContext2D.prototype.getImageData = function(...args) {
+                                const res = origGetImageData.apply(this, args);
+                                try {
+                                    if (res && res.data && res.data.length > 0) {
+                                        for (let i = 0; i < Math.min(res.data.length, 64); i += 8) {
+                                            res.data[i] = (res.data[i] ^ (seed & 1));
+                                        }
+                                    }
+                                } catch (_) {}
+                                return res;
+                            };
+                        } catch (_) {}
+
+                        // 2. WebGL Hardware & Shader Fingerprint Masking
+                        try {
+                            const maskParam = function(origFn) {
+                                return function(param) {
+                                    if (param === 37445) return 'Google Inc. (NVIDIA)';
+                                    if (param === 37446) return 'ANGLE (NVIDIA GeForce RTX 4070 Direct3D11 vs_5_0 ps_5_0)';
+                                    if (param === 7936) return 'WebKit';
+                                    if (param === 7937) return 'WebKit WebGL';
+                                    return origFn.call(this, param);
+                                };
+                            };
+
+                            if (window.WebGLRenderingContext) {
+                                WebGLRenderingContext.prototype.getParameter = maskParam(WebGLRenderingContext.prototype.getParameter);
+                            }
+                            if (window.WebGL2RenderingContext) {
+                                WebGL2RenderingContext.prototype.getParameter = maskParam(WebGL2RenderingContext.prototype.getParameter);
+                            }
+                        } catch (_) {}
+
+                        // 3. AudioContext Oscillator Fingerprint Spoofing
+                        try {
+                            if (window.AudioBuffer) {
+                                const origGetChannelData = AudioBuffer.prototype.getChannelData;
+                                AudioBuffer.prototype.getChannelData = function(channel) {
+                                    const data = origGetChannelData.call(this, channel);
+                                    try {
+                                        for (let i = 0; i < Math.min(data.length, 64); i += 4) {
+                                            data[i] += (seed * 0.000000001);
+                                        }
+                                    } catch (_) {}
+                                    return data;
+                                };
+                            }
+                        } catch (_) {}
+
+                        // 4. Standardize Concurrency & Device Memory
+                        try {
+                            Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8, configurable: true });
+                            Object.defineProperty(navigator, 'deviceMemory', { get: () => 8, configurable: true });
+                        } catch (_) {}
+
+                        // 5. Battery API Protection
+                        try {
+                            if (navigator.getBattery) {
+                                navigator.getBattery = () => Promise.resolve({
+                                    charging: true,
+                                    chargingTime: 0,
+                                    dischargingTime: Infinity,
+                                    level: 1.0,
+                                    addEventListener: () => {},
+                                    removeEventListener: () => {}
+                                });
+                            }
+                        } catch (_) {}
+                    })();
                 `
             }
         ]);
