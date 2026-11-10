@@ -1105,33 +1105,16 @@
             };
         }
 
-        // Smooth mouse-wheel horizontal scrolling for shortcuts
+        // ── Buttery-Smooth Native Wheel Scroll for shortcuts ──────────────────
         if (!shortcutsContainer.__wheelBound) {
             shortcutsContainer.__wheelBound = true;
-            let targetShortcutsScroll = shortcutsContainer.scrollLeft;
-            let isShortcutsScrolling = false;
-
-            function stepShortcuts() {
-                const diff = targetShortcutsScroll - shortcutsContainer.scrollLeft;
-                if (Math.abs(diff) > 0.5) {
-                    shortcutsContainer.scrollLeft += diff * 0.25;
-                    requestAnimationFrame(stepShortcuts);
-                } else {
-                    shortcutsContainer.scrollLeft = targetShortcutsScroll;
-                    isShortcutsScrolling = false;
-                }
-            }
+            const SHORTCUT_STEP = 100; // ~1 tile width
 
             shortcutsContainer.addEventListener('wheel', (e) => {
                 const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-                if (delta !== 0) {
-                    e.preventDefault();
-                    targetShortcutsScroll = Math.max(0, Math.min(shortcutsContainer.scrollWidth - shortcutsContainer.clientWidth, targetShortcutsScroll + delta * 1.3));
-                    if (!isShortcutsScrolling) {
-                        isShortcutsScrolling = true;
-                        requestAnimationFrame(stepShortcuts);
-                    }
-                }
+                if (delta === 0) return;
+                e.preventDefault();
+                shortcutsContainer.scrollBy({ left: Math.sign(delta) * SHORTCUT_STEP, behavior: 'smooth' });
             }, { passive: false });
         }
     }
@@ -1294,35 +1277,45 @@
             });
         });
 
-        // Buttery Smooth Horizontal Wheel Scrolling (Glitch-Free & Momentum-Assisted)
+        // ── Buttery-Smooth Native Wheel Scroll (no RAF fractional jitter) ──────
         if (!storiesGrid.__wheelBound) {
             storiesGrid.__wheelBound = true;
-            let targetStoriesScroll = storiesGrid.scrollLeft;
-            let isStoriesScrolling = false;
-
-            function stepStories() {
-                const diff = targetStoriesScroll - storiesGrid.scrollLeft;
-                if (Math.abs(diff) > 0.5) {
-                    storiesGrid.scrollLeft += diff * 0.25;
-                    requestAnimationFrame(stepStories);
-                } else {
-                    storiesGrid.scrollLeft = targetStoriesScroll;
-                    isStoriesScrolling = false;
-                }
-            }
+            const CARD_STEP = 310; // 290px card + 20px gap
 
             storiesGrid.addEventListener('wheel', (e) => {
                 const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-                if (delta !== 0) {
-                    e.preventDefault();
-                    targetStoriesScroll = Math.max(0, Math.min(storiesGrid.scrollWidth - storiesGrid.clientWidth, targetStoriesScroll + delta * 1.3));
-                    if (!isStoriesScrolling) {
-                        isStoriesScrolling = true;
-                        requestAnimationFrame(stepStories);
-                    }
-                }
+                if (delta === 0) return;
+                e.preventDefault();
+                storiesGrid.scrollBy({ left: Math.sign(delta) * CARD_STEP, behavior: 'smooth' });
             }, { passive: false });
         }
+
+        // ── Arrow Button Wiring ───────────────────────────────────────────────
+        const btnStoriesPrev = document.getElementById('btnStoriesPrev');
+        const btnStoriesNext = document.getElementById('btnStoriesNext');
+        const SCROLL_PAGES = 3; // cards to skip per arrow click
+
+        function updateArrowVisibility() {
+            if (!btnStoriesPrev || !btnStoriesNext) return;
+            const maxScroll = storiesGrid.scrollWidth - storiesGrid.clientWidth;
+            btnStoriesPrev.classList.toggle('hidden', storiesGrid.scrollLeft <= 2);
+            btnStoriesNext.classList.toggle('hidden', storiesGrid.scrollLeft >= maxScroll - 2);
+        }
+
+        if (btnStoriesPrev) {
+            btnStoriesPrev.addEventListener('click', () => {
+                storiesGrid.scrollBy({ left: -(310 * SCROLL_PAGES), behavior: 'smooth' });
+            });
+        }
+        if (btnStoriesNext) {
+            btnStoriesNext.addEventListener('click', () => {
+                storiesGrid.scrollBy({ left: 310 * SCROLL_PAGES, behavior: 'smooth' });
+            });
+        }
+
+        storiesGrid.addEventListener('scroll', updateArrowVisibility, { passive: true });
+        // Initial visibility state
+        setTimeout(updateArrowVisibility, 200);
     }
 
     // View More Stories Button Handler (Fallback if triggered)

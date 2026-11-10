@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About Fokk Browser</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+html,body{background:#090b14;color:#fff;min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:3px}
+
+/* Layout */
+.page-wrap{max-width:900px;margin:0 auto;padding:48px 32px 80px}
+
+/* Hero */
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:60px 0 48px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:56px}
+.hero-logo-ring{width:88px;height:88px;border-radius:24px;background:linear-gradient(135deg,rgba(0,229,255,0.15),rgba(139,92,246,0.1));border:1px solid rgba(0,229,255,0.3);display:flex;align-items:center;justify-content:center;margin-bottom:24px;box-shadow:0 0 60px rgba(0,229,255,0.12)}
+.hero-logo-ring img{width:72px;height:72px;border-radius:18px}
+.hero-title{font-size:40px;font-weight:850;letter-spacing:-1px;margin-bottom:10px;background:linear-gradient(135deg,#fff 40%,rgba(0,229,255,0.9));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-version{display:inline-flex;align-items:center;gap:8px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);border-radius:100px;padding:5px 16px;font-size:12px;font-weight:600;color:#00E5FF;margin-bottom:16px}
+.hero-desc{font-size:16px;line-height:1.65;color:rgba(255,255,255,0.6);max-width:620px}
+
+/* Section */
+.section{margin-bottom:52px}
+.section-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#00E5FF;margin-bottom:20px}
+.section-title{font-size:24px;font-weight:750;letter-spacing:-0.5px;margin-bottom:12px}
+
+/* Principles grid */
+.principles-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+@media(max-width:600px){.principles-grid{grid-template-columns:1fr}}
+.principle-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:22px 20px;transition:border-color 0.2s}
+.principle-card:hover{border-color:rgba(0,229,255,0.25)}
+.principle-icon{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.principle-title{font-size:14px;font-weight:700;margin-bottom:6px}
+.principle-desc{font-size:12.5px;line-height:1.55;color:rgba(255,255,255,0.55)}
+
+/* Features list */
+.features-list{display:flex;flex-direction:column;gap:14px}
+.feature-row{display:flex;align-items:flex-start;gap:14px;padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px}
+.feature-icon-wrap{width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.feature-text{flex:1}
+.feature-name{font-size:13.5px;font-weight:700;margin-bottom:3px}
+.feature-sub{font-size:12px;color:rgba(255,255,255,0.5);line-height:1.45}
+
+/* Stats row */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:0}
+.stat-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:22px;text-align:center}
+.stat-value{font-size:28px;font-weight:850;letter-spacing:-1px;background:linear-gradient(135deg,#00E5FF,#8B5CF6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.stat-label{font-size:11.5px;color:rgba(255,255,255,0.5)}
+
+/* Team / Acks */
+.ack-list{display:flex;flex-direction:column;gap:10px}
+.ack-row{display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:11px}
+.ack-badge{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.ack-name{font-size:13px;font-weight:700;margin-bottom:1px}
+.ack-role{font-size:11.5px;color:rgba(255,255,255,0.45)}
+
+/* CTA row */
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+.btn-cta{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:12px;font-size:13.5px;font-weight:700;cursor:pointer;transition:all 0.2s;border:none;text-decoration:none}
+.btn-primary-cta{background:linear-gradient(135deg,#00E5FF,#0EA5E9);color:#000}
+.btn-primary-cta:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,229,255,0.35)}
+.btn-secondary-cta{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:#fff}
+.btn-secondary-cta:hover{background:rgba(255,255,255,0.12);transform:translateY(-2px)}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-logo-ring">
+      <img src="icon.png" alt="Fokk Logo">
+    </div>
+    <div class="hero-version">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Version 1.0.0 · Rust Shield Edition · Chromium 124
+    </div>
+    <h1 class="hero-title">Fokk Browser</h1>
+    <p class="hero-desc">An ultra-fast, zero-compromise desktop web browser engineered for radical privacy, built-in network-level adblocking, canvas cloaking, DNS-over-HTTPS, and distraction-free browsing — with zero ads, zero telemetry, and zero tracking.</p>
+  </div>
+
+  <!-- Mission -->
+  <div class="section">
+    <div class="section-label">Our Mission</div>
+    <div class="section-title">The internet should be yours, not theirs.</div>
+    <p style="font-size:14.5px;line-height:1.72;color:rgba(255,255,255,0.6)">Every major browser today is funded by advertising revenue, search engine data agreements, or telemetry pipelines that profile your behaviour. Fokk exists to prove that a browser can be blazing fast, richly featured, and 100% private — without selling a single byte of your data. We are building the browser we always wanted to use.</p>
+  </div>
+
+  <!-- Principles -->
+  <div class="section">
+    <div class="section-label">Core Principles</div>
+    <div class="principles-grid">
+      <div class="principle-card">
+        <div class="principle-icon" style="background:rgba(0,229,255,0.1)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="principle-title">Privacy First — Always</div>
+        <div class="principle-desc">Zero telemetry, zero crash reporting sent to external servers, no opt-out dark patterns. Privacy is the default, not a premium add-on.</div>
+      </div>
+      <div class="principle-card">
+        <div class="principle-icon" style="background:rgba(239,68,68,0.1)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+        </div>
+        <div class="principle-title">Zero Advertising Model</div>
+        <div class="principle-desc">We do not display ads, sell search data, or accept payments from advertising networks. Period.</div>
+      </div>
+      <div class="principle-card">
+        <div class="principle-icon" style="background:rgba(139,92,246,0.1)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2.2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+        </div>
+        <div class="principle-title">Open Source & Transparent</div>
+        <div class="principle-desc">Every line of Fokk's core logic is auditable on GitHub. No hidden code paths, no obfuscated analytics modules.</div>
+      </div>
+      <div class="principle-card">
+        <div class="principle-icon" style="background:rgba(16,185,129,0.1)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div class="principle-title">Performance Without Compromise</div>
+        <div class="principle-desc">Network-level adblocking removes requests before they're made. Faster page loads, lower RAM usage, longer battery life.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <div class="section">
+    <div class="section-label">Key Features</div>
+    <div class="features-list">
+      <div class="feature-row">
+        <div class="feature-icon-wrap" style="background:rgba(0,229,255,0.1)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="feature-text">
+          <div class="feature-name">Fokk Shield — Network-Level Adblock</div>
+          <div class="feature-sub">Blocks 50,000+ tracker domains, ad networks, and malware hosts at the DNS/request interception layer — before any data leaves your device.</div>
+        </div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon-wrap" style="background:rgba(139,92,246,0.1)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div class="feature-text">
+          <div class="feature-name">Stealth Incognito Mode</div>
+          <div class="feature-sub">True zero-history private browsing with isolated cookie stores, no cache, and disabled web storage — engineered for real privacy, not a checkbox.</div>
+        </div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon-wrap" style="background:rgba(234,179,8,0.1)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EAB308" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+        <div class="feature-text">
+          <div class="feature-name">DNS-over-HTTPS Privacy Tunnel</div>
+          <div class="feature-sub">Routes DNS queries through encrypted channels (Cloudflare, Quad9, Mullvad) so your ISP cannot log your browsing intent.</div>
+        </div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon-wrap" style="background:rgba(16,185,129,0.1)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+        </div>
+        <div class="feature-text">
+          <div class="feature-name">Dual Split-View Browsing</div>
+          <div class="feature-sub">Side-by-side dual-pane layout with adjustable divider, independent tab management, and smart close/swap controls — productively browse two pages simultaneously.</div>
+        </div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon-wrap" style="background:rgba(239,68,68,0.1)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </div>
+        <div class="feature-text">
+          <div class="feature-name">Tab Memory Hibernation</div>
+          <div class="feature-sub">Automatically suspends background tabs after 15 minutes of inactivity to reclaim RAM — wakes them instantly on click with zero data loss.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="section">
+    <div class="section-label">By the Numbers</div>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">50K+</div>
+        <div class="stat-label">Tracker domains blocked</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">0</div>
+        <div class="stat-label">External telemetry endpoints</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">100%</div>
+        <div class="stat-label">Open source codebase</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Acknowledgements -->
+  <div class="section">
+    <div class="section-label">Built On the Shoulders of Giants</div>
+    <div class="ack-list">
+      <div class="ack-row">
+        <div class="ack-badge" style="background:#1A1A2E;color:#4FC3F7">E</div>
+        <div>
+          <div class="ack-name">Electron / Chromium</div>
+          <div class="ack-role">Cross-platform desktop shell and rendering engine — BSD / MIT License</div>
+        </div>
+      </div>
+      <div class="ack-row">
+        <div class="ack-badge" style="background:#1A1A2E;color:#A5D6A7">AB</div>
+        <div>
+          <div class="ack-name">EasyList & uBlock Filter Lists</div>
+          <div class="ack-role">Community-maintained adblock filter ruleset — Creative Commons Attribution-ShareAlike 3.0</div>
+        </div>
+      </div>
+      <div class="ack-row">
+        <div class="ack-badge" style="background:#1A1A2E;color:#F48FB1">PL</div>
+        <div>
+          <div class="ack-name">Peter Lowe's Ad Server List</div>
+          <div class="ack-role">Authoritative tracker/ad domain blocklist — Non-commercial use permitted</div>
+        </div>
+      </div>
+      <div class="ack-row">
+        <div class="ack-badge" style="background:#1A1A2E;color:#CE93D8">CF</div>
+        <div>
+          <div class="ack-name">Cloudflare 1.1.1.1 / Quad9 / Mullvad</div>
+          <div class="ack-role">Privacy-first DNS-over-HTTPS resolvers — respective terms of service apply</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="section">
+    <div class="section-label">Get Involved</div>
+    <p style="font-size:14px;line-height:1.65;color:rgba(255,255,255,0.55);margin-bottom:0">Fokk is an open-source project sustained by its community. Whether you contribute code, report bugs, sponsor development, or simply spread the word — every action keeps independent privacy software alive.</p>
+    <div class="cta-row">
+      <a class="btn-cta btn-primary-cta" href="https://github.com/Kimmojiraja/fokk-project" target="_blank">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+        View on GitHub
+      </a>
+      <a class="btn-cta btn-secondary-cta" href="https://github.com/sponsors/Kimmojiraja" target="_blank">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        Sponsor the Project
+      </a>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

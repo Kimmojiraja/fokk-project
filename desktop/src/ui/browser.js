@@ -1,4 +1,10 @@
 const { ipcRenderer } = require('electron');
+const path = require('path');
+
+// Helper: file:// URL for a UI page in the same directory as browser.html
+function uiPageUrl(filename) {
+    return 'file:///' + path.join(__dirname, filename).replace(/\\/g, '/');
+}
 
 let tabs = [];
 let activeTabId = null;
@@ -1451,6 +1457,11 @@ function openFeatureHub(hubId) {
             featureHubModal.classList.add('hidden');
         };
 
+    } else if (hubId === 'privacy-policy') {
+        featureHubModal.classList.add('hidden');
+        createTab(uiPageUrl('fokk_privacy.html'));
+        return;
+
     } else if (hubId === 'privacy') {
         featureModalTitle.textContent = 'Privacy Vault & Purge';
         featureModalBody.innerHTML = `
@@ -1464,7 +1475,19 @@ function openFeatureHub(hubId) {
                 </div>
             </div>
             <button class="modal-btn danger" id="btnPurgeNow" style="margin-top: 16px;">Purge Selected Data Now</button>
+            <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 11.5px; color: var(--text-secondary);">Looking for our legal policy &amp; cautions?</span>
+                <button class="modal-btn secondary" id="btnOpenPrivacyPolicyPage" style="font-size: 11px; padding: 4px 10px;">Read Privacy Policy</button>
+            </div>
         `;
+
+        const btnPrivacyDoc = document.getElementById('btnOpenPrivacyPolicyPage');
+        if (btnPrivacyDoc) {
+            btnPrivacyDoc.onclick = () => {
+                featureHubModal.classList.add('hidden');
+                createTab(uiPageUrl('fokk_privacy.html'));
+            };
+        }
 
         document.getElementById('btnPurgeNow').onclick = async () => {
             const storages = [];
@@ -1600,279 +1623,19 @@ function openFeatureHub(hubId) {
         };
 
     } else if (hubId === 'fundraising') {
-        featureModalTitle.textContent = 'Fundraising & Contributing';
-        featureModalBody.innerHTML = `
-            <div style="margin-bottom: 16px;">
-                <h4 style="color: #FFF; font-size: 14px; margin-bottom: 6px;">Support Independent Privacy</h4>
-                <p style="font-size: 12px; line-height: 1.6; color: var(--text-secondary);">
-                    Fokk Browser has zero ads, zero trackers, and zero telemetry. It is built and maintained by privacy advocates funded solely by community sponsors.
-                </p>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between;">
-                    <div>
-                        <div style="font-size: 13px; font-weight: 700; color: #FFF;">GitHub Sponsors</div>
-                        <div style="font-size: 11px; color: var(--text-secondary);">Monthly recurring developer sponsorship</div>
-                    </div>
-                    <button class="modal-btn secondary" id="btnOpenGhSponsors">Sponsor on GitHub</button>
-                </div>
-                <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between;">
-                    <div>
-                        <div style="font-size: 13px; font-weight: 700; color: #FFF;">Open to Code Contributors</div>
-                        <div style="font-size: 11px; color: var(--text-secondary);">Star, fork, and contribute to Fokk Project</div>
-                    </div>
-                    <button class="modal-btn secondary" id="btnOpenRepo">View GitHub Repo</button>
-                </div>
-                <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px;">
-                    <div style="font-size: 13px; font-weight: 700; color: #FFF; margin-bottom: 2px;">Crypto Privacy Vault</div>
-                    <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">Direct, anonymous decentralized support:</div>
-                    
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between;">
-                            <div>
-                                <span style="font-size: 11px; font-weight: 700; color: #F7931A; margin-right: 6px;">BTC (Bitcoin):</span>
-                                <code style="font-size: 10.5px; color: #E2E8F0;">bc1qwxnv6uphj0ke8q50gdx6ew8j3lgvwhk6k2kaet</code>
-                            </div>
-                            <button class="modal-btn secondary btn-copy-crypto" data-crypto="bc1qwxnv6uphj0ke8q50gdx6ew8j3lgvwhk6k2kaet" data-name="BTC" style="padding: 2px 10px; font-size: 11px;">Copy</button>
-                        </div>
-
-                        <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between;">
-                            <div>
-                                <span style="font-size: 11px; font-weight: 700; color: #627EEA; margin-right: 6px;">ETH (Ethereum):</span>
-                                <code style="font-size: 10.5px; color: #E2E8F0;">0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525</code>
-                            </div>
-                            <button class="modal-btn secondary btn-copy-crypto" data-crypto="0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525" data-name="ETH" style="padding: 2px 10px; font-size: 11px;">Copy</button>
-                        </div>
-
-                        <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between;">
-                            <div>
-                                <span style="font-size: 11px; font-weight: 700; color: #F3BA2F; margin-right: 6px;">BNB (Smart Chain):</span>
-                                <code style="font-size: 10.5px; color: #E2E8F0;">0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525</code>
-                            </div>
-                            <button class="modal-btn secondary btn-copy-crypto" data-crypto="0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525" data-name="BNB" style="padding: 2px 10px; font-size: 11px;">Copy</button>
-                        </div>
-
-                        <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between;">
-                            <div>
-                                <span style="font-size: 11px; font-weight: 700; color: #14F195; margin-right: 6px;">SOL (Solana):</span>
-                                <code style="font-size: 10.5px; color: #E2E8F0;">DqgAgDj4PjvR4K1wtYfpaZuYNeNZgj2fQoKnXApWKuTj</code>
-                            </div>
-                            <button class="modal-btn secondary btn-copy-crypto" data-crypto="DqgAgDj4PjvR4K1wtYfpaZuYNeNZgj2fQoKnXApWKuTj" data-name="SOL" style="padding: 2px 10px; font-size: 11px;">Copy</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.getElementById('btnOpenGhSponsors').onclick = () => {
-            createTab('https://github.com/sponsors/Kimmojiraja');
-            featureHubModal.classList.add('hidden');
-        };
-        document.getElementById('btnOpenRepo').onclick = () => {
-            createTab('https://github.com/Kimmojiraja/fokk-project');
-            featureHubModal.classList.add('hidden');
-        };
-        featureModalBody.querySelectorAll('.btn-copy-crypto').forEach(btn => {
-            btn.onclick = () => {
-                const addr = btn.getAttribute('data-crypto');
-                const name = btn.getAttribute('data-name');
-                navigator.clipboard.writeText(addr).then(() => {
-                    showToast(`${name} address copied to clipboard`);
-                });
-            };
-        });
+        featureHubModal.classList.add('hidden');
+        createTab(uiPageUrl('fokk_contributing.html'));
+        return;
 
     } else if (hubId === 'license') {
-        featureModalTitle.textContent = 'License & Legal Notice';
-        featureModalBody.innerHTML = `
-            <div style="margin-bottom: 14px;">
-                <h4 style="color: #FFF; font-size: 14px; margin-bottom: 6px;">Fokk Shield Browser — MIT License</h4>
-                <div style="background: #090A0C; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 11px; line-height: 1.5; color: var(--text-secondary); max-height: 150px; overflow-y: auto;">
-                    Copyright (c) 2026 Fokk Shield Team<br><br>
-                    Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software.<br><br>
-                    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
-                </div>
-            </div>
-            <div style="margin-bottom: 12px;">
-                <div style="font-size: 12px; font-weight: 700; color: #FFF; margin-bottom: 4px;">Open Source Acknowledgments</div>
-                <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.5;">
-                    Built with Electron 30, Chromium 124, and curated adblock rule sets inspired by EasyList, Peter Lowe, and uBlock Origin community filters.
-                </div>
-            </div>
-            <div style="background: rgba(0,229,255,0.06); border: 1px solid rgba(0,229,255,0.2); border-radius: 8px; padding: 10px;">
-                <div style="font-size: 11.5px; font-weight: 700; color: var(--fokk-cyan);">Zero Data Collection Guarantee</div>
-                <div style="font-size: 10.5px; color: var(--text-secondary); margin-top: 2px;">
-                    This software never tracks, logs, stores, or transmits your search history, URLs, or personal data to any external server.
-                </div>
-            </div>
-        `;
+        featureHubModal.classList.add('hidden');
+        createTab(uiPageUrl('fokk_license.html'));
+        return;
 
     } else if (hubId === 'about') {
-        featureModalTitle.textContent = 'About Fokk Browser';
-        featureModalBody.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
-                <img src="icon.png" style="width: 52px; height: 52px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,229,255,0.4);">
-                <div>
-                    <h3 style="color: #FFF; font-size: 18px;">Fokk Browser Desktop</h3>
-                    <div style="color: var(--fokk-cyan); font-size: 12px; font-weight: 700;">Version 1.0.0 · Rust Shield Edition</div>
-                    <div style="color: var(--text-secondary); font-size: 11px;">Chromium 124 / Electron 30 · Multi-Platform</div>
-                </div>
-            </div>
-
-            <!-- In-App 1-Click Update Center -->
-            <div class="update-center-card">
-                <div class="update-card-header">
-                    <div class="update-status-wrap">
-                        <span class="update-dot" id="updateDot"></span>
-                        <div>
-                            <div class="update-main-title" id="updateMainTitle">Fokk Browser is up to date</div>
-                            <div class="update-sub-title" id="updateSubTitle">Current version 1.0.0 is the official release</div>
-                        </div>
-                    </div>
-                    <button id="btnCheckUpdate" class="btn-update-action" title="Check for latest releases from GitHub">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/></svg>
-                        <span>Check for Updates</span>
-                    </button>
-                </div>
-
-                <div id="updateDownloadBox" class="update-download-box hidden">
-                    <div class="update-progress-info">
-                        <span id="updateProgressText">Downloading update...</span>
-                        <span id="updateProgressPercent">0%</span>
-                    </div>
-                    <div class="update-progress-track">
-                        <div class="update-progress-bar" id="updateProgressBar"></div>
-                    </div>
-                </div>
-
-                <div id="updateActionBox" class="update-action-box hidden">
-                    <div class="update-notes-preview" id="updateNotesPreview"></div>
-                    <button id="btnApplyUpdate" class="btn-install-update">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        <span id="btnApplyUpdateText">Update Now (1-Click)</span>
-                    </button>
-                </div>
-            </div>
-
-            <p style="font-size: 12.5px; line-height: 1.6; color: var(--text-secondary); margin-bottom: 14px;">
-                Fokk Browser is an ultra-fast, zero-compromise desktop web browser engineered with built-in network adblocking, canvas cloaking, DNS privacy, and distraction-free tools.
-            </p>
-            <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <div style="font-size: 12px; font-weight: 700; color: #FFF; margin-bottom: 2px;">Official Repository</div>
-                    <div style="font-size: 11.5px; color: var(--fokk-cyan); cursor: pointer;" id="linkRepo">github.com/Kimmojiraja/fokk-project</div>
-                </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-secondary);"><polyline points="9 18 15 12 9 6"/></svg>
-            </div>
-        `;
-
-        document.getElementById('linkRepo').onclick = () => {
-            createTab('https://github.com/Kimmojiraja/fokk-project');
-            featureHubModal.classList.add('hidden');
-        };
-
-        // Wire 1-Click Update Controls
-        let updateTargetInfo = null;
-        let downloadedFilePath = null;
-
-        const btnCheckUpdate = document.getElementById('btnCheckUpdate');
-        const updateDot = document.getElementById('updateDot');
-        const updateMainTitle = document.getElementById('updateMainTitle');
-        const updateSubTitle = document.getElementById('updateSubTitle');
-        const updateDownloadBox = document.getElementById('updateDownloadBox');
-        const updateProgressBar = document.getElementById('updateProgressBar');
-        const updateProgressText = document.getElementById('updateProgressText');
-        const updateProgressPercent = document.getElementById('updateProgressPercent');
-        const updateActionBox = document.getElementById('updateActionBox');
-        const updateNotesPreview = document.getElementById('updateNotesPreview');
-        const btnApplyUpdate = document.getElementById('btnApplyUpdate');
-        const btnApplyUpdateText = document.getElementById('btnApplyUpdateText');
-
-        btnCheckUpdate.onclick = async () => {
-            btnCheckUpdate.disabled = true;
-            updateDot.className = 'update-dot checking';
-            updateMainTitle.textContent = 'Checking for updates...';
-            updateSubTitle.textContent = 'Connecting to GitHub Releases...';
-
-            try {
-                const res = await ipcRenderer.invoke('fokk-check-update');
-                btnCheckUpdate.disabled = false;
-
-                if (res && res.available) {
-                    updateTargetInfo = res;
-                    updateDot.className = 'update-dot available';
-                    updateMainTitle.textContent = `New Update Available: v${res.latestVersion}`;
-                    updateSubTitle.textContent = `Current v${res.currentVersion} · Click below to update`;
-
-                    updateActionBox.classList.remove('hidden');
-                    if (res.releaseNotes) {
-                        updateNotesPreview.textContent = res.releaseNotes.substring(0, 180) + '...';
-                        updateNotesPreview.style.display = 'block';
-                    }
-                    btnApplyUpdateText.textContent = `Update to v${res.latestVersion} (1-Click)`;
-                } else {
-                    updateDot.className = 'update-dot';
-                    updateMainTitle.textContent = 'You are on the latest version';
-                    updateSubTitle.textContent = `Version ${res.currentVersion || '1.0.0'} is up to date`;
-                    updateActionBox.classList.add('hidden');
-                    showToast('Fokk Browser is fully up to date!');
-                }
-            } catch (e) {
-                btnCheckUpdate.disabled = false;
-                updateDot.className = 'update-dot';
-                updateMainTitle.textContent = 'Could not check for updates';
-                updateSubTitle.textContent = e.message || 'Network error';
-            }
-        };
-
-        btnApplyUpdate.onclick = async () => {
-            if (downloadedFilePath) {
-                btnApplyUpdate.disabled = true;
-                btnApplyUpdateText.textContent = 'Restarting and installing update...';
-                await ipcRenderer.invoke('fokk-install-update', { filePath: downloadedFilePath });
-                return;
-            }
-
-            if (!updateTargetInfo || !updateTargetInfo.downloadUrl) return;
-
-            btnApplyUpdate.disabled = true;
-            updateDownloadBox.classList.remove('hidden');
-            updateProgressText.textContent = `Downloading v${updateTargetInfo.latestVersion}...`;
-
-            try {
-                const downloadRes = await ipcRenderer.invoke('fokk-start-update', {
-                    downloadUrl: updateTargetInfo.downloadUrl,
-                    fileName: updateTargetInfo.fileName
-                });
-
-                if (downloadRes && downloadRes.success) {
-                    downloadedFilePath = downloadRes.filePath;
-                    updateDownloadBox.classList.add('hidden');
-                    updateDot.className = 'update-dot ready';
-                    updateMainTitle.textContent = `v${updateTargetInfo.latestVersion} Downloaded!`;
-                    updateSubTitle.textContent = 'Ready to apply. Click below to restart.';
-                    btnApplyUpdate.disabled = false;
-                    btnApplyUpdateText.textContent = 'Restart & Install Update (1-Click)';
-                    btnApplyUpdate.classList.add('btn-restart-ready');
-                    showToast('Update downloaded! Ready to install.');
-                }
-            } catch (err) {
-                btnApplyUpdate.disabled = false;
-                updateDownloadBox.classList.add('hidden');
-                showToast(`Update download failed: ${err.message}`);
-            }
-        };
-
-        // Track live download progress
-        ipcRenderer.on('fokk-update-progress', (event, p) => {
-            if (updateProgressBar && updateProgressPercent) {
-                updateProgressBar.style.width = `${p.percent}%`;
-                updateProgressPercent.textContent = `${p.percent}%`;
-                const mbTrans = (p.transferred / (1024 * 1024)).toFixed(1);
-                const mbTot = (p.total / (1024 * 1024)).toFixed(1);
-                updateProgressText.textContent = `Downloading update: ${mbTrans} MB / ${mbTot} MB`;
-            }
-        });
+        featureHubModal.classList.add('hidden');
+        createTab(uiPageUrl('fokk_about.html'));
+        return;
     }
 
     featureHubModal.classList.remove('hidden');
@@ -2416,6 +2179,42 @@ const COMMAND_HUD_REGISTRY = [
                 showToast(!isMuted ? 'Audio Muted' : 'Audio Unmuted');
             }
         }
+    },
+    {
+        id: 'cmd-about',
+        category: 'Information & Legal',
+        title: 'About Fokk Browser',
+        sub: 'App specifications, mission, architecture & team',
+        shortcut: '',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+        action: () => { createTab(uiPageUrl('fokk_about.html')); }
+    },
+    {
+        id: 'cmd-contributing',
+        category: 'Information & Legal',
+        title: 'Contributing & Business Model',
+        sub: 'Support independent zero-ad privacy, plans & tiers',
+        shortcut: '',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+        action: () => { createTab(uiPageUrl('fokk_contributing.html')); }
+    },
+    {
+        id: 'cmd-license',
+        category: 'Information & Legal',
+        title: 'License & Open Source Notice',
+        sub: 'MIT license, third-party component licenses & rights',
+        shortcut: '',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+        action: () => { createTab(uiPageUrl('fokk_license.html')); }
+    },
+    {
+        id: 'cmd-privacy-doc',
+        category: 'Information & Legal',
+        title: 'Privacy Policy & Cautions',
+        sub: 'Zero-data policy, disclaimers, cautions & user rights',
+        shortcut: '',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+        action: () => { createTab(uiPageUrl('fokk_privacy.html')); }
     }
 ];
 
@@ -2606,6 +2405,7 @@ function toggleSplitView() {
         viewsContainer.classList.remove('split-view-active');
         if (splitDivider) splitDivider.classList.add('hidden');
         splitSecondaryTabId = null;
+        document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
         tabs.forEach(t => {
             t.webview.style.width = '';
             t.webview.classList.remove('split-primary', 'split-secondary');
@@ -2659,6 +2459,109 @@ function updateSplitLayout() {
             t.webview.classList.remove('split-primary', 'split-secondary');
         }
     });
+
+    // Update / inject pane headers
+    renderSplitPaneHeaders(primary, secondary);
+}
+
+function renderSplitPaneHeaders(primary, secondary) {
+    // Remove old headers
+    document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
+
+    function makePaneHeader(tab, isPrimary) {
+        if (!tab || !tab.webview) return;
+        const existing = tab.webview.previousElementSibling;
+        if (existing && existing.classList.contains('split-pane-header')) existing.remove();
+
+        let currentUrl = '';
+        try { currentUrl = tab.webview.getURL ? tab.webview.getURL() : ''; } catch (_) {}
+        let displayUrl = currentUrl || 'New Tab';
+        try { displayUrl = new URL(currentUrl).hostname || 'New Tab'; } catch (_) {}
+
+        const header = document.createElement('div');
+        header.className = 'split-pane-header';
+        header.dataset.pane = isPrimary ? 'primary' : 'secondary';
+        if (isPrimary) {
+            header.style.left = '0';
+            header.style.width = `calc(${splitRatio * 100}% - 3px)`;
+            header.style.right = 'auto';
+        } else {
+            header.style.left = `calc(${splitRatio * 100}% + 3px)`;
+            header.style.width = `calc(${(1 - splitRatio) * 100}% - 3px)`;
+            header.style.right = '0';
+        }
+
+        header.innerHTML = `
+            <div class="split-pane-info">
+                <span class="split-pane-badge">${isPrimary ? 'Left Pane' : 'Right Pane'}</span>
+                <span class="split-pane-url" title="${currentUrl}">${displayUrl}</span>
+            </div>
+            <div class="split-pane-actions">
+                <button class="split-pane-btn btn-swap-panes" title="Swap Left and Right Sides">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 16V4m0 0L3 8m4-4 4 4"/><path d="M17 8v12m0 0 4-4m-4 4-4-4"/></svg>
+                </button>
+                <button class="split-pane-btn btn-focus-pane" title="Keep Only This Pane (Exit Split View)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                </button>
+                <button class="split-pane-btn btn-close-pane" title="Close This Tab &amp; Keep Other">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+        `;
+
+        // Insert header just before the webview in its parent
+        viewsContainer.insertBefore(header, tab.webview);
+
+        // 1. Swap Panes
+        header.querySelector('.btn-swap-panes').onclick = () => {
+            if (!isSplitViewActive) return;
+            const oldActive = activeTabId;
+            activeTabId = splitSecondaryTabId;
+            splitSecondaryTabId = oldActive;
+            updateSplitLayout();
+            showToast('Panes swapped');
+        };
+
+        // 2. Keep Only This Pane (Full Window, exit split without closing other tab)
+        header.querySelector('.btn-focus-pane').onclick = () => {
+            activeTabId = tab.id;
+            isSplitViewActive = false;
+            if (btnSplitView) btnSplitView.classList.remove('active');
+            viewsContainer.classList.remove('split-view-active');
+            if (splitDivider) splitDivider.classList.add('hidden');
+            document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
+            tabs.forEach(t => {
+                t.webview.style.width = '';
+                t.webview.classList.remove('split-primary', 'split-secondary');
+                t.webview.style.display = t.id === activeTabId ? 'flex' : 'none';
+            });
+            showToast(`Focused on ${displayUrl}`);
+        };
+
+        // 3. Close This Tab completely (other tab takes over full window)
+        header.querySelector('.btn-close-pane').onclick = () => {
+            const closingId = tab.id;
+            const otherTab = isPrimary ? secondary : primary;
+            if (otherTab) {
+                activeTabId = otherTab.id;
+            }
+            isSplitViewActive = false;
+            if (btnSplitView) btnSplitView.classList.remove('active');
+            viewsContainer.classList.remove('split-view-active');
+            if (splitDivider) splitDivider.classList.add('hidden');
+            document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
+            tabs.forEach(t => {
+                t.webview.style.width = '';
+                t.webview.classList.remove('split-primary', 'split-secondary');
+                t.webview.style.display = t.id === activeTabId ? 'flex' : 'none';
+            });
+            closeTab(closingId);
+            showToast('Closed split pane');
+        };
+    }
+
+    if (primary) makePaneHeader(primary, true);
+    if (secondary) makePaneHeader(secondary, false);
 }
 
 if (btnSplitView) {
@@ -2670,11 +2573,17 @@ if (btnSplitView) {
 
 if (splitDivider) {
     let isDragging = false;
+    let rafId = null;
+    let pendingRatio = 0.5;
+
     splitDivider.addEventListener('mousedown', (e) => {
+        e.preventDefault();
         isDragging = true;
         splitDivider.classList.add('dragging');
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
+        // Disable pointer-events on webviews to prevent mouse swallowing
+        document.querySelectorAll('webview').forEach(wv => { wv.style.pointerEvents = 'none'; });
     });
 
     window.addEventListener('mousemove', (e) => {
@@ -2683,16 +2592,25 @@ if (splitDivider) {
         const rawX = e.clientX - rect.left;
         let ratio = rawX / rect.width;
         ratio = Math.max(0.2, Math.min(0.8, ratio));
-        splitRatio = ratio;
-        updateSplitLayout();
+        pendingRatio = ratio;
+        if (!rafId) {
+            rafId = requestAnimationFrame(() => {
+                splitRatio = pendingRatio;
+                updateSplitLayout();
+                rafId = null;
+            });
+        }
     });
 
     window.addEventListener('mouseup', () => {
         if (isDragging) {
             isDragging = false;
+            if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
             if (splitDivider) splitDivider.classList.remove('dragging');
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
+            // Re-enable pointer events on webviews
+            document.querySelectorAll('webview').forEach(wv => { wv.style.pointerEvents = ''; });
         }
     });
 }
