@@ -71,19 +71,21 @@ body {
 
 /* Centered Firefox Layout Container (1200px max) */
 .firefox-layout-container {
-    max-width: 1220px;
+    max-width: 1240px;
     margin: 0 auto;
-    padding: 38px 24px 60px 24px;
+    padding: 22px 28px 26px 28px;
     display: flex;
     flex-direction: column;
     align-items: center;
     position: relative;
     z-index: 1;
+    min-height: 100vh;
+    box-sizing: border-box;
 }
 
 /* Brand Header */
 .firefox-brand-header {
-    margin-bottom: 24px;
+    margin-bottom: 14px;
 }
 
 .brand-logo-group {
@@ -214,58 +216,218 @@ body {
     background: rgba(255, 255, 255, 0.1);
 }
 
-/* Horizontal Shortcuts (Firefox Style) */
+/* INCOGNITO STEALTH HERO CARD (Matching Image 3) */
+.incognito-stealth-hero {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px 20px 22px;
+    margin-bottom: 24px;
+    width: 100%;
+    max-width: 580px;
+    animation: stealthHeroFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes stealthHeroFadeIn {
+    from { opacity: 0; transform: translateY(12px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.stealth-hat-badge {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(168, 85, 247, 0.22) 0%, rgba(168, 85, 247, 0.05) 70%, transparent 100%);
+    border: 1.5px solid rgba(168, 85, 247, 0.38);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    box-shadow: 0 0 32px rgba(168, 85, 247, 0.3), inset 0 0 16px rgba(168, 85, 247, 0.15);
+}
+
+.stealth-hat-badge svg {
+    filter: drop-shadow(0 2px 8px rgba(168, 85, 247, 0.45));
+}
+
+.stealth-hero-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: #F8FAFC;
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+}
+
+.stealth-hero-subtitle {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: #94A3B8;
+    max-width: 440px;
+    margin-bottom: 20px;
+}
+
+.stealth-features-badges {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.stealth-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 15px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(168, 85, 247, 0.28);
+    font-size: 12px;
+    font-weight: 600;
+    color: #E2E8F0;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    transition: all 0.2s ease;
+}
+
+.stealth-chip:hover {
+    background: rgba(168, 85, 247, 0.12);
+    border-color: rgba(168, 85, 247, 0.45);
+    transform: translateY(-1px);
+}
+
+/* Incognito Stealth Full Screen Theme */
+body.incognito-stealth-mode .wallpaper-bg {
+    background-image: none !important;
+    background-color: #07080b !important;
+}
+
+body.incognito-stealth-mode .wallpaper-overlay {
+    background: radial-gradient(circle at 50% 28%, rgba(168, 85, 247, 0.12) 0%, rgba(7, 8, 11, 0.96) 65%) !important;
+}
+
+body.incognito-stealth-mode .brand-logo-badge {
+    border-color: rgba(168, 85, 247, 0.45) !important;
+    box-shadow: 0 0 24px rgba(168, 85, 247, 0.3) !important;
+}
+
+body.incognito-stealth-mode .firefox-search-box {
+    border-color: rgba(168, 85, 247, 0.35) !important;
+    box-shadow: 0 4px 22px rgba(168, 85, 247, 0.14) !important;
+}
+
+body.incognito-stealth-mode .firefox-search-box:focus-within {
+    border-color: #C084FC !important;
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.25), 0 4px 24px rgba(168, 85, 247, 0.2) !important;
+}
+
+body.incognito-stealth-mode #shortcutsContainer {
+    display: none !important;
+}
+
+body.incognito-stealth-mode #incognitoStealthHero {
+    display: flex !important;
+}
+
+/* Horizontal Shortcuts (Modern & Horizontally Scrollable) */
 .firefox-shortcuts-row {
     width: 100%;
+    max-width: 1100px;
     display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    gap: 20px;
-    margin-bottom: 46px;
-    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 24px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 6px 14px 14px 14px;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    -webkit-overflow-scrolling: touch;
+}
+
+.firefox-shortcuts-row::-webkit-scrollbar {
+    height: 5px;
+}
+
+.firefox-shortcuts-row::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.firefox-shortcuts-row::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+}
+
+.firefox-shortcuts-row::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.35);
 }
 
 .shortcut-tile {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-    width: 82px;
+    gap: 7px;
+    width: 84px;
     cursor: pointer;
     text-decoration: none;
-    transition: transform 0.18s ease;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    flex-shrink: 0;
+    user-select: none;
 }
 
 .shortcut-tile:hover {
-    transform: translateY(-3px);
+    transform: translateY(-4px);
 }
 
 .shortcut-icon-card {
-    width: 58px;
-    height: 58px;
-    border-radius: 14px;
-    background: rgba(43, 42, 51, 0.85);
+    width: 62px;
+    height: 62px;
+    border-radius: 16px;
+    background: rgba(36, 35, 45, 0.88);
     backdrop-filter: blur(20px);
-    border: 1px solid var(--firefox-border);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
-    transition: all 0.18s ease;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
+    flex-shrink: 0;
 }
 
 .shortcut-tile:hover .shortcut-icon-card {
-    background: rgba(60, 59, 72, 0.95);
-    border-color: var(--firefox-border-hover);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    background: rgba(50, 48, 62, 0.95);
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(0, 229, 255, 0.15);
+}
+
+.shortcut-svg-wrap {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.shortcut-svg-wrap svg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 .shortcut-favicon-img {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     border-radius: 6px;
     object-fit: contain;
+    pointer-events: none;
 }
 
 .shortcut-fallback-icon {
@@ -274,43 +436,63 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.shortcut-icon-card svg {
-    width: 28px;
-    height: 28px;
+    pointer-events: none;
 }
 
 .shortcut-letter {
-    font-size: 19px;
+    font-size: 20px;
     font-weight: 700;
     color: #FFF;
+}
+
+.shortcut-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #F1F5F9;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+    max-width: 80px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+}
+
+.shortcut-sub {
+    font-size: 10px;
+    color: #94A3B8;
+    max-width: 76px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    margin-top: -3px;
 }
 
 .shortcut-del-btn {
     position: absolute;
     top: -5px;
     right: -5px;
-    width: 18px;
-    height: 18px;
+    width: 19px;
+    height: 19px;
     border-radius: 50%;
     background: #EF4444;
     color: #FFF;
     border: none;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 12px;
     display: none;
     align-items: center;
     justify-content: center;
     z-index: 10;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
 }
 
 .shortcut-edit-btn {
     position: absolute;
     top: -5px;
     left: -5px;
-    width: 18px;
-    height: 18px;
+    width: 19px;
+    height: 19px;
     border-radius: 50%;
     background: #0284C7;
     color: #FFF;
@@ -321,6 +503,7 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 10;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
 }
 
 .shortcut-tile:hover .shortcut-del-btn,
@@ -329,13 +512,16 @@ body {
 }
 
 .add-shortcut-card {
-    border: 1px dashed rgba(255, 255, 255, 0.25);
-    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1.5px dashed rgba(255, 255, 255, 0.32) !important;
+    color: rgba(255, 255, 255, 0.8) !important;
 }
 
 .add-shortcut-card:hover {
-    border-color: var(--fokk-cyan);
-    color: var(--fokk-cyan);
+    background: rgba(0, 229, 255, 0.12) !important;
+    border-color: #00E5FF !important;
+    color: #00E5FF !important;
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.25) !important;
 }
 
 .shortcut-label {
@@ -441,76 +627,104 @@ body {
     flex-shrink: 0;
 }
 
-/* 4-column x 2-row Editorial Grid */
+/* Modern Single-Row Horizontally Scrollable Stories Grid */
 .firefox-stories-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 18px;
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 6px 6px 18px 6px;
+    width: 100%;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    -webkit-overflow-scrolling: touch;
 }
 
-@media (max-width: 1100px) {
-    .firefox-stories-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
+.firefox-stories-grid::-webkit-scrollbar {
+    height: 5px;
+}
+
+.firefox-stories-grid::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.firefox-stories-grid::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+}
+
+.firefox-stories-grid::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.35);
 }
 
 .firefox-card {
-    background: var(--firefox-card-bg);
-    backdrop-filter: blur(24px);
-    border: 1px solid var(--firefox-border);
-    border-radius: 12px;
+    min-width: 290px;
+    max-width: 320px;
+    height: 355px; /* Taller card matching single row requirement */
+    flex-shrink: 0;
+    scroll-snap-align: start;
+    background: rgba(22, 24, 34, 0.82);
+    backdrop-filter: blur(28px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
     overflow: hidden;
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
 }
 
 .firefox-card:hover {
-    transform: translateY(-4px);
-    background: var(--firefox-card-hover);
-    border-color: var(--firefox-border-hover);
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    transform: translateY(-6px);
+    background: rgba(30, 32, 44, 0.94);
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 229, 255, 0.15);
 }
 
 .card-img-wrap {
     width: 100%;
-    height: 155px;
+    height: 195px; /* Much taller thumbnail */
     overflow: hidden;
     position: relative;
-    background: #1e1d24;
+    background: #14161f;
 }
 
 .card-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.35s ease;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .firefox-card:hover .card-img {
-    transform: scale(1.04);
+    transform: scale(1.06);
 }
 
 .card-body {
-    padding: 13px 14px 14px 14px;
+    padding: 14px 16px 16px 16px;
     display: flex;
     flex-direction: column;
     flex: 1;
     justify-content: space-between;
+    gap: 8px;
 }
 
 .card-headline {
-    font-size: 14px;
+    font-size: 14.5px;
     font-weight: 700;
-    line-height: 1.35;
+    line-height: 1.4;
     color: #ffffff;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    letter-spacing: -0.2px;
 }
 
 .card-source-bar {
@@ -520,6 +734,11 @@ body {
     font-size: 12px;
     color: #94a3b8;
     margin-top: auto;
+}
+
+/* More stories hidden in modern single-row scroll mode */
+.more-stories-wrap {
+    display: none !important;
 }
 
 .source-icon {
@@ -714,23 +933,23 @@ body {
     box-shadow: 0 0 14px rgba(6, 182, 212, 0.4);
 }
 
-/* Wallpaper Studio Modal */
+/* Modals & Dialogs */
 .modal-backdrop {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.72);
-    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.76);
+    backdrop-filter: blur(12px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 999;
+    z-index: 99999;
 }
 
 .modal-backdrop.hidden {
-    display: none;
+    display: none !important;
 }
 
 .modal-card {

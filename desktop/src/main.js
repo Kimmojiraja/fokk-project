@@ -365,13 +365,13 @@ ipcMain.on('fokk-open-new-tab', () => {
 
 ipcMain.on('fokk-new-private-tab', () => {
     if (mainWindow) {
-        mainWindow.webContents.executeJavaScript(`if (typeof createTab === 'function') createTab(START_PAGE_URL, true);`);
+        mainWindow.webContents.executeJavaScript(`if (typeof createTab === 'function') createTab(START_PAGE_URL, { isPrivate: true });`);
     }
 });
 
 ipcMain.on('fokk-open-private-tabs', () => {
     if (mainWindow) {
-        mainWindow.webContents.executeJavaScript(`if (typeof createTab === 'function') createTab(START_PAGE_URL, true);`);
+        mainWindow.webContents.executeJavaScript(`if (typeof createTab === 'function') createTab(START_PAGE_URL, { isPrivate: true });`);
     }
 });
 

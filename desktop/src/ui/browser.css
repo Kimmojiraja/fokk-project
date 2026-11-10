@@ -134,20 +134,59 @@ html, body {
 }
 
 .tab-close {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
-    opacity: 0.6;
-    transition: all 0.15s ease;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 6px;
+    flex-shrink: 0;
+    opacity: 0.65;
+    transition: all 0.16s ease;
+}
+
+.tab-close svg {
+    pointer-events: none;
 }
 
 .tab-close:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
     opacity: 1;
+}
+
+.browser-tab.active .tab-close {
+    opacity: 0.85;
+}
+
+.browser-tab.active .tab-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    opacity: 1;
+}
+
+/* Incognito / Private Tab Styling */
+.browser-tab.private-tab {
+    border-bottom: 2px solid rgba(168, 85, 247, 0.4);
+}
+
+.browser-tab.private-tab.active {
+    background: rgba(168, 85, 247, 0.14);
+    border-color: rgba(168, 85, 247, 0.5);
+}
+
+.browser-tab.private-tab .tab-title {
+    color: #e9d5ff;
+}
+
+.browser-tab.private-tab .tab-favicon {
+    filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.6));
 }
 
 .new-tab-btn {

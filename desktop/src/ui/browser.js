@@ -37,6 +37,9 @@ const btnClose = document.getElementById('btnClose');
 const START_PAGE_URL = ipcRenderer.sendSync('fokk-get-start-page-url');
 const PRELOAD_SCRIPT_PATH = ipcRenderer.sendSync('fokk-get-preload-path');
 
+// Authentic Incognito Stealth Vector Icon (matches official Android ic_incognito.xml)
+const INCOGNITO_FAVICON_SVG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M6 11.5 L7.8 4.8 C8.2 3.8 9.5 3.8 12 3.8 C14.5 3.8 15.8 3.8 16.2 4.8 L18 11.5 Z" fill="%23C084FC" stroke="none"/><path d="M2.5 12 C6.5 10.5 17.5 10.5 21.5 12" stroke="%23C084FC" stroke-width="2.2" stroke-linecap="round"/><circle cx="8" cy="16.5" r="2.8" stroke="%23C084FC" stroke-width="2" fill="none"/><circle cx="16" cy="16.5" r="2.8" stroke="%23C084FC" stroke-width="2" fill="none"/><path d="M10.8 16.5 Q12 15.2 13.2 16.5" stroke="%23C084FC" stroke-width="2" fill="none"/></svg>';
+
 // Search Engine Registry (Exact Vector SVGs matching mobile design reference)
 const OMNIBOX_ENGINES = {
     google: {
@@ -111,15 +114,26 @@ window.loadUrlInActiveTab = loadUrlInActiveTab;
 function createTab(url = START_PAGE_URL, options = {}) {
     tabCounter++;
     const tabId = 'tab_' + tabCounter;
-    const isPrivate = !!options.isPrivate;
+    const isPrivate = typeof options === 'boolean' ? options : !!(options && options.isPrivate);
+
+    // If private/incognito mode and opening start page, load the dedicated Incognito Home view
+    let targetUrl = url;
+    if (isPrivate && (!targetUrl || targetUrl === START_PAGE_URL || targetUrl.includes('start.html'))) {
+        targetUrl = START_PAGE_URL + (START_PAGE_URL.includes('?') ? '&' : '?') + 'incognito=1';
+    }
 
     const tabEl = document.createElement('div');
     tabEl.className = 'browser-tab' + (isPrivate ? ' private-tab' : '');
     tabEl.id = 'tab_btn_' + tabId;
     tabEl.innerHTML = `
-        <img src="icon.png" class="tab-favicon" id="fav_${tabId}">
-        <span class="tab-title" id="title_${tabId}">${isPrivate ? 'Private Tab' : 'New Tab'}</span>
-        <button class="tab-close" title="Close Tab (Ctrl+W)">&times;</button>
+        <img src="${isPrivate ? INCOGNITO_FAVICON_SVG : 'icon.png'}" class="tab-favicon" id="fav_${tabId}" alt="Favicon">
+        <span class="tab-title" id="title_${tabId}">${isPrivate ? 'Incognito' : 'New Tab'}</span>
+        <button class="tab-close" title="Close Tab (Ctrl+W)" aria-label="Close Tab">
+            <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                <line x1="1.5" y1="1.5" x2="8.5" y2="8.5"/>
+                <line x1="8.5" y1="1.5" x2="1.5" y2="8.5"/>
+            </svg>
+        </button>
     `;
 
     tabEl.querySelector('.tab-close').onclick = (e) => {
@@ -132,7 +146,7 @@ function createTab(url = START_PAGE_URL, options = {}) {
 
     const webview = document.createElement('webview');
     webview.id = 'view_' + tabId;
-    webview.setAttribute('src', url);
+    webview.setAttribute('src', targetUrl);
     webview.setAttribute('preload', PRELOAD_SCRIPT_PATH);
     webview.setAttribute('allowpopups', 'true');
     webview.setAttribute('useragent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
@@ -213,8 +227,15 @@ function createTab(url = START_PAGE_URL, options = {}) {
 
     webview.addEventListener('page-favicon-updated', (e) => {
         const favEl = document.getElementById('fav_' + tabId);
-        if (favEl && e.favicons && e.favicons.length > 0) {
-            favEl.src = e.favicons[0];
+        const currentUrl = (webview.getURL ? webview.getURL() : '') || '';
+        if (favEl) {
+            if (isPrivate && (currentUrl.includes('start.html') || currentUrl.startsWith('file:') || !currentUrl)) {
+                favEl.src = INCOGNITO_FAVICON_SVG;
+            } else if (e.favicons && e.favicons.length > 0) {
+                favEl.src = e.favicons[0];
+            } else if (isPrivate) {
+                favEl.src = INCOGNITO_FAVICON_SVG;
+            }
         }
     });
 
