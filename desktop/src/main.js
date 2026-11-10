@@ -6,6 +6,7 @@ const { spawn } = require('child_process');
 const AdBlockEngine = require('./adblock');
 const newsService = require('./news');
 const { VpnEngine } = require('./vpn_engine');
+const { cleanTrackingUrl } = require('./clean_url');
 
 // Universal Stealth & Anti-Automation Flags (matching Brave / Un-automated Chromium)
 app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
@@ -16,6 +17,10 @@ app.commandLine.appendSwitch('no-sandbox');
 app.commandLine.appendSwitch('disable-quic');
 app.commandLine.appendSwitch('disable-webrtc-multiple-routes');
 app.commandLine.appendSwitch('enforce-webrtc-ip-permission-check');
+
+// Anti-White-Flash & Resilient Windows Compositing
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
 
 // Paths
 const devAssetsDir = path.resolve(__dirname, '..', '..', 'app', 'src', 'main', 'assets');
@@ -30,6 +35,10 @@ const ICON_PATH = fs.existsSync(path.join(__dirname, 'ui', 'icon.png'))
 let mainWindow = null;
 let shieldEnabled = true;
 const adblock = new AdBlockEngine(ASSETS_DIR);
+let stealthPoisonerScript = '';
+try {
+    stealthPoisonerScript = fs.readFileSync(path.join(__dirname, 'stealth_poisoner.js'), 'utf8');
+} catch (_) {}
 let vpnEngine = null;
 try {
     vpnEngine = new VpnEngine(app.getPath('userData'));
@@ -109,9 +118,19 @@ function setupAdblockingForSession(sess) {
             }
             broadcastStatsThrottled();
             callback({ cancel: true });
-        } else {
-            callback({ cancel: false });
+            return;
         }
+
+        // Clean tracking parameters & trampolines from main frame navigations
+        if (shieldEnabled && (details.resourceType === 'mainFrame' || details.resourceType === 'subFrame')) {
+            const cleaned = cleanTrackingUrl(details.url);
+            if (cleaned && cleaned !== details.url) {
+                callback({ redirectURL: cleaned });
+                return;
+            }
+        }
+
+        callback({ cancel: false });
     });
 
     sess.on('will-download', (event, item) => {
@@ -171,7 +190,8 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
-            webviewTag: true
+            webviewTag: true,
+            backgroundThrottling: false
         }
     });
 
@@ -200,21 +220,23 @@ function createWindow() {
 
         if (type === 'webview') {
             setupAdblockingForSession(contents.session);
-            contents.on('did-navigate', () => {
-                if (shieldEnabled) {
-                    adblock.injectCosmeticFilters(contents);
-                }
-            });
+            const runCosmeticFilters = () => {
+                if (!shieldEnabled) return;
+                const u = (contents.getURL ? contents.getURL() : '').toLowerCase();
+                if (!u || u.startsWith('file:') || u.startsWith('fokk:') || u === 'about:blank') return;
+                adblock.injectCosmeticFilters(contents);
+            };
+            contents.on('did-navigate', runCosmeticFilters);
             contents.on('dom-ready', () => {
-                if (shieldEnabled) {
-                    adblock.injectCosmeticFilters(contents);
+                runCosmeticFilters();
+                if (stealthPoisonerScript) {
+                    const u = (contents.getURL ? contents.getURL() : '').toLowerCase();
+                    if (u && !u.startsWith('file:') && !u.startsWith('fokk:') && u !== 'about:blank') {
+                        contents.executeJavaScript(stealthPoisonerScript).catch(() => {});
+                    }
                 }
             });
-            contents.on('did-navigate-in-page', () => {
-                if (shieldEnabled) {
-                    adblock.injectCosmeticFilters(contents);
-                }
-            });
+            contents.on('did-navigate-in-page', runCosmeticFilters);
 
             // Universal Window Open & OAuth Popup Handler matching Brave / Firefox
             contents.setWindowOpenHandler((details) => {
@@ -353,8 +375,80 @@ ipcMain.on('fokk-save-offline-page', () => {
     }
 });
 
-ipcMain.on('fokk-get-search-suggestions', (event, query) => {
-    event.returnValue = '[]';
+/**
+ * Fetches real-time search auto-suggestions from OpenSearch providers (Google with Bing fallback).
+ * @param {string} query
+ * @returns {Promise<string[]>}
+ */
+function fetchSearchSuggestions(query) {
+    return new Promise((resolve) => {
+        if (!query || typeof query !== 'string' || !query.trim()) {
+            return resolve([]);
+        }
+        const clean = query.trim();
+        // Do not query for URL addresses or single-word domain names
+        if (/^https?:\/\//i.test(clean) || (clean.includes('.') && !clean.includes(' '))) {
+            return resolve([]);
+        }
+
+        const requestSuggestions = (url) => {
+            return new Promise((resInner) => {
+                const req = https.get(url, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+                    }
+                }, (resp) => {
+                    if (resp.statusCode < 200 || resp.statusCode >= 300) {
+                        return resInner([]);
+                    }
+                    let data = '';
+                    resp.setEncoding('utf8');
+                    resp.on('data', chunk => { data += chunk; });
+                    resp.on('end', () => {
+                        try {
+                            const parsed = JSON.parse(data);
+                            if (Array.isArray(parsed) && Array.isArray(parsed[1])) {
+                                return resInner(parsed[1].filter(s => typeof s === 'string').slice(0, 8));
+                            }
+                            resInner([]);
+                        } catch (_) {
+                            resInner([]);
+                        }
+                    });
+                });
+                req.on('error', () => resInner([]));
+                req.setTimeout(1800, () => {
+                    req.destroy();
+                    resInner([]);
+                });
+            });
+        };
+
+        const googleUrl = 'https://suggestqueries.google.com/complete/search?client=chrome&q=' + encodeURIComponent(clean);
+        requestSuggestions(googleUrl).then((results) => {
+            if (results && results.length > 0) {
+                return resolve(results);
+            }
+            // Fallback to Bing OpenSearch
+            const bingUrl = 'https://api.bing.com/osjson.aspx?query=' + encodeURIComponent(clean);
+            return requestSuggestions(bingUrl).then((bingResults) => {
+                resolve(bingResults || []);
+            });
+        }).catch(() => resolve([]));
+    });
+}
+
+ipcMain.handle('fokk-get-search-suggestions', async (event, query) => {
+    return await fetchSearchSuggestions(query);
+});
+
+ipcMain.on('fokk-get-search-suggestions', async (event, query) => {
+    try {
+        const list = await fetchSearchSuggestions(query);
+        event.returnValue = JSON.stringify(list);
+    } catch (_) {
+        event.returnValue = '[]';
+    }
 });
 
 ipcMain.on('fokk-open-new-tab', () => {
@@ -365,13 +459,13 @@ ipcMain.on('fokk-open-new-tab', () => {
 
 ipcMain.on('fokk-new-private-tab', () => {
     if (mainWindow) {
-        mainWindow.webContents.executeJavaScript(`if (typeof createTab === 'function') createTab(START_PAGE_URL, true);`);
+        mainWindow.webContents.executeJavaScript(`if (typeof createTab === 'function') createTab(START_PAGE_URL, { isPrivate: true });`);
     }
 });
 
 ipcMain.on('fokk-open-private-tabs', () => {
     if (mainWindow) {
-        mainWindow.webContents.executeJavaScript(`if (typeof createTab === 'function') createTab(START_PAGE_URL, true);`);
+        mainWindow.webContents.executeJavaScript(`if (typeof createTab === 'function') createTab(START_PAGE_URL, { isPrivate: true });`);
     }
 });
 
@@ -674,12 +768,23 @@ ipcMain.handle('fokk-pick-wallpaper', async () => {
     if (!result.canceled && result.filePaths.length > 0) {
         try {
             const filePath = result.filePaths[0];
-            const ext = path.extname(filePath).replace('.', '') || 'jpeg';
-            const data = fs.readFileSync(filePath).toString('base64');
-            customWallpaperBase64 = `data:image/${ext};base64,${data}`;
-            return customWallpaperBase64;
+            const ext = path.extname(filePath) || '.jpg';
+            const userDataDir = app.getPath('userData');
+            const destPath = path.join(userDataDir, 'fokk_custom_wallpaper' + ext);
+            fs.copyFileSync(filePath, destPath);
+            // Return safe local file URL that webviews and browser can load without exceeding localStorage quotas
+            const fileUrl = 'file:///' + destPath.replace(/\\/g, '/');
+            return fileUrl;
         } catch (e) {
-            console.error('[Wallpaper] Error reading file:', e);
+            console.error('[Wallpaper] Error saving wallpaper file, falling back to base64:', e);
+            try {
+                const filePath = result.filePaths[0];
+                const ext = path.extname(filePath).replace('.', '') || 'jpeg';
+                const data = fs.readFileSync(filePath).toString('base64');
+                return `data:image/${ext};base64,${data}`;
+            } catch (err) {
+                console.error('[Wallpaper] Base64 fallback error:', err);
+            }
         }
     }
     return null;

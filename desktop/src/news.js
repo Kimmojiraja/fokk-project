@@ -87,17 +87,17 @@ class DesktopNewsService {
                     { name: 'Ars Technica', url: 'https://feeds.arstechnica.com/arstechnica/index' }
                 ],
                 world: [
-                    { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
-                    { name: 'CNN', url: 'http://rss.cnn.com/rss/edition_world.rss' },
-                    { name: 'ABC News', url: 'https://abcnews.go.com/abcnews/internationalheadlines' },
-                    { name: 'NPR', url: 'https://feeds.npr.org/1004/rss.xml' }
+                    { name: 'The Guardian', url: 'https://www.theguardian.com/world/rss' },
+                    { name: 'NPR', url: 'https://feeds.npr.org/1004/rss.xml' },
+                    { name: 'Sky News', url: 'https://feeds.skynews.com/feeds/rss/world.xml' },
+                    { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' }
                 ],
                 all: [
-                    { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/rss.xml' },
-                    { name: 'CNN', url: 'http://rss.cnn.com/rss/cnn_topstories.rss' },
-                    { name: 'ABC News', url: 'https://abcnews.go.com/abcnews/topstories' },
+                    { name: 'The Guardian', url: 'https://www.theguardian.com/international/rss' },
                     { name: 'NPR', url: 'https://feeds.npr.org/1001/rss.xml' },
-                    { name: 'Yahoo News', url: 'https://news.yahoo.com/rss/' }
+                    { name: 'Sky News', url: 'https://feeds.skynews.com/feeds/rss/world.xml' },
+                    { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/rss.xml' },
+                    { name: 'ABC News', url: 'https://abcnews.go.com/abcnews/topstories' }
                 ]
             }
         };
@@ -136,7 +136,8 @@ class DesktopNewsService {
         const itemRegex = /<item[\s\S]*?<\/item>/gi;
         const titleRegex = /<title(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i;
         const linkRegex = /<link(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i;
-        const mediaRegex = /<media:content[^>]*url=["']([^"']+)["']|<enclosure[^>]*url=["']([^"']+)["']|<media:thumbnail[^>]*url=["']([^"']+)["']/i;
+        const descRegex = /<description(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i;
+        const pubDateRegex = /<pubDate(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/pubDate>/i;
         const descImgRegex = /<img[^>]+src=["']([^"']+)["']/i;
 
         let match;
@@ -162,24 +163,81 @@ class DesktopNewsService {
             const link = lMatch ? lMatch[1].trim() : '';
             if (!link || !link.startsWith('http')) continue;
 
-            let img = '';
-            const mMatch = mediaRegex.exec(content);
-            if (mMatch) {
-                img = mMatch[1] || mMatch[2] || mMatch[3] || '';
+            // Extract real live article snippet/description
+            let snippet = '';
+            const dMatch = descRegex.exec(content);
+            if (dMatch) {
+                snippet = dMatch[1]
+                    .replace(/<[^>]+>/g, '')
+                    .replace(/&amp;/g, '&')
+                    .replace(/&quot;/g, '"')
+                    .replace(/&#39;/g, "'")
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                if (snippet.toLowerCase() === title.toLowerCase()) snippet = '';
+                if (snippet.length > 160) snippet = snippet.slice(0, 157) + '...';
             }
+
+            // Extract real live publication time
+            let timeAgo = 'Live';
+            const pMatch = pubDateRegex.exec(content);
+            if (pMatch) {
+                try {
+                    const d = new Date(pMatch[1].trim());
+                    if (!isNaN(d.getTime())) {
+                        const diffMin = Math.round((Date.now() - d.getTime()) / 60000);
+                        if (diffMin < 60) timeAgo = `${Math.max(1, diffMin)}m ago`;
+                        else if (diffMin < 1440) timeAgo = `${Math.floor(diffMin / 60)}h ago`;
+                        else timeAgo = `${Math.floor(diffMin / 1440)}d ago`;
+                    }
+                } catch (_) {}
+            }
+
+            // Extract highest-resolution image available across all media tags
+            let img = '';
+            const allMediaTags = content.match(/<(?:media:content|enclosure|media:thumbnail)[^>]+>/gi) || [];
+            let bestWidth = 0;
+            for (const tag of allMediaTags) {
+                const uMatch = tag.match(/url=["']([^"']+)["']/i);
+                if (!uMatch) continue;
+                const candidateUrl = uMatch[1];
+                const wMatch = tag.match(/width=["'](\d+)["']/i);
+                const tagWidth = wMatch ? parseInt(wMatch[1], 10) : 0;
+                if (!img || tagWidth > bestWidth) {
+                    img = candidateUrl;
+                    bestWidth = tagWidth;
+                }
+            }
+
             if (!img) {
                 const dMatch = descImgRegex.exec(content);
                 if (dMatch) img = dMatch[1] || '';
             }
 
-            if (img && img.includes('/news/')) {
-                img = img.replace('/240/', '/800/').replace('/134/', '/450/').replace('/135/', '/450/');
+            // Upgrade resolution for known CDN patterns (ensures razor-sharp 4K/retina display)
+            if (img) {
+                // Guardian: upgrade width query parameter to 1000px
+                if (img.includes('guim.co.uk')) {
+                    img = img.replace(/width=\d+/i, 'width=1000').replace(/quality=\d+/i, 'quality=90');
+                }
+                // ABC News: upgrade 384px thumbnail to 992px high-def
+                if (img.includes('abcnews.com')) {
+                    img = img.replace(/_384\.jpg$/i, '_992.jpg').replace(/_4x3t?_384\.jpg$/i, '_16x9_992.jpg');
+                }
+                // BBC: upgrade 240/320/450px to 1024px
+                if (img.includes('bbci.co.uk') || img.includes('/news/')) {
+                    img = img.replace(/\/(?:240|320|450|134|135)\//, '/1024/');
+                }
             }
 
             items.push({
                 title,
+                snippet,
+                description: snippet,
                 source: srcName,
-                time: 'Live',
+                time: timeAgo,
                 category: category || 'all',
                 region: region || 'global',
                 url: link,

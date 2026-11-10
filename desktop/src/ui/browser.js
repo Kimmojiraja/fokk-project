@@ -37,6 +37,9 @@ const btnClose = document.getElementById('btnClose');
 const START_PAGE_URL = ipcRenderer.sendSync('fokk-get-start-page-url');
 const PRELOAD_SCRIPT_PATH = ipcRenderer.sendSync('fokk-get-preload-path');
 
+// Authentic Incognito Stealth Vector Icon (URL-encoded data URI to prevent attribute quote breaks)
+const INCOGNITO_FAVICON_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M6 11.5 L7.8 4.8 C8.2 3.8 9.5 3.8 12 3.8 C14.5 3.8 15.8 3.8 16.2 4.8 L18 11.5 Z" fill="#C084FC" stroke="none"/><path d="M2.5 12 C6.5 10.5 17.5 10.5 21.5 12" stroke="#C084FC" stroke-width="2.2" stroke-linecap="round"/><circle cx="8" cy="16.5" r="2.8" stroke="#C084FC" stroke-width="2" fill="none"/><circle cx="16" cy="16.5" r="2.8" stroke="#C084FC" stroke-width="2" fill="none"/><path d="M10.8 16.5 Q12 15.2 13.2 16.5" stroke="#C084FC" stroke-width="2" fill="none"/></svg>');
+
 // Search Engine Registry (Exact Vector SVGs matching mobile design reference)
 const OMNIBOX_ENGINES = {
     google: {
@@ -111,15 +114,26 @@ window.loadUrlInActiveTab = loadUrlInActiveTab;
 function createTab(url = START_PAGE_URL, options = {}) {
     tabCounter++;
     const tabId = 'tab_' + tabCounter;
-    const isPrivate = !!options.isPrivate;
+    const isPrivate = typeof options === 'boolean' ? options : !!(options && options.isPrivate);
+
+    // If private/incognito mode and opening start page, load the dedicated Incognito Home view
+    let targetUrl = url;
+    if (isPrivate && (!targetUrl || targetUrl === START_PAGE_URL || targetUrl.includes('start.html'))) {
+        targetUrl = START_PAGE_URL + (START_PAGE_URL.includes('?') ? '&' : '?') + 'incognito=1';
+    }
 
     const tabEl = document.createElement('div');
     tabEl.className = 'browser-tab' + (isPrivate ? ' private-tab' : '');
     tabEl.id = 'tab_btn_' + tabId;
     tabEl.innerHTML = `
-        <img src="icon.png" class="tab-favicon" id="fav_${tabId}">
-        <span class="tab-title" id="title_${tabId}">${isPrivate ? 'Private Tab' : 'New Tab'}</span>
-        <button class="tab-close" title="Close Tab (Ctrl+W)">&times;</button>
+        <img src="${isPrivate ? INCOGNITO_FAVICON_SVG : 'icon.png'}" class="tab-favicon" id="fav_${tabId}" alt="Favicon">
+        <span class="tab-title" id="title_${tabId}">${isPrivate ? 'Incognito' : 'New Tab'}</span>
+        <button class="tab-close" title="Close Tab (Ctrl+W)" aria-label="Close Tab">
+            <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                <line x1="1.5" y1="1.5" x2="8.5" y2="8.5"/>
+                <line x1="8.5" y1="1.5" x2="1.5" y2="8.5"/>
+            </svg>
+        </button>
     `;
 
     tabEl.querySelector('.tab-close').onclick = (e) => {
@@ -132,11 +146,12 @@ function createTab(url = START_PAGE_URL, options = {}) {
 
     const webview = document.createElement('webview');
     webview.id = 'view_' + tabId;
-    webview.setAttribute('src', url);
+    webview.setAttribute('src', targetUrl);
     webview.setAttribute('preload', PRELOAD_SCRIPT_PATH);
     webview.setAttribute('allowpopups', 'true');
     webview.setAttribute('useragent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
-    webview.setAttribute('webpreferences', 'contextIsolation=yes, javascript=yes');
+    webview.setAttribute('webpreferences', 'contextIsolation=yes, javascript=yes, backgroundThrottling=no');
+    webview.style.backgroundColor = '#090A0C';
     if (isPrivate) {
         webview.setAttribute('partition', 'fokk_incognito_' + Date.now());
     } else {
@@ -204,7 +219,13 @@ function createTab(url = START_PAGE_URL, options = {}) {
     webview.addEventListener('page-title-updated', (e) => {
         const titleEl = document.getElementById('title_' + tabId);
         if (titleEl && e.title) {
-            titleEl.textContent = (isPrivate ? '[Private] ' : '') + e.title;
+            const currentUrl = (webview.getURL ? webview.getURL() : '') || '';
+            const isStartPage = currentUrl.includes('start.html') || currentUrl.startsWith('file:') || !currentUrl || e.title === 'New Tab' || e.title === 'Incognito';
+            if (isPrivate) {
+                titleEl.textContent = isStartPage ? 'Incognito' : e.title;
+            } else {
+                titleEl.textContent = e.title;
+            }
         }
         if (!isPrivate && webview.getURL) {
             recordHistoryItem(webview.getURL(), e.title);
@@ -213,8 +234,15 @@ function createTab(url = START_PAGE_URL, options = {}) {
 
     webview.addEventListener('page-favicon-updated', (e) => {
         const favEl = document.getElementById('fav_' + tabId);
-        if (favEl && e.favicons && e.favicons.length > 0) {
-            favEl.src = e.favicons[0];
+        const currentUrl = (webview.getURL ? webview.getURL() : '') || '';
+        if (favEl) {
+            if (isPrivate && (currentUrl.includes('start.html') || currentUrl.startsWith('file:') || !currentUrl)) {
+                favEl.src = INCOGNITO_FAVICON_SVG;
+            } else if (e.favicons && e.favicons.length > 0) {
+                favEl.src = e.favicons[0];
+            } else if (isPrivate) {
+                favEl.src = INCOGNITO_FAVICON_SVG;
+            }
         }
     });
 
@@ -255,21 +283,35 @@ function createTab(url = START_PAGE_URL, options = {}) {
 
 function activateTab(tabId) {
     activeTabId = tabId;
+    const targetTab = tabs.find(t => t.id === tabId);
+    if (targetTab) {
+        targetTab.lastActiveTime = Date.now();
+        if (targetTab.isSleeping && typeof wakeTab === 'function') {
+            wakeTab(targetTab);
+        }
+    }
+
     tabs.forEach(t => {
+        let currentTabUrl = '';
+        try { currentTabUrl = (typeof t.webview.getURL === 'function') ? t.webview.getURL() : ''; } catch (_) {}
+
         if (t.id === tabId) {
             t.el.classList.add('active');
             t.webview.classList.add('active');
-            updateOmnibox(t.webview.getURL ? t.webview.getURL() : '');
+            updateOmnibox(currentTabUrl);
             updateNavState(t.webview);
             if (shieldCountText) {
-                const u = t.webview.getURL ? t.webview.getURL() : '';
-                shieldCountText.textContent = (u.startsWith('http') && t.blockedCount) ? t.blockedCount : '0';
+                shieldCountText.textContent = (currentTabUrl.startsWith('http') && t.blockedCount) ? t.blockedCount : '0';
             }
         } else {
             t.el.classList.remove('active');
             t.webview.classList.remove('active');
         }
     });
+
+    if (isSplitViewActive && typeof updateSplitLayout === 'function') {
+        updateSplitLayout();
+    }
 }
 
 function closeTab(tabId) {
@@ -291,8 +333,13 @@ function closeTab(tabId) {
 
 function updateNavState(webview) {
     if (!webview || typeof webview.canGoBack !== 'function') return;
-    btnBack.disabled = !webview.canGoBack();
-    btnForward.disabled = !webview.canGoForward();
+    try {
+        btnBack.disabled = !webview.canGoBack();
+        btnForward.disabled = !webview.canGoForward();
+    } catch (_) {
+        btnBack.disabled = true;
+        btnForward.disabled = true;
+    }
 }
 
 function updateOmnibox(rawUrl) {
@@ -1499,12 +1546,18 @@ function openFeatureHub(hubId) {
             card.onclick = () => {
                 const id = card.getAttribute('data-id');
                 const file = card.getAttribute('data-file');
-                localStorage.setItem('fokk_wallpaper_id', id);
-                localStorage.removeItem('fokk_custom_wallpaper');
+                try {
+                    localStorage.setItem('fokk_wallpaper_id', id);
+                    localStorage.removeItem('fokk_custom_wallpaper');
+                } catch (_) {}
 
-                // Notify all active start pages to update instantly
+                // Notify all active start pages to update instantly and persist in webview session
                 tabs.forEach(t => {
                     t.webview.executeJavaScript(`
+                        try {
+                            localStorage.setItem('fokk_wallpaper_id', '${id}');
+                            localStorage.removeItem('fokk_custom_wallpaper');
+                        } catch (_) {}
                         if (typeof window.setWallpaper === 'function') {
                             window.setWallpaper({ id: '${id}', url: '${file}' });
                         } else {
@@ -1522,11 +1575,23 @@ function openFeatureHub(hubId) {
         document.getElementById('btnUploadCustomWp').onclick = async () => {
             const dataUrl = await ipcRenderer.invoke('fokk-pick-wallpaper');
             if (dataUrl) {
-                localStorage.setItem('fokk_custom_wallpaper', dataUrl);
+                try {
+                    localStorage.setItem('fokk_custom_wallpaper', dataUrl);
+                    localStorage.removeItem('fokk_wallpaper_id');
+                } catch (_) {}
+
                 tabs.forEach(t => {
                     t.webview.executeJavaScript(`
-                        const bg = document.getElementById('wallpaperBg');
-                        if (bg) bg.style.backgroundImage = 'url("${dataUrl}")';
+                        try {
+                            localStorage.setItem('fokk_custom_wallpaper', ${JSON.stringify(dataUrl)});
+                            localStorage.removeItem('fokk_wallpaper_id');
+                        } catch (_) {}
+                        if (typeof window.setWallpaper === 'function') {
+                            window.setWallpaper(${JSON.stringify(dataUrl)});
+                        } else {
+                            const bg = document.getElementById('wallpaperBg');
+                            if (bg) bg.style.backgroundImage = 'url("' + ${JSON.stringify(dataUrl)} + '")';
+                        }
                     `).catch(() => {});
                 });
                 featureHubModal.classList.add('hidden');
@@ -1550,13 +1615,6 @@ function openFeatureHub(hubId) {
                         <div style="font-size: 11px; color: var(--text-secondary);">Monthly recurring developer sponsorship</div>
                     </div>
                     <button class="modal-btn secondary" id="btnOpenGhSponsors">Sponsor on GitHub</button>
-                </div>
-                <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between;">
-                    <div>
-                        <div style="font-size: 13px; font-weight: 700; color: #FFF;">Buy Me a Coffee</div>
-                        <div style="font-size: 11px; color: var(--text-secondary);">One-time community contribution</div>
-                    </div>
-                    <button class="modal-btn secondary" id="btnOpenCoffee">Buy Coffee</button>
                 </div>
                 <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between;">
                     <div>
@@ -1608,10 +1666,6 @@ function openFeatureHub(hubId) {
 
         document.getElementById('btnOpenGhSponsors').onclick = () => {
             createTab('https://github.com/sponsors/Kimmojiraja');
-            featureHubModal.classList.add('hidden');
-        };
-        document.getElementById('btnOpenCoffee').onclick = () => {
-            createTab('https://www.buymeacoffee.com/k_raja');
             featureHubModal.classList.add('hidden');
         };
         document.getElementById('btnOpenRepo').onclick = () => {
@@ -1835,8 +1889,36 @@ if (featureHubModal) {
 
 // 6. Keyboard Shortcuts
 window.addEventListener('keydown', (e) => {
-    if (e.ctrlKey) {
-        if (e.key === 't' || e.key === 'T') {
+    if (e.key === 'Escape') {
+        if (commandHudModal && !commandHudModal.classList.contains('hidden')) {
+            closeCommandHud();
+            return;
+        }
+    }
+
+    if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'k' || e.key === 'K') {
+            e.preventDefault();
+            if (commandHudModal && !commandHudModal.classList.contains('hidden')) {
+                closeCommandHud();
+            } else {
+                openCommandHud();
+            }
+        } else if ((e.shiftKey && (e.key === 'd' || e.key === 'D')) || e.key === '\\') {
+            e.preventDefault();
+            toggleSplitView();
+        } else if (e.shiftKey && (e.key === 'p' || e.key === 'P')) {
+            e.preventDefault();
+            createTab(START_PAGE_URL, { isPrivate: true });
+        } else if (e.key === 'm' || e.key === 'M') {
+            e.preventDefault();
+            const active = getActiveWebview();
+            if (active && typeof active.isAudioMuted === 'function') {
+                const muted = active.isAudioMuted();
+                active.setAudioMuted(!muted);
+                showToast(!muted ? 'Audio Muted' : 'Audio Unmuted');
+            }
+        } else if (e.key === 't' || e.key === 'T') {
             e.preventDefault();
             createTab(START_PAGE_URL);
         } else if (e.key === 'w' || e.key === 'W') {
@@ -2139,17 +2221,22 @@ function initVpnUI() {
             if (vpnRadarRing) vpnRadarRing.className = 'vpn-radar-ring connecting';
             try {
                 const res = await ipcRenderer.invoke('fokk-vpn-toggle');
-                if (res && res.status) {
-                    updateVpnUI(res.status);
-                    if (res.status.state === 'connected') {
-                        showToast(`Tunnel Connected: ${res.status.virtualCountry || 'Encrypted'}`);
-                    } else if (res.status.state === 'error' && res.status.errorMessage) {
-                        showToast(res.status.errorMessage);
+                const newStatus = (res && res.status) ? res.status : ipcRenderer.sendSync('fokk-vpn-get-status');
+                if (newStatus) {
+                    updateVpnUI(newStatus);
+                    if (newStatus.state === 'connected') {
+                        showToast(`Tunnel Connected: ${newStatus.virtualCountry || 'Encrypted'}`);
+                    } else if (newStatus.state === 'error' && newStatus.errorMessage) {
+                        showToast(newStatus.errorMessage);
                     } else {
                         showToast('Tunnel Disconnected (Direct Traffic)');
                     }
                 }
             } catch (err) {
+                try {
+                    const cur = ipcRenderer.sendSync('fokk-vpn-get-status');
+                    if (cur) updateVpnUI(cur);
+                } catch (_) {}
                 showToast('VPN Error: ' + err.message);
             }
         });
@@ -2202,6 +2289,481 @@ function initVpnUI() {
     });
 }
 initVpnUI();
+
+// ==========================================================================
+// 7. Universal Command HUD (Ctrl+K Spotlight Launcher)
+// ==========================================================================
+const btnCommandHud = document.getElementById('btnCommandHud');
+const commandHudModal = document.getElementById('commandHudModal');
+const commandHudInput = document.getElementById('commandHudInput');
+const commandHudList = document.getElementById('commandHudList');
+
+let activeHudIndex = 0;
+let currentHudItems = [];
+
+const COMMAND_HUD_REGISTRY = [
+    {
+        id: 'cmd-vpn',
+        category: 'Privacy & Security',
+        title: 'Toggle Privacy Tunnel (VPN)',
+        sub: 'Connect or disconnect Tor & WARP stealth relay',
+        shortcut: 'Shift+V',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="12" r="3"/></svg>',
+        action: () => { if (btnVpnToggle) btnVpnToggle.click(); }
+    },
+    {
+        id: 'cmd-split',
+        category: 'Productivity',
+        title: 'Split View / Dual Browsing',
+        sub: 'Browse two tabs side-by-side with resizable divider',
+        shortcut: 'Ctrl+Shift+D',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>',
+        action: () => { toggleSplitView(); }
+    },
+    {
+        id: 'cmd-burn',
+        category: 'Privacy & Security',
+        title: 'Burn Session',
+        sub: 'Immediately purge all cookies, cache, and browsing traces',
+        shortcut: 'Ctrl+Shift+Del',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FF5252" stroke-width="2.2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
+        action: () => { if (btnBurnSession) btnBurnSession.click(); }
+    },
+    {
+        id: 'cmd-incognito',
+        category: 'Privacy & Security',
+        title: 'Open Incognito Stealth Tab',
+        sub: 'Private browsing with zero history, cache, or persistent cookies',
+        shortcut: 'Ctrl+Shift+P',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 11.5 L7.8 4.8 C8.2 3.8 9.5 3.8 12 3.8 C14.5 3.8 15.8 3.8 16.2 4.8 L18 11.5 Z" fill="#C084FC"/><path d="M2.5 12 C6.5 10.5 17.5 10.5 21.5 12" stroke="#C084FC" stroke-width="2.2"/><circle cx="8" cy="16.5" r="2.8" stroke="#C084FC" stroke-width="2"/><circle cx="16" cy="16.5" r="2.8" stroke="#C084FC" stroke-width="2"/></svg>',
+        action: () => { createTab(START_PAGE_URL, { isPrivate: true }); }
+    },
+    {
+        id: 'cmd-sleep',
+        category: 'Performance',
+        title: 'Hibernate Inactive Tabs',
+        sub: 'Free up to 80% RAM by putting idle tabs into sleep mode',
+        shortcut: 'Eco Mode',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2.2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
+        action: () => { hibernateAllInactiveTabs(); }
+    },
+    {
+        id: 'cmd-reader',
+        category: 'Productivity',
+        title: 'Toggle Reader Mode',
+        sub: 'Distraction-free article reading with clean typography',
+        shortcut: 'Ctrl+Alt+R',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+        action: () => { if (btnReaderMode) btnReaderMode.click(); }
+    },
+    {
+        id: 'cmd-wallpapers',
+        category: 'Customization',
+        title: 'Visual Studio & 4K Wallpapers',
+        sub: 'Customize coastal sailboat background or upload personal wallpapers',
+        shortcut: '',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
+        action: () => { if (btnVisuals) btnVisuals.click(); }
+    },
+    {
+        id: 'cmd-downloads',
+        category: 'Feature Hubs',
+        title: 'Downloads Manager',
+        sub: 'Inspect download progress and open finished files',
+        shortcut: 'Ctrl+J',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+        action: () => { openFeatureHub('downloads'); }
+    },
+    {
+        id: 'cmd-bookmarks',
+        category: 'Feature Hubs',
+        title: 'Bookmarks Library',
+        sub: 'View and manage all saved bookmarks and folders',
+        shortcut: 'Ctrl+B',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>',
+        action: () => { openFeatureHub('bookmarks'); }
+    },
+    {
+        id: 'cmd-history',
+        category: 'Feature Hubs',
+        title: 'Browsing History',
+        sub: 'Search visited pages or clear timeline records',
+        shortcut: 'Ctrl+H',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+        action: () => { openFeatureHub('history'); }
+    },
+    {
+        id: 'cmd-shield',
+        category: 'Feature Hubs',
+        title: 'AdShield & Tracker Telemetry',
+        sub: 'View live blocked ad trackers, scripts, and DoH status',
+        shortcut: '',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
+        action: () => { openFeatureHub('shield'); }
+    },
+    {
+        id: 'cmd-mute',
+        category: 'Quick Commands',
+        title: 'Mute / Unmute Current Audio',
+        sub: 'Silence background audio playback instantly',
+        shortcut: 'Ctrl+M',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>',
+        action: () => {
+            const active = getActiveWebview();
+            if (active && typeof active.isAudioMuted === 'function') {
+                const isMuted = active.isAudioMuted();
+                active.setAudioMuted(!isMuted);
+                showToast(!isMuted ? 'Audio Muted' : 'Audio Unmuted');
+            }
+        }
+    }
+];
+
+function openCommandHud() {
+    if (!commandHudModal) return;
+    commandHudModal.classList.remove('hidden');
+    if (commandHudInput) {
+        commandHudInput.value = '';
+        setTimeout(() => commandHudInput.focus(), 30);
+    }
+    activeHudIndex = 0;
+    renderCommandHudItems('');
+}
+
+function closeCommandHud() {
+    if (!commandHudModal) return;
+    commandHudModal.classList.add('hidden');
+}
+
+function renderCommandHudItems(queryText) {
+    if (!commandHudList) return;
+    const query = (queryText || '').toLowerCase().trim();
+
+    // 1. Filter Built-in Commands
+    const matchedCommands = COMMAND_HUD_REGISTRY.filter(c => 
+        !query || c.title.toLowerCase().includes(query) || c.sub.toLowerCase().includes(query) || c.category.toLowerCase().includes(query)
+    ).map(c => ({
+        type: 'command',
+        title: c.title,
+        sub: c.sub,
+        category: c.category,
+        shortcut: c.shortcut,
+        iconSvg: c.iconSvg,
+        action: c.action
+    }));
+
+    // 2. Filter Open Tabs
+    const matchedTabs = tabs.filter(t => {
+        const title = (t.el.querySelector('.tab-title') ? t.el.querySelector('.tab-title').textContent : '').toLowerCase();
+        const url = (t.webview.getURL ? t.webview.getURL() : '').toLowerCase();
+        return query && (title.includes(query) || url.includes(query));
+    }).map(t => ({
+        type: 'tab',
+        title: t.el.querySelector('.tab-title') ? t.el.querySelector('.tab-title').textContent : 'Tab',
+        sub: t.webview.getURL ? t.webview.getURL() : '',
+        category: 'Open Tabs',
+        shortcut: 'Switch Tab',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg>',
+        action: () => { activateTab(t.id); }
+    }));
+
+    // 3. Filter Bookmarks
+    let matchedBookmarks = [];
+    if (query) {
+        try {
+            const bms = JSON.parse(localStorage.getItem('fokk_bookmarks') || '[]');
+            matchedBookmarks = bms.filter(b => 
+                (b.title || '').toLowerCase().includes(query) || (b.url || '').toLowerCase().includes(query)
+            ).slice(0, 5).map(b => ({
+                type: 'bookmark',
+                title: b.title || b.url,
+                sub: b.url,
+                category: 'Bookmarks',
+                shortcut: 'Open Bookmark',
+                iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>',
+                action: () => { loadUrlInActiveTab(b.url); }
+            }));
+        } catch (_) {}
+    }
+
+    currentHudItems = [...matchedTabs, ...matchedCommands, ...matchedBookmarks];
+
+    if (currentHudItems.length === 0) {
+        commandHudList.innerHTML = `
+            <div style="padding: 24px; text-align: center; color: #64748B; font-size: 13.5px;">
+                No commands, tabs, or bookmarks found matching "${queryText}"
+            </div>
+        `;
+        return;
+    }
+
+    activeHudIndex = Math.max(0, Math.min(activeHudIndex, currentHudItems.length - 1));
+
+    let html = '';
+    let lastCategory = '';
+    currentHudItems.forEach((item, idx) => {
+        if (item.category !== lastCategory) {
+            html += `<div class="command-hud-category-label">${item.category}</div>`;
+            lastCategory = item.category;
+        }
+        const isActive = idx === activeHudIndex;
+        html += `
+            <div class="command-hud-item ${isActive ? 'active' : ''}" data-index="${idx}">
+                <div class="hud-item-left">
+                    <div class="hud-item-icon">${item.iconSvg}</div>
+                    <div>
+                        <span class="hud-item-title">${item.title}</span>
+                        ${item.sub ? `<span class="hud-item-sub">${item.sub}</span>` : ''}
+                    </div>
+                </div>
+                ${item.shortcut ? `<span class="hud-item-shortcut">${item.shortcut}</span>` : ''}
+            </div>
+        `;
+    });
+
+    commandHudList.innerHTML = html;
+
+    commandHudList.querySelectorAll('.command-hud-item').forEach(el => {
+        el.addEventListener('click', () => {
+            const idx = parseInt(el.getAttribute('data-index'), 10);
+            if (currentHudItems[idx]) {
+                closeCommandHud();
+                currentHudItems[idx].action();
+            }
+        });
+    });
+}
+
+function updateHudSelection() {
+    const items = commandHudList ? commandHudList.querySelectorAll('.command-hud-item') : [];
+    items.forEach((it, idx) => {
+        if (idx === activeHudIndex) {
+            it.classList.add('active');
+            try { it.scrollIntoView({ block: 'nearest' }); } catch (_) {}
+        } else {
+            it.classList.remove('active');
+        }
+    });
+}
+
+if (btnCommandHud) {
+    btnCommandHud.addEventListener('click', (e) => {
+        e.preventDefault();
+        openCommandHud();
+    });
+}
+
+if (commandHudModal) {
+    commandHudModal.addEventListener('click', (e) => {
+        if (e.target === commandHudModal) closeCommandHud();
+    });
+}
+
+if (commandHudInput) {
+    commandHudInput.addEventListener('input', (e) => {
+        activeHudIndex = 0;
+        renderCommandHudItems(e.target.value);
+    });
+
+    commandHudInput.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (currentHudItems.length > 0) {
+                activeHudIndex = (activeHudIndex + 1) % currentHudItems.length;
+                updateHudSelection();
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (currentHudItems.length > 0) {
+                activeHudIndex = (activeHudIndex - 1 + currentHudItems.length) % currentHudItems.length;
+                updateHudSelection();
+            }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (currentHudItems[activeHudIndex]) {
+                const item = currentHudItems[activeHudIndex];
+                closeCommandHud();
+                item.action();
+            }
+        }
+    });
+}
+
+// ==========================================================================
+// 8. Dual Split View Browsing
+// ==========================================================================
+const btnSplitView = document.getElementById('btnSplitView');
+const splitDivider = document.getElementById('splitDivider');
+let isSplitViewActive = false;
+let splitSecondaryTabId = null;
+let splitRatio = 0.5;
+
+function toggleSplitView() {
+    isSplitViewActive = !isSplitViewActive;
+    if (btnSplitView) btnSplitView.classList.toggle('active', isSplitViewActive);
+
+    if (!isSplitViewActive) {
+        viewsContainer.classList.remove('split-view-active');
+        if (splitDivider) splitDivider.classList.add('hidden');
+        splitSecondaryTabId = null;
+        tabs.forEach(t => {
+            t.webview.style.width = '';
+            t.webview.classList.remove('split-primary', 'split-secondary');
+            t.webview.style.display = t.id === activeTabId ? 'flex' : 'none';
+        });
+        showToast('Split View Disabled');
+        return;
+    }
+
+    viewsContainer.classList.add('split-view-active');
+    if (splitDivider) splitDivider.classList.remove('hidden');
+
+    if (tabs.length < 2) {
+        const curActive = activeTabId;
+        createTab(START_PAGE_URL);
+        activeTabId = curActive;
+    }
+
+    const other = tabs.find(t => t.id !== activeTabId);
+    if (other) {
+        splitSecondaryTabId = other.id;
+    }
+
+    updateSplitLayout();
+    showToast('Split View Active (Side-by-Side Dual Browsing)');
+}
+
+function updateSplitLayout() {
+    if (!isSplitViewActive) return;
+    const primary = tabs.find(t => t.id === activeTabId);
+    let secondary = tabs.find(t => t.id === splitSecondaryTabId);
+    if (!secondary || secondary === primary) {
+        secondary = tabs.find(t => t.id !== activeTabId);
+        if (secondary) splitSecondaryTabId = secondary.id;
+    }
+
+    tabs.forEach(t => {
+        if (t === primary) {
+            t.webview.style.display = 'flex';
+            t.webview.style.width = `calc(${splitRatio * 100}% - 3px)`;
+            t.webview.classList.add('split-primary');
+            t.webview.classList.remove('split-secondary');
+        } else if (t === secondary) {
+            t.webview.style.display = 'flex';
+            t.webview.style.width = `calc(${(1 - splitRatio) * 100}% - 3px)`;
+            t.webview.classList.add('split-secondary');
+            t.webview.classList.remove('split-primary');
+        } else {
+            t.webview.style.display = 'none';
+            t.webview.style.width = '';
+            t.webview.classList.remove('split-primary', 'split-secondary');
+        }
+    });
+}
+
+if (btnSplitView) {
+    btnSplitView.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleSplitView();
+    });
+}
+
+if (splitDivider) {
+    let isDragging = false;
+    splitDivider.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        splitDivider.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging || !isSplitViewActive) return;
+        const rect = viewsContainer.getBoundingClientRect();
+        const rawX = e.clientX - rect.left;
+        let ratio = rawX / rect.width;
+        ratio = Math.max(0.2, Math.min(0.8, ratio));
+        splitRatio = ratio;
+        updateSplitLayout();
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            if (splitDivider) splitDivider.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        }
+    });
+}
+
+// ==========================================================================
+// 9. Tab Memory Hibernation & Eco Mode
+// ==========================================================================
+const TAB_HIBERNATE_IDLE_MS = 15 * 60 * 1000;
+
+function hibernateTab(tab) {
+    if (!tab || tab.isSleeping || tab.id === activeTabId) return;
+    if (tab.isPrivate) return;
+
+    const currentUrl = (typeof tab.webview.getURL === 'function' ? tab.webview.getURL() : '') || '';
+    if (!currentUrl || currentUrl.startsWith('file:') || currentUrl === 'about:blank') return;
+
+    tab.isSleeping = true;
+    tab.savedUrl = currentUrl;
+    tab.savedTitle = tab.el.querySelector('.tab-title') ? tab.el.querySelector('.tab-title').textContent : '';
+
+    tab.el.classList.add('sleeping-tab');
+    let ind = tab.el.querySelector('.sleep-indicator');
+    if (!ind) {
+        ind = document.createElement('span');
+        ind.className = 'sleep-indicator';
+        ind.title = 'Sleeping to save RAM — Click to wake';
+        ind.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+        const titleEl = tab.el.querySelector('.tab-title');
+        if (titleEl) tab.el.insertBefore(ind, titleEl);
+    }
+
+    try {
+        tab.webview.stop();
+        tab.webview.loadURL('about:blank');
+    } catch (_) {}
+}
+
+function wakeTab(tab) {
+    if (!tab || !tab.isSleeping) return;
+    tab.isSleeping = false;
+    tab.el.classList.remove('sleeping-tab');
+    const ind = tab.el.querySelector('.sleep-indicator');
+    if (ind) ind.remove();
+
+    if (tab.savedUrl) {
+        try {
+            tab.webview.loadURL(tab.savedUrl);
+            showToast(`Woke up "${tab.savedTitle || 'Tab'}" from memory sleep`);
+        } catch (_) {}
+    }
+}
+
+function hibernateAllInactiveTabs() {
+    let hibernatedCount = 0;
+    tabs.forEach(t => {
+        if (t.id !== activeTabId && !t.isSleeping) {
+            hibernateTab(t);
+            if (t.isSleeping) hibernatedCount++;
+        }
+    });
+    showToast(hibernatedCount > 0 ? `Hibernated ${hibernatedCount} background tab(s) to save RAM` : 'All background tabs are already in sleep mode');
+}
+
+setInterval(() => {
+    const now = Date.now();
+    tabs.forEach(t => {
+        if (t.id !== activeTabId && !t.isSleeping && t.lastActiveTime && (now - t.lastActiveTime > TAB_HIBERNATE_IDLE_MS)) {
+            hibernateTab(t);
+        }
+    });
+}, 60000);
 
 // Initialize Initial Tab
 createTab(START_PAGE_URL);

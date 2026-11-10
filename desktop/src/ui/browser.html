@@ -95,6 +95,19 @@
             </button>
         </div>
 
+        <div class="toolbar-actions-right">
+            <button class="nav-btn" id="btnSplitView" title="Split View / Dual Browsing (Ctrl+Shift+D)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="12" y1="3" x2="12" y2="21"/>
+                </svg>
+            </button>
+            <button class="nav-btn" id="btnCommandHud" title="Universal Command HUD (Ctrl+K)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="4 17 10 11 4 5"/>
+                    <line x1="12" y1="19" x2="20" y2="19"/>
+                </svg>
+            </button>
             <button class="nav-btn vpn-toggle-btn" id="btnVpnToggle" title="Fokk Shield Tunnel — Zero-Log Privacy VPN">
                 <svg class="vpn-quantum-glyph" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 2L3.5 7v10L12 22l8.5-5V7L12 2z" stroke="currentColor" stroke-width="1.9"/>
@@ -122,12 +135,16 @@
         <div class="menu-user-card" id="menuUserCard">
             <div class="menu-avatar-wrap" id="menuAvatarWrap" title="Click to change profile picture">
                 <img src="icon.png" class="menu-avatar" id="menuAvatarImg" alt="User Avatar">
-                <span class="menu-avatar-badge" title="Upload Custom Photo">✎</span>
+                <span class="menu-avatar-badge" title="Upload Custom Photo">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                </span>
             </div>
             <div class="menu-user-info">
                 <div class="menu-username-row">
                     <span class="menu-username" id="menuUsernameText">Shadow Falcon</span>
-                    <button class="btn-edit-username" id="btnEditUsername" title="Edit username">✎</button>
+                    <button class="btn-edit-username" id="btnEditUsername" title="Edit username">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    </button>
                 </div>
                 <div class="menu-user-edition">Fokk Privacy Vault · Rust Shield Edition</div>
             </div>
@@ -179,9 +196,15 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 <span>New Tab</span>
             </div>
-            <div class="action-grid-item" id="actPrivateTab">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                <span>Private Tab</span>
+            <div class="action-grid-item" id="actPrivateTab" title="Open Incognito Stealth Tab">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M6 11.5 L7.8 4.8 C8.2 3.8 9.5 3.8 12 3.8 C14.5 3.8 15.8 3.8 16.2 4.8 L18 11.5 Z" fill="#C084FC" stroke="none"/>
+                    <path d="M2.5 12 C6.5 10.5 17.5 10.5 21.5 12" stroke="#C084FC" stroke-width="2.2" stroke-linecap="round"/>
+                    <circle cx="8" cy="16.5" r="2.8" stroke="#C084FC" stroke-width="2" fill="none"/>
+                    <circle cx="16" cy="16.5" r="2.8" stroke="#C084FC" stroke-width="2" fill="none"/>
+                    <path d="M10.8 16.5 Q12 15.2 13.2 16.5" stroke="#C084FC" stroke-width="2" fill="none"/>
+                </svg>
+                <span>Incognito Tab</span>
             </div>
             <div class="action-grid-item" id="actReaderMode">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -458,11 +481,35 @@
         </div>
     </div>
 
-    <!-- 5. Toast Feedback Notifications -->
+    <!-- 5. Universal Command HUD (Ctrl+K) -->
+    <div id="commandHudModal" class="command-hud-backdrop hidden">
+        <div class="command-hud-card">
+            <div class="command-hud-search-bar">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" id="commandHudInput" class="command-hud-input" placeholder="Type a command or search tabs, history, bookmarks... (Ctrl+K)" autocomplete="off" spellcheck="false">
+                <span class="command-hud-badge">ESC</span>
+            </div>
+            <div class="command-hud-list" id="commandHudList">
+                <!-- Dynamically populated commands, tabs, and bookmarks -->
+            </div>
+            <div class="command-hud-footer">
+                <span class="hud-footer-hint"><strong>↑↓</strong> navigate</span>
+                <span class="hud-footer-hint"><strong>↵</strong> select</span>
+                <span class="hud-footer-hint"><strong>ESC</strong> dismiss</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. Toast Feedback Notifications -->
     <div id="toastContainer" class="toast-container"></div>
 
-    <!-- 6. Webview Tab Views Container -->
-    <div class="views-container" id="viewsContainer"></div>
+    <!-- 7. Webview Tab Views Container -->
+    <div class="views-container" id="viewsContainer">
+        <div id="splitDivider" class="split-divider hidden" title="Drag to Resize Split Views"></div>
+    </div>
 
     <script src="browser.js"></script>
 </body>

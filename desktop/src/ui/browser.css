@@ -60,7 +60,7 @@ html, body {
     height: 22px;
     border-radius: 6px;
     object-fit: cover;
-    box-shadow: 0 2px 8px rgba(0, 229, 255, 0.35);
+    box-shadow: none !important;
     pointer-events: none;
 }
 
@@ -69,6 +69,7 @@ html, body {
     font-weight: 900;
     letter-spacing: 0.14em;
     color: var(--fokk-cyan);
+    text-shadow: none !important;
 }
 
 .tab-strip {
@@ -134,20 +135,59 @@ html, body {
 }
 
 .tab-close {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
-    opacity: 0.6;
-    transition: all 0.15s ease;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 6px;
+    flex-shrink: 0;
+    opacity: 0.65;
+    transition: all 0.16s ease;
+}
+
+.tab-close svg {
+    pointer-events: none;
 }
 
 .tab-close:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
     opacity: 1;
+}
+
+.browser-tab.active .tab-close {
+    opacity: 0.85;
+}
+
+.browser-tab.active .tab-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    opacity: 1;
+}
+
+/* Incognito / Private Tab Styling */
+.browser-tab.private-tab {
+    border-bottom: 2px solid rgba(168, 85, 247, 0.4);
+}
+
+.browser-tab.private-tab.active {
+    background: rgba(168, 85, 247, 0.14);
+    border-color: rgba(168, 85, 247, 0.5);
+}
+
+.browser-tab.private-tab .tab-title {
+    color: #e9d5ff;
+}
+
+.browser-tab.private-tab .tab-favicon {
+    filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.6));
 }
 
 .new-tab-btn {
@@ -219,6 +259,14 @@ html, body {
     display: flex;
     align-items: center;
     gap: 4px;
+}
+
+.toolbar-actions-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    flex-shrink: 0;
 }
 
 .nav-btn {
@@ -383,7 +431,7 @@ html, body {
 .views-container {
     flex: 1;
     position: relative;
-    background: #000;
+    background: #090A0C !important;
     overflow: hidden;
 }
 
@@ -395,6 +443,7 @@ webview {
     height: 100%;
     display: none;
     border: none;
+    background-color: #090A0C !important;
 }
 
 webview.active {
@@ -1422,7 +1471,7 @@ body.theme-light .feature-modal-body div[style*="background: rgba(255,255,255,0.
 .vpn-popover {
     position: absolute;
     top: 86px;
-    right: 88px;
+    right: 112px; /* VPN btn is leftmost in toolbar-actions-right; 3 btns (32px) + gaps + padding to its right */
     width: 340px;
     background: rgba(18, 19, 24, 0.96);
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -2089,5 +2138,280 @@ body.theme-light .vpn-proto-icon-box {
 body.theme-light .vpn-footer-toggle {
     border-top: 1px solid #E2E8F0 !important;
 }
+
+/* ==========================================================================
+   Universal Command HUD (Ctrl+K Spotlight Launcher)
+   ========================================================================== */
+.command-hud-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(8, 10, 16, 0.72);
+    backdrop-filter: blur(14px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 12vh;
+    z-index: 100000;
+    animation: hudFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.command-hud-backdrop.hidden {
+    display: none !important;
+}
+
+@keyframes hudFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.command-hud-card {
+    background: #14161F;
+    border: 1px solid rgba(0, 229, 255, 0.28);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 24px rgba(0, 229, 255, 0.12);
+    border-radius: 14px;
+    width: 90%;
+    max-width: 640px;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: hudSlideDown 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes hudSlideDown {
+    from { transform: translateY(-16px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.command-hud-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.command-hud-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #FFFFFF;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.command-hud-input::placeholder {
+    color: #64748B;
+    font-size: 13.5px;
+}
+
+.command-hud-badge {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #94A3B8;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 5px;
+    letter-spacing: 0.5px;
+}
+
+.command-hud-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 420px;
+}
+
+.command-hud-category-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #00E5FF;
+    padding: 8px 10px 4px 10px;
+}
+
+.command-hud-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    background: transparent;
+    transition: all 0.12s ease;
+    user-select: none;
+}
+
+.command-hud-item:hover,
+.command-hud-item.active {
+    background: rgba(0, 229, 255, 0.12);
+    border: 1px solid rgba(0, 229, 255, 0.25);
+}
+
+.hud-item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.hud-item-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #00E5FF;
+    flex-shrink: 0;
+}
+
+.hud-item-title {
+    font-size: 13.5px;
+    font-weight: 550;
+    color: #E2E8F0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hud-item-sub {
+    font-size: 11px;
+    color: #94A3B8;
+    margin-left: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hud-item-shortcut {
+    font-size: 11px;
+    color: #64748B;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-family: monospace;
+}
+
+.command-hud-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+    padding: 8px 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.hud-footer-hint {
+    font-size: 11px;
+    color: #64748B;
+}
+
+.hud-footer-hint strong {
+    color: #94A3B8;
+}
+
+/* ==========================================================================
+   Dual Split View Architecture
+   ========================================================================== */
+.views-container.split-view-active {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    position: relative !important;
+    overflow: hidden !important;
+    width: 100% !important;
+    height: calc(100vh - 86px) !important;
+}
+
+.views-container.split-view-active webview.split-primary {
+    position: relative !important;
+    top: 0 !important;
+    left: 0 !important;
+    display: flex !important;
+    height: 100% !important;
+    order: 1 !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+    border-right: none !important;
+}
+
+.views-container.split-view-active .split-divider {
+    position: relative !important;
+    display: block !important;
+    width: 6px !important;
+    min-width: 6px !important;
+    height: 100% !important;
+    order: 2 !important;
+    flex-shrink: 0 !important;
+    background: #181924 !important;
+    cursor: col-resize !important;
+    z-index: 100 !important;
+    transition: background 0.15s ease;
+}
+
+.views-container.split-view-active .split-divider:hover,
+.views-container.split-view-active .split-divider.dragging {
+    background: #00E5FF !important;
+    box-shadow: 0 0 12px rgba(0, 229, 255, 0.7) !important;
+}
+
+.views-container.split-view-active .split-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 28px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.views-container.split-view-active webview.split-secondary {
+    position: relative !important;
+    top: 0 !important;
+    left: 0 !important;
+    display: flex !important;
+    height: 100% !important;
+    order: 3 !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+    border-left: none !important;
+}
+
+/* ==========================================================================
+   Tab Sleep & Memory Hibernation State
+   ========================================================================== */
+.browser-tab.sleeping-tab {
+    opacity: 0.72;
+}
+
+.browser-tab.sleeping-tab:hover {
+    opacity: 0.95;
+}
+
+.browser-tab .sleep-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #A78BFA;
+    margin-right: 2px;
+}
+
 
 
