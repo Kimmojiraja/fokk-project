@@ -768,12 +768,23 @@ ipcMain.handle('fokk-pick-wallpaper', async () => {
     if (!result.canceled && result.filePaths.length > 0) {
         try {
             const filePath = result.filePaths[0];
-            const ext = path.extname(filePath).replace('.', '') || 'jpeg';
-            const data = fs.readFileSync(filePath).toString('base64');
-            customWallpaperBase64 = `data:image/${ext};base64,${data}`;
-            return customWallpaperBase64;
+            const ext = path.extname(filePath) || '.jpg';
+            const userDataDir = app.getPath('userData');
+            const destPath = path.join(userDataDir, 'fokk_custom_wallpaper' + ext);
+            fs.copyFileSync(filePath, destPath);
+            // Return safe local file URL that webviews and browser can load without exceeding localStorage quotas
+            const fileUrl = 'file:///' + destPath.replace(/\\/g, '/');
+            return fileUrl;
         } catch (e) {
-            console.error('[Wallpaper] Error reading file:', e);
+            console.error('[Wallpaper] Error saving wallpaper file, falling back to base64:', e);
+            try {
+                const filePath = result.filePaths[0];
+                const ext = path.extname(filePath).replace('.', '') || 'jpeg';
+                const data = fs.readFileSync(filePath).toString('base64');
+                return `data:image/${ext};base64,${data}`;
+            } catch (err) {
+                console.error('[Wallpaper] Base64 fallback error:', err);
+            }
         }
     }
     return null;

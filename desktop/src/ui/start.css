@@ -18,12 +18,11 @@
     -webkit-font-smoothing: antialiased;
 }
 
-html {
-    background-color: #090A0C !important;
+html, body {
+    background-color: transparent !important;
 }
 
 body {
-    background-color: var(--firefox-dark-base);
     color: var(--text-white);
     min-height: 100vh;
     overflow-x: hidden;
@@ -57,8 +56,8 @@ body {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    z-index: -2;
-    transition: opacity 0.5s ease-in-out;
+    z-index: 0;
+    transition: opacity 0.4s ease-in-out;
 }
 
 .wallpaper-overlay {
@@ -67,9 +66,9 @@ body {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: linear-gradient(180deg, rgba(14, 16, 24, 0.22) 0%, rgba(14, 16, 24, 0.48) 100%);
+    background: linear-gradient(180deg, rgba(14, 16, 24, 0.22) 0%, rgba(14, 16, 24, 0.52) 100%);
     backdrop-filter: blur(0.5px);
-    z-index: -1;
+    z-index: 1;
     pointer-events: none;
 }
 
@@ -82,7 +81,7 @@ body {
     flex-direction: column;
     align-items: center;
     position: relative;
-    z-index: 1;
+    z-index: 2;
     min-height: 100vh;
     box-sizing: border-box;
 }
@@ -413,13 +412,20 @@ body.incognito-stealth-mode .search-suggestion-item.active .search-suggestion-ar
 }
 
 /* Incognito Stealth Full Screen Theme */
-body.incognito-stealth-mode .wallpaper-bg {
-    background-image: none !important;
+body.incognito-stealth-mode {
     background-color: #08090C !important;
+}
+
+body.incognito-stealth-mode .wallpaper-bg {
+    display: none !important;
 }
 
 body.incognito-stealth-mode .wallpaper-overlay {
     background: #08090C !important;
+}
+
+body.incognito-stealth-mode .floating-pencil-btn {
+    display: none !important;
 }
 
 body.incognito-stealth-mode .brand-logo-badge {
@@ -1258,6 +1264,43 @@ body.incognito-stealth-mode #incognitoStealthHero {
     font-size: 11.5px;
     font-weight: 600;
     color: #ffffff;
+}
+
+/* Floating Customize Background Button */
+.floating-pencil-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(28, 30, 42, 0.88);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 1000;
+}
+
+.floating-pencil-btn:hover {
+    background: rgba(38, 42, 60, 0.98);
+    border-color: rgba(0, 229, 255, 0.6);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6), 0 0 14px rgba(0, 229, 255, 0.25);
+    transform: translateY(-2px) scale(1.05);
+}
+
+.floating-pencil-btn svg {
+    pointer-events: none;
+    transition: transform 0.2s ease;
+}
+
+.floating-pencil-btn:hover svg {
+    transform: rotate(15deg);
 }
 
 /* ==========================================================================

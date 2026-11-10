@@ -1546,12 +1546,18 @@ function openFeatureHub(hubId) {
             card.onclick = () => {
                 const id = card.getAttribute('data-id');
                 const file = card.getAttribute('data-file');
-                localStorage.setItem('fokk_wallpaper_id', id);
-                localStorage.removeItem('fokk_custom_wallpaper');
+                try {
+                    localStorage.setItem('fokk_wallpaper_id', id);
+                    localStorage.removeItem('fokk_custom_wallpaper');
+                } catch (_) {}
 
-                // Notify all active start pages to update instantly
+                // Notify all active start pages to update instantly and persist in webview session
                 tabs.forEach(t => {
                     t.webview.executeJavaScript(`
+                        try {
+                            localStorage.setItem('fokk_wallpaper_id', '${id}');
+                            localStorage.removeItem('fokk_custom_wallpaper');
+                        } catch (_) {}
                         if (typeof window.setWallpaper === 'function') {
                             window.setWallpaper({ id: '${id}', url: '${file}' });
                         } else {
@@ -1569,11 +1575,23 @@ function openFeatureHub(hubId) {
         document.getElementById('btnUploadCustomWp').onclick = async () => {
             const dataUrl = await ipcRenderer.invoke('fokk-pick-wallpaper');
             if (dataUrl) {
-                localStorage.setItem('fokk_custom_wallpaper', dataUrl);
+                try {
+                    localStorage.setItem('fokk_custom_wallpaper', dataUrl);
+                    localStorage.removeItem('fokk_wallpaper_id');
+                } catch (_) {}
+
                 tabs.forEach(t => {
                     t.webview.executeJavaScript(`
-                        const bg = document.getElementById('wallpaperBg');
-                        if (bg) bg.style.backgroundImage = 'url("${dataUrl}")';
+                        try {
+                            localStorage.setItem('fokk_custom_wallpaper', ${JSON.stringify(dataUrl)});
+                            localStorage.removeItem('fokk_wallpaper_id');
+                        } catch (_) {}
+                        if (typeof window.setWallpaper === 'function') {
+                            window.setWallpaper(${JSON.stringify(dataUrl)});
+                        } else {
+                            const bg = document.getElementById('wallpaperBg');
+                            if (bg) bg.style.backgroundImage = 'url("' + ${JSON.stringify(dataUrl)} + '")';
+                        }
                     `).catch(() => {});
                 });
                 featureHubModal.classList.add('hidden');

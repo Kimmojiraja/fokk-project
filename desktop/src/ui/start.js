@@ -72,8 +72,8 @@
         {
             id: 'obsidian',
             name: 'Stealth Matte Black',
-            url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080"><rect width="1920" height="1080" fill="%23090a0c"/></svg>',
-            thumb: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="192" height="108" viewBox="0 0 192 108"><rect width="192" height="108" fill="%23090a0c"/></svg>'
+            url: "data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080"><rect width="1920" height="1080" fill="#090a0c"/></svg>'),
+            thumb: "data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="192" height="108" viewBox="0 0 192 108"><rect width="192" height="108" fill="#090a0c"/></svg>')
         }
     ];
 
@@ -351,9 +351,11 @@
     }
 
     function setWallpaper(item) {
-        localStorage.removeItem('fokk_custom_wallpaper');
-        localStorage.setItem('fokk_wallpaper_id', item.id);
-        wallpaperBg.style.backgroundImage = `url("${item.url}")`;
+        try {
+            localStorage.removeItem('fokk_custom_wallpaper');
+            localStorage.setItem('fokk_wallpaper_id', item.id);
+        } catch (_) {}
+        if (wallpaperBg) wallpaperBg.style.backgroundImage = `url("${item.url}")`;
         renderWallpaperGrid();
     }
 
@@ -365,8 +367,11 @@
             if (match) {
                 setWallpaper(match);
             } else {
-                localStorage.setItem('fokk_custom_wallpaper', itemOrId);
-                wallpaperBg.style.backgroundImage = `url("${itemOrId}")`;
+                try {
+                    localStorage.setItem('fokk_custom_wallpaper', itemOrId);
+                    localStorage.removeItem('fokk_wallpaper_id');
+                } catch (_) {}
+                if (wallpaperBg) wallpaperBg.style.backgroundImage = `url("${itemOrId}")`;
             }
         } else if (itemOrId && itemOrId.url) {
             setWallpaper(itemOrId);
@@ -379,7 +384,7 @@
         const hasCustom = !!localStorage.getItem('fokk_custom_wallpaper');
 
         wallpapersGrid.innerHTML = CURATED_WALLPAPERS.map(w => `
-            <div class="wallpaper-tile ${(!hasCustom && w.id === currentId) ? 'active' : ''}" style="background-image: url('${w.url}')" data-id="${w.id}">
+            <div class="wallpaper-tile ${(!hasCustom && w.id === currentId) ? 'active' : ''}" style="background-image: url('${w.thumb || w.url}')" data-id="${w.id}">
                 <div class="wallpaper-tile-label">${w.name}</div>
             </div>
         `).join('');
@@ -388,7 +393,11 @@
             tile.addEventListener('click', () => {
                 const id = tile.getAttribute('data-id');
                 const match = CURATED_WALLPAPERS.find(w => w.id === id);
-                if (match) setWallpaper(match);
+                if (match) {
+                    setWallpaper(match);
+                    wallpaperModal.classList.add('hidden');
+                    wallpaperModal.classList.remove('active');
+                }
             });
         });
     }
@@ -399,18 +408,23 @@
             e.stopPropagation();
             renderWallpaperGrid();
             wallpaperModal.classList.remove('hidden');
+            wallpaperModal.classList.add('active');
         });
     }
 
     if (btnCloseModal) {
         btnCloseModal.addEventListener('click', () => {
             wallpaperModal.classList.add('hidden');
+            wallpaperModal.classList.remove('active');
         });
     }
 
     if (wallpaperModal) {
         wallpaperModal.addEventListener('click', (e) => {
-            if (e.target === wallpaperModal) wallpaperModal.classList.add('hidden');
+            if (e.target === wallpaperModal) {
+                wallpaperModal.classList.add('hidden');
+                wallpaperModal.classList.remove('active');
+            }
         });
     }
 
@@ -420,9 +434,12 @@
             if (window.FokkShieldBridge && typeof window.FokkShieldBridge.triggerWallpaperPicker === 'function') {
                 window.FokkShieldBridge.triggerWallpaperPicker().then(dataUrl => {
                     if (dataUrl) {
-                        localStorage.setItem('fokk_custom_wallpaper', dataUrl);
-                        wallpaperBg.style.backgroundImage = `url("${dataUrl}")`;
+                        try {
+                            localStorage.setItem('fokk_custom_wallpaper', dataUrl);
+                        } catch (_) {}
+                        if (wallpaperBg) wallpaperBg.style.backgroundImage = `url("${dataUrl}")`;
                         wallpaperModal.classList.add('hidden');
+                        wallpaperModal.classList.remove('active');
                     }
                 }).catch(() => {
                     if (deviceFileInput) deviceFileInput.click();
@@ -440,9 +457,12 @@
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     const result = event.target.result;
-                    localStorage.setItem('fokk_custom_wallpaper', result);
-                    wallpaperBg.style.backgroundImage = `url("${result}")`;
+                    try {
+                        localStorage.setItem('fokk_custom_wallpaper', result);
+                    } catch (_) {}
+                    if (wallpaperBg) wallpaperBg.style.backgroundImage = `url("${result}")`;
                     wallpaperModal.classList.add('hidden');
+                    wallpaperModal.classList.remove('active');
                 };
                 reader.readAsDataURL(file);
             }
