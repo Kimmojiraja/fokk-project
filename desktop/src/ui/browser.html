@@ -96,6 +96,18 @@
         </div>
 
         <div class="toolbar-actions-right">
+            <button class="nav-btn" id="btnSplitView" title="Split View / Dual Browsing (Ctrl+Shift+D)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="12" y1="3" x2="12" y2="21"/>
+                </svg>
+            </button>
+            <button class="nav-btn" id="btnCommandHud" title="Universal Command HUD (Ctrl+K)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="4 17 10 11 4 5"/>
+                    <line x1="12" y1="19" x2="20" y2="19"/>
+                </svg>
+            </button>
             <button class="nav-btn vpn-toggle-btn" id="btnVpnToggle" title="Fokk Shield Tunnel — Zero-Log Privacy VPN">
                 <svg class="vpn-quantum-glyph" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 2L3.5 7v10L12 22l8.5-5V7L12 2z" stroke="currentColor" stroke-width="1.9"/>
@@ -465,11 +477,35 @@
         </div>
     </div>
 
-    <!-- 5. Toast Feedback Notifications -->
+    <!-- 5. Universal Command HUD (Ctrl+K) -->
+    <div id="commandHudModal" class="command-hud-backdrop hidden">
+        <div class="command-hud-card">
+            <div class="command-hud-search-bar">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" id="commandHudInput" class="command-hud-input" placeholder="Type a command or search tabs, history, bookmarks... (Ctrl+K)" autocomplete="off" spellcheck="false">
+                <span class="command-hud-badge">ESC</span>
+            </div>
+            <div class="command-hud-list" id="commandHudList">
+                <!-- Dynamically populated commands, tabs, and bookmarks -->
+            </div>
+            <div class="command-hud-footer">
+                <span class="hud-footer-hint"><strong>↑↓</strong> navigate</span>
+                <span class="hud-footer-hint"><strong>↵</strong> select</span>
+                <span class="hud-footer-hint"><strong>ESC</strong> dismiss</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. Toast Feedback Notifications -->
     <div id="toastContainer" class="toast-container"></div>
 
-    <!-- 6. Webview Tab Views Container -->
-    <div class="views-container" id="viewsContainer"></div>
+    <!-- 7. Webview Tab Views Container -->
+    <div class="views-container" id="viewsContainer">
+        <div id="splitDivider" class="split-divider hidden" title="Drag to Resize Split Views"></div>
+    </div>
 
     <script src="browser.js"></script>
 </body>

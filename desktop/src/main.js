@@ -6,6 +6,7 @@ const { spawn } = require('child_process');
 const AdBlockEngine = require('./adblock');
 const newsService = require('./news');
 const { VpnEngine } = require('./vpn_engine');
+const { cleanTrackingUrl } = require('./clean_url');
 
 // Universal Stealth & Anti-Automation Flags (matching Brave / Un-automated Chromium)
 app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
@@ -30,6 +31,10 @@ const ICON_PATH = fs.existsSync(path.join(__dirname, 'ui', 'icon.png'))
 let mainWindow = null;
 let shieldEnabled = true;
 const adblock = new AdBlockEngine(ASSETS_DIR);
+let stealthPoisonerScript = '';
+try {
+    stealthPoisonerScript = fs.readFileSync(path.join(__dirname, 'stealth_poisoner.js'), 'utf8');
+} catch (_) {}
 let vpnEngine = null;
 try {
     vpnEngine = new VpnEngine(app.getPath('userData'));
@@ -109,9 +114,19 @@ function setupAdblockingForSession(sess) {
             }
             broadcastStatsThrottled();
             callback({ cancel: true });
-        } else {
-            callback({ cancel: false });
+            return;
         }
+
+        // Clean tracking parameters & trampolines from main frame navigations
+        if (shieldEnabled && (details.resourceType === 'mainFrame' || details.resourceType === 'subFrame')) {
+            const cleaned = cleanTrackingUrl(details.url);
+            if (cleaned && cleaned !== details.url) {
+                callback({ redirectURL: cleaned });
+                return;
+            }
+        }
+
+        callback({ cancel: false });
     });
 
     sess.on('will-download', (event, item) => {
@@ -200,21 +215,23 @@ function createWindow() {
 
         if (type === 'webview') {
             setupAdblockingForSession(contents.session);
-            contents.on('did-navigate', () => {
-                if (shieldEnabled) {
-                    adblock.injectCosmeticFilters(contents);
-                }
-            });
+            const runCosmeticFilters = () => {
+                if (!shieldEnabled) return;
+                const u = (contents.getURL ? contents.getURL() : '').toLowerCase();
+                if (!u || u.startsWith('file:') || u.startsWith('fokk:') || u === 'about:blank') return;
+                adblock.injectCosmeticFilters(contents);
+            };
+            contents.on('did-navigate', runCosmeticFilters);
             contents.on('dom-ready', () => {
-                if (shieldEnabled) {
-                    adblock.injectCosmeticFilters(contents);
+                runCosmeticFilters();
+                if (stealthPoisonerScript) {
+                    const u = (contents.getURL ? contents.getURL() : '').toLowerCase();
+                    if (u && !u.startsWith('file:') && !u.startsWith('fokk:') && u !== 'about:blank') {
+                        contents.executeJavaScript(stealthPoisonerScript).catch(() => {});
+                    }
                 }
             });
-            contents.on('did-navigate-in-page', () => {
-                if (shieldEnabled) {
-                    adblock.injectCosmeticFilters(contents);
-                }
-            });
+            contents.on('did-navigate-in-page', runCosmeticFilters);
 
             // Universal Window Open & OAuth Popup Handler matching Brave / Firefox
             contents.setWindowOpenHandler((details) => {

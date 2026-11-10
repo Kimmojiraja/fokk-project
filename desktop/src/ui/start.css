@@ -1067,6 +1067,7 @@ body.incognito-stealth-mode #incognitoStealthHero {
 }
 
 /* Modals & Dialogs */
+.fokk-modal-backdrop,
 .modal-backdrop {
     position: fixed;
     top: 0;
@@ -1081,10 +1082,12 @@ body.incognito-stealth-mode #incognitoStealthHero {
     z-index: 99999;
 }
 
+.fokk-modal-backdrop.hidden,
 .modal-backdrop.hidden {
     display: none !important;
 }
 
+.fokk-modal-backdrop.active,
 .modal-backdrop.active,
 #addShortcutModal.active,
 #wallpaperModal.active {

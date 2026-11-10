@@ -696,6 +696,10 @@ class AdBlockEngine {
     injectCosmeticFilters(webContents) {
         if (!webContents || webContents.isDestroyed()) return;
         const currentUrl = (webContents.getURL ? webContents.getURL() : '').toLowerCase();
+        // Never run adblock cosmetic filters or anti-adblock defusers on internal browser UI pages
+        if (!currentUrl || currentUrl.startsWith('file:') || currentUrl.startsWith('fokk:') || currentUrl === 'about:blank') {
+            return;
+        }
         let hostname = '';
         try { hostname = new URL(currentUrl).hostname.toLowerCase(); } catch(_) {}
 
