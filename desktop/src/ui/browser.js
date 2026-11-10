@@ -12,7 +12,7 @@ function uiPageUrl(filename) {
 async function exportEncryptedVault(password) {
     const payload = {
         app: 'Fokk Browser',
-        version: '1.0.0',
+        version: '1.1.0',
         exportedAt: new Date().toISOString(),
         bookmarks: JSON.parse(localStorage.getItem('fokk_bookmarks') || '[]'),
         shortcuts: JSON.parse(localStorage.getItem('fokk_desktop_shortcuts') || '[]'),

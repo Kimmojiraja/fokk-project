@@ -1,16 +1,16 @@
 {
   "name": "fokk-browser",
   "productName": "Fokk Browser",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Fokk Shield Browser - Ultra-fast, zero-ad privacy browser for Desktop",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
     "pack:linux": "electron-builder --linux --dir",
     "dist:linux": "electron-builder --linux deb AppImage",
-    "dist:win": "electron-builder --win zip -c.win.signAndEditExecutable=false",
+    "dist:win": "electron-builder --win zip portable",
     "dist:mac": "electron-builder --mac zip",
-    "dist:all": "electron-builder --linux deb AppImage --win zip -c.win.signAndEditExecutable=false --mac zip",
+    "dist:all": "electron-builder --linux deb AppImage --win zip portable --mac zip",
     "dist": "electron-builder -wl"
   },
   "keywords": [
@@ -73,10 +73,11 @@
     },
     "win": {
       "target": [
-        "nsis",
-        "portable"
+        "portable",
+        "zip"
       ],
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "signAndEditExecutable": false
     },
     "mac": {
       "target": [

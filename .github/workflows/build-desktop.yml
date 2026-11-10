@@ -91,7 +91,7 @@ jobs:
 
       - name: Build Windows Packages
         working-directory: desktop
-        run: npx electron-builder --win zip -c.win.signAndEditExecutable=false --publish never
+        run: npx electron-builder --win zip portable --publish never
 
       - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
@@ -117,7 +117,7 @@ jobs:
             --notes "Fokk Browser Desktop v$VERSION multi-platform release." \
             --prerelease=false || true
 
-          gh release upload "$TAG" dist/*-win.zip --clobber || true
+          gh release upload "$TAG" dist/*-win.zip dist/*.exe --clobber || true
 
   build-macos:
     name: Build macOS (Zip)
