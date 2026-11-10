@@ -221,6 +221,14 @@ html, body {
     gap: 4px;
 }
 
+.toolbar-actions-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
 .nav-btn {
     width: 32px;
     height: 32px;
@@ -1422,7 +1430,7 @@ body.theme-light .feature-modal-body div[style*="background: rgba(255,255,255,0.
 .vpn-popover {
     position: absolute;
     top: 86px;
-    right: 88px;
+    right: 112px; /* VPN btn is leftmost in toolbar-actions-right; 3 btns (32px) + gaps + padding to its right */
     width: 340px;
     background: rgba(18, 19, 24, 0.96);
     border: 1px solid rgba(255, 255, 255, 0.12);

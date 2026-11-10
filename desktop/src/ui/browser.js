@@ -1553,13 +1553,6 @@ function openFeatureHub(hubId) {
                 </div>
                 <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between;">
                     <div>
-                        <div style="font-size: 13px; font-weight: 700; color: #FFF;">Buy Me a Coffee</div>
-                        <div style="font-size: 11px; color: var(--text-secondary);">One-time community contribution</div>
-                    </div>
-                    <button class="modal-btn secondary" id="btnOpenCoffee">Buy Coffee</button>
-                </div>
-                <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between;">
-                    <div>
                         <div style="font-size: 13px; font-weight: 700; color: #FFF;">Open to Code Contributors</div>
                         <div style="font-size: 11px; color: var(--text-secondary);">Star, fork, and contribute to Fokk Project</div>
                     </div>
@@ -1608,10 +1601,6 @@ function openFeatureHub(hubId) {
 
         document.getElementById('btnOpenGhSponsors').onclick = () => {
             createTab('https://github.com/sponsors/Kimmojiraja');
-            featureHubModal.classList.add('hidden');
-        };
-        document.getElementById('btnOpenCoffee').onclick = () => {
-            createTab('https://www.buymeacoffee.com/k_raja');
             featureHubModal.classList.add('hidden');
         };
         document.getElementById('btnOpenRepo').onclick = () => {
@@ -2139,17 +2128,22 @@ function initVpnUI() {
             if (vpnRadarRing) vpnRadarRing.className = 'vpn-radar-ring connecting';
             try {
                 const res = await ipcRenderer.invoke('fokk-vpn-toggle');
-                if (res && res.status) {
-                    updateVpnUI(res.status);
-                    if (res.status.state === 'connected') {
-                        showToast(`Tunnel Connected: ${res.status.virtualCountry || 'Encrypted'}`);
-                    } else if (res.status.state === 'error' && res.status.errorMessage) {
-                        showToast(res.status.errorMessage);
+                const newStatus = (res && res.status) ? res.status : ipcRenderer.sendSync('fokk-vpn-get-status');
+                if (newStatus) {
+                    updateVpnUI(newStatus);
+                    if (newStatus.state === 'connected') {
+                        showToast(`Tunnel Connected: ${newStatus.virtualCountry || 'Encrypted'}`);
+                    } else if (newStatus.state === 'error' && newStatus.errorMessage) {
+                        showToast(newStatus.errorMessage);
                     } else {
                         showToast('Tunnel Disconnected (Direct Traffic)');
                     }
                 }
             } catch (err) {
+                try {
+                    const cur = ipcRenderer.sendSync('fokk-vpn-get-status');
+                    if (cur) updateVpnUI(cur);
+                } catch (_) {}
                 showToast('VPN Error: ' + err.message);
             }
         });

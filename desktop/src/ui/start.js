@@ -537,7 +537,13 @@
                 targetUrl = getActiveEngine().url + encodeURIComponent(query);
             }
 
-            window.location.href = targetUrl;
+            // Prefer the bridge so the URL loads inside the tab system (not just navigating
+            // the webview away from the start page while losing history/tab state).
+            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openUrl === 'function') {
+                window.FokkShieldBridge.openUrl(targetUrl);
+            } else {
+                window.location.href = targetUrl;
+            }
         });
     }
 
