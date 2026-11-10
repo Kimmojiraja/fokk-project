@@ -137,20 +137,20 @@
         }
     ];
 
-    // Diverse fallback photos matching editorial categories (eliminates repetitive typewriter fallback)
+    // Diverse fallback photos matching editorial categories (high-res 1200px 4K crisp photography)
     const DEFAULT_STORY_IMAGES = [
-        "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80",
-        "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80"
+        "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1200&q=85",
+        "https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=1200&q=85",
+        "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=85",
+        "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1200&q=85",
+        "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1200&q=85",
+        "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=85",
+        "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=1200&q=85",
+        "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=85",
+        "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=85",
+        "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=85",
+        "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=85",
+        "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=85"
     ];
 
     // 3. Primary 8 Rich Editorial Stories (matching reference exactly)
@@ -852,18 +852,23 @@
             if (saveBtn) saveBtn.textContent = 'Add Shortcut';
         }
 
+        if (saveBtn) saveBtn.onclick = saveShortcutAction;
+
         updateShortcutPreview();
+        modal.classList.add('active');
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
         setTimeout(() => {
             if (isEdit && titleInput) titleInput.focus();
             else if (urlInput) urlInput.focus();
+            else if (titleInput) titleInput.focus();
         }, 60);
     }
 
     function closeShortcutModal() {
         const modal = document.getElementById('addShortcutModal');
         if (modal) {
+            modal.classList.remove('active');
             modal.classList.add('hidden');
             modal.style.display = 'none';
         }
@@ -874,13 +879,22 @@
         const urlInputEl = document.getElementById('shortcutUrlInput');
         const titleInputEl = document.getElementById('shortcutTitleInput');
         let rawUrl = (urlInputEl ? urlInputEl.value : '').trim();
-        if (!rawUrl) return;
+        let rawTitle = (titleInputEl ? titleInputEl.value : '').trim();
+
+        if (!rawUrl && rawTitle && (rawTitle.includes('.') || !rawTitle.includes(' '))) {
+            rawUrl = rawTitle;
+        }
+
+        if (!rawUrl) {
+            if (urlInputEl) urlInputEl.focus();
+            return;
+        }
 
         const validUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : 'https://' + rawUrl;
         let host = '';
         try { host = new URL(validUrl).hostname; } catch(_) { host = rawUrl; }
 
-        let name = (titleInputEl ? titleInputEl.value : '').trim();
+        let name = rawTitle;
         if (!name) {
             const cleanHost = host.replace(/^www\./i, '').split('.')[0];
             name = cleanHost.charAt(0).toUpperCase() + cleanHost.slice(1);
@@ -1186,7 +1200,7 @@
             return `
                 <div class="firefox-card" data-url="${story.url}">
                     <div class="card-img-wrap">
-                        <img class="card-img" src="${imgSrc}" alt="News thumbnail" loading="lazy">
+                        <img class="card-img" src="${imgSrc}" alt="News thumbnail" loading="lazy" onerror="this.onerror=null; this.src='${fallbackImg}';">
                     </div>
                     <div class="card-body">
                         <h3 class="card-headline">${story.title}</h3>

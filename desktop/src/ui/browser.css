@@ -60,7 +60,7 @@ html, body {
     height: 22px;
     border-radius: 6px;
     object-fit: cover;
-    box-shadow: 0 2px 8px rgba(0, 229, 255, 0.35);
+    box-shadow: none !important;
     pointer-events: none;
 }
 
@@ -69,6 +69,7 @@ html, body {
     font-weight: 900;
     letter-spacing: 0.14em;
     color: var(--fokk-cyan);
+    text-shadow: none !important;
 }
 
 .tab-strip {
