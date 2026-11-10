@@ -35,21 +35,24 @@
         },
         {
             id: 'sailboat_4',
-            name: 'Open Sea Regatta',
+            name: 'Open Sea Regatta (Pro Edition)',
             url: 'wallpaper_sailboat_4.jpg',
-            thumb: 'wallpaper_sailboat_4.jpg'
+            thumb: 'wallpaper_sailboat_4.jpg',
+            pro: true
         },
         {
             id: 'sailboat_5',
-            name: 'Tropical Lagoon Sailboat',
+            name: 'Tropical Lagoon Sailboat (Pro Edition)',
             url: 'wallpaper_sailboat_5.jpg',
-            thumb: 'wallpaper_sailboat_5.jpg'
+            thumb: 'wallpaper_sailboat_5.jpg',
+            pro: true
         },
         {
             id: 'sailboat_6',
-            name: 'Dramatic Horizon Sailing',
+            name: 'Dramatic Horizon Sailing (Pro Edition)',
             url: 'wallpaper_sailboat_6.jpg',
-            thumb: 'wallpaper_sailboat_6.jpg'
+            thumb: 'wallpaper_sailboat_6.jpg',
+            pro: true
         },
         {
             id: 'alpine',
@@ -385,6 +388,7 @@
 
         wallpapersGrid.innerHTML = CURATED_WALLPAPERS.map(w => `
             <div class="wallpaper-tile ${(!hasCustom && w.id === currentId) ? 'active' : ''}" style="background-image: url('${w.thumb || w.url}')" data-id="${w.id}">
+                ${w.pro ? '<span class="wallpaper-pro-badge">PRO</span>' : ''}
                 <div class="wallpaper-tile-label">${w.name}</div>
             </div>
         `).join('');

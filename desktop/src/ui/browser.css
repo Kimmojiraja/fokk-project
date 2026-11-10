@@ -539,6 +539,36 @@ webview.active {
 .btn-edit-username:hover {
     opacity: 1;
 }
+.btn-menu-get-pro {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.22), rgba(139, 92, 246, 0.25));
+    border: 1px solid rgba(0, 229, 255, 0.45);
+    border-radius: 100px;
+    color: #00E5FF;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    padding: 3px 9px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.15);
+    white-space: nowrap;
+}
+.btn-menu-get-pro:hover {
+    background: linear-gradient(135deg, #00E5FF, #0EA5E9);
+    color: #000;
+    box-shadow: 0 0 16px rgba(0, 229, 255, 0.5);
+    transform: translateY(-1px);
+}
+.btn-menu-get-pro.is-pro-active {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #10B981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+}
 .menu-user-edition {
     font-size: 10.5px;
     color: var(--text-secondary);
@@ -2437,6 +2467,59 @@ body.theme-light .vpn-footer-toggle {
 }
 
 /* ==========================================================================
+   Quad Multi-Split (2x2 Power Grid - Pro Feature)
+   ========================================================================== */
+.views-container.quad-view-active {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: 1fr 1fr !important;
+    gap: 4px !important;
+    position: relative !important;
+    overflow: hidden !important;
+    width: 100% !important;
+    height: calc(100vh - 86px) !important;
+    background: #090a10 !important;
+    padding: 2px !important;
+    box-sizing: border-box !important;
+}
+
+.views-container.quad-view-active webview.split-quad {
+    position: relative !important;
+    display: flex !important;
+    width: 100% !important;
+    height: calc(100% - 30px) !important;
+    margin-top: 30px !important;
+    box-sizing: border-box !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.split-pane-header.quad-header {
+    position: absolute !important;
+    height: 30px !important;
+    width: calc(50% - 4px) !important;
+    z-index: 200 !important;
+}
+
+.split-pane-header.quad-header[data-quad-index="0"] {
+    top: 2px !important;
+    left: 2px !important;
+}
+.split-pane-header.quad-header[data-quad-index="1"] {
+    top: 2px !important;
+    left: calc(50% + 2px) !important;
+}
+.split-pane-header.quad-header[data-quad-index="2"] {
+    top: calc(50% + 2px) !important;
+    left: 2px !important;
+}
+.split-pane-header.quad-header[data-quad-index="3"] {
+    top: calc(50% + 2px) !important;
+    left: calc(50% + 2px) !important;
+}
+
+/* ==========================================================================
    Dual Split View Architecture
    ========================================================================== */
 .views-container.split-view-active {
@@ -2462,7 +2545,17 @@ body.theme-light .vpn-footer-toggle {
     border-right: none !important;
 }
 
-.views-container.split-view-active .split-divider {
+.split-divider {
+    display: none;
+}
+.split-divider.hidden {
+    display: none !important;
+}
+.views-container.quad-view-active .split-divider {
+    display: none !important;
+}
+
+.views-container.split-view-active .split-divider:not(.hidden) {
     position: relative !important;
     display: block !important;
     width: 6px !important;

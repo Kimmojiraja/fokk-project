@@ -6,6 +6,101 @@ function uiPageUrl(filename) {
     return 'file:///' + path.join(__dirname, filename).replace(/\\/g, '/');
 }
 
+// =========================================================================
+// Fokk Pro Feature: AES-256 Offline Encrypted Vault Backup & Restore
+// =========================================================================
+async function exportEncryptedVault(password) {
+    const payload = {
+        app: 'Fokk Browser',
+        version: '1.0.0',
+        exportedAt: new Date().toISOString(),
+        bookmarks: JSON.parse(localStorage.getItem('fokk_bookmarks') || '[]'),
+        shortcuts: JSON.parse(localStorage.getItem('fokk_desktop_shortcuts') || '[]'),
+        theme: localStorage.getItem('fokk_global_theme') || 'default',
+        wallpaperId: localStorage.getItem('fokk_wallpaper_id') || 'sailboat',
+        domainScripts: JSON.parse(localStorage.getItem('fokk_domain_scripts') || '{}'),
+        searchEngine: localStorage.getItem('fokk_search_engine') || 'bing'
+    };
+
+    const enc = new TextEncoder();
+    const dataBytes = enc.encode(JSON.stringify(payload));
+
+    const salt = window.crypto.getRandomValues(new Uint8Array(16));
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+
+    const keyMaterial = await window.crypto.subtle.importKey(
+        'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey']
+    );
+
+    const key = await window.crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt']
+    );
+
+    const ciphertext = await window.crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv }, key, dataBytes
+    );
+
+    const vaultPackage = {
+        format: 'fokkvault',
+        version: 1,
+        salt: Array.from(salt),
+        iv: Array.from(iv),
+        ciphertext: Array.from(new Uint8Array(ciphertext))
+    };
+
+    const blob = new Blob([JSON.stringify(vaultPackage, null, 2)], { type: 'application/json' });
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `fokk-vault-${new Date().toISOString().slice(0, 10)}.fokkvault`;
+    a.click();
+    URL.revokeObjectURL(blobUrl);
+}
+
+async function importEncryptedVault(fileContent, password) {
+    const pkg = JSON.parse(fileContent);
+    if (!pkg || pkg.format !== 'fokkvault' || !pkg.ciphertext || !pkg.salt || !pkg.iv) {
+        throw new Error('Invalid .fokkvault file format');
+    }
+
+    const salt = new Uint8Array(pkg.salt);
+    const iv = new Uint8Array(pkg.iv);
+    const ciphertext = new Uint8Array(pkg.ciphertext);
+
+    const enc = new TextEncoder();
+    const keyMaterial = await window.crypto.subtle.importKey(
+        'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey']
+    );
+
+    const key = await window.crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['decrypt']
+    );
+
+    const decrypted = await window.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv }, key, ciphertext
+    );
+
+    const dec = new TextDecoder();
+    const payload = JSON.parse(dec.decode(decrypted));
+
+    if (payload.bookmarks) localStorage.setItem('fokk_bookmarks', JSON.stringify(payload.bookmarks));
+    if (payload.shortcuts) localStorage.setItem('fokk_desktop_shortcuts', JSON.stringify(payload.shortcuts));
+    if (payload.theme) localStorage.setItem('fokk_global_theme', payload.theme);
+    if (payload.wallpaperId) localStorage.setItem('fokk_wallpaper_id', payload.wallpaperId);
+    if (payload.domainScripts) localStorage.setItem('fokk_domain_scripts', JSON.stringify(payload.domainScripts));
+    if (payload.searchEngine) localStorage.setItem('fokk_search_engine', payload.searchEngine);
+
+    return payload;
+}
+
 let tabs = [];
 let activeTabId = null;
 let tabCounter = 0;
@@ -220,6 +315,20 @@ function createTab(url = START_PAGE_URL, options = {}) {
             updateNavState(webview);
             updateOmnibox(webview.getURL());
         }
+
+        // Auto-inject persistent domain CSS/JS (Pro Feature)
+        try {
+            const curUrl = webview.getURL ? webview.getURL() : '';
+            if (curUrl && curUrl.startsWith('http')) {
+                const host = new URL(curUrl).hostname;
+                const domainScripts = JSON.parse(localStorage.getItem('fokk_domain_scripts') || '{}');
+                const rule = domainScripts[host];
+                if (rule && rule.enabled !== false) {
+                    if (rule.css) webview.insertCSS(rule.css);
+                    if (rule.js) webview.executeJavaScript(rule.js);
+                }
+            }
+        } catch (_) {}
     });
 
     webview.addEventListener('page-title-updated', (e) => {
@@ -317,6 +426,8 @@ function activateTab(tabId) {
 
     if (isSplitViewActive && typeof updateSplitLayout === 'function') {
         updateSplitLayout();
+    } else if (isQuadViewActive && typeof updateQuadLayout === 'function') {
+        updateQuadLayout();
     }
 }
 
@@ -334,6 +445,17 @@ function closeTab(tabId) {
     } else if (activeTabId === tabId) {
         const nextTab = tabs[Math.max(0, idx - 1)];
         activateTab(nextTab.id);
+    }
+
+    if (isSplitViewActive && typeof updateSplitLayout === 'function') {
+        updateSplitLayout();
+    }
+    if (isQuadViewActive && typeof updateQuadLayout === 'function') {
+        if (tabs.length < 4) {
+            toggleQuadMode();
+        } else {
+            updateQuadLayout();
+        }
     }
 }
 
@@ -548,6 +670,7 @@ if (btnBookmarkOmni) {
 if (btnMenu && desktopBrowserMenu) {
     btnMenu.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (typeof updateProUI === 'function') updateProUI();
         desktopBrowserMenu.classList.toggle('hidden');
         if (vpnPopover) {
             vpnPopover.classList.add('hidden');
@@ -624,6 +747,40 @@ if (btnEditUsername) {
         openFeatureHub('edit-profile');
     };
 }
+
+// Pro Status Sync in Three-Dot Menu
+const btnMenuGetPro = document.getElementById('btnMenuGetPro');
+const btnMenuGetProText = document.getElementById('btnMenuGetProText');
+
+function updateProUI() {
+    const isPro = localStorage.getItem('fokk_pro_status') === 'active';
+    if (btnMenuGetPro && btnMenuGetProText) {
+        if (isPro) {
+            btnMenuGetPro.classList.add('is-pro-active');
+            btnMenuGetProText.textContent = 'Pro Active';
+            btnMenuGetPro.title = 'Fokk Pro Active · Click to manage license';
+        } else {
+            btnMenuGetPro.classList.remove('is-pro-active');
+            btnMenuGetProText.textContent = 'Get Pro';
+            btnMenuGetPro.title = 'Upgrade to Fokk Pro ($4.79/mo)';
+        }
+    }
+}
+updateProUI();
+
+if (btnMenuGetPro) {
+    btnMenuGetPro.onclick = (e) => {
+        e.stopPropagation();
+        desktopBrowserMenu.classList.add('hidden');
+        createTab(uiPageUrl('fokk_contributing.html'));
+    };
+}
+
+window.addEventListener('storage', (e) => {
+    if (e.key === 'fokk_pro_status') {
+        updateProUI();
+    }
+});
 
 // Shield Toggle in Menu
 const menuShieldToggle = document.getElementById('menuShieldToggle');
@@ -1475,6 +1632,21 @@ function openFeatureHub(hubId) {
                 </div>
             </div>
             <button class="modal-btn danger" id="btnPurgeNow" style="margin-top: 16px;">Purge Selected Data Now</button>
+
+            <!-- AES-256 Encrypted Offline Vault Backup (Pro Feature) -->
+            <div class="modal-form-group" style="margin-top: 22px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <label class="modal-form-label" style="margin:0;">AES-256 Offline Vault Backup</label>
+                    <span style="background: rgba(0,229,255,0.15); color: #00E5FF; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px;">PRO ENCRYPTED</span>
+                </div>
+                <p style="font-size: 11.5px; line-height: 1.45; color: var(--text-secondary); margin-bottom: 12px;">Export or restore an encrypted (.fokkvault) backup of all your bookmarks, shortcuts, and settings with zero cloud dependency.</p>
+                <div style="display: flex; gap: 8px;">
+                    <button class="modal-btn" id="btnExportVault" style="flex: 1; font-size: 11.5px; padding: 6px 10px;">Export .fokkvault</button>
+                    <button class="modal-btn secondary" id="btnImportVaultTrigger" style="flex: 1; font-size: 11.5px; padding: 6px 10px;">Import .fokkvault</button>
+                    <input type="file" id="vaultFileInput" accept=".fokkvault,.json" style="display: none;">
+                </div>
+            </div>
+
             <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
                 <span style="font-size: 11.5px; color: var(--text-secondary);">Looking for our legal policy &amp; cautions?</span>
                 <button class="modal-btn secondary" id="btnOpenPrivacyPolicyPage" style="font-size: 11px; padding: 4px 10px;">Read Privacy Policy</button>
@@ -1486,6 +1658,40 @@ function openFeatureHub(hubId) {
             btnPrivacyDoc.onclick = () => {
                 featureHubModal.classList.add('hidden');
                 createTab(uiPageUrl('fokk_privacy.html'));
+            };
+        }
+
+        const btnExport = document.getElementById('btnExportVault');
+        if (btnExport) {
+            btnExport.onclick = async () => {
+                const pass = prompt('Enter a password to encrypt your .fokkvault backup:');
+                if (!pass) return;
+                try {
+                    await exportEncryptedVault(pass);
+                    showToast('Encrypted vault exported successfully!');
+                } catch (e) {
+                    showToast('Vault export failed: ' + e.message);
+                }
+            };
+        }
+
+        const btnImportTrigger = document.getElementById('btnImportVaultTrigger');
+        const vaultFileInput = document.getElementById('vaultFileInput');
+        if (btnImportTrigger && vaultFileInput) {
+            btnImportTrigger.onclick = () => vaultFileInput.click();
+            vaultFileInput.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const pass = prompt('Enter password to decrypt ' + file.name + ':');
+                if (!pass) return;
+                try {
+                    const text = await file.text();
+                    await importEncryptedVault(text, pass);
+                    showToast('Encrypted vault restored successfully!');
+                    featureHubModal.classList.add('hidden');
+                } catch (err) {
+                    alert('Decryption failed: incorrect password or corrupted file.');
+                }
             };
         }
 
@@ -1505,36 +1711,68 @@ function openFeatureHub(hubId) {
         };
 
     } else if (hubId === 'scripts') {
-        featureModalTitle.textContent = 'Extensions & User Scripts';
+        featureModalTitle.textContent = 'Script & Style Studio (Per-Site)';
+        const activeWebview = getActiveWebview();
+        let currentDomain = 'example.com';
+        try {
+            if (activeWebview && activeWebview.getURL) {
+                const u = new URL(activeWebview.getURL());
+                if (u.hostname) currentDomain = u.hostname;
+            }
+        } catch (_) {}
+
+        let domainScripts = {};
+        try { domainScripts = JSON.parse(localStorage.getItem('fokk_domain_scripts') || '{}'); } catch (_) {}
+        const existing = domainScripts[currentDomain] || { css: '', js: '', enabled: true };
+
         featureModalBody.innerHTML = `
-            <div class="modal-form-group">
-                <label class="modal-form-label">Custom CSS Injector</label>
-                <textarea id="txtCustomCSS" class="modal-textarea" rows="4" placeholder="/* CSS to inject on active page */"></textarea>
-                <button class="modal-btn secondary" id="btnInjectCSS" style="margin-top: 6px;">Inject CSS</button>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; color: var(--text-secondary);">Target Site: <strong style="color: #00E5FF;">${currentDomain}</strong></span>
+                <span style="background: rgba(0,229,255,0.12); color: #00E5FF; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px;">PRO STUDIO</span>
             </div>
-            <div class="modal-form-group" style="margin-top: 16px;">
-                <label class="modal-form-label">Custom JavaScript Injector</label>
-                <textarea id="txtCustomJS" class="modal-textarea" rows="4" placeholder="// JS to evaluate on active page"></textarea>
-                <button class="modal-btn" id="btnInjectJS" style="margin-top: 6px;">Execute JavaScript</button>
+            <div class="modal-form-group">
+                <label class="modal-form-label">Custom CSS (Auto-injected on ${currentDomain})</label>
+                <textarea id="txtCustomCSS" class="modal-textarea" rows="3" placeholder="/* Custom CSS rules */">${existing.css || ''}</textarea>
+            </div>
+            <div class="modal-form-group" style="margin-top: 10px;">
+                <label class="modal-form-label">Custom JavaScript (Evaluated on ${currentDomain})</label>
+                <textarea id="txtCustomJS" class="modal-textarea" rows="3" placeholder="// Custom JavaScript logic">${existing.js || ''}</textarea>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 14px;">
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #FFF; cursor: pointer;">
+                    <input type="checkbox" id="chkAutoInject" ${existing.enabled !== false ? 'checked' : ''}> Persistent auto-inject
+                </label>
+                <div style="display: flex; gap: 8px;">
+                    <button class="modal-btn secondary" id="btnTestInject">Run Once</button>
+                    <button class="modal-btn" id="btnSaveScript">Save for ${currentDomain}</button>
+                </div>
             </div>
         `;
 
-        document.getElementById('btnInjectCSS').onclick = () => {
+        document.getElementById('btnTestInject').onclick = () => {
             const css = document.getElementById('txtCustomCSS').value;
+            const js = document.getElementById('txtCustomJS').value;
             const active = getActiveWebview();
-            if (active && css) {
-                active.insertCSS(css);
-                showToast('CSS Injected into page');
+            if (active) {
+                if (css) active.insertCSS(css);
+                if (js) active.executeJavaScript(js);
+                showToast('Styles & Scripts executed on active page');
             }
         };
 
-        document.getElementById('btnInjectJS').onclick = () => {
+        document.getElementById('btnSaveScript').onclick = () => {
+            const css = document.getElementById('txtCustomCSS').value;
             const js = document.getElementById('txtCustomJS').value;
+            const enabled = document.getElementById('chkAutoInject').checked;
+            domainScripts[currentDomain] = { css, js, enabled };
+            localStorage.setItem('fokk_domain_scripts', JSON.stringify(domainScripts));
             const active = getActiveWebview();
-            if (active && js) {
-                active.executeJavaScript(js);
-                showToast('JavaScript Executed');
+            if (active) {
+                if (css) active.insertCSS(css);
+                if (js) active.executeJavaScript(js);
             }
+            featureHubModal.classList.add('hidden');
+            showToast(`Persistent scripts saved for ${currentDomain}`);
         };
 
     } else if (hubId === 'visuals') {
@@ -2084,6 +2322,15 @@ const COMMAND_HUD_REGISTRY = [
         action: () => { toggleSplitView(); }
     },
     {
+        id: 'cmd-quad',
+        category: 'Productivity',
+        title: 'Quad Multi-Split (2x2 Power Grid)',
+        sub: 'Browse 4 active screens simultaneously in a 2x2 grid (Pro)',
+        shortcut: 'Shift+Q',
+        iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+        action: () => { toggleQuadMode(); }
+    },
+    {
         id: 'cmd-burn',
         category: 'Privacy & Security',
         title: 'Burn Session',
@@ -2398,6 +2645,9 @@ let splitSecondaryTabId = null;
 let splitRatio = 0.5;
 
 function toggleSplitView() {
+    if (isQuadViewActive) {
+        toggleQuadMode();
+    }
     isSplitViewActive = !isSplitViewActive;
     if (btnSplitView) btnSplitView.classList.toggle('active', isSplitViewActive);
 
@@ -2497,6 +2747,9 @@ function renderSplitPaneHeaders(primary, secondary) {
                 <span class="split-pane-url" title="${currentUrl}">${displayUrl}</span>
             </div>
             <div class="split-pane-actions">
+                <button class="split-pane-btn btn-toggle-quad" title="Switch to Quad 4-Pane Grid (Pro)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                </button>
                 <button class="split-pane-btn btn-swap-panes" title="Swap Left and Right Sides">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 16V4m0 0L3 8m4-4 4 4"/><path d="M17 8v12m0 0 4-4m-4 4-4-4"/></svg>
                 </button>
@@ -2511,6 +2764,14 @@ function renderSplitPaneHeaders(primary, secondary) {
 
         // Insert header just before the webview in its parent
         viewsContainer.insertBefore(header, tab.webview);
+
+        // 0. Toggle Quad Mode (Pro)
+        const btnQuad = header.querySelector('.btn-toggle-quad');
+        if (btnQuad) {
+            btnQuad.onclick = () => {
+                toggleQuadMode();
+            };
+        }
 
         // 1. Swap Panes
         header.querySelector('.btn-swap-panes').onclick = () => {
@@ -2562,6 +2823,137 @@ function renderSplitPaneHeaders(primary, secondary) {
 
     if (primary) makePaneHeader(primary, true);
     if (secondary) makePaneHeader(secondary, false);
+}
+
+// ==========================================================================
+// 8.1 Quad Multi-Split (2x2 Power Grid - Pro Feature)
+// ==========================================================================
+let isQuadViewActive = false;
+
+function toggleQuadMode() {
+    isQuadViewActive = !isQuadViewActive;
+
+    if (!isQuadViewActive) {
+        viewsContainer.classList.remove('quad-view-active');
+        document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
+        tabs.forEach(t => {
+            t.webview.style.width = '';
+            t.webview.classList.remove('split-quad', 'split-primary', 'split-secondary');
+            t.webview.style.display = t.id === activeTabId ? 'flex' : 'none';
+        });
+        showToast('Quad Multi-Split Disabled');
+        return;
+    }
+
+    // Disable dual split if active
+    if (isSplitViewActive) {
+        isSplitViewActive = false;
+        if (btnSplitView) btnSplitView.classList.remove('active');
+        if (splitDivider) splitDivider.classList.add('hidden');
+        viewsContainer.classList.remove('split-view-active');
+        document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
+    }
+
+    // Ensure we have at least 4 tabs
+    const initialActive = activeTabId;
+    while (tabs.length < 4) {
+        createTab(START_PAGE_URL);
+    }
+    activeTabId = initialActive;
+
+    viewsContainer.classList.add('quad-view-active');
+    if (splitDivider) splitDivider.classList.add('hidden');
+
+    updateQuadLayout();
+    showToast('Quad Multi-Split Active (2x2 Power Grid)');
+}
+
+function updateQuadLayout() {
+    if (!isQuadViewActive) return;
+
+    // We select the active tab and the other tabs up to 4
+    const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
+    const otherTabs = tabs.filter(t => t.id !== activeTab.id);
+    const quadTabs = [activeTab, ...otherTabs].slice(0, 4);
+
+    tabs.forEach(t => {
+        if (quadTabs.includes(t)) {
+            t.webview.style.display = 'flex';
+            t.webview.style.width = '100%';
+            t.webview.classList.add('split-quad');
+            t.webview.classList.remove('split-primary', 'split-secondary');
+        } else {
+            t.webview.style.display = 'none';
+            t.webview.style.width = '';
+            t.webview.classList.remove('split-quad', 'split-primary', 'split-secondary');
+        }
+    });
+
+    renderQuadPaneHeaders(quadTabs);
+}
+
+function renderQuadPaneHeaders(quadTabs) {
+    document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
+
+    const paneLabels = ['Top Left (Active)', 'Top Right', 'Bottom Left', 'Bottom Right'];
+
+    quadTabs.forEach((tab, index) => {
+        if (!tab || !tab.webview) return;
+
+        let currentUrl = '';
+        try { currentUrl = tab.webview.getURL ? tab.webview.getURL() : ''; } catch (_) {}
+        let displayUrl = currentUrl || 'New Tab';
+        try { displayUrl = new URL(currentUrl).hostname || 'New Tab'; } catch (_) {}
+
+        const header = document.createElement('div');
+        header.className = 'split-pane-header quad-header';
+        header.dataset.quadIndex = index.toString();
+
+        header.innerHTML = `
+            <div class="split-pane-info">
+                <span class="split-pane-badge">${paneLabels[index] || `Pane ${index + 1}`}</span>
+                <span class="split-pane-url" title="${currentUrl}">${displayUrl}</span>
+            </div>
+            <div class="split-pane-actions">
+                <button class="split-pane-btn btn-switch-dual" title="Switch to Dual Split View">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                </button>
+                <button class="split-pane-btn btn-focus-pane" title="Keep Only This Pane (Exit Quad)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                </button>
+                <button class="split-pane-btn btn-close-pane" title="Close This Tab">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+        `;
+
+        viewsContainer.insertBefore(header, tab.webview);
+
+        const btnDual = header.querySelector('.btn-switch-dual');
+        if (btnDual) {
+            btnDual.onclick = () => {
+                toggleQuadMode();
+                if (!isSplitViewActive) toggleSplitView();
+            };
+        }
+
+        const btnFocus = header.querySelector('.btn-focus-pane');
+        if (btnFocus) {
+            btnFocus.onclick = () => {
+                activeTabId = tab.id;
+                toggleQuadMode();
+                activateTab(tab.id);
+                showToast(`Focused on ${displayUrl}`);
+            };
+        }
+
+        const btnClose = header.querySelector('.btn-close-pane');
+        if (btnClose) {
+            btnClose.onclick = () => {
+                closeTab(tab.id);
+            };
+        }
+    });
 }
 
 if (btnSplitView) {
