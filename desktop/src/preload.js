@@ -169,6 +169,37 @@ if (isInternalPage) {
         return { success: false, error: 'Session sync disabled to maintain cookie integrity' };
     },
 
+    // Fokk Shield Tunnel (Privacy VPN & Relay)
+    getVpnStatus: () => {
+        try {
+            return ipcRenderer.sendSync('fokk-vpn-get-status');
+        } catch (_) {
+            return { state: 'disconnected' };
+        }
+    },
+    getVpnLocations: () => {
+        try {
+            return ipcRenderer.sendSync('fokk-vpn-get-locations');
+        } catch (_) {
+            return [];
+        }
+    },
+    toggleVpn: async () => {
+        return await ipcRenderer.invoke('fokk-vpn-toggle');
+    },
+    setVpnMode: async (modeId) => {
+        return await ipcRenderer.invoke('fokk-vpn-set-mode', modeId);
+    },
+    setVpnKillSwitch: async (enabled) => {
+        return await ipcRenderer.invoke('fokk-vpn-set-killswitch', enabled);
+    },
+    setVpnCustomConfig: async (config) => {
+        return await ipcRenderer.invoke('fokk-vpn-set-custom', config);
+    },
+    onVpnStatusChanged: (cb) => {
+        ipcRenderer.on('fokk-vpn-status-changed', (event, data) => cb(data));
+    },
+
     // Utilities
     vibrate: () => {},
     toast: (msg) => {
