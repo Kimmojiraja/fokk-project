@@ -444,6 +444,10 @@ body.incognito-stealth-mode #shortcutsContainer {
     display: none !important;
 }
 
+body.incognito-stealth-mode .firefox-stories-section {
+    display: none !important;
+}
+
 body.incognito-stealth-mode #incognitoStealthHero {
     display: flex !important;
 }

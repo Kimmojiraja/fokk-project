@@ -1255,6 +1255,7 @@
     }
 
     window.addEventListener('fokk-live-news-updated', (event) => {
+        if (document.body.classList.contains('incognito-stealth-mode')) return;
         let stories = null;
         let incomingRegion = null;
         if (Array.isArray(event.detail)) {
@@ -1285,10 +1286,11 @@
     });
 
     // Initialize Page
+    let isIncognito = false;
     try {
         const urlParams = new URLSearchParams(window.location.search);
-        const isIncognitoMode = urlParams.get('incognito') === '1' || window.location.hash.includes('incognito');
-        if (isIncognitoMode) {
+        isIncognito = urlParams.get('incognito') === '1' || window.location.hash.includes('incognito');
+        if (isIncognito) {
             document.body.classList.add('incognito-stealth-mode');
             const searchInput = document.getElementById('desktopSearchInput');
             if (searchInput) {
@@ -1298,6 +1300,8 @@
     } catch (_) {}
 
     loadWallpaper();
-    renderShortcuts();
-    fetchStories('global');
+    if (!isIncognito) {
+        renderShortcuts();
+        fetchStories('global');
+    }
 })();
