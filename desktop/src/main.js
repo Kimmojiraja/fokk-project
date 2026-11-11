@@ -140,6 +140,13 @@ function setupAdblockingForSession(sess) {
     });
 
     sess.webRequest.onBeforeRequest((details, callback) => {
+        // Enforce HTTPS upgrade for all external web requests
+        if (details.url.startsWith('http://') && !details.url.includes('localhost') && !details.url.includes('127.0.0.1')) {
+            const secureUrl = details.url.replace(/^http:\/\//i, 'https://');
+            callback({ redirectURL: secureUrl });
+            return;
+        }
+
         if (shieldEnabled && adblock.shouldBlock(details.url, details.resourceType)) {
             if (mainWindow && !mainWindow.isDestroyed()) {
                 try {
@@ -1079,11 +1086,11 @@ app.whenReady().then(() => {
     app.userAgentFallback = CHROME_USER_AGENT;
     createWindow();
 
-    // Configure AdGuard DoH default out-of-the-box (matching mobile Android DnsOverHttpsEngine)
+    // Configure DoH with automatic fallback so CDN geo-routing (Akamai/Cloudflare) functions correctly
     try {
         if (app.configureHostResolver) {
             app.configureHostResolver({
-                secureDnsMode: 'secure',
+                secureDnsMode: 'automatic',
                 secureDnsServers: [DOH_PROVIDERS.adguard]
             });
         }

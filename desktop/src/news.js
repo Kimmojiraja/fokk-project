@@ -23,8 +23,8 @@ class DesktopNewsService {
                 all: [
                     { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/uk/rss.xml' },
                     { name: 'The Guardian', url: 'https://www.theguardian.com/uk/rss' },
-                    { name: 'Sky News', url: 'https://feeds.skynews.com/feeds/rss/uk.xml' },
                     { name: 'The Independent', url: 'https://www.independent.co.uk/news/uk/rss' },
+                    { name: 'Evening Standard', url: 'https://www.standard.co.uk/news/uk/rss' },
                     { name: 'BBC World', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' }
                 ]
             },
@@ -89,13 +89,13 @@ class DesktopNewsService {
                 world: [
                     { name: 'The Guardian', url: 'https://www.theguardian.com/world/rss' },
                     { name: 'NPR', url: 'https://feeds.npr.org/1004/rss.xml' },
-                    { name: 'Sky News', url: 'https://feeds.skynews.com/feeds/rss/world.xml' },
+                    { name: 'Al Jazeera', url: 'https://www.aljazeera.com/xml/rss/all.xml' },
                     { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' }
                 ],
                 all: [
                     { name: 'The Guardian', url: 'https://www.theguardian.com/international/rss' },
                     { name: 'NPR', url: 'https://feeds.npr.org/1001/rss.xml' },
-                    { name: 'Sky News', url: 'https://feeds.skynews.com/feeds/rss/world.xml' },
+                    { name: 'Reuters', url: 'https://news.google.com/rss/headlines/section/topic/WORLD' },
                     { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/rss.xml' },
                     { name: 'ABC News', url: 'https://abcnews.go.com/abcnews/topstories' }
                 ]
@@ -160,8 +160,11 @@ class DesktopNewsService {
             if (lowerT.startsWith('watch live') || lowerT.startsWith('listen live') || lowerT.startsWith('video:')) continue;
 
             const lMatch = linkRegex.exec(content);
-            const link = lMatch ? lMatch[1].trim() : '';
+            let link = lMatch ? lMatch[1].trim() : '';
             if (!link || !link.startsWith('http')) continue;
+            if (link.startsWith('http://') && !link.includes('localhost') && !link.includes('127.0.0.1')) {
+                link = link.replace(/^http:\/\//i, 'https://');
+            }
 
             // Extract real live article snippet/description
             let snippet = '';

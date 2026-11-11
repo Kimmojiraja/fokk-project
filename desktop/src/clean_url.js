@@ -27,6 +27,7 @@ function cleanTrackingUrl(rawUrl) {
     if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return null;
 
     try {
+        let stripped = false;
         const parsed = new URL(trimmed);
 
         // Auto-upgrade insecure http:// to https:// for modern web and CDN-protected sites
@@ -50,7 +51,6 @@ function cleanTrackingUrl(rawUrl) {
         }
 
         // 2. Strip tracking query parameters
-        let stripped = false;
         for (const key of Array.from(parsed.searchParams.keys())) {
             const lowerKey = key.toLowerCase();
             if (TRACKING_PARAMS.has(lowerKey) || lowerKey.startsWith('utm_') || lowerKey.startsWith('fb_')) {

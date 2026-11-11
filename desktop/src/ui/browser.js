@@ -203,11 +203,15 @@ function showToast(message, isAlert = false) {
 
 // Helper to load in active tab or create tab if none exist
 function loadUrlInActiveTab(url) {
+    let cleanUrl = url;
+    if (typeof cleanUrl === 'string' && cleanUrl.startsWith('http://') && !cleanUrl.includes('localhost') && !cleanUrl.includes('127.0.0.1')) {
+        cleanUrl = cleanUrl.replace(/^http:\/\//i, 'https://');
+    }
     const active = getActiveWebview();
     if (active) {
-        active.loadURL(url);
+        active.loadURL(cleanUrl);
     } else {
-        createTab(url);
+        createTab(cleanUrl);
     }
 }
 window.loadUrlInActiveTab = loadUrlInActiveTab;
@@ -218,8 +222,13 @@ function createTab(url = START_PAGE_URL, options = {}) {
     const tabId = 'tab_' + tabCounter;
     const isPrivate = typeof options === 'boolean' ? options : !!(options && options.isPrivate);
 
-    // If private/incognito mode and opening start page, load the dedicated Incognito Home view
+    // Auto-upgrade insecure http:// to https://
     let targetUrl = url;
+    if (typeof targetUrl === 'string' && targetUrl.startsWith('http://') && !targetUrl.includes('localhost') && !targetUrl.includes('127.0.0.1')) {
+        targetUrl = targetUrl.replace(/^http:\/\//i, 'https://');
+    }
+
+    // If private/incognito mode and opening start page, load the dedicated Incognito Home view
     if (isPrivate && (!targetUrl || targetUrl === START_PAGE_URL || targetUrl.includes('start.html'))) {
         targetUrl = START_PAGE_URL + (START_PAGE_URL.includes('?') ? '&' : '?') + 'incognito=1';
     }
@@ -613,6 +622,9 @@ urlInput.addEventListener('keydown', (e) => {
         let targetUrl = '';
         if (/^https?:\/\//i.test(query)) {
             targetUrl = query;
+            if (targetUrl.startsWith('http://') && !targetUrl.includes('localhost') && !targetUrl.includes('127.0.0.1')) {
+                targetUrl = targetUrl.replace(/^http:\/\//i, 'https://');
+            }
         } else if (/^localhost(:\d+)?(\/.*)?$/i.test(query) || /^127\.0\.0\.1(:\d+)?(\/.*)?$/i.test(query)) {
             targetUrl = 'http://' + query;
         } else if (query.includes('.') && !query.includes(' ') && !query.endsWith('.')) {

@@ -468,18 +468,31 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                             const detectAndInjectDefuserBar = function() {
                                 const title = (document.title || '').toLowerCase();
                                 const bodyText = document.body ? document.body.innerText.substring(0, 600).toLowerCase() : '';
-                                const isBlocked = title.includes('access denied') || bodyText.includes('access denied') || bodyText.includes("you don't have permission") || bodyText.includes('errors.edgesuite.net');
+                                const isBlocked = title.includes('access denied') || bodyText.includes('access denied') || bodyText.includes("you don't have permission") || bodyText.includes('errors.edgesuite.net') || title.includes('403 forbidden');
                                 if (isBlocked && !document.getElementById('fokk-defuser-bar')) {
                                     const bar = document.createElement('div');
                                     bar.id = 'fokk-defuser-bar';
-                                    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(90deg,#0a192f,#1e293b);border-bottom:2px solid #00E5FF;color:#fff;padding:12px 18px;display:flex;align-items:center;gap:14px;z-index:2147483647;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,0.8);';
-                                    bar.innerHTML = '<span style="font-weight:700;color:#00E5FF;">&#9889; Fokk AI Defuser:</span><span>This page was restricted by publisher CDN.</span><button id="fokk-btn-archive" style="background:#00E5FF;color:#0a192f;border:none;padding:6px 14px;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;">Instant Archive Bypass</button><button id="fokk-btn-dismiss" style="background:transparent;border:1px solid #64748b;color:#cbd5e1;padding:5px 10px;border-radius:5px;font-size:11px;cursor:pointer;margin-left:auto;">Dismiss</button>';
+                                    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(90deg,#0a192f,#1e293b);border-bottom:2px solid #00E5FF;color:#fff;padding:10px 18px;display:flex;align-items:center;gap:12px;z-index:2147483647;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,0.8);';
+                                    bar.innerHTML = '<span style="font-weight:700;color:#00E5FF;display:inline-flex;align-items:center;gap:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Fokk AI Defuser:</span><span>Publisher CDN access block detected.</span><button id="fokk-btn-cache" style="background:#00E5FF;color:#0a192f;border:none;padding:5px 12px;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;">Google Cache Bypass</button><button id="fokk-btn-archive" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;padding:5px 12px;border-radius:6px;font-weight:600;font-size:12px;cursor:pointer;">Archive Bypass</button><button id="fokk-btn-search" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;padding:5px 12px;border-radius:6px;font-weight:600;font-size:12px;cursor:pointer;">Find Story</button><button id="fokk-btn-dismiss" style="background:transparent;border:1px solid #64748b;color:#cbd5e1;padding:4px 8px;border-radius:5px;font-size:11px;cursor:pointer;margin-left:auto;">Dismiss</button>';
                                     if (document.body) {
                                         document.body.prepend(bar);
+                                        const btnCache = document.getElementById('fokk-btn-cache');
+                                        if (btnCache) {
+                                            btnCache.onclick = function() {
+                                                window.location.href = 'https://webcache.googleusercontent.com/search?q=cache:' + encodeURIComponent(window.location.href);
+                                            };
+                                        }
                                         const btnArchive = document.getElementById('fokk-btn-archive');
                                         if (btnArchive) {
                                             btnArchive.onclick = function() {
                                                 window.location.href = 'https://web.archive.org/web/' + encodeURIComponent(window.location.href);
+                                            };
+                                        }
+                                        const btnSearch = document.getElementById('fokk-btn-search');
+                                        if (btnSearch) {
+                                            btnSearch.onclick = function() {
+                                                let q = window.location.pathname.split('/').pop().replace(/-\d+$/, '').replace(/-/g, ' ');
+                                                window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(q);
                                             };
                                         }
                                         const btnDismiss = document.getElementById('fokk-btn-dismiss');

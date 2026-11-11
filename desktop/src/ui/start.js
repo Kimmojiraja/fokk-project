@@ -475,10 +475,14 @@
 
     // 2. Navigation Handler
     function navigateTo(url) {
+        let cleanUrl = url;
+        if (typeof cleanUrl === 'string' && cleanUrl.startsWith('http://') && !cleanUrl.includes('localhost') && !cleanUrl.includes('127.0.0.1')) {
+            cleanUrl = cleanUrl.replace(/^http:\/\//i, 'https://');
+        }
         if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openUrl === 'function') {
-            window.FokkShieldBridge.openUrl(url);
+            window.FokkShieldBridge.openUrl(cleanUrl);
         } else {
-            window.location.href = url;
+            window.location.href = cleanUrl;
         }
     }
 
