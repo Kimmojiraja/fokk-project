@@ -137,6 +137,7 @@ const btnClose = document.getElementById('btnClose');
 
 const START_PAGE_URL = ipcRenderer.sendSync('fokk-get-start-page-url');
 const PRELOAD_SCRIPT_PATH = ipcRenderer.sendSync('fokk-get-preload-path');
+const PLATFORM_USER_AGENT = ipcRenderer.sendSync('fokk-get-user-agent');
 
 // Authentic Incognito Stealth Vector Icon (URL-encoded data URI to prevent attribute quote breaks)
 const INCOGNITO_FAVICON_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M6 11.5 L7.8 4.8 C8.2 3.8 9.5 3.8 12 3.8 C14.5 3.8 15.8 3.8 16.2 4.8 L18 11.5 Z" fill="#C084FC" stroke="none"/><path d="M2.5 12 C6.5 10.5 17.5 10.5 21.5 12" stroke="#C084FC" stroke-width="2.2" stroke-linecap="round"/><circle cx="8" cy="16.5" r="2.8" stroke="#C084FC" stroke-width="2" fill="none"/><circle cx="16" cy="16.5" r="2.8" stroke="#C084FC" stroke-width="2" fill="none"/><path d="M10.8 16.5 Q12 15.2 13.2 16.5" stroke="#C084FC" stroke-width="2" fill="none"/></svg>');
@@ -250,7 +251,7 @@ function createTab(url = START_PAGE_URL, options = {}) {
     webview.setAttribute('src', targetUrl);
     webview.setAttribute('preload', PRELOAD_SCRIPT_PATH);
     webview.setAttribute('allowpopups', 'true');
-    webview.setAttribute('useragent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+    webview.setAttribute('useragent', PLATFORM_USER_AGENT);
     webview.setAttribute('webpreferences', 'contextIsolation=yes, javascript=yes, backgroundThrottling=no');
     webview.style.backgroundColor = '#090A0C';
     if (isPrivate) {
@@ -2829,6 +2830,36 @@ function renderSplitPaneHeaders(primary, secondary) {
 // 8.1 Quad Multi-Split (2x2 Power Grid - Pro Feature)
 // ==========================================================================
 let isQuadViewActive = false;
+let quadSlotTabIds = [null, null, null, null];
+
+function selectQuadPane(tabId) {
+    if (!isQuadViewActive || !tabId) return;
+    activeTabId = tabId;
+
+    tabs.forEach(t => {
+        const isTarget = t.id === tabId;
+        t.el.classList.toggle('active', isTarget);
+        t.webview.classList.toggle('active', isTarget);
+        t.webview.classList.toggle('is-active-quad-pane', isTarget);
+    });
+
+    const targetTab = tabs.find(t => t.id === tabId);
+    if (targetTab) {
+        let u = '';
+        try { u = targetTab.webview.getURL ? targetTab.webview.getURL() : ''; } catch (_) {}
+        updateOmnibox(u);
+        updateNavState(targetTab.webview);
+    }
+
+    document.querySelectorAll('.split-pane-header.quad-header').forEach(h => {
+        const isHActive = h.dataset.tabId === tabId;
+        h.classList.toggle('is-active-header', isHActive);
+        const badge = h.querySelector('.split-pane-badge');
+        if (badge && h.dataset.baseLabel) {
+            badge.textContent = isHActive ? `${h.dataset.baseLabel} • Active` : h.dataset.baseLabel;
+        }
+    });
+}
 
 function toggleQuadMode() {
     isQuadViewActive = !isQuadViewActive;
@@ -2838,9 +2869,10 @@ function toggleQuadMode() {
         document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
         tabs.forEach(t => {
             t.webview.style.width = '';
-            t.webview.classList.remove('split-quad', 'split-primary', 'split-secondary');
+            t.webview.classList.remove('split-quad', 'is-active-quad-pane', 'split-primary', 'split-secondary');
             t.webview.style.display = t.id === activeTabId ? 'flex' : 'none';
         });
+        quadSlotTabIds = [null, null, null, null];
         showToast('Quad Multi-Split Disabled');
         return;
     }
@@ -2861,6 +2893,11 @@ function toggleQuadMode() {
     }
     activeTabId = initialActive;
 
+    // Stable 4 slots: current active tab in slot 0, other tabs in slots 1, 2, 3
+    const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
+    const otherTabs = tabs.filter(t => t.id !== activeTab.id);
+    quadSlotTabIds = [activeTab.id, otherTabs[0].id, otherTabs[1].id, otherTabs[2].id];
+
     viewsContainer.classList.add('quad-view-active');
     if (splitDivider) splitDivider.classList.add('hidden');
 
@@ -2871,21 +2908,34 @@ function toggleQuadMode() {
 function updateQuadLayout() {
     if (!isQuadViewActive) return;
 
-    // We select the active tab and the other tabs up to 4
-    const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
-    const otherTabs = tabs.filter(t => t.id !== activeTab.id);
-    const quadTabs = [activeTab, ...otherTabs].slice(0, 4);
+    // Ensure all 4 slots have valid open tabs
+    for (let i = 0; i < 4; i++) {
+        if (!quadSlotTabIds[i] || !tabs.find(t => t.id === quadSlotTabIds[i])) {
+            const unused = tabs.find(t => !quadSlotTabIds.includes(t.id));
+            if (unused) {
+                quadSlotTabIds[i] = unused.id;
+            } else {
+                const cur = activeTabId;
+                createTab(START_PAGE_URL);
+                activeTabId = cur;
+                quadSlotTabIds[i] = tabs[tabs.length - 1].id;
+            }
+        }
+    }
+
+    const quadTabs = quadSlotTabIds.map(id => tabs.find(t => t.id === id)).filter(Boolean);
 
     tabs.forEach(t => {
         if (quadTabs.includes(t)) {
             t.webview.style.display = 'flex';
             t.webview.style.width = '100%';
             t.webview.classList.add('split-quad');
+            t.webview.classList.toggle('is-active-quad-pane', t.id === activeTabId);
             t.webview.classList.remove('split-primary', 'split-secondary');
         } else {
             t.webview.style.display = 'none';
             t.webview.style.width = '';
-            t.webview.classList.remove('split-quad', 'split-primary', 'split-secondary');
+            t.webview.classList.remove('split-quad', 'is-active-quad-pane', 'split-primary', 'split-secondary');
         }
     });
 
@@ -2895,7 +2945,7 @@ function updateQuadLayout() {
 function renderQuadPaneHeaders(quadTabs) {
     document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
 
-    const paneLabels = ['Top Left (Active)', 'Top Right', 'Bottom Left', 'Bottom Right'];
+    const paneLabels = ['Top Left', 'Top Right', 'Bottom Left', 'Bottom Right'];
 
     quadTabs.forEach((tab, index) => {
         if (!tab || !tab.webview) return;
@@ -2905,14 +2955,17 @@ function renderQuadPaneHeaders(quadTabs) {
         let displayUrl = currentUrl || 'New Tab';
         try { displayUrl = new URL(currentUrl).hostname || 'New Tab'; } catch (_) {}
 
+        const isActive = tab.id === activeTabId;
         const header = document.createElement('div');
-        header.className = 'split-pane-header quad-header';
+        header.className = 'split-pane-header quad-header' + (isActive ? ' is-active-header' : '');
         header.dataset.quadIndex = index.toString();
+        header.dataset.tabId = tab.id;
+        header.dataset.baseLabel = paneLabels[index] || `Pane ${index + 1}`;
 
         header.innerHTML = `
             <div class="split-pane-info">
-                <span class="split-pane-badge">${paneLabels[index] || `Pane ${index + 1}`}</span>
-                <span class="split-pane-url" title="${currentUrl}">${displayUrl}</span>
+                <span class="split-pane-badge">${isActive ? `${header.dataset.baseLabel} • Active` : header.dataset.baseLabel}</span>
+                <input type="text" class="quad-pane-nav-input" value="${currentUrl}" placeholder="Enter address or search...">
             </div>
             <div class="split-pane-actions">
                 <button class="split-pane-btn btn-switch-dual" title="Switch to Dual Split View">
@@ -2929,9 +2982,62 @@ function renderQuadPaneHeaders(quadTabs) {
 
         viewsContainer.insertBefore(header, tab.webview);
 
+        // Clicking anywhere on the header selects this pane
+        header.addEventListener('mousedown', () => {
+            selectQuadPane(tab.id);
+        });
+
+        // Interactive address bar inside each quad header
+        const navInput = header.querySelector('.quad-pane-nav-input');
+        if (navInput) {
+            navInput.addEventListener('focus', () => {
+                selectQuadPane(tab.id);
+                navInput.select();
+            });
+
+            navInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    let dest = navInput.value.trim();
+                    if (dest) {
+                        if (!dest.startsWith('http://') && !dest.startsWith('https://') && !dest.startsWith('file:') && !dest.startsWith('fokk:')) {
+                            if (dest.includes('.') && !dest.includes(' ')) {
+                                dest = 'https://' + dest;
+                            } else {
+                                dest = 'https://www.bing.com/search?q=' + encodeURIComponent(dest);
+                            }
+                        }
+                        tab.webview.loadURL(dest);
+                        navInput.blur();
+                    }
+                }
+            });
+        }
+
+        // Keep input updated on navigation
+        if (!tab.webview.__quadNavBound) {
+            tab.webview.__quadNavBound = true;
+            tab.webview.addEventListener('did-navigate', (e) => {
+                const curH = document.querySelector(`.split-pane-header.quad-header[data-tab-id="${tab.id}"]`);
+                if (curH) {
+                    const inp = curH.querySelector('.quad-pane-nav-input');
+                    if (inp && document.activeElement !== inp) inp.value = e.url;
+                }
+                if (isQuadViewActive && tab.id === activeTabId) {
+                    updateOmnibox(e.url);
+                }
+            });
+
+            // Focus on webview focuses this quad slot
+            tab.webview.addEventListener('focus', () => {
+                if (isQuadViewActive) selectQuadPane(tab.id);
+            });
+        }
+
         const btnDual = header.querySelector('.btn-switch-dual');
         if (btnDual) {
-            btnDual.onclick = () => {
+            btnDual.onclick = (e) => {
+                e.stopPropagation();
                 toggleQuadMode();
                 if (!isSplitViewActive) toggleSplitView();
             };
@@ -2939,7 +3045,8 @@ function renderQuadPaneHeaders(quadTabs) {
 
         const btnFocus = header.querySelector('.btn-focus-pane');
         if (btnFocus) {
-            btnFocus.onclick = () => {
+            btnFocus.onclick = (e) => {
+                e.stopPropagation();
                 activeTabId = tab.id;
                 toggleQuadMode();
                 activateTab(tab.id);
@@ -2949,8 +3056,11 @@ function renderQuadPaneHeaders(quadTabs) {
 
         const btnClose = header.querySelector('.btn-close-pane');
         if (btnClose) {
-            btnClose.onclick = () => {
-                closeTab(tab.id);
+            btnClose.onclick = (e) => {
+                e.stopPropagation();
+                const closingId = tab.id;
+                quadSlotTabIds = quadSlotTabIds.map(id => id === closingId ? null : id);
+                closeTab(closingId);
             };
         }
     });

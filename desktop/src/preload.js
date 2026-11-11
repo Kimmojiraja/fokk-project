@@ -297,10 +297,28 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
 
                     // Clean navigator.webdriver fallback
                     try {
-                        if (navigator.webdriver) {
-                            delete Object.getPrototypeOf(navigator).webdriver;
-                        }
+                        Object.defineProperty(navigator, 'webdriver', {
+                            get: () => undefined,
+                            configurable: true
+                        });
                     } catch (_) {}
+
+                    // Helper to preserve [native code] signature on proxy functions
+                    function makeNative(fn, name, orig) {
+                        try {
+                            const nativeStr = orig ? Function.prototype.toString.call(orig) : ('function ' + (name || '') + '() { [native code] }');
+                            Object.defineProperty(fn, 'toString', {
+                                value: function() { return nativeStr; },
+                                writable: false,
+                                configurable: true
+                            });
+                            Object.defineProperty(fn, 'name', {
+                                value: name || (orig ? orig.name : ''),
+                                configurable: true
+                            });
+                        } catch (_) {}
+                        return fn;
+                    }
 
                     // =========================================================================
                     // Fokk Pro Advanced Privacy Cloaker (Canvas, WebGL, AudioContext & Hardware)
@@ -309,47 +327,17 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                         'use strict';
                         const seed = Math.floor(Math.random() * 10) + 1;
 
-                        // 1. Canvas Fingerprint Noise Injection (toDataURL & getImageData)
-                        try {
-                            const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
-                            HTMLCanvasElement.prototype.toDataURL = function(...args) {
-                                try {
-                                    const ctx = this.getContext('2d');
-                                    if (ctx && this.width > 0 && this.height > 0) {
-                                        const imgData = ctx.getImageData(0, 0, Math.min(this.width, 16), Math.min(this.height, 16));
-                                        for (let i = 0; i < imgData.data.length; i += 8) {
-                                            imgData.data[i] = (imgData.data[i] ^ (seed & 1));
-                                        }
-                                        ctx.putImageData(imgData, 0, 0);
-                                    }
-                                } catch (_) {}
-                                return origToDataURL.apply(this, args);
-                            };
-
-                            const origGetImageData = CanvasRenderingContext2D.prototype.getImageData;
-                            CanvasRenderingContext2D.prototype.getImageData = function(...args) {
-                                const res = origGetImageData.apply(this, args);
-                                try {
-                                    if (res && res.data && res.data.length > 0) {
-                                        for (let i = 0; i < Math.min(res.data.length, 64); i += 8) {
-                                            res.data[i] = (res.data[i] ^ (seed & 1));
-                                        }
-                                    }
-                                } catch (_) {}
-                                return res;
-                            };
-                        } catch (_) {}
-
-                        // 2. WebGL Hardware & Shader Fingerprint Masking
+                        // 1. WebGL Hardware & Shader Masking with Native Signature Preservation
                         try {
                             const maskParam = function(origFn) {
-                                return function(param) {
+                                const proxy = function(param) {
                                     if (param === 37445) return 'Google Inc. (NVIDIA)';
                                     if (param === 37446) return 'ANGLE (NVIDIA GeForce RTX 4070 Direct3D11 vs_5_0 ps_5_0)';
                                     if (param === 7936) return 'WebKit';
                                     if (param === 7937) return 'WebKit WebGL';
                                     return origFn.call(this, param);
                                 };
+                                return makeNative(proxy, 'getParameter', origFn);
                             };
 
                             if (window.WebGLRenderingContext) {
@@ -360,11 +348,11 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                             }
                         } catch (_) {}
 
-                        // 3. AudioContext Oscillator Fingerprint Spoofing
+                        // 2. AudioContext Oscillator Fingerprint Guard
                         try {
                             if (window.AudioBuffer) {
                                 const origGetChannelData = AudioBuffer.prototype.getChannelData;
-                                AudioBuffer.prototype.getChannelData = function(channel) {
+                                const proxyAudio = function(channel) {
                                     const data = origGetChannelData.call(this, channel);
                                     try {
                                         for (let i = 0; i < Math.min(data.length, 64); i += 4) {
@@ -373,19 +361,20 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                                     } catch (_) {}
                                     return data;
                                 };
+                                AudioBuffer.prototype.getChannelData = makeNative(proxyAudio, 'getChannelData', origGetChannelData);
                             }
                         } catch (_) {}
 
-                        // 4. Standardize Concurrency & Device Memory
+                        // 3. Standardize Concurrency & Device Memory
                         try {
                             Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8, configurable: true });
                             Object.defineProperty(navigator, 'deviceMemory', { get: () => 8, configurable: true });
                         } catch (_) {}
 
-                        // 5. Battery API Protection
+                        // 4. Battery API Protection
                         try {
                             if (navigator.getBattery) {
-                                navigator.getBattery = () => Promise.resolve({
+                                const fakeBattery = () => Promise.resolve({
                                     charging: true,
                                     chargingTime: 0,
                                     dischargingTime: Infinity,
@@ -393,7 +382,32 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                                     addEventListener: () => {},
                                     removeEventListener: () => {}
                                 });
+                                navigator.getBattery = makeNative(fakeBattery, 'getBattery', navigator.getBattery);
                             }
+                        } catch (_) {}
+
+                        // 5. Universal CMP / Cookie Overlay Scroll Guard (The Guardian, Sky News, etc.)
+                        try {
+                            const unlockScroll = () => {
+                                const html = document.documentElement;
+                                const body = document.body;
+                                if (!html || !body) return;
+                                const htmlOverflow = window.getComputedStyle(html).overflowY;
+                                const bodyOverflow = window.getComputedStyle(body).overflowY;
+                                const bodyPos = window.getComputedStyle(body).position;
+                                if (htmlOverflow === 'hidden' || bodyOverflow === 'hidden' || bodyPos === 'fixed' ||
+                                    html.classList.contains('gu-consent-active') || body.classList.contains('gu-consent-active')) {
+                                    html.style.setProperty('overflow', 'auto', 'important');
+                                    html.style.setProperty('overflow-y', 'auto', 'important');
+                                    body.style.setProperty('overflow', 'auto', 'important');
+                                    body.style.setProperty('overflow-y', 'auto', 'important');
+                                    body.style.setProperty('position', 'static', 'important');
+                                    document.querySelectorAll('div[id^="sp_message_container"], div[class*="sp_message"], .gu-cmp-banner, .tp-backdrop').forEach(el => el.remove());
+                                }
+                            };
+                            window.addEventListener('load', unlockScroll);
+                            setTimeout(unlockScroll, 800);
+                            setTimeout(unlockScroll, 2000);
                         } catch (_) {}
                     })();
                 `

@@ -60,7 +60,23 @@ const DOH_PROVIDERS = {
     google: 'https://dns.google/dns-query'
 };
 
-const CHROME_USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+function getPlatformUserAgent() {
+    if (process.platform === 'win32') {
+        return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+    } else if (process.platform === 'darwin') {
+        return 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+    } else {
+        return 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+    }
+}
+
+function getPlatformClientHint() {
+    if (process.platform === 'win32') return '"Windows"';
+    if (process.platform === 'darwin') return '"macOS"';
+    return '"Linux"';
+}
+
+const CHROME_USER_AGENT = getPlatformUserAgent();
 
 let statsUpdateTimer = null;
 function broadcastStatsThrottled() {
@@ -101,7 +117,10 @@ function setupAdblockingForSession(sess) {
         if (!headers['sec-ch-ua'] || details.url.includes('whatsapp.com')) {
             headers['sec-ch-ua'] = '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"';
             headers['sec-ch-ua-mobile'] = '?0';
-            headers['sec-ch-ua-platform'] = '"Linux"';
+            headers['sec-ch-ua-platform'] = getPlatformClientHint();
+        }
+        if (headers['X-Requested-With'] && headers['X-Requested-With'].toLowerCase().includes('electron')) {
+            delete headers['X-Requested-With'];
         }
         callback({ requestHeaders: headers });
     });
@@ -313,6 +332,10 @@ ipcMain.on('fokk-get-start-page-url', (event) => {
 
 ipcMain.on('fokk-get-preload-path', (event) => {
     event.returnValue = PRELOAD_PATH;
+});
+
+ipcMain.on('fokk-get-user-agent', (event) => {
+    event.returnValue = CHROME_USER_AGENT;
 });
 
 ipcMain.on('fokk-win-min', () => {
@@ -1021,26 +1044,18 @@ app.whenReady().then(() => {
         newsService.getLiveNews('all', reg).catch(() => {});
     });
 
-    // Ensure any previously corrupted foreign Google session cookies are cleared
-    try {
-        const persistSess = session.fromPartition('persist:fokk_default_session');
-        const googleHosts = ['google.com', 'google.co.uk', 'accounts.google.com', 'youtube.com', 'google.co.in'];
-        googleHosts.forEach(host => {
-            persistSess.cookies.get({ domain: host }).then(cookies => {
-                if (cookies && cookies.length > 0) {
-                    cookies.forEach(c => {
-                        // Purge corrupted Firefox tokens (AEC, NID, __Host-GAPS, LSID, etc.)
-                        const u = 'https://' + (c.domain.startsWith('.') ? c.domain.slice(1) : c.domain) + c.path;
-                        persistSess.cookies.remove(u, c.name).catch(() => {});
-                    });
-                }
-            }).catch(() => {});
-        });
-    } catch (_) {}
-
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
+});
+
+app.on('before-quit', async () => {
+    try {
+        const persistSess = session.fromPartition('persist:fokk_default_session');
+        if (persistSess && persistSess.cookies) {
+            await persistSess.cookies.flushStore();
+        }
+    } catch (_) {}
 });
 
 app.on('window-all-closed', () => {
