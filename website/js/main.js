@@ -67,28 +67,28 @@ function detectUserPlatform() {
     let os = 'windows';
     let osLabel = 'Windows';
     let fileFormat = '.exe / .zip';
-    let downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.0.0/Fokk%20Browser-1.0.0-win.zip';
+    let downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.1.0/Fokk.Browser.1.1.0.exe';
 
     if (/android/i.test(ua)) {
         os = 'android';
         osLabel = 'Android';
         fileFormat = '.apk';
-        downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/latest/download/Fokk.apk';
+        downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/v2.3.5/app-debug.apk';
     } else if (/macintosh|mac os x/i.test(ua)) {
         os = 'mac';
         osLabel = 'macOS';
         fileFormat = '.zip';
-        downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.0.0/Fokk%20Browser-1.0.0-mac.zip';
+        downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.1.0/Fokk.Browser-1.1.0-arm64-mac.zip';
     } else if (/linux/i.test(ua)) {
         os = 'linux';
         osLabel = 'Linux';
         fileFormat = '.AppImage / .deb';
-        downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.0.0/Fokk%20Browser-1.0.0.AppImage';
+        downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.1.0/Fokk.Browser-1.1.0.AppImage';
     } else if (/windows/i.test(ua)) {
         os = 'windows';
         osLabel = 'Windows';
         fileFormat = '.exe / .zip';
-        downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.0.0/Fokk%20Browser-1.0.0-win.zip';
+        downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.1.0/Fokk.Browser.1.1.0.exe';
     }
 
     // Update Hero Dynamic Button
