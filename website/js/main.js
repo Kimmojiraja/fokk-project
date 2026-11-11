@@ -1,6 +1,12 @@
 /**
  * Fokk Browser Official Website — Client Logic
- * Auto-detects user platform, handles interactive mockup toggling, FAQs, and checksum copies.
+ * Modern, interactive script handling:
+ * - Light / Dark Theme switching with localStorage persistence
+ * - OS detection for dynamic hero download CTA
+ * - Hero Bento Search Engine switcher & privacy search trigger
+ * - Hero Bento Video Shield interactive Before / After simulation
+ * - Interactive Browser Mockup viewport switcher (Dual / Quad / 4K Sailboat)
+ * - FAQ Accordion, Navbar Scroll, and Checksum clipboard copy
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -10,16 +16,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Dynamic Platform Detection
     detectUserPlatform();
 
-    // 2. Interactive Browser Mockup View Switcher
+    // 2. Bento Card 1: Multi-Engine Search
+    initBentoSearch();
+
+    // 3. Bento Card 2: Interactive Shield Demo
+    initShieldDemo();
+
+    // 4. Interactive Browser Mockup View Switcher
     initMockupSwitcher();
 
-    // 3. FAQ Accordion
+    // 5. FAQ Accordion
     initFaqAccordion();
 
-    // 4. Navbar Scroll Shadow
+    // 6. Navbar Scroll Shadow
     initNavbarScroll();
 
-    // 5. Checksum Copy to Clipboard
+    // 7. Checksum Copy to Clipboard
     initCopyChecksum();
 });
 
@@ -54,7 +66,7 @@ function detectUserPlatform() {
     const ua = navigator.userAgent || '';
     let os = 'windows';
     let osLabel = 'Windows';
-    let fileFormat = '.exe';
+    let fileFormat = '.exe / .zip';
     let downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.0.0/Fokk%20Browser-1.0.0-win.zip';
 
     if (/android/i.test(ua)) {
@@ -94,11 +106,117 @@ function detectUserPlatform() {
     const matchingCard = document.querySelector(`.download-card[data-os="${os}"]`);
     if (matchingCard) {
         matchingCard.classList.add('active-os');
-        const badge = document.createElement('div');
-        badge.className = 'os-detected-badge';
-        badge.textContent = 'Detected OS';
-        matchingCard.appendChild(badge);
+        if (!matchingCard.querySelector('.os-detected-badge')) {
+            const badge = document.createElement('div');
+            badge.className = 'os-detected-badge';
+            badge.textContent = 'Detected OS';
+            matchingCard.appendChild(badge);
+        }
     }
+}
+
+/**
+ * Bento Search Box: Multi-Engine switcher and private query dispatcher
+ */
+function initBentoSearch() {
+    const engineBtns = document.querySelectorAll('.engine-pill');
+    const searchInput = document.getElementById('bentoSearchInput');
+    const searchForm = document.getElementById('bentoSearchForm');
+
+    let activeEngine = 'duckduckgo';
+
+    const placeholders = {
+        'duckduckgo': 'Search with DuckDuckGo (zero trackers)...',
+        'google': 'Search with Google (unprofiled)...',
+        'bing': 'Search with Bing (clean)...',
+        'brave': 'Search with Brave Search (independent index)...'
+    };
+
+    engineBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            engineBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeEngine = btn.dataset.engine || 'duckduckgo';
+            if (searchInput && placeholders[activeEngine]) {
+                searchInput.placeholder = placeholders[activeEngine];
+                searchInput.focus();
+            }
+        });
+    });
+
+    if (searchForm && searchInput) {
+        searchForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const query = searchInput.value.trim();
+            if (!query) return;
+
+            let targetUrl = '';
+            switch (activeEngine) {
+                case 'google':
+                    targetUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+                    break;
+                case 'bing':
+                    targetUrl = `https://www.bing.com/search?q=${encodeURIComponent(query)}`;
+                    break;
+                case 'brave':
+                    targetUrl = `https://search.brave.com/search?q=${encodeURIComponent(query)}`;
+                    break;
+                case 'duckduckgo':
+                default:
+                    targetUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+                    break;
+            }
+
+            window.open(targetUrl, '_blank', 'noopener,noreferrer');
+        });
+    }
+}
+
+/**
+ * Bento Shield: Interactive Before/After Toggle
+ */
+function initShieldDemo() {
+    const btnClean = document.getElementById('btnShieldOn');
+    const btnAds = document.getElementById('btnShieldOff');
+    const demoBadge = document.getElementById('shieldDemoBadge');
+    const demoStatus = document.getElementById('shieldDemoStatus');
+    const videoTime = document.getElementById('shieldVideoTime');
+    const demoScreen = document.getElementById('shieldDemoScreen');
+
+    if (!btnClean || !btnAds) return;
+
+    btnClean.addEventListener('click', () => {
+        btnClean.classList.add('active');
+        btnAds.classList.remove('ad-active');
+        if (demoBadge) {
+            demoBadge.className = 'shield-demo-badge';
+            demoBadge.innerHTML = '<span class="badge-dot" style="background:#10B981"></span><span>Clean 1.0x Realtime • 0 Ads</span>';
+        }
+        if (videoTime) {
+            videoTime.textContent = '1080p 60fps • 0s delay • 1.0x native';
+            videoTime.style.color = '#94A3B8';
+        }
+        if (demoScreen) {
+            demoScreen.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+        }
+    });
+
+    btnAds.addEventListener('click', () => {
+        btnAds.classList.add('ad-active');
+        btnClean.classList.remove('active');
+        if (demoBadge) {
+            demoBadge.className = 'shield-demo-badge warning';
+            demoBadge.innerHTML = '<span class="badge-dot" style="background:#F43F5E"></span><span>⚠ Ad 1 of 2 (0:30) • Playback Throttled</span>';
+        }
+        if (videoTime) {
+            videoTime.textContent = 'Playback paused by 30s unskippable ad • Warning detected';
+            videoTime.style.color = '#F43F5E';
+        }
+        if (demoScreen) {
+            demoScreen.style.borderColor = 'rgba(244, 63, 94, 0.5)';
+        }
+    });
 }
 
 /**
@@ -141,6 +259,7 @@ function initFaqAccordion() {
 
     faqItems.forEach(item => {
         const question = item.querySelector('.faq-question');
+        if (!question) return;
         question.addEventListener('click', () => {
             const isOpen = item.classList.contains('open');
 
@@ -186,8 +305,8 @@ function initCopyChecksum() {
                 await navigator.clipboard.writeText(textToCopy);
                 const originalText = btn.innerHTML;
                 btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
-                btn.style.borderColor = 'var(--primary-cyan)';
-                btn.style.color = 'var(--primary-cyan)';
+                btn.style.borderColor = 'var(--primary)';
+                btn.style.color = 'var(--primary)';
 
                 setTimeout(() => {
                     btn.innerHTML = originalText;
