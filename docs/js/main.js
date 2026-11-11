@@ -4,6 +4,9 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 0. Theme Switcher (Dark / Light)
+    initThemeToggle();
+
     // 1. Dynamic Platform Detection
     detectUserPlatform();
 
@@ -19,6 +22,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. Checksum Copy to Clipboard
     initCopyChecksum();
 });
+
+/**
+ * Handles Dark / Light Theme Toggle & Persistence
+ */
+function initThemeToggle() {
+    const themeBtn = document.getElementById('themeToggleBtn');
+    const savedTheme = localStorage.getItem('fokk_web_theme') || 'dark';
+
+    if (savedTheme === 'light') {
+        document.documentElement.classList.add('theme-light');
+        document.body.classList.add('theme-light');
+    } else {
+        document.documentElement.classList.remove('theme-light');
+        document.body.classList.remove('theme-light');
+    }
+
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('theme-light');
+            const isLight = document.body.classList.toggle('theme-light');
+            localStorage.setItem('fokk_web_theme', isLight ? 'light' : 'dark');
+        });
+    }
+}
 
 /**
  * Detects visitor's Operating System and dynamically personalizes Hero CTA and Download Card
