@@ -1897,6 +1897,29 @@ body.theme-light .faq-item {
 /* ==========================================================================
    Responsive Breakpoints
    ========================================================================== */
+/* ==========================================================================
+   Mobile-Only Navigation & Components (Desktop Untouched)
+   ========================================================================== */
+.mobile-menu-toggle {
+    display: none;
+}
+
+.mobile-nav-drawer {
+    display: none;
+}
+
+.table-mobile-hint {
+    display: none;
+}
+
+.btn-full {
+    width: 100%;
+    justify-content: center;
+}
+
+/* ==========================================================================
+   Responsive Breakpoints
+   ========================================================================== */
 @media (max-width: 1080px) {
     .features-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -1913,45 +1936,450 @@ body.theme-light .faq-item {
 }
 
 @media (max-width: 768px) {
+    /* Base Container & Spacing */
+    .container {
+        padding: 0 18px;
+    }
+
+    /* Navbar & Brand on Mobile */
+    .nav-full-container {
+        height: 68px;
+        padding: 0 18px;
+    }
+
+    .nav-brand {
+        gap: 12px;
+    }
+
+    .nav-logo {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+    }
+
+    .nav-brand-text {
+        font-size: 1.35rem;
+    }
+
     .nav-links {
-        display: none;
+        display: none !important;
     }
+
+    .github-star-pill,
+    .nav-cta-desktop {
+        display: none !important;
+    }
+
+    .nav-actions {
+        gap: 10px;
+    }
+
+    /* Mobile Hamburger Button */
+    .mobile-menu-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 42px;
+        height: 42px;
+        border-radius: var(--radius-sm);
+        background: var(--bg-surface);
+        border: 1px solid var(--border-strong);
+        color: var(--text-primary);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+    }
+
+    body.theme-light .mobile-menu-toggle {
+        background: #FFFFFF;
+        border-color: #CBD5E1;
+    }
+
+    .mobile-menu-toggle:active {
+        transform: scale(0.95);
+    }
+
+    .mobile-menu-toggle.is-active .line-top {
+        transform: translateY(6px) rotate(45deg);
+        transform-origin: center;
+    }
+
+    .mobile-menu-toggle.is-active .line-mid {
+        opacity: 0;
+    }
+
+    .mobile-menu-toggle.is-active .line-bot {
+        transform: translateY(-6px) rotate(-45deg);
+        transform-origin: center;
+    }
+
+    /* Mobile Navigation Drawer */
+    .mobile-nav-drawer {
+        display: block;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background: var(--bg-surface);
+        border-bottom: 1px solid var(--border-strong);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+        padding: 20px 18px 24px;
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden;
+        pointer-events: none;
+        transition: max-height 0.35s ease, opacity 0.25s ease;
+        z-index: 999;
+    }
+
+    body.theme-light .mobile-nav-drawer {
+        background: #FFFFFF;
+        box-shadow: 0 20px 30px rgba(0, 0, 0, 0.12);
+        border-bottom-color: #CBD5E1;
+    }
+
+    .mobile-nav-drawer.is-open {
+        max-height: 520px;
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .mobile-nav-links {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 18px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .mobile-nav-link {
+        display: block;
+        padding: 10px 14px;
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        text-decoration: none;
+        border-radius: var(--radius-sm);
+        transition: background var(--transition-fast);
+    }
+
+    .mobile-nav-link:active,
+    .mobile-nav-link:hover {
+        background: var(--bg-card);
+        color: var(--primary);
+    }
+
+    body.theme-light .mobile-nav-link:active,
+    body.theme-light .mobile-nav-link:hover {
+        background: #F1F5F9;
+    }
+
+    .mobile-nav-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    /* Hero Section on Mobile */
+    .hero-section {
+        padding: 36px 0 54px;
+    }
+
+    .hero-watermark {
+        font-size: 24vw;
+        top: 8%;
+        opacity: 0.04;
+    }
+
+    .hero-pill-badge {
+        font-size: 0.74rem;
+        padding: 5px 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 100%;
+        margin-bottom: 20px;
+    }
+
     .hero-title {
-        font-size: 2.5rem;
+        font-size: clamp(2.1rem, 8.5vw, 2.7rem);
+        line-height: 1.15;
+        letter-spacing: -0.035em;
+        margin-bottom: 16px;
+        padding: 0 4px;
     }
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
+
+    .hero-subtitle {
+        font-size: 0.98rem;
+        line-height: 1.55;
+        margin-bottom: 26px;
+        padding: 0 4px;
     }
-    .features-grid {
-        grid-template-columns: 1fr;
+
+    .hero-cta-group {
+        flex-direction: column;
+        width: 100%;
+        gap: 12px;
     }
-    .versus-grid {
-        grid-template-columns: 1fr;
+
+    .hero-cta-group .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 14px 20px;
     }
-    .download-cards-grid {
-        grid-template-columns: 1fr;
+
+    .platform-pill-row {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px 10px;
+        font-size: 0.8rem;
+        margin-top: 20px;
+        padding: 0 8px;
     }
+
+    /* Bento Cards on Mobile */
     .hero-bento-grid {
         grid-template-columns: 1fr;
+        gap: 18px;
+        margin-top: 36px;
     }
+
+    .bento-card {
+        padding: 22px 18px;
+    }
+
+    .engine-selector {
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 8px;
+        margin-bottom: 14px;
+        scrollbar-width: none;
+    }
+
+    .engine-selector::-webkit-scrollbar {
+        display: none;
+    }
+
+    .engine-pill {
+        font-size: 0.78rem;
+        padding: 5px 12px;
+    }
+
+    .bento-search-box {
+        flex-direction: column;
+        gap: 10px;
+        background: transparent;
+        border: none;
+        padding: 0;
+    }
+
+    .bento-input-wrap {
+        width: 100%;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius-pill);
+        padding: 10px 16px;
+    }
+
+    .bento-search-btn {
+        width: 100%;
+        border-radius: var(--radius-pill);
+        padding: 12px 20px;
+        justify-content: center;
+    }
+
+    .video-shield-simulator {
+        height: auto;
+        min-height: 220px;
+    }
+
+    /* Section Typography */
+    .section-header {
+        margin-bottom: 34px;
+        padding: 0 8px;
+    }
+
+    .section-title {
+        font-size: 1.85rem;
+        line-height: 1.22;
+        margin-bottom: 12px;
+    }
+
+    .section-desc {
+        font-size: 0.95rem;
+        line-height: 1.55;
+    }
+
+    /* Features Grid */
+    .features-grid {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+
+    .feature-card {
+        padding: 24px 20px;
+    }
+
+    /* Versus Section */
+    .versus-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .versus-card {
+        padding: 22px 18px;
+    }
+
+    /* Comparison Table Mobile Swiping */
+    .table-mobile-hint {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+        margin-bottom: 12px;
+        padding: 6px 12px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: var(--radius-pill);
+        border: 1px solid var(--border-subtle);
+    }
+
+    body.theme-light .table-mobile-hint {
+        background: rgba(0, 0, 0, 0.03);
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -18px;
+        padding: 0 18px;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .comp-table {
+        min-width: 680px;
+    }
+
+    .comp-table th, .comp-table td {
+        padding: 12px 12px;
+        font-size: 0.82rem;
+    }
+
+    .comp-table th:first-child, .comp-table td:first-child {
+        position: sticky;
+        left: 0;
+        background: var(--bg-card);
+        z-index: 2;
+        min-width: 175px;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
+    }
+
+    body.theme-light .comp-table th:first-child,
+    body.theme-light .comp-table td:first-child {
+        background: #FFFFFF;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Showcase Deep Dives */
     .showcase-row, .showcase-row:nth-child(even) {
         flex-direction: column;
-        gap: 32px;
+        gap: 28px;
+        margin-bottom: 50px;
     }
+
+    .showcase-text {
+        width: 100%;
+    }
+
+    .showcase-visual {
+        width: 100%;
+    }
+
+    .showcase-title {
+        font-size: 1.6rem;
+    }
+
+    /* Downloads Grid */
+    .download-cards-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .download-card {
+        padding: 24px 20px;
+    }
+
+    .checksum-box {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+        padding: 20px;
+        text-align: left;
+    }
+
+    .checksum-box .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* License Box */
     .license-box {
         flex-direction: column;
-        padding: 28px;
+        padding: 24px 20px;
+        gap: 20px;
     }
+
+    /* Footer */
     .footer-grid {
         grid-template-columns: 1fr;
         gap: 30px;
     }
+
     .footer-bottom {
         flex-direction: column;
-        gap: 10px;
+        gap: 12px;
         text-align: center;
     }
-    .platform-pill-row {
-        flex-wrap: wrap;
+}
+
+/* Extra Compact Phones (iPhone SE, Galaxy Fold, 360px and smaller) */
+@media (max-width: 480px) {
+    .nav-full-container {
+        height: 62px;
+        padding: 0 14px;
+    }
+
+    .nav-brand-text {
+        font-size: 1.22rem;
+    }
+
+    .nav-logo {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+    }
+
+    .hero-title {
+        font-size: 1.95rem;
+    }
+
+    .section-title {
+        font-size: 1.6rem;
+    }
+
+    .btn-lg {
+        font-size: 0.95rem;
+        padding: 12px 18px;
+    }
+
+    .btn-dynamic-main {
+        font-size: 0.92rem;
+    }
+
+    .btn-dynamic-sub {
+        font-size: 0.72rem;
     }
 }

@@ -33,6 +33,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 7. Checksum Copy to Clipboard
     initCopyChecksum();
+
+    // 8. Mobile Navigation Drawer
+    initMobileMenu();
 });
 
 /**
@@ -315,5 +318,49 @@ function initCopyChecksum() {
                 }, 2000);
             } catch (_) {}
         });
+    });
+}
+
+/**
+ * Mobile Navigation Drawer & Hamburger Toggle
+ */
+function initMobileMenu() {
+    const toggleBtn = document.getElementById('mobileMenuToggle');
+    const drawer = document.getElementById('mobileNavDrawer');
+    if (!toggleBtn || !drawer) return;
+
+    const toggle = (force) => {
+        const isOpen = force !== undefined ? force : !drawer.classList.contains('is-open');
+        drawer.classList.toggle('is-open', isOpen);
+        toggleBtn.classList.toggle('is-active', isOpen);
+        toggleBtn.setAttribute('aria-expanded', isOpen);
+        drawer.setAttribute('aria-hidden', !isOpen);
+        document.body.classList.toggle('mobile-menu-open', isOpen);
+    };
+
+    toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggle();
+    });
+
+    // Close when tapping any navigation link inside drawer
+    drawer.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+            toggle(false);
+        });
+    });
+
+    // Close when clicking outside drawer
+    document.addEventListener('click', (e) => {
+        if (drawer.classList.contains('is-open') && !drawer.contains(e.target) && !toggleBtn.contains(e.target)) {
+            toggle(false);
+        }
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && drawer.classList.contains('is-open')) {
+            toggle(false);
+        }
     });
 }
