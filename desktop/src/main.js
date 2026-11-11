@@ -112,17 +112,23 @@ function setupAdblockingForSession(sess) {
 
     sess.webRequest.onBeforeSendHeaders((details, callback) => {
         const headers = { ...details.requestHeaders };
-        // Ensure clean Google Chrome User-Agent is presented (fixes WhatsApp Web device linking)
+        // Ensure clean Google Chrome User-Agent & Client Hints are presented (fixes Akamai / Sky News / WhatsApp)
         headers['User-Agent'] = CHROME_USER_AGENT;
-        if (!headers['sec-ch-ua'] || details.url.includes('whatsapp.com')) {
-            headers['sec-ch-ua'] = '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"';
-            headers['sec-ch-ua-mobile'] = '?0';
-            headers['sec-ch-ua-platform'] = getPlatformClientHint();
+        headers['sec-ch-ua'] = '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"';
+        headers['sec-ch-ua-mobile'] = '?0';
+        headers['sec-ch-ua-platform'] = getPlatformClientHint();
+        if (headers['sec-ch-ua-full-version-list']) {
+            headers['sec-ch-ua-full-version-list'] = '"Chromium";v="124.0.6367.243", "Google Chrome";v="124.0.6367.243", "Not-A.Brand";v="99.0.0.0"';
         }
-        // Strip Electron-identifying headers (Akamai / Cloudflare fingerprint these)
-        if (headers['X-Requested-With'] && headers['X-Requested-With'].toLowerCase().includes('electron')) {
-            delete headers['X-Requested-With'];
+
+        // Strip any Electron-identifying headers
+        for (const k of Object.keys(headers)) {
+            const lk = k.toLowerCase();
+            if (lk === 'x-requested-with' || (typeof headers[k] === 'string' && headers[k].toLowerCase().includes('electron'))) {
+                delete headers[k];
+            }
         }
+
         // Ensure realistic browser headers that CDNs (Akamai, Sky News, Guardian) require
         if (!headers['Accept-Language']) {
             headers['Accept-Language'] = 'en-GB,en;q=0.9,en-US;q=0.8';
@@ -256,12 +262,6 @@ function createWindow() {
             contents.on('did-navigate', runCosmeticFilters);
             contents.on('dom-ready', () => {
                 runCosmeticFilters();
-                if (stealthPoisonerScript) {
-                    const u = (contents.getURL ? contents.getURL() : '').toLowerCase();
-                    if (u && !u.startsWith('file:') && !u.startsWith('fokk:') && u !== 'about:blank') {
-                        contents.executeJavaScript(stealthPoisonerScript).catch(() => {});
-                    }
-                }
             });
             contents.on('did-navigate-in-page', runCosmeticFilters);
 

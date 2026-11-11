@@ -303,6 +303,48 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                         });
                     } catch (_) {}
 
+                    // Clean navigator.userAgentData to completely eliminate Electron brand traces for Akamai / Cloudflare
+                    try {
+                        const fakeBrands = [
+                            { brand: 'Chromium', version: '124' },
+                            { brand: 'Google Chrome', version: '124' },
+                            { brand: 'Not-A.Brand', version: '99' }
+                        ];
+                        const fakeFullBrands = [
+                            { brand: 'Chromium', version: '124.0.6367.243' },
+                            { brand: 'Google Chrome', version: '124.0.6367.243' },
+                            { brand: 'Not-A.Brand', version: '99.0.0.0' }
+                        ];
+                        const fakeUAD = {
+                            brands: fakeBrands,
+                            mobile: false,
+                            platform: 'Windows',
+                            getHighEntropyValues: function(hints) {
+                                return Promise.resolve({
+                                    brands: fakeBrands,
+                                    mobile: false,
+                                    platform: 'Windows',
+                                    platformVersion: '15.0.0',
+                                    architecture: 'x86',
+                                    bitness: '64',
+                                    model: '',
+                                    fullVersionList: fakeFullBrands
+                                });
+                            },
+                            toJSON: function() {
+                                return {
+                                    brands: fakeBrands,
+                                    mobile: false,
+                                    platform: 'Windows'
+                                };
+                            }
+                        };
+                        Object.defineProperty(navigator, 'userAgentData', {
+                            get: () => fakeUAD,
+                            configurable: true
+                        });
+                    } catch (_) {}
+
                     // Helper to preserve [native code] signature on proxy functions
                     function makeNative(fn, name, orig) {
                         try {
