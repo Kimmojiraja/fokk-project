@@ -515,3 +515,14 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
     } catch (_) {}
 }
 
+// Global pane interaction listener to notify host window which pane is actively being interacted with
+try {
+    window.addEventListener('mousedown', () => {
+        try { ipcRenderer.send('fokk-pane-focus'); } catch (_) {}
+    }, true);
+    window.addEventListener('focus', () => {
+        try { ipcRenderer.send('fokk-pane-focus'); } catch (_) {}
+    }, true);
+} catch (_) {}
+
+

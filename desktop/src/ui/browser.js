@@ -372,6 +372,11 @@ function createTab(url = START_PAGE_URL, options = {}) {
     });
 
     webview.addEventListener('did-navigate', (e) => {
+        if (isSplitViewActive && (tabId === splitLeftTabId || tabId === splitRightTabId)) {
+            selectDualPane(tabId);
+        } else if (isQuadViewActive && quadSlotTabIds.includes(tabId)) {
+            selectQuadPane(tabId);
+        }
         if (activeTabId === tabId) {
             updateOmnibox(e.url);
             updateNavState(webview);
@@ -383,6 +388,11 @@ function createTab(url = START_PAGE_URL, options = {}) {
     });
 
     webview.addEventListener('did-navigate-in-page', (e) => {
+        if (isSplitViewActive && (tabId === splitLeftTabId || tabId === splitRightTabId)) {
+            selectDualPane(tabId);
+        } else if (isQuadViewActive && quadSlotTabIds.includes(tabId)) {
+            selectQuadPane(tabId);
+        }
         if (activeTabId === tabId) {
             updateOmnibox(e.url);
             updateNavState(webview);
@@ -390,6 +400,30 @@ function createTab(url = START_PAGE_URL, options = {}) {
         if (!isPrivate) {
             const currentTitle = (webview.getTitle ? webview.getTitle() : '') || e.url;
             recordHistoryItem(e.url, currentTitle);
+        }
+    });
+
+    webview.addEventListener('focus', () => {
+        if (isSplitViewActive && (tabId === splitLeftTabId || tabId === splitRightTabId)) {
+            selectDualPane(tabId);
+        } else if (isQuadViewActive && quadSlotTabIds.includes(tabId)) {
+            selectQuadPane(tabId);
+        }
+    });
+
+    webview.addEventListener('focusin', () => {
+        if (isSplitViewActive && (tabId === splitLeftTabId || tabId === splitRightTabId)) {
+            selectDualPane(tabId);
+        } else if (isQuadViewActive && quadSlotTabIds.includes(tabId)) {
+            selectQuadPane(tabId);
+        }
+    });
+
+    webview.addEventListener('mousedown', () => {
+        if (isSplitViewActive && (tabId === splitLeftTabId || tabId === splitRightTabId)) {
+            selectDualPane(tabId);
+        } else if (isQuadViewActive && quadSlotTabIds.includes(tabId)) {
+            selectQuadPane(tabId);
         }
     });
 
@@ -436,9 +470,24 @@ function activateTab(tabId) {
     });
 
     if (isSplitViewActive && typeof updateSplitLayout === 'function') {
-        updateSplitLayout();
+        if (tabId === splitLeftTabId) {
+            selectDualPane(splitLeftTabId);
+        } else if (tabId === splitRightTabId) {
+            selectDualPane(splitRightTabId);
+        } else {
+            // Replace whichever pane was previously active
+            if (lastActiveDualPaneSide === 'right') {
+                splitRightTabId = tabId;
+            } else {
+                splitLeftTabId = tabId;
+            }
+            splitSecondaryTabId = splitRightTabId;
+            updateSplitLayout();
+            selectDualPane(tabId);
+        }
     } else if (isQuadViewActive && typeof updateQuadLayout === 'function') {
         updateQuadLayout();
+        selectQuadPane(tabId);
     }
 }
 
@@ -453,20 +502,57 @@ function closeTab(tabId) {
 
     if (tabs.length === 0) {
         createTab(START_PAGE_URL);
-    } else if (activeTabId === tabId) {
-        const nextTab = tabs[Math.max(0, idx - 1)];
-        activateTab(nextTab.id);
+        return;
     }
 
     if (isSplitViewActive && typeof updateSplitLayout === 'function') {
-        updateSplitLayout();
+        if (tabs.length < 2) {
+            toggleSplitView();
+            if (activeTabId === tabId) {
+                const nextTab = tabs[Math.max(0, idx - 1)];
+                activateTab(nextTab.id);
+            }
+        } else {
+            if (splitLeftTabId === tabId) {
+                const available = tabs.find(x => x.id !== splitRightTabId);
+                splitLeftTabId = available ? available.id : null;
+            }
+            if (splitRightTabId === tabId) {
+                const available = tabs.find(x => x.id !== splitLeftTabId);
+                splitRightTabId = available ? available.id : null;
+            }
+            splitSecondaryTabId = splitRightTabId;
+            if (activeTabId === tabId) {
+                activeTabId = splitLeftTabId || splitRightTabId;
+            }
+            updateSplitLayout();
+            selectDualPane(activeTabId);
+        }
+        return;
     }
+
     if (isQuadViewActive && typeof updateQuadLayout === 'function') {
         if (tabs.length < 4) {
             toggleQuadMode();
+            if (activeTabId === tabId) {
+                const nextTab = tabs[Math.max(0, idx - 1)];
+                activateTab(nextTab.id);
+            }
         } else {
+            quadSlotTabIds = quadSlotTabIds.map(id => id === tabId ? null : id);
+            if (activeTabId === tabId) {
+                const fallback = quadSlotTabIds.find(id => id && tabs.some(x => x.id === id));
+                activeTabId = fallback || tabs[0].id;
+            }
             updateQuadLayout();
+            selectQuadPane(activeTabId);
         }
+        return;
+    }
+
+    if (activeTabId === tabId) {
+        const nextTab = tabs[Math.max(0, idx - 1)];
+        activateTab(nextTab.id);
     }
 }
 
@@ -2946,8 +3032,68 @@ if (commandHudInput) {
 const btnSplitView = document.getElementById('btnSplitView');
 const splitDivider = document.getElementById('splitDivider');
 let isSplitViewActive = false;
+let splitLeftTabId = null;
+let splitRightTabId = null;
 let splitSecondaryTabId = null;
+let lastActiveDualPaneSide = 'left';
 let splitRatio = 0.5;
+
+function selectDualPane(tabId) {
+    if (!isSplitViewActive || !tabId) return;
+    if (tabId !== splitLeftTabId && tabId !== splitRightTabId) return;
+
+    activeTabId = tabId;
+    lastActiveDualPaneSide = (tabId === splitRightTabId) ? 'right' : 'left';
+
+    tabs.forEach(t => {
+        const isTarget = t.id === tabId;
+        t.el.classList.toggle('active', isTarget);
+        t.webview.classList.toggle('active', isTarget);
+        t.webview.classList.toggle('is-active-split-pane', isTarget);
+    });
+
+    const targetTab = tabs.find(t => t.id === tabId);
+    if (targetTab) {
+        let u = '';
+        try { u = targetTab.webview.getURL ? targetTab.webview.getURL() : ''; } catch (_) {}
+        updateOmnibox(u);
+        updateNavState(targetTab.webview);
+        if (shieldCountText) {
+            shieldCountText.textContent = (u.startsWith('http') && targetTab.blockedCount) ? targetTab.blockedCount : '0';
+        }
+    }
+
+    document.querySelectorAll('.split-pane-header.dual-header').forEach(h => {
+        const isHActive = h.dataset.tabId === tabId;
+        h.classList.toggle('is-active-header', isHActive);
+        const badge = h.querySelector('.split-pane-badge');
+        if (badge && h.dataset.baseLabel) {
+            badge.textContent = isHActive ? `${h.dataset.baseLabel} • Active` : h.dataset.baseLabel;
+        }
+    });
+}
+
+function handleGuestFocus(guestWebContentsId) {
+    const matchingTab = tabs.find(t => {
+        try {
+            return t.webview && typeof t.webview.getWebContentsId === 'function' && t.webview.getWebContentsId() === guestWebContentsId;
+        } catch (_) {
+            return false;
+        }
+    });
+    if (matchingTab) {
+        if (isSplitViewActive && (matchingTab.id === splitLeftTabId || matchingTab.id === splitRightTabId)) {
+            if (activeTabId !== matchingTab.id) {
+                selectDualPane(matchingTab.id);
+            }
+        } else if (isQuadViewActive && quadSlotTabIds.includes(matchingTab.id)) {
+            if (activeTabId !== matchingTab.id) {
+                selectQuadPane(matchingTab.id);
+            }
+        }
+    }
+}
+window.handleGuestFocus = handleGuestFocus;
 
 function toggleSplitView() {
     if (isQuadViewActive) {
@@ -2959,11 +3105,13 @@ function toggleSplitView() {
     if (!isSplitViewActive) {
         viewsContainer.classList.remove('split-view-active');
         if (splitDivider) splitDivider.classList.add('hidden');
+        splitLeftTabId = null;
+        splitRightTabId = null;
         splitSecondaryTabId = null;
-        document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
+        document.querySelectorAll('.split-pane-header.dual-header').forEach(h => h.remove());
         tabs.forEach(t => {
             t.webview.style.width = '';
-            t.webview.classList.remove('split-primary', 'split-secondary');
+            t.webview.classList.remove('split-primary', 'split-secondary', 'is-active-split-pane');
             t.webview.style.display = t.id === activeTabId ? 'flex' : 'none';
         });
         showToast('Split View Disabled');
@@ -2979,63 +3127,86 @@ function toggleSplitView() {
         activeTabId = curActive;
     }
 
-    const other = tabs.find(t => t.id !== activeTabId);
-    if (other) {
-        splitSecondaryTabId = other.id;
-    }
+    splitLeftTabId = activeTabId;
+    const other = tabs.find(t => t.id !== splitLeftTabId);
+    splitRightTabId = other ? other.id : null;
+    splitSecondaryTabId = splitRightTabId;
+    lastActiveDualPaneSide = 'left';
 
     updateSplitLayout();
+    selectDualPane(splitLeftTabId);
     showToast('Split View Active (Side-by-Side Dual Browsing)');
 }
 
 function updateSplitLayout() {
     if (!isSplitViewActive) return;
-    const primary = tabs.find(t => t.id === activeTabId);
-    let secondary = tabs.find(t => t.id === splitSecondaryTabId);
-    if (!secondary || secondary === primary) {
-        secondary = tabs.find(t => t.id !== activeTabId);
-        if (secondary) splitSecondaryTabId = secondary.id;
+
+    let leftTab = tabs.find(t => t.id === splitLeftTabId);
+    let rightTab = tabs.find(t => t.id === splitRightTabId);
+
+    if (!leftTab && !rightTab) {
+        leftTab = tabs[0];
+        rightTab = tabs.length > 1 ? tabs[1] : null;
+        if (leftTab) splitLeftTabId = leftTab.id;
+        if (rightTab) splitRightTabId = rightTab.id;
+    } else if (!leftTab && rightTab) {
+        leftTab = tabs.find(t => t.id !== rightTab.id);
+        if (leftTab) splitLeftTabId = leftTab.id;
+    } else if (leftTab && !rightTab) {
+        rightTab = tabs.find(t => t.id !== leftTab.id);
+        if (rightTab) splitRightTabId = rightTab.id;
+    } else if (leftTab && rightTab && leftTab.id === rightTab.id) {
+        rightTab = tabs.find(t => t.id !== leftTab.id);
+        if (rightTab) splitRightTabId = rightTab.id;
+    }
+    splitSecondaryTabId = splitRightTabId;
+
+    if (!activeTabId || (activeTabId !== splitLeftTabId && activeTabId !== splitRightTabId)) {
+        activeTabId = splitLeftTabId || (leftTab ? leftTab.id : null);
     }
 
     tabs.forEach(t => {
-        if (t === primary) {
+        if (t === leftTab) {
             t.webview.style.display = 'flex';
             t.webview.style.width = `calc(${splitRatio * 100}% - 3px)`;
             t.webview.classList.add('split-primary');
             t.webview.classList.remove('split-secondary');
-        } else if (t === secondary) {
+            t.webview.classList.toggle('is-active-split-pane', t.id === activeTabId);
+        } else if (t === rightTab) {
             t.webview.style.display = 'flex';
             t.webview.style.width = `calc(${(1 - splitRatio) * 100}% - 3px)`;
             t.webview.classList.add('split-secondary');
             t.webview.classList.remove('split-primary');
+            t.webview.classList.toggle('is-active-split-pane', t.id === activeTabId);
         } else {
             t.webview.style.display = 'none';
             t.webview.style.width = '';
-            t.webview.classList.remove('split-primary', 'split-secondary');
+            t.webview.classList.remove('split-primary', 'split-secondary', 'is-active-split-pane');
         }
     });
 
-    // Update / inject pane headers
-    renderSplitPaneHeaders(primary, secondary);
+    renderSplitPaneHeaders(leftTab, rightTab);
 }
 
-function renderSplitPaneHeaders(primary, secondary) {
-    // Remove old headers
-    document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
+function renderSplitPaneHeaders(leftTab, rightTab) {
+    document.querySelectorAll('.split-pane-header.dual-header').forEach(h => h.remove());
 
     function makePaneHeader(tab, isPrimary) {
         if (!tab || !tab.webview) return;
-        const existing = tab.webview.previousElementSibling;
-        if (existing && existing.classList.contains('split-pane-header')) existing.remove();
 
         let currentUrl = '';
         try { currentUrl = tab.webview.getURL ? tab.webview.getURL() : ''; } catch (_) {}
         let displayUrl = currentUrl || 'New Tab';
         try { displayUrl = new URL(currentUrl).hostname || 'New Tab'; } catch (_) {}
 
+        const isActive = tab.id === activeTabId;
         const header = document.createElement('div');
-        header.className = 'split-pane-header';
+        header.className = 'split-pane-header dual-header' + (isActive ? ' is-active-header' : '');
         header.dataset.pane = isPrimary ? 'primary' : 'secondary';
+        header.dataset.tabId = tab.id;
+        const baseLabel = isPrimary ? 'Left Pane' : 'Right Pane';
+        header.dataset.baseLabel = baseLabel;
+
         if (isPrimary) {
             header.style.left = '0';
             header.style.width = `calc(${splitRatio * 100}% - 3px)`;
@@ -3048,8 +3219,8 @@ function renderSplitPaneHeaders(primary, secondary) {
 
         header.innerHTML = `
             <div class="split-pane-info">
-                <span class="split-pane-badge">${isPrimary ? 'Left Pane' : 'Right Pane'}</span>
-                <span class="split-pane-url" title="${currentUrl}">${displayUrl}</span>
+                <span class="split-pane-badge">${isActive ? `${baseLabel} • Active` : baseLabel}</span>
+                <input type="text" class="split-pane-nav-input" value="${currentUrl}" placeholder="Enter address or search...">
             </div>
             <div class="split-pane-actions">
                 <button class="split-pane-btn btn-toggle-quad" title="Switch to Quad 4-Pane Grid (Pro)">
@@ -3067,47 +3238,105 @@ function renderSplitPaneHeaders(primary, secondary) {
             </div>
         `;
 
-        // Insert header just before the webview in its parent
         viewsContainer.insertBefore(header, tab.webview);
+
+        // Clicking anywhere on the header selects this pane
+        header.addEventListener('mousedown', () => {
+            selectDualPane(tab.id);
+        });
+
+        // Interactive address bar inside each dual split header
+        const navInput = header.querySelector('.split-pane-nav-input');
+        if (navInput) {
+            navInput.addEventListener('focus', () => {
+                selectDualPane(tab.id);
+                navInput.select();
+            });
+
+            navInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    let dest = navInput.value.trim();
+                    if (dest) {
+                        selectDualPane(tab.id);
+                        if (!dest.startsWith('http://') && !dest.startsWith('https://') && !dest.startsWith('file:') && !dest.startsWith('fokk:')) {
+                            if (dest.includes('.') && !dest.includes(' ')) {
+                                dest = 'https://' + dest;
+                            } else {
+                                dest = 'https://www.bing.com/search?q=' + encodeURIComponent(dest);
+                            }
+                        }
+                        tab.webview.loadURL(dest);
+                        updateOmnibox(dest);
+                        navInput.blur();
+                    }
+                }
+            });
+        }
+
+        // Keep input updated on navigation
+        if (!tab.webview.__dualSplitBound) {
+            tab.webview.__dualSplitBound = true;
+            tab.webview.addEventListener('did-navigate', (e) => {
+                const curH = document.querySelector(`.split-pane-header.dual-header[data-tab-id="${tab.id}"]`);
+                if (curH) {
+                    const inp = curH.querySelector('.split-pane-nav-input');
+                    if (inp && document.activeElement !== inp) inp.value = e.url;
+                }
+                if (isSplitViewActive && tab.id === activeTabId) {
+                    updateOmnibox(e.url);
+                }
+            });
+
+            tab.webview.addEventListener('focus', () => {
+                if (isSplitViewActive) selectDualPane(tab.id);
+            });
+        }
 
         // 0. Toggle Quad Mode (Pro)
         const btnQuad = header.querySelector('.btn-toggle-quad');
         if (btnQuad) {
-            btnQuad.onclick = () => {
+            btnQuad.onclick = (e) => {
+                e.stopPropagation();
                 toggleQuadMode();
             };
         }
 
         // 1. Swap Panes
-        header.querySelector('.btn-swap-panes').onclick = () => {
+        header.querySelector('.btn-swap-panes').onclick = (e) => {
+            e.stopPropagation();
             if (!isSplitViewActive) return;
-            const oldActive = activeTabId;
-            activeTabId = splitSecondaryTabId;
-            splitSecondaryTabId = oldActive;
+            const tmp = splitLeftTabId;
+            splitLeftTabId = splitRightTabId;
+            splitRightTabId = tmp;
+            splitSecondaryTabId = splitRightTabId;
             updateSplitLayout();
+            selectDualPane(activeTabId);
             showToast('Panes swapped');
         };
 
         // 2. Keep Only This Pane (Full Window, exit split without closing other tab)
-        header.querySelector('.btn-focus-pane').onclick = () => {
+        header.querySelector('.btn-focus-pane').onclick = (e) => {
+            e.stopPropagation();
             activeTabId = tab.id;
             isSplitViewActive = false;
             if (btnSplitView) btnSplitView.classList.remove('active');
             viewsContainer.classList.remove('split-view-active');
             if (splitDivider) splitDivider.classList.add('hidden');
-            document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
+            document.querySelectorAll('.split-pane-header.dual-header').forEach(h => h.remove());
             tabs.forEach(t => {
                 t.webview.style.width = '';
-                t.webview.classList.remove('split-primary', 'split-secondary');
+                t.webview.classList.remove('split-primary', 'split-secondary', 'is-active-split-pane');
                 t.webview.style.display = t.id === activeTabId ? 'flex' : 'none';
             });
             showToast(`Focused on ${displayUrl}`);
         };
 
         // 3. Close This Tab completely (other tab takes over full window)
-        header.querySelector('.btn-close-pane').onclick = () => {
+        header.querySelector('.btn-close-pane').onclick = (e) => {
+            e.stopPropagation();
             const closingId = tab.id;
-            const otherTab = isPrimary ? secondary : primary;
+            const otherTab = isPrimary ? rightTab : leftTab;
             if (otherTab) {
                 activeTabId = otherTab.id;
             }
@@ -3115,10 +3344,10 @@ function renderSplitPaneHeaders(primary, secondary) {
             if (btnSplitView) btnSplitView.classList.remove('active');
             viewsContainer.classList.remove('split-view-active');
             if (splitDivider) splitDivider.classList.add('hidden');
-            document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
+            document.querySelectorAll('.split-pane-header.dual-header').forEach(h => h.remove());
             tabs.forEach(t => {
                 t.webview.style.width = '';
-                t.webview.classList.remove('split-primary', 'split-secondary');
+                t.webview.classList.remove('split-primary', 'split-secondary', 'is-active-split-pane');
                 t.webview.style.display = t.id === activeTabId ? 'flex' : 'none';
             });
             closeTab(closingId);
@@ -3126,8 +3355,8 @@ function renderSplitPaneHeaders(primary, secondary) {
         };
     }
 
-    if (primary) makePaneHeader(primary, true);
-    if (secondary) makePaneHeader(secondary, false);
+    if (leftTab) makePaneHeader(leftTab, true);
+    if (rightTab) makePaneHeader(rightTab, false);
 }
 
 // ==========================================================================

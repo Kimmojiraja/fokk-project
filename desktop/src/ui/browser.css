@@ -2545,6 +2545,49 @@ body.theme-light .vpn-footer-toggle {
     color: rgba(255, 255, 255, 0.5);
 }
 
+.split-pane-header.dual-header {
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.split-pane-header.dual-header.is-active-header {
+    background: rgba(20, 25, 40, 0.98) !important;
+    border-bottom: 2px solid #00E5FF !important;
+}
+
+.split-pane-header.dual-header.is-active-header .split-pane-badge {
+    background: rgba(0, 229, 255, 0.2) !important;
+    color: #00E5FF !important;
+    border-color: rgba(0, 229, 255, 0.45) !important;
+    font-weight: 700;
+}
+
+.split-pane-nav-input {
+    flex: 1;
+    min-width: 0;
+    height: 22px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    padding: 0 7px;
+    font-size: 11px;
+    color: #CBD5E1;
+    outline: none;
+    transition: all 0.15s ease;
+}
+
+.split-pane-nav-input:hover {
+    background: rgba(255, 255, 255, 0.09);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.split-pane-nav-input:focus {
+    background: rgba(14, 18, 28, 0.95);
+    border-color: #00E5FF;
+    color: #FFFFFF;
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
+}
+
 .split-pane-actions {
     display: flex;
     align-items: center;
@@ -2789,6 +2832,11 @@ body.theme-light .vpn-footer-toggle {
     flex-shrink: 0 !important;
     box-sizing: border-box !important;
     border-left: none !important;
+}
+
+.views-container.split-view-active webview.is-active-split-pane {
+    border-color: #00E5FF !important;
+    box-shadow: 0 0 12px rgba(0, 229, 255, 0.4) !important;
 }
 
 /* ==========================================================================

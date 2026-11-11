@@ -431,14 +431,36 @@ ipcMain.on('fokk-win-close', () => {
 
 // 2. Tab Navigation & Bridge Handlers
 ipcMain.on('fokk-open-url', (event, url) => {
+    let cleanUrl = url;
+    if (typeof cleanUrl === 'string' && cleanUrl.startsWith('http://') && !cleanUrl.includes('localhost') && !cleanUrl.includes('127.0.0.1')) {
+        cleanUrl = cleanUrl.replace(/^http:\/\//i, 'https://');
+    }
+    // If sent from a guest webview (e.g. start page or internal UI inside a tab/pane), load URL directly in that webview
+    if (event.sender && mainWindow && event.sender !== mainWindow.webContents && !event.sender.isDestroyed()) {
+        try {
+            event.sender.loadURL(cleanUrl);
+            return;
+        } catch (_) {}
+    }
     if (mainWindow) {
         mainWindow.webContents.executeJavaScript(`
             if (typeof loadUrlInActiveTab === 'function') {
-                loadUrlInActiveTab(${JSON.stringify(url)});
+                loadUrlInActiveTab(${JSON.stringify(cleanUrl)});
             } else if (typeof createTab === 'function') {
-                createTab(${JSON.stringify(url)});
+                createTab(${JSON.stringify(cleanUrl)});
             }
-        `);
+        `).catch(() => {});
+    }
+});
+
+ipcMain.on('fokk-pane-focus', (event) => {
+    if (mainWindow && event.sender && event.sender !== mainWindow.webContents && !event.sender.isDestroyed()) {
+        const guestId = event.sender.id;
+        mainWindow.webContents.executeJavaScript(`
+            if (typeof handleGuestFocus === 'function') {
+                handleGuestFocus(${guestId});
+            }
+        `).catch(() => {});
     }
 });
 
