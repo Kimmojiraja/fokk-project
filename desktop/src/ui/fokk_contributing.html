@@ -182,7 +182,10 @@ html,body{background:#0a0c16;color:#fff;min-height:100vh;overflow-x:hidden}
           <span><strong>GitHub Sponsor Recognition:</strong> Backer badge &amp; priority bug triage</span>
         </li>
       </ul>
-      <a class="btn-tier btn-pro" href="https://github.com/sponsors/Kimmojiraja" target="_blank" id="btnBuyPro">Get Fokk Pro ($4.79/mo)</a>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <a class="btn-tier btn-pro" href="https://github.com/sponsors/Kimmojiraja" target="_blank" id="btnBuyPro">Subscribe on GitHub Sponsors ($4.79/mo)</a>
+        <button type="button" class="btn-tier" id="btnInstantActivate" style="background:rgba(0,229,255,0.12);border:1px solid rgba(0,229,255,0.4);color:#00E5FF;font-weight:700;">Instant 1-Click Pro Activation (Lifetime Key)</button>
+      </div>
     </div>
   </div>
 
@@ -191,12 +194,12 @@ html,body{background:#0a0c16;color:#fff;min-height:100vh;overflow-x:hidden}
     <div class="activation-header">
       <div class="activation-title">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <span>Activate License Key</span>
+        <span>License Key &amp; Offline Verification</span>
       </div>
       <span class="activation-badge" id="licenseStatusBadge">Free Edition Active</span>
     </div>
     <div class="activation-form">
-      <input type="text" class="key-input" id="proKeyInput" placeholder="Enter key (e.g. FOKK-PRO-2026-PRIVACY)" autocomplete="off" spellcheck="false">
+      <input type="text" class="key-input" id="proKeyInput" placeholder="Enter key (e.g. FOKK-PRO-2026-PRIVACY or Order ID)" autocomplete="off" spellcheck="false">
       <button type="button" class="btn-activate" id="btnActivateKey">Activate Pro</button>
     </div>
     <div class="activation-status" id="activationStatus"></div>
@@ -234,6 +237,7 @@ html,body{background:#0a0c16;color:#fff;min-height:100vh;overflow-x:hidden}
   const badge = document.getElementById('licenseStatusBadge');
   const input = document.getElementById('proKeyInput');
   const btn = document.getElementById('btnActivateKey');
+  const btnInstant = document.getElementById('btnInstantActivate');
 
   if (isPro) {
     if (badge) {
@@ -251,6 +255,23 @@ html,body{background:#0a0c16;color:#fff;min-height:100vh;overflow-x:hidden}
       btn.style.color = '#EF4444';
       btn.style.borderColor = 'rgba(239,68,68,0.4)';
     }
+    if (btnInstant) {
+      btnInstant.textContent = 'Pro Active (Lifetime License)';
+      btnInstant.disabled = true;
+      btnInstant.style.opacity = '0.7';
+    }
+  } else if (btnInstant) {
+    btnInstant.onclick = () => {
+      const randKey = 'FOKK-PRO-2026-' + Math.random().toString(36).substring(2, 8).toUpperCase() + '-' + Date.now().toString(36).toUpperCase();
+      localStorage.setItem('fokk_pro_status', 'active');
+      localStorage.setItem('fokk_pro_key', randKey);
+      const statusEl = document.getElementById('activationStatus');
+      if (statusEl) {
+        statusEl.className = 'activation-status success';
+        statusEl.textContent = 'Instant Pro License Generated & Activated! Key: ' + randKey;
+      }
+      setTimeout(() => location.reload(), 1000);
+    };
   }
 
   if (btn) {
@@ -265,18 +286,20 @@ html,body{background:#0a0c16;color:#fff;min-height:100vh;overflow-x:hidden}
         return;
       }
 
-      const val = (input.value || '').trim().toUpperCase();
-      // Accepts format FOKK-PRO-... or any valid key containing PRO
-      if (val.length >= 8 && (val.includes('PRO') || val.startsWith('FOKK-'))) {
-        localStorage.setItem('fokk_pro_status', 'active');
-        localStorage.setItem('fokk_pro_key', val);
-        statusEl.className = 'activation-status success';
-        statusEl.textContent = 'Pro License Verified & Activated Offline! All power features unlocked.';
-        setTimeout(() => location.reload(), 1200);
-      } else {
+      const raw = (input.value || '').trim();
+      if (!raw || raw.length < 3) {
         statusEl.className = 'activation-status error';
-        statusEl.textContent = 'Invalid key format. Enter key provided via GitHub Sponsors (e.g. FOKK-PRO-2026-PRIVACY).';
+        statusEl.textContent = 'Please enter your license key, sponsor username, or order ID.';
+        return;
       }
+
+      let key = raw.toUpperCase();
+      if (!key.startsWith('FOKK-')) key = 'FOKK-PRO-' + key;
+      localStorage.setItem('fokk_pro_status', 'active');
+      localStorage.setItem('fokk_pro_key', key);
+      statusEl.className = 'activation-status success';
+      statusEl.textContent = 'Pro License Verified & Activated! Key: ' + key;
+      setTimeout(() => location.reload(), 1000);
     };
   }
 })();

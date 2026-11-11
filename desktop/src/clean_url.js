@@ -36,6 +36,19 @@ function cleanTrackingUrl(rawUrl) {
             stripped = true;
         }
 
+        // Whitelist authentication, OAuth, SSO, and 2FA challenge flows from tracking parameter stripping
+        const lowerHost = parsed.hostname.toLowerCase();
+        const lowerPath = parsed.pathname.toLowerCase();
+        if (lowerHost.includes('accounts.google.') ||
+            lowerHost.includes('login.microsoftonline.com') ||
+            lowerHost.includes('appleid.apple.com') ||
+            lowerPath.includes('/signin') ||
+            lowerPath.includes('/oauth') ||
+            lowerPath.includes('/challenge') ||
+            lowerPath.includes('/checkcookie')) {
+            return stripped ? parsed.toString() : null;
+        }
+
         // 1. Resolve redirect trampoline wrappers (Facebook, Google, Reddit trampolines)
         if (parsed.hostname.includes('facebook.com') && parsed.pathname === '/l.php' && parsed.searchParams.has('u')) {
             const target = parsed.searchParams.get('u');

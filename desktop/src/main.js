@@ -22,6 +22,9 @@ app.commandLine.appendSwitch('enforce-webrtc-ip-permission-check');
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
 
+// Native Passkey & WebAuthn / FIDO2 Authenticator Support (Google 2FA, Passkeys, Windows Hello)
+app.commandLine.appendSwitch('enable-features', 'WebAuthentication,WebAuthenticationWindows');
+
 // Paths
 const devAssetsDir = path.resolve(__dirname, '..', '..', 'app', 'src', 'main', 'assets');
 const packagedAssetsDir = path.join(process.resourcesPath || '', 'assets');
@@ -133,7 +136,8 @@ function setupAdblockingForSession(sess) {
         if (!headers['Accept-Language']) {
             headers['Accept-Language'] = 'en-GB,en;q=0.9,en-US;q=0.8';
         }
-        if (!headers['Upgrade-Insecure-Requests']) {
+        // Upgrade-Insecure-Requests is standard ONLY for top-level/subframe navigations (never for XHR/fetch polling in 2FA/OAuth)
+        if ((details.resourceType === 'mainFrame' || details.resourceType === 'subFrame') && !headers['Upgrade-Insecure-Requests']) {
             headers['Upgrade-Insecure-Requests'] = '1';
         }
         callback({ requestHeaders: headers });
@@ -251,7 +255,16 @@ function createWindow() {
     // Setup network adblocker and VPN engine on default and persistent sessions
     setupAdblockingForSession(session.defaultSession);
     try {
-        setupAdblockingForSession(session.fromPartition('persist:fokk_default_session'));
+        const persistSess = session.fromPartition('persist:fokk_default_session');
+        setupAdblockingForSession(persistSess);
+        // Guarantee immediate disk flush when auth/session cookies change (fixes YouTube & Google sign-in persistence)
+        if (persistSess && persistSess.cookies) {
+            persistSess.cookies.on('changed', (event, cookie, cause, removed) => {
+                if (!removed && (cookie.domain.includes('google.') || cookie.domain.includes('youtube.') || cookie.domain.includes('github.'))) {
+                    persistSess.cookies.flushStore().catch(() => {});
+                }
+            });
+        }
     } catch (_) {}
 
     // Inject cosmetic ad defusers and configure universal popup/OAuth handling
@@ -286,6 +299,7 @@ function createWindow() {
                             autoHideMenuBar: true,
                             backgroundColor: '#090A0C',
                             webPreferences: {
+                                partition: (contents.session && contents.session.partition) ? contents.session.partition : 'persist:fokk_default_session',
                                 contextIsolation: true,
                                 nodeIntegration: false,
                                 sandbox: true
@@ -328,7 +342,12 @@ function createWindow() {
                         width: 600,
                         height: 720,
                         autoHideMenuBar: true,
-                        backgroundColor: '#090A0C'
+                        backgroundColor: '#090A0C',
+                        webPreferences: {
+                            partition: (contents.session && contents.session.partition) ? contents.session.partition : 'persist:fokk_default_session',
+                            contextIsolation: true,
+                            nodeIntegration: false
+                        }
                     }
                 };
             });

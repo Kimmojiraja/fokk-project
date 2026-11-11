@@ -3230,15 +3230,18 @@ function updateQuadLayout() {
     const quadTabs = quadSlotTabIds.map(id => tabs.find(t => t.id === id)).filter(Boolean);
 
     tabs.forEach(t => {
-        if (quadTabs.includes(t)) {
+        const slotIdx = quadTabs.indexOf(t);
+        if (slotIdx !== -1) {
             t.webview.style.display = 'flex';
             t.webview.style.width = '100%';
             t.webview.classList.add('split-quad');
+            t.webview.dataset.quadIndex = slotIdx.toString();
             t.webview.classList.toggle('is-active-quad-pane', t.id === activeTabId);
             t.webview.classList.remove('split-primary', 'split-secondary');
         } else {
             t.webview.style.display = 'none';
             t.webview.style.width = '';
+            delete t.webview.dataset.quadIndex;
             t.webview.classList.remove('split-quad', 'is-active-quad-pane', 'split-primary', 'split-secondary');
         }
     });
@@ -3304,6 +3307,7 @@ function renderQuadPaneHeaders(quadTabs) {
                     e.preventDefault();
                     let dest = navInput.value.trim();
                     if (dest) {
+                        selectQuadPane(tab.id);
                         if (!dest.startsWith('http://') && !dest.startsWith('https://') && !dest.startsWith('file:') && !dest.startsWith('fokk:')) {
                             if (dest.includes('.') && !dest.includes(' ')) {
                                 dest = 'https://' + dest;
@@ -3312,6 +3316,7 @@ function renderQuadPaneHeaders(quadTabs) {
                             }
                         }
                         tab.webview.loadURL(dest);
+                        updateOmnibox(dest);
                         navInput.blur();
                     }
                 }
