@@ -27,7 +27,27 @@ function cleanTrackingUrl(rawUrl) {
     if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return null;
 
     try {
+        let stripped = false;
         const parsed = new URL(trimmed);
+
+        // Auto-upgrade insecure http:// to https:// for modern web and CDN-protected sites
+        if (parsed.protocol === 'http:' && !parsed.hostname.startsWith('localhost') && !parsed.hostname.startsWith('127.0.0.1')) {
+            parsed.protocol = 'https:';
+            stripped = true;
+        }
+
+        // Whitelist authentication, OAuth, SSO, and 2FA challenge flows from tracking parameter stripping
+        const lowerHost = parsed.hostname.toLowerCase();
+        const lowerPath = parsed.pathname.toLowerCase();
+        if (lowerHost.includes('accounts.google.') ||
+            lowerHost.includes('login.microsoftonline.com') ||
+            lowerHost.includes('appleid.apple.com') ||
+            lowerPath.includes('/signin') ||
+            lowerPath.includes('/oauth') ||
+            lowerPath.includes('/challenge') ||
+            lowerPath.includes('/checkcookie')) {
+            return stripped ? parsed.toString() : null;
+        }
 
         // 1. Resolve redirect trampoline wrappers (Facebook, Google, Reddit trampolines)
         if (parsed.hostname.includes('facebook.com') && parsed.pathname === '/l.php' && parsed.searchParams.has('u')) {
@@ -44,7 +64,6 @@ function cleanTrackingUrl(rawUrl) {
         }
 
         // 2. Strip tracking query parameters
-        let stripped = false;
         for (const key of Array.from(parsed.searchParams.keys())) {
             const lowerKey = key.toLowerCase();
             if (TRACKING_PARAMS.has(lowerKey) || lowerKey.startsWith('utm_') || lowerKey.startsWith('fb_')) {

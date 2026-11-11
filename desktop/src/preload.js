@@ -297,10 +297,70 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
 
                     // Clean navigator.webdriver fallback
                     try {
-                        if (navigator.webdriver) {
-                            delete Object.getPrototypeOf(navigator).webdriver;
-                        }
+                        Object.defineProperty(navigator, 'webdriver', {
+                            get: () => undefined,
+                            configurable: true
+                        });
                     } catch (_) {}
+
+                    // Clean navigator.userAgentData to completely eliminate Electron brand traces for Akamai / Cloudflare
+                    try {
+                        const fakeBrands = [
+                            { brand: 'Chromium', version: '124' },
+                            { brand: 'Google Chrome', version: '124' },
+                            { brand: 'Not-A.Brand', version: '99' }
+                        ];
+                        const fakeFullBrands = [
+                            { brand: 'Chromium', version: '124.0.6367.243' },
+                            { brand: 'Google Chrome', version: '124.0.6367.243' },
+                            { brand: 'Not-A.Brand', version: '99.0.0.0' }
+                        ];
+                        const fakeUAD = {
+                            brands: fakeBrands,
+                            mobile: false,
+                            platform: 'Windows',
+                            getHighEntropyValues: function(hints) {
+                                return Promise.resolve({
+                                    brands: fakeBrands,
+                                    mobile: false,
+                                    platform: 'Windows',
+                                    platformVersion: '15.0.0',
+                                    architecture: 'x86',
+                                    bitness: '64',
+                                    model: '',
+                                    fullVersionList: fakeFullBrands
+                                });
+                            },
+                            toJSON: function() {
+                                return {
+                                    brands: fakeBrands,
+                                    mobile: false,
+                                    platform: 'Windows'
+                                };
+                            }
+                        };
+                        Object.defineProperty(navigator, 'userAgentData', {
+                            get: () => fakeUAD,
+                            configurable: true
+                        });
+                    } catch (_) {}
+
+                    // Helper to preserve [native code] signature on proxy functions
+                    function makeNative(fn, name, orig) {
+                        try {
+                            const nativeStr = orig ? Function.prototype.toString.call(orig) : ('function ' + (name || '') + '() { [native code] }');
+                            Object.defineProperty(fn, 'toString', {
+                                value: function() { return nativeStr; },
+                                writable: false,
+                                configurable: true
+                            });
+                            Object.defineProperty(fn, 'name', {
+                                value: name || (orig ? orig.name : ''),
+                                configurable: true
+                            });
+                        } catch (_) {}
+                        return fn;
+                    }
 
                     // =========================================================================
                     // Fokk Pro Advanced Privacy Cloaker (Canvas, WebGL, AudioContext & Hardware)
@@ -309,47 +369,17 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                         'use strict';
                         const seed = Math.floor(Math.random() * 10) + 1;
 
-                        // 1. Canvas Fingerprint Noise Injection (toDataURL & getImageData)
-                        try {
-                            const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
-                            HTMLCanvasElement.prototype.toDataURL = function(...args) {
-                                try {
-                                    const ctx = this.getContext('2d');
-                                    if (ctx && this.width > 0 && this.height > 0) {
-                                        const imgData = ctx.getImageData(0, 0, Math.min(this.width, 16), Math.min(this.height, 16));
-                                        for (let i = 0; i < imgData.data.length; i += 8) {
-                                            imgData.data[i] = (imgData.data[i] ^ (seed & 1));
-                                        }
-                                        ctx.putImageData(imgData, 0, 0);
-                                    }
-                                } catch (_) {}
-                                return origToDataURL.apply(this, args);
-                            };
-
-                            const origGetImageData = CanvasRenderingContext2D.prototype.getImageData;
-                            CanvasRenderingContext2D.prototype.getImageData = function(...args) {
-                                const res = origGetImageData.apply(this, args);
-                                try {
-                                    if (res && res.data && res.data.length > 0) {
-                                        for (let i = 0; i < Math.min(res.data.length, 64); i += 8) {
-                                            res.data[i] = (res.data[i] ^ (seed & 1));
-                                        }
-                                    }
-                                } catch (_) {}
-                                return res;
-                            };
-                        } catch (_) {}
-
-                        // 2. WebGL Hardware & Shader Fingerprint Masking
+                        // 1. WebGL Hardware & Shader Masking with Native Signature Preservation
                         try {
                             const maskParam = function(origFn) {
-                                return function(param) {
+                                const proxy = function(param) {
                                     if (param === 37445) return 'Google Inc. (NVIDIA)';
                                     if (param === 37446) return 'ANGLE (NVIDIA GeForce RTX 4070 Direct3D11 vs_5_0 ps_5_0)';
                                     if (param === 7936) return 'WebKit';
                                     if (param === 7937) return 'WebKit WebGL';
                                     return origFn.call(this, param);
                                 };
+                                return makeNative(proxy, 'getParameter', origFn);
                             };
 
                             if (window.WebGLRenderingContext) {
@@ -360,11 +390,11 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                             }
                         } catch (_) {}
 
-                        // 3. AudioContext Oscillator Fingerprint Spoofing
+                        // 2. AudioContext Oscillator Fingerprint Guard
                         try {
                             if (window.AudioBuffer) {
                                 const origGetChannelData = AudioBuffer.prototype.getChannelData;
-                                AudioBuffer.prototype.getChannelData = function(channel) {
+                                const proxyAudio = function(channel) {
                                     const data = origGetChannelData.call(this, channel);
                                     try {
                                         for (let i = 0; i < Math.min(data.length, 64); i += 4) {
@@ -373,19 +403,20 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                                     } catch (_) {}
                                     return data;
                                 };
+                                AudioBuffer.prototype.getChannelData = makeNative(proxyAudio, 'getChannelData', origGetChannelData);
                             }
                         } catch (_) {}
 
-                        // 4. Standardize Concurrency & Device Memory
+                        // 3. Standardize Concurrency & Device Memory
                         try {
                             Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8, configurable: true });
                             Object.defineProperty(navigator, 'deviceMemory', { get: () => 8, configurable: true });
                         } catch (_) {}
 
-                        // 5. Battery API Protection
+                        // 4. Battery API Protection
                         try {
                             if (navigator.getBattery) {
-                                navigator.getBattery = () => Promise.resolve({
+                                const fakeBattery = () => Promise.resolve({
                                     charging: true,
                                     chargingTime: 0,
                                     dischargingTime: Infinity,
@@ -393,7 +424,89 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                                     addEventListener: () => {},
                                     removeEventListener: () => {}
                                 });
+                                navigator.getBattery = makeNative(fakeBattery, 'getBattery', navigator.getBattery);
                             }
+                        } catch (_) {}
+
+                        // 5. Universal CMP / Cookie Overlay Scroll Guard (The Guardian, Sky News, etc.)
+                        try {
+                            const unlockScroll = function() {
+                                const html = document.documentElement;
+                                const body = document.body;
+                                if (!html) return;
+                                if (html.classList && html.classList.contains('gu-consent-active')) html.classList.remove('gu-consent-active');
+                                if (body && body.classList && body.classList.contains('gu-consent-active')) body.classList.remove('gu-consent-active');
+                                const htmlOverflow = window.getComputedStyle(html).overflowY;
+                                const bodyOverflow = body ? window.getComputedStyle(body).overflowY : '';
+                                const bodyPos = body ? window.getComputedStyle(body).position : '';
+                                if (htmlOverflow === 'hidden') {
+                                    html.style.setProperty('overflow', 'auto', 'important');
+                                    html.style.setProperty('overflow-y', 'auto', 'important');
+                                }
+                                if (body && (bodyOverflow === 'hidden' || bodyPos === 'fixed')) {
+                                    body.style.setProperty('overflow', 'auto', 'important');
+                                    body.style.setProperty('overflow-y', 'auto', 'important');
+                                    body.style.setProperty('position', 'static', 'important');
+                                }
+                                document.querySelectorAll('div[id^="sp_message_container"], div[class*="sp_message"], .gu-cmp-banner, .tp-backdrop, iframe[id^="sp_message_iframe"]').forEach(function(el) { el.remove(); });
+                            };
+                            window.addEventListener('load', unlockScroll);
+                            window.addEventListener('DOMContentLoaded', unlockScroll);
+                            if (window.MutationObserver && document.documentElement) {
+                                const cmpObs = new MutationObserver(unlockScroll);
+                                cmpObs.observe(document.documentElement, { attributes: true, childList: true, subtree: true, attributeFilter: ['class', 'style'] });
+                            }
+                            let cmpCount = 0;
+                            const cmpTimer = setInterval(function() {
+                                unlockScroll();
+                                if (++cmpCount > 15) clearInterval(cmpTimer);
+                            }, 500);
+                        } catch (_) {}
+
+                        // 6. Access Denied / Akamai Block Instant Auto-Defuser In-Page Banner
+                        try {
+                            const detectAndInjectDefuserBar = function() {
+                                const title = (document.title || '').toLowerCase();
+                                const bodyText = document.body ? document.body.innerText.substring(0, 600).toLowerCase() : '';
+                                const isBlocked = title.includes('access denied') || bodyText.includes('access denied') || bodyText.includes("you don't have permission") || bodyText.includes('errors.edgesuite.net') || title.includes('403 forbidden');
+                                if (isBlocked && !document.getElementById('fokk-defuser-bar')) {
+                                    const bar = document.createElement('div');
+                                    bar.id = 'fokk-defuser-bar';
+                                    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(90deg,#0a192f,#1e293b);border-bottom:2px solid #00E5FF;color:#fff;padding:10px 18px;display:flex;align-items:center;gap:12px;z-index:2147483647;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,0.8);';
+                                    bar.innerHTML = '<span style="font-weight:700;color:#00E5FF;display:inline-flex;align-items:center;gap:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Fokk AI Defuser:</span><span>Publisher CDN access block detected.</span><button id="fokk-btn-cache" style="background:#00E5FF;color:#0a192f;border:none;padding:5px 12px;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;">Google Cache Bypass</button><button id="fokk-btn-archive" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;padding:5px 12px;border-radius:6px;font-weight:600;font-size:12px;cursor:pointer;">Archive Bypass</button><button id="fokk-btn-search" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;padding:5px 12px;border-radius:6px;font-weight:600;font-size:12px;cursor:pointer;">Find Story</button><button id="fokk-btn-dismiss" style="background:transparent;border:1px solid #64748b;color:#cbd5e1;padding:4px 8px;border-radius:5px;font-size:11px;cursor:pointer;margin-left:auto;">Dismiss</button>';
+                                    if (document.body) {
+                                        document.body.prepend(bar);
+                                        const btnCache = document.getElementById('fokk-btn-cache');
+                                        if (btnCache) {
+                                            btnCache.onclick = function() {
+                                                window.location.href = 'https://webcache.googleusercontent.com/search?q=cache:' + encodeURIComponent(window.location.href);
+                                            };
+                                        }
+                                        const btnArchive = document.getElementById('fokk-btn-archive');
+                                        if (btnArchive) {
+                                            btnArchive.onclick = function() {
+                                                window.location.href = 'https://web.archive.org/web/' + encodeURIComponent(window.location.href);
+                                            };
+                                        }
+                                        const btnSearch = document.getElementById('fokk-btn-search');
+                                        if (btnSearch) {
+                                            btnSearch.onclick = function() {
+                                                let q = window.location.pathname.split('/').pop().replace(/-\d+$/, '').replace(/-/g, ' ');
+                                                window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(q);
+                                            };
+                                        }
+                                        const btnDismiss = document.getElementById('fokk-btn-dismiss');
+                                        if (btnDismiss) {
+                                            btnDismiss.onclick = function() {
+                                                bar.remove();
+                                            };
+                                        }
+                                    }
+                                }
+                            };
+                            window.addEventListener('load', detectAndInjectDefuserBar);
+                            setTimeout(detectAndInjectDefuserBar, 600);
+                            setTimeout(detectAndInjectDefuserBar, 1500);
                         } catch (_) {}
                     })();
                 `
@@ -401,4 +514,15 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
         ]);
     } catch (_) {}
 }
+
+// Global pane interaction listener to notify host window which pane is actively being interacted with
+try {
+    window.addEventListener('mousedown', () => {
+        try { ipcRenderer.send('fokk-pane-focus'); } catch (_) {}
+    }, true);
+    window.addEventListener('focus', () => {
+        try { ipcRenderer.send('fokk-pane-focus'); } catch (_) {}
+    }, true);
+} catch (_) {}
+
 

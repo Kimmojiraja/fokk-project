@@ -921,12 +921,19 @@ class AdBlockEngine {
                             }
                         }
 
-                        // 4. Defuse Anti-Adblock modal traps & restore body scrolling
-                        if (document.body && document.body.style && document.body.style.overflow === 'hidden') {
-                            const modal = document.querySelector('.adblock-overlay, .tp-backdrop, .fc-dialog-container, div[class*="adblock-modal"]');
-                            if (modal) {
-                                modal.remove();
-                                document.body.style.setProperty('overflow', 'auto', 'important');
+                        // 4. Defuse Anti-Adblock & CMP consent modal traps & restore scrolling (The Guardian, Sky, etc.)
+                        const h = document.documentElement;
+                        const b = document.body;
+                        if (h && b) {
+                            const isLocked = h.style.overflow === 'hidden' || b.style.overflow === 'hidden' ||
+                                             h.classList.contains('gu-consent-active') || b.classList.contains('gu-consent-active');
+                            if (isLocked) {
+                                h.style.setProperty('overflow', 'auto', 'important');
+                                h.style.setProperty('overflow-y', 'auto', 'important');
+                                b.style.setProperty('overflow', 'auto', 'important');
+                                b.style.setProperty('overflow-y', 'auto', 'important');
+                                b.style.setProperty('position', 'static', 'important');
+                                document.querySelectorAll('.adblock-overlay, .tp-backdrop, .fc-dialog-container, div[class*="adblock-modal"], div[id^="sp_message_container"], .gu-cmp-banner').forEach(el => el.remove());
                             }
                         }
                     }

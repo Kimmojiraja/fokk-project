@@ -137,6 +137,7 @@ const btnClose = document.getElementById('btnClose');
 
 const START_PAGE_URL = ipcRenderer.sendSync('fokk-get-start-page-url');
 const PRELOAD_SCRIPT_PATH = ipcRenderer.sendSync('fokk-get-preload-path');
+const PLATFORM_USER_AGENT = ipcRenderer.sendSync('fokk-get-user-agent');
 
 // Authentic Incognito Stealth Vector Icon (URL-encoded data URI to prevent attribute quote breaks)
 const INCOGNITO_FAVICON_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M6 11.5 L7.8 4.8 C8.2 3.8 9.5 3.8 12 3.8 C14.5 3.8 15.8 3.8 16.2 4.8 L18 11.5 Z" fill="#C084FC" stroke="none"/><path d="M2.5 12 C6.5 10.5 17.5 10.5 21.5 12" stroke="#C084FC" stroke-width="2.2" stroke-linecap="round"/><circle cx="8" cy="16.5" r="2.8" stroke="#C084FC" stroke-width="2" fill="none"/><circle cx="16" cy="16.5" r="2.8" stroke="#C084FC" stroke-width="2" fill="none"/><path d="M10.8 16.5 Q12 15.2 13.2 16.5" stroke="#C084FC" stroke-width="2" fill="none"/></svg>');
@@ -202,11 +203,15 @@ function showToast(message, isAlert = false) {
 
 // Helper to load in active tab or create tab if none exist
 function loadUrlInActiveTab(url) {
+    let cleanUrl = url;
+    if (typeof cleanUrl === 'string' && cleanUrl.startsWith('http://') && !cleanUrl.includes('localhost') && !cleanUrl.includes('127.0.0.1')) {
+        cleanUrl = cleanUrl.replace(/^http:\/\//i, 'https://');
+    }
     const active = getActiveWebview();
     if (active) {
-        active.loadURL(url);
+        active.loadURL(cleanUrl);
     } else {
-        createTab(url);
+        createTab(cleanUrl);
     }
 }
 window.loadUrlInActiveTab = loadUrlInActiveTab;
@@ -217,8 +222,13 @@ function createTab(url = START_PAGE_URL, options = {}) {
     const tabId = 'tab_' + tabCounter;
     const isPrivate = typeof options === 'boolean' ? options : !!(options && options.isPrivate);
 
-    // If private/incognito mode and opening start page, load the dedicated Incognito Home view
+    // Auto-upgrade insecure http:// to https://
     let targetUrl = url;
+    if (typeof targetUrl === 'string' && targetUrl.startsWith('http://') && !targetUrl.includes('localhost') && !targetUrl.includes('127.0.0.1')) {
+        targetUrl = targetUrl.replace(/^http:\/\//i, 'https://');
+    }
+
+    // If private/incognito mode and opening start page, load the dedicated Incognito Home view
     if (isPrivate && (!targetUrl || targetUrl === START_PAGE_URL || targetUrl.includes('start.html'))) {
         targetUrl = START_PAGE_URL + (START_PAGE_URL.includes('?') ? '&' : '?') + 'incognito=1';
     }
@@ -250,7 +260,7 @@ function createTab(url = START_PAGE_URL, options = {}) {
     webview.setAttribute('src', targetUrl);
     webview.setAttribute('preload', PRELOAD_SCRIPT_PATH);
     webview.setAttribute('allowpopups', 'true');
-    webview.setAttribute('useragent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+    webview.setAttribute('useragent', PLATFORM_USER_AGENT);
     webview.setAttribute('webpreferences', 'contextIsolation=yes, javascript=yes, backgroundThrottling=no');
     webview.style.backgroundColor = '#090A0C';
     if (isPrivate) {
@@ -362,6 +372,11 @@ function createTab(url = START_PAGE_URL, options = {}) {
     });
 
     webview.addEventListener('did-navigate', (e) => {
+        if (isSplitViewActive && (tabId === splitLeftTabId || tabId === splitRightTabId)) {
+            selectDualPane(tabId);
+        } else if (isQuadViewActive && quadSlotTabIds.includes(tabId)) {
+            selectQuadPane(tabId);
+        }
         if (activeTabId === tabId) {
             updateOmnibox(e.url);
             updateNavState(webview);
@@ -373,6 +388,11 @@ function createTab(url = START_PAGE_URL, options = {}) {
     });
 
     webview.addEventListener('did-navigate-in-page', (e) => {
+        if (isSplitViewActive && (tabId === splitLeftTabId || tabId === splitRightTabId)) {
+            selectDualPane(tabId);
+        } else if (isQuadViewActive && quadSlotTabIds.includes(tabId)) {
+            selectQuadPane(tabId);
+        }
         if (activeTabId === tabId) {
             updateOmnibox(e.url);
             updateNavState(webview);
@@ -380,6 +400,30 @@ function createTab(url = START_PAGE_URL, options = {}) {
         if (!isPrivate) {
             const currentTitle = (webview.getTitle ? webview.getTitle() : '') || e.url;
             recordHistoryItem(e.url, currentTitle);
+        }
+    });
+
+    webview.addEventListener('focus', () => {
+        if (isSplitViewActive && (tabId === splitLeftTabId || tabId === splitRightTabId)) {
+            selectDualPane(tabId);
+        } else if (isQuadViewActive && quadSlotTabIds.includes(tabId)) {
+            selectQuadPane(tabId);
+        }
+    });
+
+    webview.addEventListener('focusin', () => {
+        if (isSplitViewActive && (tabId === splitLeftTabId || tabId === splitRightTabId)) {
+            selectDualPane(tabId);
+        } else if (isQuadViewActive && quadSlotTabIds.includes(tabId)) {
+            selectQuadPane(tabId);
+        }
+    });
+
+    webview.addEventListener('mousedown', () => {
+        if (isSplitViewActive && (tabId === splitLeftTabId || tabId === splitRightTabId)) {
+            selectDualPane(tabId);
+        } else if (isQuadViewActive && quadSlotTabIds.includes(tabId)) {
+            selectQuadPane(tabId);
         }
     });
 
@@ -398,6 +442,7 @@ function createTab(url = START_PAGE_URL, options = {}) {
 
 function activateTab(tabId) {
     activeTabId = tabId;
+    if (typeof window.closeAiDefuserPanel === 'function') window.closeAiDefuserPanel();
     const targetTab = tabs.find(t => t.id === tabId);
     if (targetTab) {
         targetTab.lastActiveTime = Date.now();
@@ -425,9 +470,24 @@ function activateTab(tabId) {
     });
 
     if (isSplitViewActive && typeof updateSplitLayout === 'function') {
-        updateSplitLayout();
+        if (tabId === splitLeftTabId) {
+            selectDualPane(splitLeftTabId);
+        } else if (tabId === splitRightTabId) {
+            selectDualPane(splitRightTabId);
+        } else {
+            // Replace whichever pane was previously active
+            if (lastActiveDualPaneSide === 'right') {
+                splitRightTabId = tabId;
+            } else {
+                splitLeftTabId = tabId;
+            }
+            splitSecondaryTabId = splitRightTabId;
+            updateSplitLayout();
+            selectDualPane(tabId);
+        }
     } else if (isQuadViewActive && typeof updateQuadLayout === 'function') {
         updateQuadLayout();
+        selectQuadPane(tabId);
     }
 }
 
@@ -442,20 +502,57 @@ function closeTab(tabId) {
 
     if (tabs.length === 0) {
         createTab(START_PAGE_URL);
-    } else if (activeTabId === tabId) {
-        const nextTab = tabs[Math.max(0, idx - 1)];
-        activateTab(nextTab.id);
+        return;
     }
 
     if (isSplitViewActive && typeof updateSplitLayout === 'function') {
-        updateSplitLayout();
+        if (tabs.length < 2) {
+            toggleSplitView();
+            if (activeTabId === tabId) {
+                const nextTab = tabs[Math.max(0, idx - 1)];
+                activateTab(nextTab.id);
+            }
+        } else {
+            if (splitLeftTabId === tabId) {
+                const available = tabs.find(x => x.id !== splitRightTabId);
+                splitLeftTabId = available ? available.id : null;
+            }
+            if (splitRightTabId === tabId) {
+                const available = tabs.find(x => x.id !== splitLeftTabId);
+                splitRightTabId = available ? available.id : null;
+            }
+            splitSecondaryTabId = splitRightTabId;
+            if (activeTabId === tabId) {
+                activeTabId = splitLeftTabId || splitRightTabId;
+            }
+            updateSplitLayout();
+            selectDualPane(activeTabId);
+        }
+        return;
     }
+
     if (isQuadViewActive && typeof updateQuadLayout === 'function') {
         if (tabs.length < 4) {
             toggleQuadMode();
+            if (activeTabId === tabId) {
+                const nextTab = tabs[Math.max(0, idx - 1)];
+                activateTab(nextTab.id);
+            }
         } else {
+            quadSlotTabIds = quadSlotTabIds.map(id => id === tabId ? null : id);
+            if (activeTabId === tabId) {
+                const fallback = quadSlotTabIds.find(id => id && tabs.some(x => x.id === id));
+                activeTabId = fallback || tabs[0].id;
+            }
             updateQuadLayout();
+            selectQuadPane(activeTabId);
         }
+        return;
+    }
+
+    if (activeTabId === tabId) {
+        const nextTab = tabs[Math.max(0, idx - 1)];
+        activateTab(nextTab.id);
     }
 }
 
@@ -471,16 +568,28 @@ function updateNavState(webview) {
 }
 
 function updateOmnibox(rawUrl) {
-    if (!rawUrl || rawUrl.includes('start.html') || rawUrl.includes('fokk_start.html') || rawUrl.startsWith('file://')) {
+    const isStart = !rawUrl || rawUrl.includes('start.html') || rawUrl.includes('fokk_start.html') || rawUrl.startsWith('file://');
+    const btnAiDefuser = document.getElementById('btnAiDefuser');
+    const aiDefuserPanel = document.getElementById('aiDefuserPanel');
+
+    if (isStart) {
         urlInput.value = '';
         const engine = OMNIBOX_ENGINES[currentEngine] || OMNIBOX_ENGINES.bing;
         urlInput.placeholder = `Search with ${engine.name} or enter address`;
         if (btnBookmarkOmni) btnBookmarkOmni.classList.remove('active');
+        if (btnAiDefuser) {
+            btnAiDefuser.style.display = 'none';
+            btnAiDefuser.classList.remove('active', 'needs-defuse');
+        }
+        if (aiDefuserPanel) aiDefuserPanel.classList.add('hidden');
     } else {
         urlInput.value = rawUrl;
         const bookmarks = JSON.parse(localStorage.getItem('fokk_bookmarks') || '[]');
         if (btnBookmarkOmni) {
             btnBookmarkOmni.classList.toggle('active', bookmarks.some(b => b.url === rawUrl));
+        }
+        if (btnAiDefuser) {
+            btnAiDefuser.style.display = 'inline-flex';
         }
     }
 }
@@ -599,6 +708,9 @@ urlInput.addEventListener('keydown', (e) => {
         let targetUrl = '';
         if (/^https?:\/\//i.test(query)) {
             targetUrl = query;
+            if (targetUrl.startsWith('http://') && !targetUrl.includes('localhost') && !targetUrl.includes('127.0.0.1')) {
+                targetUrl = targetUrl.replace(/^http:\/\//i, 'https://');
+            }
         } else if (/^localhost(:\d+)?(\/.*)?$/i.test(query) || /^127\.0\.0\.1(:\d+)?(\/.*)?$/i.test(query)) {
             targetUrl = 'http://' + query;
         } else if (query.includes('.') && !query.includes(' ') && !query.endsWith('.')) {
@@ -665,6 +777,286 @@ if (btnBookmarkOmni) {
         localStorage.setItem('fokk_bookmarks', JSON.stringify(bookmarks));
     });
 }
+
+// =========================================================================
+// AI Defuser — Smart Access-Denied / Paywall / Consent Wall Bypass
+// =========================================================================
+(function initAiDefuser() {
+    const btnAiDefuser = document.getElementById('btnAiDefuser');
+    const aiDefuserPanel = document.getElementById('aiDefuserPanel');
+    const aiDefuserStatus = document.getElementById('aiDefuserStatus');
+    const aiDefuserActions = document.getElementById('aiDefuserActions');
+    if (!btnAiDefuser || !aiDefuserPanel) return;
+
+    // Signatures for access-denied / paywall / consent wall detection
+    const ACCESS_BLOCKED_SIGS = [
+        /access denied/i, /you don't have permission/i, /403 forbidden/i,
+        /reference #\d+\.\w+/, /edgesuite\.net/i, /blocked by/i,
+        /this content is not available/i, /country.*not.*available/i,
+        /geo.*blocked/i, /region.*restricted/i
+    ];
+    const PAYWALL_SIGS = [
+        /subscribe to (read|continue|access)/i, /this article is for subscribers/i,
+        /create a free account/i, /sign in to read/i, /premium content/i,
+        /you've used your free articles/i, /register to continue/i,
+        /paywall/i, /metered content/i
+    ];
+
+    let panelOpen = false;
+    let currentUrl = '';
+    let currentPageText = '';
+    let defuserState = 'idle'; // idle | scanning | blocked | paywall | clear
+
+    function openPanel() {
+        panelOpen = true;
+        btnAiDefuser.classList.add('active');
+        aiDefuserPanel.classList.remove('hidden');
+        scanPage();
+    }
+
+    function closePanel() {
+        panelOpen = false;
+        btnAiDefuser.classList.remove('active');
+        aiDefuserPanel.classList.add('hidden');
+    }
+    window.closeAiDefuserPanel = closePanel;
+
+    btnAiDefuser.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (panelOpen) { closePanel(); return; }
+        openPanel();
+    });
+
+    document.addEventListener('click', (e) => {
+        if (panelOpen && !aiDefuserPanel.contains(e.target) && e.target !== btnAiDefuser) {
+            closePanel();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && panelOpen) {
+            closePanel();
+        }
+    });
+
+    // Auto-scan on navigation
+    function hookWebviewForDefuser(webview) {
+        webview.addEventListener('focus', closePanel);
+        webview.addEventListener('did-start-loading', () => {
+            if (panelOpen) closePanel();
+            btnAiDefuser.classList.remove('needs-defuse');
+        });
+        webview.addEventListener('did-navigate', () => {
+            if (panelOpen) scanPage();
+            // Auto-detect and show pulsing indicator on blocked pages
+            setTimeout(() => autoDetect(webview), 1500);
+        });
+        webview.addEventListener('did-fail-load', () => {
+            if (panelOpen) {
+                setStatus('blocked', 'Page failed to load — network block or access denied.');
+                renderActions('blocked');
+            }
+        });
+    }
+
+    // Hook into tab creation by watching viewsContainer
+    const viewsContainer = document.getElementById('viewsContainer');
+    if (viewsContainer) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach(m => {
+                m.addedNodes.forEach(node => {
+                    if (node.tagName === 'WEBVIEW') hookWebviewForDefuser(node);
+                });
+            });
+        });
+        observer.observe(viewsContainer, { childList: true, subtree: true });
+        // Hook already-existing webviews
+        viewsContainer.querySelectorAll('webview').forEach(hookWebviewForDefuser);
+    }
+
+    function autoDetect(webview) {
+        try {
+            const u = (typeof webview.getURL === 'function') ? webview.getURL() : '';
+            if (!u || u.startsWith('file://') || u.includes('start.html')) {
+                btnAiDefuser.classList.remove('needs-defuse', 'active');
+                return;
+            }
+            webview.executeJavaScript(`
+                (function() {
+                    var txt = (document.title + ' ' + (document.body ? document.body.innerText.substring(0, 1500) : '')).toLowerCase();
+                    var isBlocked = /access denied|you don.t have permission|403 forbidden|reference #\\d|edgesuite/.test(txt);
+                    var isPaywall = /subscribe to|this article is for subscribers|sign in to read|you.ve used your free|register to continue/.test(txt);
+                    return { isBlocked: isBlocked, isPaywall: isPaywall, title: document.title };
+                })();
+            `).then((result) => {
+                if (result && (result.isBlocked || result.isPaywall)) {
+                    btnAiDefuser.classList.add('needs-defuse');
+                    btnAiDefuser.setAttribute('title', result.isBlocked
+                        ? 'AI Defuser — Access blocked detected! Click to bypass'
+                        : 'AI Defuser — Paywall detected! Click to bypass');
+                } else {
+                    btnAiDefuser.classList.remove('needs-defuse');
+                    btnAiDefuser.setAttribute('title', 'AI Defuser — Bypass access blocks, paywalls & consent walls');
+                }
+            }).catch(() => {});
+        } catch (_) {}
+    }
+
+    function setStatus(type, msg) {
+        defuserState = type;
+        const colors = { scanning: '#8A9BC1', blocked: '#F43F5E', paywall: '#F59E0B', clear: '#22C55E', idle: '#8A9BC1' };
+        aiDefuserStatus.textContent = msg;
+        aiDefuserStatus.style.color = colors[type] || '#8A9BC1';
+        // Pulse the button on blocked/paywall
+        if (type === 'blocked' || type === 'paywall') {
+            btnAiDefuser.classList.add('needs-defuse');
+        } else if (type === 'clear') {
+            btnAiDefuser.classList.remove('needs-defuse');
+        }
+    }
+
+    function renderActions(type) {
+        aiDefuserActions.innerHTML = '';
+        if (type === 'blocked') {
+            const actions = [
+                { label: 'Bypass via Archive.org', fn: bypassArchive, color: '#00E5FF' },
+                { label: 'Stealth Reload (new headers)', fn: stealthReload, color: '#00E5FF' },
+                { label: 'Open in Reader Mode', fn: openReader, color: '#A78BFA' }
+            ];
+            actions.forEach(a => {
+                const btn = document.createElement('button');
+                btn.className = 'ai-defuser-action-btn';
+                btn.textContent = a.label;
+                btn.style.borderColor = a.color;
+                btn.style.color = a.color;
+                btn.onclick = a.fn;
+                aiDefuserActions.appendChild(btn);
+            });
+        } else if (type === 'paywall') {
+            const actions = [
+                { label: 'Bypass Paywall via Archive', fn: bypassArchive, color: '#F59E0B' },
+                { label: 'Extract Article (Reader)', fn: openReader, color: '#A78BFA' },
+                { label: 'Google Cache Version', fn: openGoogleCache, color: '#00E5FF' }
+            ];
+            actions.forEach(a => {
+                const btn = document.createElement('button');
+                btn.className = 'ai-defuser-action-btn';
+                btn.textContent = a.label;
+                btn.style.borderColor = a.color;
+                btn.style.color = a.color;
+                btn.onclick = a.fn;
+                aiDefuserActions.appendChild(btn);
+            });
+        }
+    }
+
+    function scanPage() {
+        const active = getActiveWebview();
+        if (!active) { setStatus('idle', 'No active page to scan.'); return; }
+        currentUrl = active.getURL();
+        if (!currentUrl || currentUrl.startsWith('file://')) {
+            setStatus('idle', 'No external page loaded.');
+            aiDefuserActions.innerHTML = '';
+            return;
+        }
+        setStatus('scanning', 'Scanning page for blocks and paywalls...');
+        aiDefuserActions.innerHTML = '';
+        active.executeJavaScript(`
+            (function() {
+                var title = document.title || '';
+                var txt = (title + ' ' + (document.body ? document.body.innerText.substring(0, 3000) : '')).toLowerCase();
+                var metaRobots = '';
+                var m = document.querySelector('meta[name="robots"]');
+                if (m) metaRobots = m.content;
+                return { title: title, text: txt, metaRobots: metaRobots };
+            })();
+        `).then((result) => {
+            if (!result) { setStatus('idle', 'Could not read page content.'); return; }
+            currentPageText = result.text || '';
+            const isBlocked = ACCESS_BLOCKED_SIGS.some(r => r.test(currentPageText));
+            const isPaywall = PAYWALL_SIGS.some(r => r.test(currentPageText));
+            if (isBlocked) {
+                setStatus('blocked', 'Access Denied detected — CDN block or geo-restriction.');
+                renderActions('blocked');
+            } else if (isPaywall) {
+                setStatus('paywall', 'Paywall or login wall detected on this page.');
+                renderActions('paywall');
+            } else {
+                setStatus('clear', 'Page is clean — no blocks or paywalls detected.');
+                aiDefuserActions.innerHTML = '';
+            }
+        }).catch(() => {
+            setStatus('idle', 'Could not inspect page. Try a manual bypass below.');
+        });
+    }
+
+    // --- Bypass Methods ---
+
+    function bypassArchive() {
+        const active = getActiveWebview();
+        if (!active) return;
+        const url = active.getURL() || currentUrl;
+        if (!url || url.startsWith('file://')) return;
+        const archiveUrl = 'https://web.archive.org/web/' + encodeURIComponent(url);
+        active.loadURL(archiveUrl);
+        closePanel();
+        showToast('Loading Wayback Machine archive...');
+    }
+
+    function stealthReload() {
+        const active = getActiveWebview();
+        if (!active) return;
+        const url = active.getURL() || currentUrl;
+        if (!url || url.startsWith('file://')) return;
+        // Reload with fresh session context — clears cookies for this domain and reloads
+        active.executeJavaScript(`
+            (function() {
+                // Clear consent/block cookies
+                var domain = window.location.hostname;
+                document.cookie.split(';').forEach(function(c) {
+                    var name = c.split('=')[0].trim();
+                    document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=' + domain;
+                    document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.' + domain;
+                });
+            })();
+        `).then(() => {
+            active.reloadIgnoringCache();
+            closePanel();
+            showToast('Stealth reload — cache cleared & cookies reset.');
+        }).catch(() => {
+            active.reloadIgnoringCache();
+            closePanel();
+            showToast('Reloading with stealth headers...');
+        });
+    }
+
+    function openReader() {
+        closePanel();
+        if (typeof toggleReaderMode === 'function') toggleReaderMode();
+        else showToast('Reader Mode activated.');
+    }
+
+    function openGoogleCache() {
+        const active = getActiveWebview();
+        if (!active) return;
+        const url = active.getURL() || currentUrl;
+        if (!url || url.startsWith('file://')) return;
+        const cacheUrl = 'https://webcache.googleusercontent.com/search?q=cache:' + encodeURIComponent(url);
+        active.loadURL(cacheUrl);
+        closePanel();
+        showToast('Loading Google Cache version...');
+    }
+
+    // Quick action buttons in panel
+    const adfArchive = document.getElementById('adfArchive');
+    const adfReader = document.getElementById('adfReader');
+    const adfGoogle = document.getElementById('adfGoogle');
+    const adfReload = document.getElementById('adfReload');
+    if (adfArchive) adfArchive.onclick = bypassArchive;
+    if (adfReader) adfReader.onclick = openReader;
+    if (adfGoogle) adfGoogle.onclick = openGoogleCache;
+    if (adfReload) adfReload.onclick = stealthReload;
+})();
 
 // 4. Desktop Browser Menu & Daily Essentials
 if (btnMenu && desktopBrowserMenu) {
@@ -987,8 +1379,7 @@ if (actDesktopUA) {
         desktopBrowserMenu.classList.add('hidden');
         isMobileUA = !isMobileUA;
         const mobileUA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36';
-        const desktopUA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-        active.setUserAgent(isMobileUA ? mobileUA : desktopUA);
+        active.setUserAgent(isMobileUA ? mobileUA : PLATFORM_USER_AGENT);
         active.reload();
         showToast(isMobileUA ? 'Switched to Mobile User-Agent' : 'Switched to Desktop User-Agent');
     };
@@ -2641,8 +3032,68 @@ if (commandHudInput) {
 const btnSplitView = document.getElementById('btnSplitView');
 const splitDivider = document.getElementById('splitDivider');
 let isSplitViewActive = false;
+let splitLeftTabId = null;
+let splitRightTabId = null;
 let splitSecondaryTabId = null;
+let lastActiveDualPaneSide = 'left';
 let splitRatio = 0.5;
+
+function selectDualPane(tabId) {
+    if (!isSplitViewActive || !tabId) return;
+    if (tabId !== splitLeftTabId && tabId !== splitRightTabId) return;
+
+    activeTabId = tabId;
+    lastActiveDualPaneSide = (tabId === splitRightTabId) ? 'right' : 'left';
+
+    tabs.forEach(t => {
+        const isTarget = t.id === tabId;
+        t.el.classList.toggle('active', isTarget);
+        t.webview.classList.toggle('active', isTarget);
+        t.webview.classList.toggle('is-active-split-pane', isTarget);
+    });
+
+    const targetTab = tabs.find(t => t.id === tabId);
+    if (targetTab) {
+        let u = '';
+        try { u = targetTab.webview.getURL ? targetTab.webview.getURL() : ''; } catch (_) {}
+        updateOmnibox(u);
+        updateNavState(targetTab.webview);
+        if (shieldCountText) {
+            shieldCountText.textContent = (u.startsWith('http') && targetTab.blockedCount) ? targetTab.blockedCount : '0';
+        }
+    }
+
+    document.querySelectorAll('.split-pane-header.dual-header').forEach(h => {
+        const isHActive = h.dataset.tabId === tabId;
+        h.classList.toggle('is-active-header', isHActive);
+        const badge = h.querySelector('.split-pane-badge');
+        if (badge && h.dataset.baseLabel) {
+            badge.textContent = isHActive ? `${h.dataset.baseLabel} • Active` : h.dataset.baseLabel;
+        }
+    });
+}
+
+function handleGuestFocus(guestWebContentsId) {
+    const matchingTab = tabs.find(t => {
+        try {
+            return t.webview && typeof t.webview.getWebContentsId === 'function' && t.webview.getWebContentsId() === guestWebContentsId;
+        } catch (_) {
+            return false;
+        }
+    });
+    if (matchingTab) {
+        if (isSplitViewActive && (matchingTab.id === splitLeftTabId || matchingTab.id === splitRightTabId)) {
+            if (activeTabId !== matchingTab.id) {
+                selectDualPane(matchingTab.id);
+            }
+        } else if (isQuadViewActive && quadSlotTabIds.includes(matchingTab.id)) {
+            if (activeTabId !== matchingTab.id) {
+                selectQuadPane(matchingTab.id);
+            }
+        }
+    }
+}
+window.handleGuestFocus = handleGuestFocus;
 
 function toggleSplitView() {
     if (isQuadViewActive) {
@@ -2654,11 +3105,13 @@ function toggleSplitView() {
     if (!isSplitViewActive) {
         viewsContainer.classList.remove('split-view-active');
         if (splitDivider) splitDivider.classList.add('hidden');
+        splitLeftTabId = null;
+        splitRightTabId = null;
         splitSecondaryTabId = null;
-        document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
+        document.querySelectorAll('.split-pane-header.dual-header').forEach(h => h.remove());
         tabs.forEach(t => {
             t.webview.style.width = '';
-            t.webview.classList.remove('split-primary', 'split-secondary');
+            t.webview.classList.remove('split-primary', 'split-secondary', 'is-active-split-pane');
             t.webview.style.display = t.id === activeTabId ? 'flex' : 'none';
         });
         showToast('Split View Disabled');
@@ -2674,63 +3127,86 @@ function toggleSplitView() {
         activeTabId = curActive;
     }
 
-    const other = tabs.find(t => t.id !== activeTabId);
-    if (other) {
-        splitSecondaryTabId = other.id;
-    }
+    splitLeftTabId = activeTabId;
+    const other = tabs.find(t => t.id !== splitLeftTabId);
+    splitRightTabId = other ? other.id : null;
+    splitSecondaryTabId = splitRightTabId;
+    lastActiveDualPaneSide = 'left';
 
     updateSplitLayout();
+    selectDualPane(splitLeftTabId);
     showToast('Split View Active (Side-by-Side Dual Browsing)');
 }
 
 function updateSplitLayout() {
     if (!isSplitViewActive) return;
-    const primary = tabs.find(t => t.id === activeTabId);
-    let secondary = tabs.find(t => t.id === splitSecondaryTabId);
-    if (!secondary || secondary === primary) {
-        secondary = tabs.find(t => t.id !== activeTabId);
-        if (secondary) splitSecondaryTabId = secondary.id;
+
+    let leftTab = tabs.find(t => t.id === splitLeftTabId);
+    let rightTab = tabs.find(t => t.id === splitRightTabId);
+
+    if (!leftTab && !rightTab) {
+        leftTab = tabs[0];
+        rightTab = tabs.length > 1 ? tabs[1] : null;
+        if (leftTab) splitLeftTabId = leftTab.id;
+        if (rightTab) splitRightTabId = rightTab.id;
+    } else if (!leftTab && rightTab) {
+        leftTab = tabs.find(t => t.id !== rightTab.id);
+        if (leftTab) splitLeftTabId = leftTab.id;
+    } else if (leftTab && !rightTab) {
+        rightTab = tabs.find(t => t.id !== leftTab.id);
+        if (rightTab) splitRightTabId = rightTab.id;
+    } else if (leftTab && rightTab && leftTab.id === rightTab.id) {
+        rightTab = tabs.find(t => t.id !== leftTab.id);
+        if (rightTab) splitRightTabId = rightTab.id;
+    }
+    splitSecondaryTabId = splitRightTabId;
+
+    if (!activeTabId || (activeTabId !== splitLeftTabId && activeTabId !== splitRightTabId)) {
+        activeTabId = splitLeftTabId || (leftTab ? leftTab.id : null);
     }
 
     tabs.forEach(t => {
-        if (t === primary) {
+        if (t === leftTab) {
             t.webview.style.display = 'flex';
             t.webview.style.width = `calc(${splitRatio * 100}% - 3px)`;
             t.webview.classList.add('split-primary');
             t.webview.classList.remove('split-secondary');
-        } else if (t === secondary) {
+            t.webview.classList.toggle('is-active-split-pane', t.id === activeTabId);
+        } else if (t === rightTab) {
             t.webview.style.display = 'flex';
             t.webview.style.width = `calc(${(1 - splitRatio) * 100}% - 3px)`;
             t.webview.classList.add('split-secondary');
             t.webview.classList.remove('split-primary');
+            t.webview.classList.toggle('is-active-split-pane', t.id === activeTabId);
         } else {
             t.webview.style.display = 'none';
             t.webview.style.width = '';
-            t.webview.classList.remove('split-primary', 'split-secondary');
+            t.webview.classList.remove('split-primary', 'split-secondary', 'is-active-split-pane');
         }
     });
 
-    // Update / inject pane headers
-    renderSplitPaneHeaders(primary, secondary);
+    renderSplitPaneHeaders(leftTab, rightTab);
 }
 
-function renderSplitPaneHeaders(primary, secondary) {
-    // Remove old headers
-    document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
+function renderSplitPaneHeaders(leftTab, rightTab) {
+    document.querySelectorAll('.split-pane-header.dual-header').forEach(h => h.remove());
 
     function makePaneHeader(tab, isPrimary) {
         if (!tab || !tab.webview) return;
-        const existing = tab.webview.previousElementSibling;
-        if (existing && existing.classList.contains('split-pane-header')) existing.remove();
 
         let currentUrl = '';
         try { currentUrl = tab.webview.getURL ? tab.webview.getURL() : ''; } catch (_) {}
         let displayUrl = currentUrl || 'New Tab';
         try { displayUrl = new URL(currentUrl).hostname || 'New Tab'; } catch (_) {}
 
+        const isActive = tab.id === activeTabId;
         const header = document.createElement('div');
-        header.className = 'split-pane-header';
+        header.className = 'split-pane-header dual-header' + (isActive ? ' is-active-header' : '');
         header.dataset.pane = isPrimary ? 'primary' : 'secondary';
+        header.dataset.tabId = tab.id;
+        const baseLabel = isPrimary ? 'Left Pane' : 'Right Pane';
+        header.dataset.baseLabel = baseLabel;
+
         if (isPrimary) {
             header.style.left = '0';
             header.style.width = `calc(${splitRatio * 100}% - 3px)`;
@@ -2743,8 +3219,8 @@ function renderSplitPaneHeaders(primary, secondary) {
 
         header.innerHTML = `
             <div class="split-pane-info">
-                <span class="split-pane-badge">${isPrimary ? 'Left Pane' : 'Right Pane'}</span>
-                <span class="split-pane-url" title="${currentUrl}">${displayUrl}</span>
+                <span class="split-pane-badge">${isActive ? `${baseLabel} • Active` : baseLabel}</span>
+                <input type="text" class="split-pane-nav-input" value="${currentUrl}" placeholder="Enter address or search...">
             </div>
             <div class="split-pane-actions">
                 <button class="split-pane-btn btn-toggle-quad" title="Switch to Quad 4-Pane Grid (Pro)">
@@ -2762,47 +3238,105 @@ function renderSplitPaneHeaders(primary, secondary) {
             </div>
         `;
 
-        // Insert header just before the webview in its parent
         viewsContainer.insertBefore(header, tab.webview);
+
+        // Clicking anywhere on the header selects this pane
+        header.addEventListener('mousedown', () => {
+            selectDualPane(tab.id);
+        });
+
+        // Interactive address bar inside each dual split header
+        const navInput = header.querySelector('.split-pane-nav-input');
+        if (navInput) {
+            navInput.addEventListener('focus', () => {
+                selectDualPane(tab.id);
+                navInput.select();
+            });
+
+            navInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    let dest = navInput.value.trim();
+                    if (dest) {
+                        selectDualPane(tab.id);
+                        if (!dest.startsWith('http://') && !dest.startsWith('https://') && !dest.startsWith('file:') && !dest.startsWith('fokk:')) {
+                            if (dest.includes('.') && !dest.includes(' ')) {
+                                dest = 'https://' + dest;
+                            } else {
+                                dest = 'https://www.bing.com/search?q=' + encodeURIComponent(dest);
+                            }
+                        }
+                        tab.webview.loadURL(dest);
+                        updateOmnibox(dest);
+                        navInput.blur();
+                    }
+                }
+            });
+        }
+
+        // Keep input updated on navigation
+        if (!tab.webview.__dualSplitBound) {
+            tab.webview.__dualSplitBound = true;
+            tab.webview.addEventListener('did-navigate', (e) => {
+                const curH = document.querySelector(`.split-pane-header.dual-header[data-tab-id="${tab.id}"]`);
+                if (curH) {
+                    const inp = curH.querySelector('.split-pane-nav-input');
+                    if (inp && document.activeElement !== inp) inp.value = e.url;
+                }
+                if (isSplitViewActive && tab.id === activeTabId) {
+                    updateOmnibox(e.url);
+                }
+            });
+
+            tab.webview.addEventListener('focus', () => {
+                if (isSplitViewActive) selectDualPane(tab.id);
+            });
+        }
 
         // 0. Toggle Quad Mode (Pro)
         const btnQuad = header.querySelector('.btn-toggle-quad');
         if (btnQuad) {
-            btnQuad.onclick = () => {
+            btnQuad.onclick = (e) => {
+                e.stopPropagation();
                 toggleQuadMode();
             };
         }
 
         // 1. Swap Panes
-        header.querySelector('.btn-swap-panes').onclick = () => {
+        header.querySelector('.btn-swap-panes').onclick = (e) => {
+            e.stopPropagation();
             if (!isSplitViewActive) return;
-            const oldActive = activeTabId;
-            activeTabId = splitSecondaryTabId;
-            splitSecondaryTabId = oldActive;
+            const tmp = splitLeftTabId;
+            splitLeftTabId = splitRightTabId;
+            splitRightTabId = tmp;
+            splitSecondaryTabId = splitRightTabId;
             updateSplitLayout();
+            selectDualPane(activeTabId);
             showToast('Panes swapped');
         };
 
         // 2. Keep Only This Pane (Full Window, exit split without closing other tab)
-        header.querySelector('.btn-focus-pane').onclick = () => {
+        header.querySelector('.btn-focus-pane').onclick = (e) => {
+            e.stopPropagation();
             activeTabId = tab.id;
             isSplitViewActive = false;
             if (btnSplitView) btnSplitView.classList.remove('active');
             viewsContainer.classList.remove('split-view-active');
             if (splitDivider) splitDivider.classList.add('hidden');
-            document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
+            document.querySelectorAll('.split-pane-header.dual-header').forEach(h => h.remove());
             tabs.forEach(t => {
                 t.webview.style.width = '';
-                t.webview.classList.remove('split-primary', 'split-secondary');
+                t.webview.classList.remove('split-primary', 'split-secondary', 'is-active-split-pane');
                 t.webview.style.display = t.id === activeTabId ? 'flex' : 'none';
             });
             showToast(`Focused on ${displayUrl}`);
         };
 
         // 3. Close This Tab completely (other tab takes over full window)
-        header.querySelector('.btn-close-pane').onclick = () => {
+        header.querySelector('.btn-close-pane').onclick = (e) => {
+            e.stopPropagation();
             const closingId = tab.id;
-            const otherTab = isPrimary ? secondary : primary;
+            const otherTab = isPrimary ? rightTab : leftTab;
             if (otherTab) {
                 activeTabId = otherTab.id;
             }
@@ -2810,10 +3344,10 @@ function renderSplitPaneHeaders(primary, secondary) {
             if (btnSplitView) btnSplitView.classList.remove('active');
             viewsContainer.classList.remove('split-view-active');
             if (splitDivider) splitDivider.classList.add('hidden');
-            document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
+            document.querySelectorAll('.split-pane-header.dual-header').forEach(h => h.remove());
             tabs.forEach(t => {
                 t.webview.style.width = '';
-                t.webview.classList.remove('split-primary', 'split-secondary');
+                t.webview.classList.remove('split-primary', 'split-secondary', 'is-active-split-pane');
                 t.webview.style.display = t.id === activeTabId ? 'flex' : 'none';
             });
             closeTab(closingId);
@@ -2821,14 +3355,44 @@ function renderSplitPaneHeaders(primary, secondary) {
         };
     }
 
-    if (primary) makePaneHeader(primary, true);
-    if (secondary) makePaneHeader(secondary, false);
+    if (leftTab) makePaneHeader(leftTab, true);
+    if (rightTab) makePaneHeader(rightTab, false);
 }
 
 // ==========================================================================
 // 8.1 Quad Multi-Split (2x2 Power Grid - Pro Feature)
 // ==========================================================================
 let isQuadViewActive = false;
+let quadSlotTabIds = [null, null, null, null];
+
+function selectQuadPane(tabId) {
+    if (!isQuadViewActive || !tabId) return;
+    activeTabId = tabId;
+
+    tabs.forEach(t => {
+        const isTarget = t.id === tabId;
+        t.el.classList.toggle('active', isTarget);
+        t.webview.classList.toggle('active', isTarget);
+        t.webview.classList.toggle('is-active-quad-pane', isTarget);
+    });
+
+    const targetTab = tabs.find(t => t.id === tabId);
+    if (targetTab) {
+        let u = '';
+        try { u = targetTab.webview.getURL ? targetTab.webview.getURL() : ''; } catch (_) {}
+        updateOmnibox(u);
+        updateNavState(targetTab.webview);
+    }
+
+    document.querySelectorAll('.split-pane-header.quad-header').forEach(h => {
+        const isHActive = h.dataset.tabId === tabId;
+        h.classList.toggle('is-active-header', isHActive);
+        const badge = h.querySelector('.split-pane-badge');
+        if (badge && h.dataset.baseLabel) {
+            badge.textContent = isHActive ? `${h.dataset.baseLabel} • Active` : h.dataset.baseLabel;
+        }
+    });
+}
 
 function toggleQuadMode() {
     isQuadViewActive = !isQuadViewActive;
@@ -2838,9 +3402,10 @@ function toggleQuadMode() {
         document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
         tabs.forEach(t => {
             t.webview.style.width = '';
-            t.webview.classList.remove('split-quad', 'split-primary', 'split-secondary');
+            t.webview.classList.remove('split-quad', 'is-active-quad-pane', 'split-primary', 'split-secondary');
             t.webview.style.display = t.id === activeTabId ? 'flex' : 'none';
         });
+        quadSlotTabIds = [null, null, null, null];
         showToast('Quad Multi-Split Disabled');
         return;
     }
@@ -2861,6 +3426,11 @@ function toggleQuadMode() {
     }
     activeTabId = initialActive;
 
+    // Stable 4 slots: current active tab in slot 0, other tabs in slots 1, 2, 3
+    const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
+    const otherTabs = tabs.filter(t => t.id !== activeTab.id);
+    quadSlotTabIds = [activeTab.id, otherTabs[0].id, otherTabs[1].id, otherTabs[2].id];
+
     viewsContainer.classList.add('quad-view-active');
     if (splitDivider) splitDivider.classList.add('hidden');
 
@@ -2871,21 +3441,37 @@ function toggleQuadMode() {
 function updateQuadLayout() {
     if (!isQuadViewActive) return;
 
-    // We select the active tab and the other tabs up to 4
-    const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
-    const otherTabs = tabs.filter(t => t.id !== activeTab.id);
-    const quadTabs = [activeTab, ...otherTabs].slice(0, 4);
+    // Ensure all 4 slots have valid open tabs
+    for (let i = 0; i < 4; i++) {
+        if (!quadSlotTabIds[i] || !tabs.find(t => t.id === quadSlotTabIds[i])) {
+            const unused = tabs.find(t => !quadSlotTabIds.includes(t.id));
+            if (unused) {
+                quadSlotTabIds[i] = unused.id;
+            } else {
+                const cur = activeTabId;
+                createTab(START_PAGE_URL);
+                activeTabId = cur;
+                quadSlotTabIds[i] = tabs[tabs.length - 1].id;
+            }
+        }
+    }
+
+    const quadTabs = quadSlotTabIds.map(id => tabs.find(t => t.id === id)).filter(Boolean);
 
     tabs.forEach(t => {
-        if (quadTabs.includes(t)) {
+        const slotIdx = quadTabs.indexOf(t);
+        if (slotIdx !== -1) {
             t.webview.style.display = 'flex';
             t.webview.style.width = '100%';
             t.webview.classList.add('split-quad');
+            t.webview.dataset.quadIndex = slotIdx.toString();
+            t.webview.classList.toggle('is-active-quad-pane', t.id === activeTabId);
             t.webview.classList.remove('split-primary', 'split-secondary');
         } else {
             t.webview.style.display = 'none';
             t.webview.style.width = '';
-            t.webview.classList.remove('split-quad', 'split-primary', 'split-secondary');
+            delete t.webview.dataset.quadIndex;
+            t.webview.classList.remove('split-quad', 'is-active-quad-pane', 'split-primary', 'split-secondary');
         }
     });
 
@@ -2895,7 +3481,7 @@ function updateQuadLayout() {
 function renderQuadPaneHeaders(quadTabs) {
     document.querySelectorAll('.split-pane-header').forEach(h => h.remove());
 
-    const paneLabels = ['Top Left (Active)', 'Top Right', 'Bottom Left', 'Bottom Right'];
+    const paneLabels = ['Top Left', 'Top Right', 'Bottom Left', 'Bottom Right'];
 
     quadTabs.forEach((tab, index) => {
         if (!tab || !tab.webview) return;
@@ -2905,14 +3491,17 @@ function renderQuadPaneHeaders(quadTabs) {
         let displayUrl = currentUrl || 'New Tab';
         try { displayUrl = new URL(currentUrl).hostname || 'New Tab'; } catch (_) {}
 
+        const isActive = tab.id === activeTabId;
         const header = document.createElement('div');
-        header.className = 'split-pane-header quad-header';
+        header.className = 'split-pane-header quad-header' + (isActive ? ' is-active-header' : '');
         header.dataset.quadIndex = index.toString();
+        header.dataset.tabId = tab.id;
+        header.dataset.baseLabel = paneLabels[index] || `Pane ${index + 1}`;
 
         header.innerHTML = `
             <div class="split-pane-info">
-                <span class="split-pane-badge">${paneLabels[index] || `Pane ${index + 1}`}</span>
-                <span class="split-pane-url" title="${currentUrl}">${displayUrl}</span>
+                <span class="split-pane-badge">${isActive ? `${header.dataset.baseLabel} • Active` : header.dataset.baseLabel}</span>
+                <input type="text" class="quad-pane-nav-input" value="${currentUrl}" placeholder="Enter address or search...">
             </div>
             <div class="split-pane-actions">
                 <button class="split-pane-btn btn-switch-dual" title="Switch to Dual Split View">
@@ -2929,9 +3518,64 @@ function renderQuadPaneHeaders(quadTabs) {
 
         viewsContainer.insertBefore(header, tab.webview);
 
+        // Clicking anywhere on the header selects this pane
+        header.addEventListener('mousedown', () => {
+            selectQuadPane(tab.id);
+        });
+
+        // Interactive address bar inside each quad header
+        const navInput = header.querySelector('.quad-pane-nav-input');
+        if (navInput) {
+            navInput.addEventListener('focus', () => {
+                selectQuadPane(tab.id);
+                navInput.select();
+            });
+
+            navInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    let dest = navInput.value.trim();
+                    if (dest) {
+                        selectQuadPane(tab.id);
+                        if (!dest.startsWith('http://') && !dest.startsWith('https://') && !dest.startsWith('file:') && !dest.startsWith('fokk:')) {
+                            if (dest.includes('.') && !dest.includes(' ')) {
+                                dest = 'https://' + dest;
+                            } else {
+                                dest = 'https://www.bing.com/search?q=' + encodeURIComponent(dest);
+                            }
+                        }
+                        tab.webview.loadURL(dest);
+                        updateOmnibox(dest);
+                        navInput.blur();
+                    }
+                }
+            });
+        }
+
+        // Keep input updated on navigation
+        if (!tab.webview.__quadNavBound) {
+            tab.webview.__quadNavBound = true;
+            tab.webview.addEventListener('did-navigate', (e) => {
+                const curH = document.querySelector(`.split-pane-header.quad-header[data-tab-id="${tab.id}"]`);
+                if (curH) {
+                    const inp = curH.querySelector('.quad-pane-nav-input');
+                    if (inp && document.activeElement !== inp) inp.value = e.url;
+                }
+                if (isQuadViewActive && tab.id === activeTabId) {
+                    updateOmnibox(e.url);
+                }
+            });
+
+            // Focus on webview focuses this quad slot
+            tab.webview.addEventListener('focus', () => {
+                if (isQuadViewActive) selectQuadPane(tab.id);
+            });
+        }
+
         const btnDual = header.querySelector('.btn-switch-dual');
         if (btnDual) {
-            btnDual.onclick = () => {
+            btnDual.onclick = (e) => {
+                e.stopPropagation();
                 toggleQuadMode();
                 if (!isSplitViewActive) toggleSplitView();
             };
@@ -2939,7 +3583,8 @@ function renderQuadPaneHeaders(quadTabs) {
 
         const btnFocus = header.querySelector('.btn-focus-pane');
         if (btnFocus) {
-            btnFocus.onclick = () => {
+            btnFocus.onclick = (e) => {
+                e.stopPropagation();
                 activeTabId = tab.id;
                 toggleQuadMode();
                 activateTab(tab.id);
@@ -2949,8 +3594,11 @@ function renderQuadPaneHeaders(quadTabs) {
 
         const btnClose = header.querySelector('.btn-close-pane');
         if (btnClose) {
-            btnClose.onclick = () => {
-                closeTab(tab.id);
+            btnClose.onclick = (e) => {
+                e.stopPropagation();
+                const closingId = tab.id;
+                quadSlotTabIds = quadSlotTabIds.map(id => id === closingId ? null : id);
+                closeTab(closingId);
             };
         }
     });

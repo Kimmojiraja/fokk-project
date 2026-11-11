@@ -22,6 +22,9 @@ app.commandLine.appendSwitch('enforce-webrtc-ip-permission-check');
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
 
+// Native Passkey & WebAuthn / FIDO2 Authenticator Support (Google 2FA, Passkeys, Windows Hello)
+app.commandLine.appendSwitch('enable-features', 'WebAuthentication,WebAuthenticationWindows');
+
 // Paths
 const devAssetsDir = path.resolve(__dirname, '..', '..', 'app', 'src', 'main', 'assets');
 const packagedAssetsDir = path.join(process.resourcesPath || '', 'assets');
@@ -60,7 +63,23 @@ const DOH_PROVIDERS = {
     google: 'https://dns.google/dns-query'
 };
 
-const CHROME_USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+function getPlatformUserAgent() {
+    if (process.platform === 'win32') {
+        return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+    } else if (process.platform === 'darwin') {
+        return 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+    } else {
+        return 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+    }
+}
+
+function getPlatformClientHint() {
+    if (process.platform === 'win32') return '"Windows"';
+    if (process.platform === 'darwin') return '"macOS"';
+    return '"Linux"';
+}
+
+const CHROME_USER_AGENT = getPlatformUserAgent();
 
 let statsUpdateTimer = null;
 function broadcastStatsThrottled() {
@@ -96,17 +115,42 @@ function setupAdblockingForSession(sess) {
 
     sess.webRequest.onBeforeSendHeaders((details, callback) => {
         const headers = { ...details.requestHeaders };
-        // Ensure clean Google Chrome User-Agent is presented (fixes WhatsApp Web device linking)
+        // Ensure clean Google Chrome User-Agent & Client Hints are presented (fixes Akamai / Sky News / WhatsApp)
         headers['User-Agent'] = CHROME_USER_AGENT;
-        if (!headers['sec-ch-ua'] || details.url.includes('whatsapp.com')) {
-            headers['sec-ch-ua'] = '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"';
-            headers['sec-ch-ua-mobile'] = '?0';
-            headers['sec-ch-ua-platform'] = '"Linux"';
+        headers['sec-ch-ua'] = '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"';
+        headers['sec-ch-ua-mobile'] = '?0';
+        headers['sec-ch-ua-platform'] = getPlatformClientHint();
+        if (headers['sec-ch-ua-full-version-list']) {
+            headers['sec-ch-ua-full-version-list'] = '"Chromium";v="124.0.6367.243", "Google Chrome";v="124.0.6367.243", "Not-A.Brand";v="99.0.0.0"';
+        }
+
+        // Strip any Electron-identifying headers
+        for (const k of Object.keys(headers)) {
+            const lk = k.toLowerCase();
+            if (lk === 'x-requested-with' || (typeof headers[k] === 'string' && headers[k].toLowerCase().includes('electron'))) {
+                delete headers[k];
+            }
+        }
+
+        // Ensure realistic browser headers that CDNs (Akamai, Sky News, Guardian) require
+        if (!headers['Accept-Language']) {
+            headers['Accept-Language'] = 'en-GB,en;q=0.9,en-US;q=0.8';
+        }
+        // Upgrade-Insecure-Requests is standard ONLY for top-level/subframe navigations (never for XHR/fetch polling in 2FA/OAuth)
+        if ((details.resourceType === 'mainFrame' || details.resourceType === 'subFrame') && !headers['Upgrade-Insecure-Requests']) {
+            headers['Upgrade-Insecure-Requests'] = '1';
         }
         callback({ requestHeaders: headers });
     });
 
     sess.webRequest.onBeforeRequest((details, callback) => {
+        // Enforce HTTPS upgrade for all external web requests
+        if (details.url.startsWith('http://') && !details.url.includes('localhost') && !details.url.includes('127.0.0.1')) {
+            const secureUrl = details.url.replace(/^http:\/\//i, 'https://');
+            callback({ redirectURL: secureUrl });
+            return;
+        }
+
         if (shieldEnabled && adblock.shouldBlock(details.url, details.resourceType)) {
             if (mainWindow && !mainWindow.isDestroyed()) {
                 try {
@@ -211,7 +255,16 @@ function createWindow() {
     // Setup network adblocker and VPN engine on default and persistent sessions
     setupAdblockingForSession(session.defaultSession);
     try {
-        setupAdblockingForSession(session.fromPartition('persist:fokk_default_session'));
+        const persistSess = session.fromPartition('persist:fokk_default_session');
+        setupAdblockingForSession(persistSess);
+        // Guarantee immediate disk flush when auth/session cookies change (fixes YouTube & Google sign-in persistence)
+        if (persistSess && persistSess.cookies) {
+            persistSess.cookies.on('changed', (event, cookie, cause, removed) => {
+                if (!removed && (cookie.domain.includes('google.') || cookie.domain.includes('youtube.') || cookie.domain.includes('github.'))) {
+                    persistSess.cookies.flushStore().catch(() => {});
+                }
+            });
+        }
     } catch (_) {}
 
     // Inject cosmetic ad defusers and configure universal popup/OAuth handling
@@ -229,12 +282,6 @@ function createWindow() {
             contents.on('did-navigate', runCosmeticFilters);
             contents.on('dom-ready', () => {
                 runCosmeticFilters();
-                if (stealthPoisonerScript) {
-                    const u = (contents.getURL ? contents.getURL() : '').toLowerCase();
-                    if (u && !u.startsWith('file:') && !u.startsWith('fokk:') && u !== 'about:blank') {
-                        contents.executeJavaScript(stealthPoisonerScript).catch(() => {});
-                    }
-                }
             });
             contents.on('did-navigate-in-page', runCosmeticFilters);
 
@@ -252,6 +299,7 @@ function createWindow() {
                             autoHideMenuBar: true,
                             backgroundColor: '#090A0C',
                             webPreferences: {
+                                partition: (contents.session && contents.session.partition) ? contents.session.partition : 'persist:fokk_default_session',
                                 contextIsolation: true,
                                 nodeIntegration: false,
                                 sandbox: true
@@ -294,7 +342,12 @@ function createWindow() {
                         width: 600,
                         height: 720,
                         autoHideMenuBar: true,
-                        backgroundColor: '#090A0C'
+                        backgroundColor: '#090A0C',
+                        webPreferences: {
+                            partition: (contents.session && contents.session.partition) ? contents.session.partition : 'persist:fokk_default_session',
+                            contextIsolation: true,
+                            nodeIntegration: false
+                        }
                     }
                 };
             });
@@ -315,6 +368,52 @@ ipcMain.on('fokk-get-preload-path', (event) => {
     event.returnValue = PRELOAD_PATH;
 });
 
+ipcMain.on('fokk-get-user-agent', (event) => {
+    event.returnValue = CHROME_USER_AGENT;
+});
+
+// AI Defuser: Stealth-fetch a URL server-side (bypasses browser-level CDN fingerprinting)
+const { net } = require('electron');
+ipcMain.handle('fokk-ai-defuser-fetch', async (event, targetUrl) => {
+    return new Promise((resolve) => {
+        try {
+            const request = net.request({
+                method: 'GET',
+                url: targetUrl,
+                redirect: 'follow'
+            });
+            request.setHeader('User-Agent', CHROME_USER_AGENT);
+            request.setHeader('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8');
+            request.setHeader('Accept-Language', 'en-GB,en;q=0.9,en-US;q=0.8');
+            request.setHeader('Accept-Encoding', 'gzip, deflate, br');
+            request.setHeader('Cache-Control', 'no-cache');
+            request.setHeader('Pragma', 'no-cache');
+            request.setHeader('Upgrade-Insecure-Requests', '1');
+            request.setHeader('Sec-Fetch-Site', 'none');
+            request.setHeader('Sec-Fetch-Mode', 'navigate');
+            request.setHeader('Sec-Fetch-User', '?1');
+            request.setHeader('Sec-Fetch-Dest', 'document');
+            request.setHeader('sec-ch-ua', '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"');
+            request.setHeader('sec-ch-ua-mobile', '?0');
+            request.setHeader('sec-ch-ua-platform', getPlatformClientHint());
+            const chunks = [];
+            request.on('response', (response) => {
+                const statusCode = response.statusCode;
+                response.on('data', (chunk) => chunks.push(chunk));
+                response.on('end', () => {
+                    const body = Buffer.concat(chunks).toString('utf8');
+                    resolve({ ok: statusCode >= 200 && statusCode < 400, status: statusCode, body });
+                });
+                response.on('error', () => resolve({ ok: false, status: 0, body: '' }));
+            });
+            request.on('error', () => resolve({ ok: false, status: 0, body: '' }));
+            request.end();
+        } catch (e) {
+            resolve({ ok: false, status: 0, body: '' });
+        }
+    });
+});
+
 ipcMain.on('fokk-win-min', () => {
     if (mainWindow) mainWindow.minimize();
 });
@@ -332,14 +431,36 @@ ipcMain.on('fokk-win-close', () => {
 
 // 2. Tab Navigation & Bridge Handlers
 ipcMain.on('fokk-open-url', (event, url) => {
+    let cleanUrl = url;
+    if (typeof cleanUrl === 'string' && cleanUrl.startsWith('http://') && !cleanUrl.includes('localhost') && !cleanUrl.includes('127.0.0.1')) {
+        cleanUrl = cleanUrl.replace(/^http:\/\//i, 'https://');
+    }
+    // If sent from a guest webview (e.g. start page or internal UI inside a tab/pane), load URL directly in that webview
+    if (event.sender && mainWindow && event.sender !== mainWindow.webContents && !event.sender.isDestroyed()) {
+        try {
+            event.sender.loadURL(cleanUrl);
+            return;
+        } catch (_) {}
+    }
     if (mainWindow) {
         mainWindow.webContents.executeJavaScript(`
             if (typeof loadUrlInActiveTab === 'function') {
-                loadUrlInActiveTab(${JSON.stringify(url)});
+                loadUrlInActiveTab(${JSON.stringify(cleanUrl)});
             } else if (typeof createTab === 'function') {
-                createTab(${JSON.stringify(url)});
+                createTab(${JSON.stringify(cleanUrl)});
             }
-        `);
+        `).catch(() => {});
+    }
+});
+
+ipcMain.on('fokk-pane-focus', (event) => {
+    if (mainWindow && event.sender && event.sender !== mainWindow.webContents && !event.sender.isDestroyed()) {
+        const guestId = event.sender.id;
+        mainWindow.webContents.executeJavaScript(`
+            if (typeof handleGuestFocus === 'function') {
+                handleGuestFocus(${guestId});
+            }
+        `).catch(() => {});
     }
 });
 
@@ -1006,11 +1127,11 @@ app.whenReady().then(() => {
     app.userAgentFallback = CHROME_USER_AGENT;
     createWindow();
 
-    // Configure AdGuard DoH default out-of-the-box (matching mobile Android DnsOverHttpsEngine)
+    // Configure DoH with automatic fallback so CDN geo-routing (Akamai/Cloudflare) functions correctly
     try {
         if (app.configureHostResolver) {
             app.configureHostResolver({
-                secureDnsMode: 'secure',
+                secureDnsMode: 'automatic',
                 secureDnsServers: [DOH_PROVIDERS.adguard]
             });
         }
@@ -1021,26 +1142,18 @@ app.whenReady().then(() => {
         newsService.getLiveNews('all', reg).catch(() => {});
     });
 
-    // Ensure any previously corrupted foreign Google session cookies are cleared
-    try {
-        const persistSess = session.fromPartition('persist:fokk_default_session');
-        const googleHosts = ['google.com', 'google.co.uk', 'accounts.google.com', 'youtube.com', 'google.co.in'];
-        googleHosts.forEach(host => {
-            persistSess.cookies.get({ domain: host }).then(cookies => {
-                if (cookies && cookies.length > 0) {
-                    cookies.forEach(c => {
-                        // Purge corrupted Firefox tokens (AEC, NID, __Host-GAPS, LSID, etc.)
-                        const u = 'https://' + (c.domain.startsWith('.') ? c.domain.slice(1) : c.domain) + c.path;
-                        persistSess.cookies.remove(u, c.name).catch(() => {});
-                    });
-                }
-            }).catch(() => {});
-        });
-    } catch (_) {}
-
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
+});
+
+app.on('before-quit', async () => {
+    try {
+        const persistSess = session.fromPartition('persist:fokk_default_session');
+        if (persistSess && persistSess.cookies) {
+            await persistSess.cookies.flushStore();
+        }
+    } catch (_) {}
 });
 
 app.on('window-all-closed', () => {

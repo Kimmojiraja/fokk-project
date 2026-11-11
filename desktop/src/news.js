@@ -1,6 +1,35 @@
 const https = require('https');
 const http = require('http');
 
+function cleanRssText(raw) {
+    if (!raw || typeof raw !== 'string') return '';
+    let text = raw.trim();
+    // 1. Strip CDATA wrappers
+    text = text.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
+    // 2. Decode entities (repeated to catch double-encoded entities like &amp;lt;)
+    for (let i = 0; i < 2; i++) {
+        text = text
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&apos;/g, "'")
+            .replace(/&#x27;/g, "'")
+            .replace(/&#x2F;/g, '/')
+            .replace(/&nbsp;/g, ' ');
+    }
+    // 3. Strip all HTML tags
+    text = text.replace(/<[^>]+>/g, ' ');
+    // 4. Strip leftover decimal/hex numeric entities
+    text = text.replace(/&#\d+;/g, '').replace(/&#x[0-9a-f]+;/gi, '');
+    // 5. Clean list numbers, bullets, link artifacts
+    text = text.replace(/^(\d+\.|\*|-|•)\s*/, '');
+    // 6. Normalize whitespace
+    text = text.replace(/\s+/g, ' ').trim();
+    return text;
+}
+
 class DesktopNewsService {
     constructor() {
         this.cache = new Map();
@@ -23,8 +52,8 @@ class DesktopNewsService {
                 all: [
                     { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/uk/rss.xml' },
                     { name: 'The Guardian', url: 'https://www.theguardian.com/uk/rss' },
-                    { name: 'Sky News', url: 'https://feeds.skynews.com/feeds/rss/uk.xml' },
                     { name: 'The Independent', url: 'https://www.independent.co.uk/news/uk/rss' },
+                    { name: 'Evening Standard', url: 'https://www.standard.co.uk/news/uk/rss' },
                     { name: 'BBC World', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' }
                 ]
             },
@@ -89,13 +118,13 @@ class DesktopNewsService {
                 world: [
                     { name: 'The Guardian', url: 'https://www.theguardian.com/world/rss' },
                     { name: 'NPR', url: 'https://feeds.npr.org/1004/rss.xml' },
-                    { name: 'Sky News', url: 'https://feeds.skynews.com/feeds/rss/world.xml' },
+                    { name: 'Al Jazeera', url: 'https://www.aljazeera.com/xml/rss/all.xml' },
                     { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' }
                 ],
                 all: [
                     { name: 'The Guardian', url: 'https://www.theguardian.com/international/rss' },
                     { name: 'NPR', url: 'https://feeds.npr.org/1001/rss.xml' },
-                    { name: 'Sky News', url: 'https://feeds.skynews.com/feeds/rss/world.xml' },
+                    { name: 'Reuters', url: 'https://news.google.com/rss/headlines/section/topic/WORLD' },
                     { name: 'BBC News', url: 'https://feeds.bbci.co.uk/news/rss.xml' },
                     { name: 'ABC News', url: 'https://abcnews.go.com/abcnews/topstories' }
                 ]
@@ -146,38 +175,33 @@ class DesktopNewsService {
             const tMatch = titleRegex.exec(content);
             if (!tMatch) continue;
 
-            let title = tMatch[1].trim()
-                .replace(/&amp;/g, '&')
-                .replace(/&quot;/g, '"')
-                .replace(/&#39;/g, "'")
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/<[^>]+>/g, '')
-                .trim();
+            let title = cleanRssText(tMatch[1]);
+            // Strip redundant publisher trailing attribution tags (e.g. "Headline - Reuters")
+            title = title.replace(/\s+[-|]\s+(?:The Guardian|BBC News|BBC|NPR|ABC News|Reuters|The Independent|Al Jazeera|NDTV|The Hindu|India Today|Times of India).*$/i, '').trim();
 
             if (title.length < 15) continue;
             const lowerT = title.toLowerCase();
             if (lowerT.startsWith('watch live') || lowerT.startsWith('listen live') || lowerT.startsWith('video:')) continue;
 
             const lMatch = linkRegex.exec(content);
-            const link = lMatch ? lMatch[1].trim() : '';
+            let link = lMatch ? lMatch[1].trim() : '';
             if (!link || !link.startsWith('http')) continue;
+            if (link.startsWith('http://') && !link.includes('localhost') && !link.includes('127.0.0.1')) {
+                link = link.replace(/^http:\/\//i, 'https://');
+            }
 
             // Extract real live article snippet/description
             let snippet = '';
             const dMatch = descRegex.exec(content);
             if (dMatch) {
-                snippet = dMatch[1]
-                    .replace(/<[^>]+>/g, '')
-                    .replace(/&amp;/g, '&')
-                    .replace(/&quot;/g, '"')
-                    .replace(/&#39;/g, "'")
-                    .replace(/&lt;/g, '<')
-                    .replace(/&gt;/g, '>')
-                    .replace(/\s+/g, ' ')
-                    .trim();
+                snippet = cleanRssText(dMatch[1]);
                 if (snippet.toLowerCase() === title.toLowerCase()) snippet = '';
-                if (snippet.length > 160) snippet = snippet.slice(0, 157) + '...';
+            }
+
+            if (!snippet || snippet.length < 20) {
+                snippet = `Latest briefing and developing updates reported by ${srcName || 'News'}.`;
+            } else if (snippet.length > 155) {
+                snippet = snippet.slice(0, 150).trim() + '...';
             }
 
             // Extract real live publication time

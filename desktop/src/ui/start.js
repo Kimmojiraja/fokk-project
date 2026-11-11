@@ -475,10 +475,14 @@
 
     // 2. Navigation Handler
     function navigateTo(url) {
+        let cleanUrl = url;
+        if (typeof cleanUrl === 'string' && cleanUrl.startsWith('http://') && !cleanUrl.includes('localhost') && !cleanUrl.includes('127.0.0.1')) {
+            cleanUrl = cleanUrl.replace(/^http:\/\//i, 'https://');
+        }
         if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openUrl === 'function') {
-            window.FokkShieldBridge.openUrl(url);
+            window.FokkShieldBridge.openUrl(cleanUrl);
         } else {
-            window.location.href = url;
+            window.location.href = cleanUrl;
         }
     }
 
@@ -1245,29 +1249,42 @@
         return `<span class="source-badge-icon" style="background:${color};color:#FFF;font-size:8.5px;font-weight:800;padding:1px 4px;border-radius:3px;display:inline-flex;align-items:center;">${initials}</span>`;
     }
 
+    function escapeCardText(str) {
+        if (!str || typeof str !== 'string') return '';
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     // 5. Render Stories (Modern Single-Row Horizontally Scrollable Cards)
     function renderStories(items) {
         if (!storiesGrid) return;
         const sourceList = (items && items.length >= 4) ? items : ALL_STORIES;
-        const list = sourceList.slice(0, 12);
+        const list = sourceList.slice(0, 8);
 
         storiesGrid.innerHTML = list.map((story, idx) => {
             const fallbackImg = DEFAULT_STORY_IMAGES[idx % DEFAULT_STORY_IMAGES.length];
             const imgSrc = story.image || story.img || fallbackImg;
             const badgeHtml = getPublisherBadge(story.source, story.sourceIcon, story.url);
+            const safeTitle = escapeCardText(story.title);
+            const safeSnippet = escapeCardText(story.snippet || `Latest briefing and analysis reported by ${story.source || 'News'}.`);
+
             return `
-                <div class="firefox-card" data-url="${story.url}">
+                <div class="firefox-card" data-url="${story.url}" style="flex: 0 0 300px !important; width: 300px !important; min-width: 300px !important; max-width: 300px !important; height: 345px !important; flex-shrink: 0 !important; flex-grow: 0 !important; box-sizing: border-box !important;">
                     <div class="card-img-wrap">
                         <img class="card-img" src="${imgSrc}" alt="News thumbnail" loading="lazy" onerror="this.onerror=null; this.src='${fallbackImg}';">
                     </div>
                     <div class="card-body">
-                        <h3 class="card-headline">${story.title}</h3>
-                        ${story.snippet ? `<p class="card-snippet">${story.snippet}</p>` : ''}
+                        <h3 class="card-headline" title="${safeTitle}">${safeTitle}</h3>
+                        <p class="card-snippet">${safeSnippet}</p>
                         <div class="card-source-bar">
                             ${badgeHtml}
-                            <span class="source-name">${story.source || 'News'}</span>
+                            <span class="source-name">${escapeCardText(story.source || 'News')}</span>
                             <span class="source-time-dot">•</span>
-                            <span class="source-time">${story.time || 'Live'}</span>
+                            <span class="source-time">${escapeCardText(story.time || 'Live')}</span>
                         </div>
                     </div>
                 </div>
