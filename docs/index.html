@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fokk Browser — Fast, Privacy-First, Zero-Ad Modern Web Browser</title>
+    <meta name="description" content="Fokk Browser is an ultra-fast, tracker-free web browser engineered with native on-device uBlock adblock shielding, AI paywall defuser, dual & quad split-screen grid, and zero telemetry for Windows, Linux, macOS, and Android.">
+    <meta name="keywords" content="Fokk Browser, Privacy Browser, Adblocker, uBlock Origin, Split View Browser, Open Source Browser, Brave Alternative, Firefox Alternative, Zero Telemetry">
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://kimmojiraja.github.io/fokk-project/">
+    <meta property="og:title" content="Fokk Browser — Fast, Privacy-First, Zero-Ad Modern Web Browser">
+    <meta property="og:description" content="Browse without ads, trackers, or telemetry. Built-in uBlock Origin shielding, AI paywall mirrors, dual & quad multi-split browsing, and memory eco hibernation.">
+    <meta property="og:image" content="assets/fokk_logo.png">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Ambient Background Glow Effects -->
+    <div class="bg-ambient">
+        <div class="glow-orb glow-orb-1"></div>
+        <div class="glow-orb glow-orb-2"></div>
+        <div class="glow-orb glow-orb-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <!-- Navigation Header -->
+    <header class="site-nav" id="siteNav">
+        <div class="container nav-wrap">
+            <a href="#" class="nav-brand">
+                <img src="assets/icon.png" alt="Fokk Logo" class="nav-logo">
+                <span class="nav-brand-text">FOKK <span class="nav-badge-pill">SHIELD</span></span>
+            </a>
+
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="#features" class="nav-link">Features</a></li>
+                    <li><a href="#grid" class="nav-link">Power Grid</a></li>
+                    <li><a href="#comparison" class="nav-link">Comparison</a></li>
+                    <li><a href="#downloads" class="nav-link">Downloads</a></li>
+                    <li><a href="#license" class="nav-link">License</a></li>
+                    <li><a href="#faq" class="nav-link">FAQ</a></li>
+                </ul>
+            </nav>
+
+            <div class="nav-actions">
+                <a href="https://github.com/Kimmojiraja/fokk-project" target="_blank" rel="noopener" class="github-star-pill" title="Star Fokk Browser on GitHub">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    <span>GitHub</span>
+                </a>
+                <a href="#downloads" class="btn btn-primary btn-pill-small">Get Fokk Free</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="container">
+                <div class="hero-pill-badge">
+                    <span class="dot"></span>
+                    <span>Desktop v1.1.0 & Android v2.3.5 Now Live • Zero Telemetry</span>
+                </div>
+
+                <h1 class="hero-title">
+                    The Internet Without Ads, Trackers, or <span class="text-gradient-cyan">Compromises.</span>
+                </h1>
+
+                <p class="hero-subtitle">
+                    Engineered for pure speed and total digital sovereignty. Native on-device uBlock Origin ad shielding, AI paywall defusing, dual & quad multi-split browsing, and absolute zero telemetry.
+                </p>
+
+                <div class="hero-cta-group">
+                    <a href="https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.0.0/Fokk%20Browser-1.0.0-win.zip" id="heroDynamicDownloadBtn" class="btn btn-primary btn-lg download-btn-dynamic">
+                        <span class="btn-dynamic-main">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            <span id="heroOsLabel">Download for Windows</span>
+                        </span>
+                        <span class="btn-dynamic-sub" id="heroOsSub">v1.1.0 • 64-bit (.exe / .zip) • Free</span>
+                    </a>
+
+                    <a href="https://github.com/Kimmojiraja/fokk-project" target="_blank" rel="noopener" class="btn btn-secondary btn-lg">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                        <span>Explore Source Code</span>
+                    </a>
+                </div>
+
+                <div class="platform-pill-row">
+                    <span><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg> Windows</span>
+                    <span>•</span>
+                    <span><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-3.14 0-5.7 2.56-5.7 5.7 0 1.04.28 2.01.77 2.84C3.89 9.87 2 12.72 2 16.03c0 4.41 3.59 8 8 8h4c4.41 0 8-3.59 8-8 0-3.31-1.89-6.16-5.07-7.49.49-.83.77-1.8.77-2.84C17.7 2.56 15.14 0 12 0z"/></svg> Linux</span>
+                    <span>•</span>
+                    <span><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 7.15c.66-.8 1.11-1.92.99-3.04-1 .04-2.14.67-2.81 1.45-.58.67-1.1 1.76-.96 2.85 1.11.09 2.19-.58 2.78-1.26z"/></svg> macOS</span>
+                    <span>•</span>
+                    <span><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993.0001.5511-.4482.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.4116 13.8533 8.0838 12 8.0838s-3.5902.3278-5.1369.8659L4.8408 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/></svg> Android</span>
+                </div>
+
+                <!-- Realistic Interactive Browser Mockup -->
+                <div class="mockup-wrapper">
+                    <div class="mockup-window">
+                        <div class="mockup-titlebar">
+                            <div class="window-dots">
+                                <span class="dot-red"></span>
+                                <span class="dot-yellow"></span>
+                                <span class="dot-green"></span>
+                            </div>
+                            <div class="mockup-tabs">
+                                <div class="mockup-tab active">
+                                    <img src="assets/icon.png" width="14" height="14" alt="Tab Icon">
+                                    <span>Dual Split Workspace</span>
+                                </div>
+                                <div class="mockup-tab">
+                                    <span>Trading &amp; Tech Grid</span>
+                                </div>
+                            </div>
+                            <div style="width: 50px;"></div>
+                        </div>
+
+                        <div class="mockup-toolbar">
+                            <div class="toolbar-nav-icons">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/></svg>
+                            </div>
+                            <div class="mockup-omnibox">
+                                <span id="mockupOmniboxUrl">fokk://split-view/left-right</span>
+                                <div class="mockup-shield-tag">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                    <span>1,429 Shielded</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mockup-viewport">
+                            <div class="mockup-view-slide active" data-view="dual">
+                                <img src="assets/preview_dual.png" alt="Fokk Browser Dual Split Screen Mode">
+                            </div>
+                            <div class="mockup-view-slide" data-view="quad">
+                                <img src="assets/preview_quad.png" alt="Fokk Browser Quad 4-Grid Mode">
+                            </div>
+                            <div class="mockup-view-slide" data-view="start">
+                                <img src="assets/wallpaper_sailboat.jpg" alt="Fokk Browser 4K Start Page">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- View Switcher -->
+                    <div class="mockup-view-switch">
+                        <button class="view-switch-btn active" data-view="dual">Dual Split Browsing</button>
+                        <button class="view-switch-btn" data-view="quad">Quad 4-Pane Power Grid</button>
+                        <button class="view-switch-btn" data-view="start">4K Sailboat Start Page</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Trust & Performance Stats -->
+        <section class="stats-section">
+            <div class="container">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-number text-gradient-cyan">0</span>
+                        <span class="stat-label">Trackers &amp; Telemetry Allowed</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number text-gradient-cyan">3x</span>
+                        <span class="stat-label">Faster Page Load Speeds</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number text-gradient-cyan">65%</span>
+                        <span class="stat-label">RAM Saved via Tab Hibernation</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number text-gradient-cyan">100%</span>
+                        <span class="stat-label">Open Source &amp; On-Device Shield</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Signature Superpowers (Feature Grid) -->
+        <section class="features-section" id="features">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-tag">Superpowers</span>
+                    <h2 class="section-title">Everything a Modern Browser Should Have Been.</h2>
+                    <p class="section-desc">Zero bloat, zero tracking scripts, and zero spyware. Just pure performance and powerful multitasking tools crafted for developers, traders, and privacy purists.</p>
+                </div>
+
+                <div class="features-grid">
+                    <!-- Feature 1 -->
+                    <div class="feature-card">
+                        <div class="feature-icon-badge">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                        </div>
+                        <h3 class="feature-card-title">On-Device Shield 2.0</h3>
+                        <p class="feature-card-desc">Native uBlock Origin payload interception at document-start. Strips video ads with zero speed tampering, no 16x acceleration hacks, and zero layout breakage.</p>
+                        <ul class="feature-check-list">
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Native 1x clean YouTube playback</li>
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Blocks popups, banners &amp; miners</li>
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Zero speed or CPU throttling</li>
+                        </ul>
+                    </div>
+
+                    <!-- Feature 2 -->
+                    <div class="feature-card purple" id="grid">
+                        <div class="feature-icon-badge">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        </div>
+                        <h3 class="feature-card-title">Dual &amp; Quad Power Grid</h3>
+                        <p class="feature-card-desc">Side-by-side dual split view with independent URL routing, and a 2x2 4-pane productivity power grid for monitoring live feeds, docs, trading charts, and code simultaneously.</p>
+                        <ul class="feature-check-list">
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Independent pane URL navigation</li>
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 1-click swap, focus &amp; draggable divider</li>
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 4 live simultaneous WebContents</li>
+                        </ul>
+                    </div>
+
+                    <!-- Feature 3 -->
+                    <div class="feature-card green">
+                        <div class="feature-icon-badge">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                        </div>
+                        <h3 class="feature-card-title">AI Paywall Defuser &amp; Reader</h3>
+                        <p class="feature-card-desc">Instant 1-click access to clean archive mirrors for paywalled news articles. Clean high-contrast reader mode strips clutter, sticky banners, and tracking overlays.</p>
+                        <ul class="feature-check-list">
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Instant paywall mirror resolution</li>
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Distraction-free typography</li>
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> On-device article summarizer</li>
+                        </ul>
+                    </div>
+
+                    <!-- Feature 4 -->
+                    <div class="feature-card">
+                        <div class="feature-icon-badge">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                        </div>
+                        <h3 class="feature-card-title">RAM Eco Mode &amp; Hibernation</h3>
+                        <p class="feature-card-desc">Automatically hibernates inactive background tabs to save memory. Wakes up instantly on click with zero state loss, keeping your machine icy-cool and lightning fast.</p>
+                        <ul class="feature-check-list">
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Up to 65% memory reduction</li>
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Instantaneous wake on focus</li>
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 1-click "Hibernate All Background"</li>
+                        </ul>
+                    </div>
+
+                    <!-- Feature 5 -->
+                    <div class="feature-card purple">
+                        <div class="feature-icon-badge">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 12 2.1 10a10.05 10.05 0 0 0 0 4L12 12z"/></svg>
+                        </div>
+                        <h3 class="feature-card-title">Isolated Sandbox &amp; Burn</h3>
+                        <p class="feature-card-desc">Private tabs operate in a physically isolated disk and cookie partition (<code style="color: var(--accent-purple);">fokk_private</code>). 1-click Burn Session permanently incinerates history, cache, and storage.</p>
+                        <ul class="feature-check-list">
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> No cookie leaks across sessions</li>
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 1-click cryptographic Burn Session</li>
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> WebAuthn 2FA &amp; Passkey native support</li>
+                        </ul>
+                    </div>
+
+                    <!-- Feature 6 -->
+                    <div class="feature-card green">
+                        <div class="feature-icon-badge">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                        </div>
+                        <h3 class="feature-card-title">4K Sailboats &amp; Multi-Engine</h3>
+                        <p class="feature-card-desc">Stunning curated 4K full-bleed sailboat wallpapers, live RSS trending briefings (Global, US, UK, Tech, Sports), and 1-click switching between Bing, DuckDuckGo, Brave, Google, and Ecosia.</p>
+                        <ul class="feature-check-list">
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Customizable 128px shortcut tiles</li>
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Cleaned headlines without tags</li>
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Upload your own device wallpapers</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Deep Dive Visual Showcase -->
+        <section class="showcase-section">
+            <div class="container">
+                <!-- Row 1: Dual Split -->
+                <div class="showcase-row">
+                    <div class="showcase-text">
+                        <span class="showcase-badge">Dual Split Browsing</span>
+                        <h3 class="showcase-title">Two Independent Worlds. One Fluid Window.</h3>
+                        <p class="showcase-desc">
+                            Research on the left while drafting code on the right. Compare products side-by-side without messy tab window resizing. With independent address bars, dynamic divider dragging, and active pane borders, multitasking feels effortless.
+                        </p>
+                        <a href="#downloads" class="btn btn-secondary">Try Dual Split View</a>
+                    </div>
+                    <div class="showcase-visual">
+                        <img src="assets/preview_dual.png" alt="Dual Split Screen Preview">
+                    </div>
+                </div>
+
+                <!-- Row 2: Quad Power Grid -->
+                <div class="showcase-row">
+                    <div class="showcase-text">
+                        <span class="showcase-badge" style="color: var(--accent-purple); background: rgba(167, 139, 250, 0.12); border-color: rgba(167, 139, 250, 0.3);">Quad 4-Pane Power Grid</span>
+                        <h3 class="showcase-title">Four Active Viewports. Maximum Productivity.</h3>
+                        <p class="showcase-desc">
+                            Monitor crypto charts, terminal output, API docs, and chat simultaneously. The Quad 2x2 layout provides 4 fully functional, hardware-accelerated web engines with interactive URL bars in each slot.
+                        </p>
+                        <a href="#downloads" class="btn btn-secondary">Get Quad Mode</a>
+                    </div>
+                    <div class="showcase-visual">
+                        <img src="assets/preview_quad.png" alt="Quad 4-Pane Grid Preview">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Comparison Matrix -->
+        <section class="comparison-section" id="comparison">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-tag">Direct Comparison</span>
+                    <h2 class="section-title">Why Privacy Advocates Are Switching to Fokk.</h2>
+                    <p class="section-desc">See how Fokk compares side-by-side with mainstream and privacy browsers.</p>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="comp-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 32%;">Feature Capability</th>
+                                <th class="highlight" style="width: 20%;">Fokk Browser</th>
+                                <th style="width: 16%;">Brave</th>
+                                <th style="width: 16%;">Google Chrome</th>
+                                <th style="width: 16%;">Firefox</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <span class="feature-title">Native YouTube Video Ad Stripping</span>
+                                    <span class="feature-sub">Clean 1x playback without speed tampering or 16x hacks</span>
+                                </td>
+                                <td class="highlight"><span class="status-icon yes">✓</span> <strong>Native 1x Zero-Ad</strong></td>
+                                <td><span class="status-icon partial">~</span> Frequent breaks</td>
+                                <td><span class="status-icon no">✗</span> Ad-supported</td>
+                                <td><span class="status-icon no">✗</span> Needs extension</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="feature-title">AI Paywall Defuser &amp; Archive Mirrors</span>
+                                    <span class="feature-sub">Instant 1-click clean reading without paywall blocks</span>
+                                </td>
+                                <td class="highlight"><span class="status-icon yes">✓</span> <strong>Built-in</strong></td>
+                                <td><span class="status-icon no">✗</span> None</td>
+                                <td><span class="status-icon no">✗</span> None</td>
+                                <td><span class="status-icon no">✗</span> None</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="feature-title">Quad 4-Pane (2x2) Multitasking Grid</span>
+                                    <span class="feature-sub">Four independent active webviews in one window</span>
+                                </td>
+                                <td class="highlight"><span class="status-icon yes">✓</span> <strong>Built-in</strong></td>
+                                <td><span class="status-icon no">✗</span> None</td>
+                                <td><span class="status-icon no">✗</span> None</td>
+                                <td><span class="status-icon no">✗</span> None</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="feature-title">Dual Side-by-Side Split View</span>
+                                    <span class="feature-sub">Independent address inputs &amp; active pane glow</span>
+                                </td>
+                                <td class="highlight"><span class="status-icon yes">✓</span> <strong>Built-in</strong></td>
+                                <td><span class="status-icon no">✗</span> None</td>
+                                <td><span class="status-icon no">✗</span> None</td>
+                                <td><span class="status-icon no">✗</span> None</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="feature-title">Automatic RAM Tab Hibernation</span>
+                                    <span class="feature-sub">Memory sleep for inactive background tabs</span>
+                                </td>
+                                <td class="highlight"><span class="status-icon yes">✓</span> <strong>Up to 65% RAM saved</strong></td>
+                                <td><span class="status-icon partial">~</span> Basic memory saver</td>
+                                <td><span class="status-icon partial">~</span> High RAM usage</td>
+                                <td><span class="status-icon partial">~</span> Extension required</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="feature-title">Zero Remote Telemetry &amp; Logging</span>
+                                    <span class="feature-sub">No user analytics, diagnostic logs or ad IDs</span>
+                                </td>
+                                <td class="highlight"><span class="status-icon yes">✓</span> <strong>Strict Zero Logging</strong></td>
+                                <td><span class="status-icon partial">~</span> Diagnostic telemetry</td>
+                                <td><span class="status-icon no">✗</span> Heavy telemetry</td>
+                                <td><span class="status-icon partial">~</span> Opt-out telemetry</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="feature-title">100% Free &amp; Open Source</span>
+                                    <span class="feature-sub">Transparent public code under GPLv3 &amp; MIT</span>
+                                </td>
+                                <td class="highlight"><span class="status-icon yes">✓</span> <strong>GPLv3 / MIT</strong></td>
+                                <td><span class="status-icon yes">✓</span> MPL 2.0</td>
+                                <td><span class="status-icon no">✗</span> Proprietary</td>
+                                <td><span class="status-icon yes">✓</span> MPL 2.0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Multi-Platform Download Matrix -->
+        <section class="downloads-section" id="downloads">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-tag">Install Fokk</span>
+                    <h2 class="section-title">Available Everywhere You Browse.</h2>
+                    <p class="section-desc">Download native binaries for Windows, Linux, macOS, and Android. 100% free, safe, and open-source.</p>
+                </div>
+
+                <div class="download-cards-grid">
+                    <!-- Windows -->
+                    <div class="download-card" data-os="windows">
+                        <div class="os-logo-wrap">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+                        </div>
+                        <h4 class="download-card-os">Windows</h4>
+                        <span class="download-card-version">Windows 10 / 11 (64-bit)</span>
+                        <ul class="download-file-list">
+                            <li>
+                                <a href="https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.0.0/Fokk%20Browser-1.0.0-win.zip" class="file-download-btn">
+                                    <span>Download .zip (Portable)</span>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://github.com/Kimmojiraja/fokk-project/releases" class="file-download-btn">
+                                    <span>View Windows Installer (.exe)</span>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Linux -->
+                    <div class="download-card" data-os="linux">
+                        <div class="os-logo-wrap">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-3.14 0-5.7 2.56-5.7 5.7 0 1.04.28 2.01.77 2.84C3.89 9.87 2 12.72 2 16.03c0 4.41 3.59 8 8 8h4c4.41 0 8-3.59 8-8 0-3.31-1.89-6.16-5.07-7.49.49-.83.77-1.8.77-2.84C17.7 2.56 15.14 0 12 0z"/></svg>
+                        </div>
+                        <h4 class="download-card-os">Linux</h4>
+                        <span class="download-card-version">Ubuntu, Debian, Fedora, Arch</span>
+                        <ul class="download-file-list">
+                            <li>
+                                <a href="https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.0.0/Fokk%20Browser-1.0.0.AppImage" class="file-download-btn">
+                                    <span>Universal .AppImage</span>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.0.0/fokk-browser_1.0.0_amd64.deb" class="file-download-btn">
+                                    <span>Debian / Ubuntu (.deb)</span>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- macOS -->
+                    <div class="download-card" data-os="mac">
+                        <div class="os-logo-wrap">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 7.15c.66-.8 1.11-1.92.99-3.04-1 .04-2.14.67-2.81 1.45-.58.67-1.1 1.76-.96 2.85 1.11.09 2.19-.58 2.78-1.26z"/></svg>
+                        </div>
+                        <h4 class="download-card-os">macOS</h4>
+                        <span class="download-card-version">Apple Silicon &amp; Intel (macOS 11+)</span>
+                        <ul class="download-file-list">
+                            <li>
+                                <a href="https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.0.0/Fokk%20Browser-1.0.0-mac.zip" class="file-download-btn">
+                                    <span>Download macOS .zip</span>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://github.com/Kimmojiraja/fokk-project/releases" class="file-download-btn">
+                                    <span>View All macOS Builds</span>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Android -->
+                    <div class="download-card" data-os="android">
+                        <div class="os-logo-wrap">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993.0001.5511-.4482.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.4116 13.8533 8.0838 12 8.0838s-3.5902.3278-5.1369.8659L4.8408 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/></svg>
+                        </div>
+                        <h4 class="download-card-os">Android</h4>
+                        <span class="download-card-version">Android 8.0+ (ARM64 / ARMv7)</span>
+                        <ul class="download-file-list">
+                            <li>
+                                <a href="https://github.com/Kimmojiraja/fokk-project/releases/latest/download/Fokk.apk" class="file-download-btn">
+                                    <span>Direct APK (Fokk.apk)</span>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://github.com/Kimmojiraja/fokk-project/releases" class="file-download-btn">
+                                    <span>All Mobile Builds</span>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Checksum / Integrity Box -->
+                <div class="checksum-box">
+                    <div>
+                        <strong>Binary Integrity Check:</strong> Verify releases on GitHub Releases via SHA-256 checksums.
+                    </div>
+                    <button class="btn btn-secondary btn-pill-small" data-copy="git clone https://github.com/Kimmojiraja/fokk-project.git">
+                        Copy Clone Command
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Open Source & License Section -->
+        <section class="license-section" id="license">
+            <div class="container">
+                <div class="license-box">
+                    <div class="license-info">
+                        <div class="license-badges">
+                            <span class="lic-badge">GNU GPLv3</span>
+                            <span class="lic-badge" style="background: rgba(0, 229, 255, 0.12); color: var(--primary-cyan); border-color: rgba(0, 229, 255, 0.3);">MIT Licensed Modules</span>
+                            <span class="lic-badge" style="background: rgba(16, 185, 129, 0.12); color: var(--accent-green); border-color: rgba(16, 185, 129, 0.3);">100% Free Forever</span>
+                        </div>
+                        <h3 class="license-title">Transparent Open-Source Integrity</h3>
+                        <p class="license-desc">
+                            Fokk Browser has zero commercial telemetry, zero tracking contracts, and zero hidden telemetry servers. We believe user trust must be verifiable in source code, not promised in PR statements. Audit, fork, compile, or contribute directly on GitHub.
+                        </p>
+                        <div class="license-cta-group">
+                            <a href="https://github.com/Kimmojiraja/fokk-project/blob/main/LICENSE" target="_blank" rel="noopener" class="btn btn-secondary">Read GPLv3 License</a>
+                            <a href="https://github.com/Kimmojiraja/fokk-project/blob/main/CONTRIBUTORS.md" target="_blank" rel="noopener" class="btn btn-secondary">View Contributors</a>
+                        </div>
+                    </div>
+
+                    <div class="license-stats-aside">
+                        <div class="lic-stat-row">
+                            <span>Repository</span>
+                            <span class="lic-stat-val">Kimmojiraja / fokk-project</span>
+                        </div>
+                        <div class="lic-stat-row">
+                            <span>Engine Core</span>
+                            <span class="lic-stat-val">Chromium / Electron 34</span>
+                        </div>
+                        <div class="lic-stat-row">
+                            <span>Adblock Architecture</span>
+                            <span class="lic-stat-val">uBlock Origin Payload Rulebase</span>
+                        </div>
+                        <div class="lic-stat-row">
+                            <span>Network Privacy</span>
+                            <span class="lic-stat-val">DoH + Local Proxy Vault</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Frequently Asked Questions -->
+        <section class="faq-section" id="faq">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-tag">Common Inquiries</span>
+                    <h2 class="section-title">Frequently Asked Questions</h2>
+                    <p class="section-desc">Got questions about Fokk Browser? Everything you need to know about our privacy architecture, performance, and features.</p>
+                </div>
+
+                <div class="faq-accordion">
+                    <div class="faq-item open">
+                        <div class="faq-question">
+                            <span>How does Fokk block YouTube ads without speed slowdowns or delays?</span>
+                            <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div class="faq-answer">
+                            Unlike browser extensions that artificially accelerate video playback to 16x speed or trigger YouTube anti-adblock warnings, Fokk strips ad payloads directly at document-start before the player initializes. Videos play smoothly at native 1x speed with zero lag, zero black frames, and zero warnings.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>What is the difference between Dual Split and Quad 4-Grid mode?</span>
+                            <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div class="faq-answer">
+                            Dual Split View divides your browser window into two independent side-by-side viewports with a draggable divider and independent address bars. Quad 4-Grid mode arranges four fully functional webviews into a 2x2 grid layout, ideal for financial traders, software engineers, and researchers monitoring multiple live streams simultaneously.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>Does Fokk collect any telemetry, search queries, or browsing history?</span>
+                            <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div class="faq-answer">
+                            No. Fokk has zero telemetry servers, zero user analytics, and zero tracking pings. Your browsing history, bookmarks, and sessions remain strictly encrypted on your local machine. You can also use the 1-click Burn Session tool to immediately purge all browsing artifacts at any time.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>How does the AI Paywall Defuser work?</span>
+                            <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div class="faq-answer">
+                            When you encounter a paywalled news article, the AI Defuser banner automatically queries verified public archive mirrors and serves a clean, readable version. Combined with our high-contrast Reader View, it strips clutter, sticky subscription banners, and paywall overlays.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>Can I use standard Chrome extensions and Google sign-in?</span>
+                            <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div class="faq-answer">
+                            Yes. Fokk is built on Chromium and Electron 34, offering complete compatibility with Google Accounts, 2-Step Verification, WebAuthn Passkeys, and modern web applications.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>Is Fokk Browser really 100% free? How is it funded?</span>
+                            <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div class="faq-answer">
+                            Yes! Fokk Browser is completely free and open-source under the GNU General Public License v3.0 (GPLv3). It is funded solely by community sponsors, GitHub sponsors, and privacy advocates who believe the web should be free from corporate surveillance.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo-row">
+                        <img src="assets/icon.png" alt="Fokk Logo" class="footer-logo">
+                        <span class="footer-brand-title">FOKK BROWSER</span>
+                    </div>
+                    <p class="footer-mission">
+                        Speed. Privacy. Zero Compromises. An independent open-source browser engineered for an ad-free, sovereign web.
+                    </p>
+                </div>
+
+                <div class="footer-links-col">
+                    <h5>Features</h5>
+                    <ul class="footer-links-list">
+                        <li><a href="#features">On-Device Shield</a></li>
+                        <li><a href="#grid">Dual &amp; Quad Grid</a></li>
+                        <li><a href="#features">AI Paywall Defuser</a></li>
+                        <li><a href="#features">RAM Eco Hibernation</a></li>
+                        <li><a href="#features">Isolated Sandbox</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-links-col">
+                    <h5>Downloads</h5>
+                    <ul class="footer-links-list">
+                        <li><a href="#downloads">Windows (.exe / .zip)</a></li>
+                        <li><a href="#downloads">Linux (.deb / .AppImage)</a></li>
+                        <li><a href="#downloads">macOS (.dmg / .zip)</a></li>
+                        <li><a href="#downloads">Android APK (Fokk.apk)</a></li>
+                        <li><a href="https://github.com/Kimmojiraja/fokk-project/releases" target="_blank" rel="noopener">All GitHub Releases</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-links-col">
+                    <h5>Project &amp; Legal</h5>
+                    <ul class="footer-links-list">
+                        <li><a href="https://github.com/Kimmojiraja/fokk-project" target="_blank" rel="noopener">GitHub Repository</a></li>
+                        <li><a href="https://github.com/Kimmojiraja/fokk-project/blob/main/LICENSE" target="_blank" rel="noopener">GPLv3 License</a></li>
+                        <li><a href="https://github.com/Kimmojiraja/fokk-project/blob/main/CONTRIBUTORS.md" target="_blank" rel="noopener">Contributors</a></li>
+                        <li><a href="#faq">FAQ</a></li>
+                        <li><a href="https://github.com/Kimmojiraja/fokk-project/issues" target="_blank" rel="noopener">Report an Issue</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <span>&copy; 2026 Fokk Browser Project. Released under GNU GPLv3 &amp; MIT.</span>
+                <span>Zero Ads • Zero Trackers • Zero Telemetry</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+</body>
+</html>
