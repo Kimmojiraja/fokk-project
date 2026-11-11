@@ -119,8 +119,23 @@ function setupAdblockingForSession(sess) {
             headers['sec-ch-ua-mobile'] = '?0';
             headers['sec-ch-ua-platform'] = getPlatformClientHint();
         }
+        // Strip Electron-identifying headers (Akamai / Cloudflare fingerprint these)
         if (headers['X-Requested-With'] && headers['X-Requested-With'].toLowerCase().includes('electron')) {
             delete headers['X-Requested-With'];
+        }
+        // Ensure realistic browser headers that CDNs (Akamai, Sky News, Guardian) require
+        if (!headers['Accept-Language']) {
+            headers['Accept-Language'] = 'en-GB,en;q=0.9,en-US;q=0.8';
+        }
+        if (!headers['Upgrade-Insecure-Requests']) {
+            headers['Upgrade-Insecure-Requests'] = '1';
+        }
+        // Remove Electron-leaked Sec-Fetch headers on main frame navigations and replace with Chrome-authentic values
+        if (details.resourceType === 'mainFrame') {
+            headers['Sec-Fetch-Site'] = 'none';
+            headers['Sec-Fetch-Mode'] = 'navigate';
+            headers['Sec-Fetch-User'] = '?1';
+            headers['Sec-Fetch-Dest'] = 'document';
         }
         callback({ requestHeaders: headers });
     });
@@ -336,6 +351,48 @@ ipcMain.on('fokk-get-preload-path', (event) => {
 
 ipcMain.on('fokk-get-user-agent', (event) => {
     event.returnValue = CHROME_USER_AGENT;
+});
+
+// AI Defuser: Stealth-fetch a URL server-side (bypasses browser-level CDN fingerprinting)
+const { net } = require('electron');
+ipcMain.handle('fokk-ai-defuser-fetch', async (event, targetUrl) => {
+    return new Promise((resolve) => {
+        try {
+            const request = net.request({
+                method: 'GET',
+                url: targetUrl,
+                redirect: 'follow'
+            });
+            request.setHeader('User-Agent', CHROME_USER_AGENT);
+            request.setHeader('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8');
+            request.setHeader('Accept-Language', 'en-GB,en;q=0.9,en-US;q=0.8');
+            request.setHeader('Accept-Encoding', 'gzip, deflate, br');
+            request.setHeader('Cache-Control', 'no-cache');
+            request.setHeader('Pragma', 'no-cache');
+            request.setHeader('Upgrade-Insecure-Requests', '1');
+            request.setHeader('Sec-Fetch-Site', 'none');
+            request.setHeader('Sec-Fetch-Mode', 'navigate');
+            request.setHeader('Sec-Fetch-User', '?1');
+            request.setHeader('Sec-Fetch-Dest', 'document');
+            request.setHeader('sec-ch-ua', '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"');
+            request.setHeader('sec-ch-ua-mobile', '?0');
+            request.setHeader('sec-ch-ua-platform', getPlatformClientHint());
+            const chunks = [];
+            request.on('response', (response) => {
+                const statusCode = response.statusCode;
+                response.on('data', (chunk) => chunks.push(chunk));
+                response.on('end', () => {
+                    const body = Buffer.concat(chunks).toString('utf8');
+                    resolve({ ok: statusCode >= 200 && statusCode < 400, status: statusCode, body });
+                });
+                response.on('error', () => resolve({ ok: false, status: 0, body: '' }));
+            });
+            request.on('error', () => resolve({ ok: false, status: 0, body: '' }));
+            request.end();
+        } catch (e) {
+            resolve({ ok: false, status: 0, body: '' });
+        }
+    });
 });
 
 ipcMain.on('fokk-win-min', () => {

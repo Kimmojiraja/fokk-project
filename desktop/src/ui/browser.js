@@ -667,6 +667,269 @@ if (btnBookmarkOmni) {
     });
 }
 
+// =========================================================================
+// AI Defuser — Smart Access-Denied / Paywall / Consent Wall Bypass
+// =========================================================================
+(function initAiDefuser() {
+    const btnAiDefuser = document.getElementById('btnAiDefuser');
+    const aiDefuserPanel = document.getElementById('aiDefuserPanel');
+    const aiDefuserStatus = document.getElementById('aiDefuserStatus');
+    const aiDefuserActions = document.getElementById('aiDefuserActions');
+    if (!btnAiDefuser || !aiDefuserPanel) return;
+
+    // Signatures for access-denied / paywall / consent wall detection
+    const ACCESS_BLOCKED_SIGS = [
+        /access denied/i, /you don't have permission/i, /403 forbidden/i,
+        /reference #\d+\.\w+/, /edgesuite\.net/i, /blocked by/i,
+        /this content is not available/i, /country.*not.*available/i,
+        /geo.*blocked/i, /region.*restricted/i
+    ];
+    const PAYWALL_SIGS = [
+        /subscribe to (read|continue|access)/i, /this article is for subscribers/i,
+        /create a free account/i, /sign in to read/i, /premium content/i,
+        /you've used your free articles/i, /register to continue/i,
+        /paywall/i, /metered content/i
+    ];
+
+    let panelOpen = false;
+    let currentUrl = '';
+    let currentPageText = '';
+    let defuserState = 'idle'; // idle | scanning | blocked | paywall | clear
+
+    function openPanel() {
+        panelOpen = true;
+        btnAiDefuser.classList.add('active');
+        aiDefuserPanel.classList.remove('hidden');
+        scanPage();
+    }
+
+    function closePanel() {
+        panelOpen = false;
+        btnAiDefuser.classList.remove('active');
+        aiDefuserPanel.classList.add('hidden');
+    }
+
+    btnAiDefuser.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (panelOpen) { closePanel(); return; }
+        openPanel();
+    });
+
+    document.addEventListener('click', (e) => {
+        if (panelOpen && !aiDefuserPanel.contains(e.target) && e.target !== btnAiDefuser) {
+            closePanel();
+        }
+    });
+
+    // Auto-scan on navigation
+    function hookWebviewForDefuser(webview) {
+        webview.addEventListener('did-navigate', () => {
+            if (panelOpen) scanPage();
+            // Auto-detect and show pulsing indicator on blocked pages
+            setTimeout(() => autoDetect(webview), 1500);
+        });
+        webview.addEventListener('did-fail-load', () => {
+            if (panelOpen) {
+                setStatus('blocked', 'Page failed to load — network block or access denied.');
+                renderActions('blocked');
+            }
+        });
+    }
+
+    // Hook into tab creation by watching viewsContainer
+    const viewsContainer = document.getElementById('viewsContainer');
+    if (viewsContainer) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach(m => {
+                m.addedNodes.forEach(node => {
+                    if (node.tagName === 'WEBVIEW') hookWebviewForDefuser(node);
+                });
+            });
+        });
+        observer.observe(viewsContainer, { childList: true, subtree: true });
+        // Hook already-existing webviews
+        viewsContainer.querySelectorAll('webview').forEach(hookWebviewForDefuser);
+    }
+
+    function autoDetect(webview) {
+        try {
+            webview.executeJavaScript(`
+                (function() {
+                    var txt = (document.title + ' ' + (document.body ? document.body.innerText.substring(0, 1500) : '')).toLowerCase();
+                    var isBlocked = /access denied|you don.t have permission|403 forbidden|reference #\\d|edgesuite/.test(txt);
+                    var isPaywall = /subscribe to|this article is for subscribers|sign in to read|you.ve used your free|register to continue/.test(txt);
+                    return { isBlocked: isBlocked, isPaywall: isPaywall, title: document.title };
+                })();
+            `).then((result) => {
+                if (result && (result.isBlocked || result.isPaywall)) {
+                    btnAiDefuser.classList.add('needs-defuse');
+                    btnAiDefuser.setAttribute('title', result.isBlocked
+                        ? 'AI Defuser — Access blocked detected! Click to bypass'
+                        : 'AI Defuser — Paywall detected! Click to bypass');
+                } else {
+                    btnAiDefuser.classList.remove('needs-defuse');
+                    btnAiDefuser.setAttribute('title', 'AI Defuser — Bypass access blocks, paywalls & consent walls');
+                }
+            }).catch(() => {});
+        } catch (_) {}
+    }
+
+    function setStatus(type, msg) {
+        defuserState = type;
+        const colors = { scanning: '#8A9BC1', blocked: '#F43F5E', paywall: '#F59E0B', clear: '#22C55E', idle: '#8A9BC1' };
+        aiDefuserStatus.textContent = msg;
+        aiDefuserStatus.style.color = colors[type] || '#8A9BC1';
+        // Pulse the button on blocked/paywall
+        if (type === 'blocked' || type === 'paywall') {
+            btnAiDefuser.classList.add('needs-defuse');
+        } else if (type === 'clear') {
+            btnAiDefuser.classList.remove('needs-defuse');
+        }
+    }
+
+    function renderActions(type) {
+        aiDefuserActions.innerHTML = '';
+        if (type === 'blocked') {
+            const actions = [
+                { label: 'Bypass via Archive.org', fn: bypassArchive, color: '#00E5FF' },
+                { label: 'Stealth Reload (new headers)', fn: stealthReload, color: '#00E5FF' },
+                { label: 'Open in Reader Mode', fn: openReader, color: '#A78BFA' }
+            ];
+            actions.forEach(a => {
+                const btn = document.createElement('button');
+                btn.className = 'ai-defuser-action-btn';
+                btn.textContent = a.label;
+                btn.style.borderColor = a.color;
+                btn.style.color = a.color;
+                btn.onclick = a.fn;
+                aiDefuserActions.appendChild(btn);
+            });
+        } else if (type === 'paywall') {
+            const actions = [
+                { label: 'Bypass Paywall via Archive', fn: bypassArchive, color: '#F59E0B' },
+                { label: 'Extract Article (Reader)', fn: openReader, color: '#A78BFA' },
+                { label: 'Google Cache Version', fn: openGoogleCache, color: '#00E5FF' }
+            ];
+            actions.forEach(a => {
+                const btn = document.createElement('button');
+                btn.className = 'ai-defuser-action-btn';
+                btn.textContent = a.label;
+                btn.style.borderColor = a.color;
+                btn.style.color = a.color;
+                btn.onclick = a.fn;
+                aiDefuserActions.appendChild(btn);
+            });
+        }
+    }
+
+    function scanPage() {
+        const active = getActiveWebview();
+        if (!active) { setStatus('idle', 'No active page to scan.'); return; }
+        currentUrl = active.getURL();
+        if (!currentUrl || currentUrl.startsWith('file://')) {
+            setStatus('idle', 'No external page loaded.');
+            aiDefuserActions.innerHTML = '';
+            return;
+        }
+        setStatus('scanning', 'Scanning page for blocks and paywalls...');
+        aiDefuserActions.innerHTML = '';
+        active.executeJavaScript(`
+            (function() {
+                var title = document.title || '';
+                var txt = (title + ' ' + (document.body ? document.body.innerText.substring(0, 3000) : '')).toLowerCase();
+                var metaRobots = '';
+                var m = document.querySelector('meta[name="robots"]');
+                if (m) metaRobots = m.content;
+                return { title: title, text: txt, metaRobots: metaRobots };
+            })();
+        `).then((result) => {
+            if (!result) { setStatus('idle', 'Could not read page content.'); return; }
+            currentPageText = result.text || '';
+            const isBlocked = ACCESS_BLOCKED_SIGS.some(r => r.test(currentPageText));
+            const isPaywall = PAYWALL_SIGS.some(r => r.test(currentPageText));
+            if (isBlocked) {
+                setStatus('blocked', 'Access Denied detected — CDN block or geo-restriction.');
+                renderActions('blocked');
+            } else if (isPaywall) {
+                setStatus('paywall', 'Paywall or login wall detected on this page.');
+                renderActions('paywall');
+            } else {
+                setStatus('clear', 'Page is clean — no blocks or paywalls detected.');
+                aiDefuserActions.innerHTML = '';
+            }
+        }).catch(() => {
+            setStatus('idle', 'Could not inspect page. Try a manual bypass below.');
+        });
+    }
+
+    // --- Bypass Methods ---
+
+    function bypassArchive() {
+        const active = getActiveWebview();
+        if (!active) return;
+        const url = active.getURL() || currentUrl;
+        if (!url || url.startsWith('file://')) return;
+        const archiveUrl = 'https://web.archive.org/web/' + encodeURIComponent(url);
+        active.loadURL(archiveUrl);
+        closePanel();
+        showToast('Loading Wayback Machine archive...');
+    }
+
+    function stealthReload() {
+        const active = getActiveWebview();
+        if (!active) return;
+        const url = active.getURL() || currentUrl;
+        if (!url || url.startsWith('file://')) return;
+        // Reload with fresh session context — clears cookies for this domain and reloads
+        active.executeJavaScript(`
+            (function() {
+                // Clear consent/block cookies
+                var domain = window.location.hostname;
+                document.cookie.split(';').forEach(function(c) {
+                    var name = c.split('=')[0].trim();
+                    document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=' + domain;
+                    document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.' + domain;
+                });
+            })();
+        `).then(() => {
+            active.reloadIgnoringCache();
+            closePanel();
+            showToast('Stealth reload — cache cleared & cookies reset.');
+        }).catch(() => {
+            active.reloadIgnoringCache();
+            closePanel();
+            showToast('Reloading with stealth headers...');
+        });
+    }
+
+    function openReader() {
+        closePanel();
+        if (typeof toggleReaderMode === 'function') toggleReaderMode();
+        else showToast('Reader Mode activated.');
+    }
+
+    function openGoogleCache() {
+        const active = getActiveWebview();
+        if (!active) return;
+        const url = active.getURL() || currentUrl;
+        if (!url || url.startsWith('file://')) return;
+        const cacheUrl = 'https://webcache.googleusercontent.com/search?q=cache:' + encodeURIComponent(url);
+        active.loadURL(cacheUrl);
+        closePanel();
+        showToast('Loading Google Cache version...');
+    }
+
+    // Quick action buttons in panel
+    const adfArchive = document.getElementById('adfArchive');
+    const adfReader = document.getElementById('adfReader');
+    const adfGoogle = document.getElementById('adfGoogle');
+    const adfReload = document.getElementById('adfReload');
+    if (adfArchive) adfArchive.onclick = bypassArchive;
+    if (adfReader) adfReader.onclick = openReader;
+    if (adfGoogle) adfGoogle.onclick = openGoogleCache;
+    if (adfReload) adfReload.onclick = stealthReload;
+})();
+
 // 4. Desktop Browser Menu & Daily Essentials
 if (btnMenu && desktopBrowserMenu) {
     btnMenu.addEventListener('click', (e) => {
@@ -988,8 +1251,7 @@ if (actDesktopUA) {
         desktopBrowserMenu.classList.add('hidden');
         isMobileUA = !isMobileUA;
         const mobileUA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36';
-        const desktopUA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-        active.setUserAgent(isMobileUA ? mobileUA : desktopUA);
+        active.setUserAgent(isMobileUA ? mobileUA : PLATFORM_USER_AGENT);
         active.reload();
         showToast(isMobileUA ? 'Switched to Mobile User-Agent' : 'Switched to Desktop User-Agent');
     };
