@@ -399,6 +399,7 @@ function createTab(url = START_PAGE_URL, options = {}) {
 
 function activateTab(tabId) {
     activeTabId = tabId;
+    if (typeof window.closeAiDefuserPanel === 'function') window.closeAiDefuserPanel();
     const targetTab = tabs.find(t => t.id === tabId);
     if (targetTab) {
         targetTab.lastActiveTime = Date.now();
@@ -472,16 +473,28 @@ function updateNavState(webview) {
 }
 
 function updateOmnibox(rawUrl) {
-    if (!rawUrl || rawUrl.includes('start.html') || rawUrl.includes('fokk_start.html') || rawUrl.startsWith('file://')) {
+    const isStart = !rawUrl || rawUrl.includes('start.html') || rawUrl.includes('fokk_start.html') || rawUrl.startsWith('file://');
+    const btnAiDefuser = document.getElementById('btnAiDefuser');
+    const aiDefuserPanel = document.getElementById('aiDefuserPanel');
+
+    if (isStart) {
         urlInput.value = '';
         const engine = OMNIBOX_ENGINES[currentEngine] || OMNIBOX_ENGINES.bing;
         urlInput.placeholder = `Search with ${engine.name} or enter address`;
         if (btnBookmarkOmni) btnBookmarkOmni.classList.remove('active');
+        if (btnAiDefuser) {
+            btnAiDefuser.style.display = 'none';
+            btnAiDefuser.classList.remove('active', 'needs-defuse');
+        }
+        if (aiDefuserPanel) aiDefuserPanel.classList.add('hidden');
     } else {
         urlInput.value = rawUrl;
         const bookmarks = JSON.parse(localStorage.getItem('fokk_bookmarks') || '[]');
         if (btnBookmarkOmni) {
             btnBookmarkOmni.classList.toggle('active', bookmarks.some(b => b.url === rawUrl));
+        }
+        if (btnAiDefuser) {
+            btnAiDefuser.style.display = 'inline-flex';
         }
     }
 }
@@ -708,6 +721,7 @@ if (btnBookmarkOmni) {
         btnAiDefuser.classList.remove('active');
         aiDefuserPanel.classList.add('hidden');
     }
+    window.closeAiDefuserPanel = closePanel;
 
     btnAiDefuser.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -721,8 +735,19 @@ if (btnBookmarkOmni) {
         }
     });
 
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && panelOpen) {
+            closePanel();
+        }
+    });
+
     // Auto-scan on navigation
     function hookWebviewForDefuser(webview) {
+        webview.addEventListener('focus', closePanel);
+        webview.addEventListener('did-start-loading', () => {
+            if (panelOpen) closePanel();
+            btnAiDefuser.classList.remove('needs-defuse');
+        });
         webview.addEventListener('did-navigate', () => {
             if (panelOpen) scanPage();
             // Auto-detect and show pulsing indicator on blocked pages
@@ -753,6 +778,11 @@ if (btnBookmarkOmni) {
 
     function autoDetect(webview) {
         try {
+            const u = (typeof webview.getURL === 'function') ? webview.getURL() : '';
+            if (!u || u.startsWith('file://') || u.includes('start.html')) {
+                btnAiDefuser.classList.remove('needs-defuse', 'active');
+                return;
+            }
             webview.executeJavaScript(`
                 (function() {
                     var txt = (document.title + ' ' + (document.body ? document.body.innerText.substring(0, 1500) : '')).toLowerCase();

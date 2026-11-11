@@ -35,6 +35,10 @@ html, body {
     flex-direction: column;
 }
 
+.hidden {
+    display: none !important;
+}
+
 /* 1. Titlebar & Tab Strip (Zero Bottom Border for Seamless Blend) */
 .titlebar {
     height: 42px;
@@ -451,6 +455,9 @@ html, body {
     padding: 12px;
     font-size: 12px;
     color: var(--text-primary);
+}
+.ai-defuser-panel.hidden {
+    display: none !important;
 }
 .ai-defuser-header {
     display: flex;
