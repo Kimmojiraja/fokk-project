@@ -1249,14 +1249,14 @@
     function renderStories(items) {
         if (!storiesGrid) return;
         const sourceList = (items && items.length >= 4) ? items : ALL_STORIES;
-        const list = sourceList.slice(0, 12);
+        const list = sourceList.slice(0, 8);
 
         storiesGrid.innerHTML = list.map((story, idx) => {
             const fallbackImg = DEFAULT_STORY_IMAGES[idx % DEFAULT_STORY_IMAGES.length];
             const imgSrc = story.image || story.img || fallbackImg;
             const badgeHtml = getPublisherBadge(story.source, story.sourceIcon, story.url);
             return `
-                <div class="firefox-card" data-url="${story.url}">
+                <div class="firefox-card" data-url="${story.url}" style="flex: 0 0 300px !important; width: 300px !important; min-width: 300px !important; max-width: 300px !important; height: 345px !important; flex-shrink: 0 !important; flex-grow: 0 !important; box-sizing: border-box !important;">
                     <div class="card-img-wrap">
                         <img class="card-img" src="${imgSrc}" alt="News thumbnail" loading="lazy" onerror="this.onerror=null; this.src='${fallbackImg}';">
                     </div>

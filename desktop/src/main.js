@@ -130,13 +130,6 @@ function setupAdblockingForSession(sess) {
         if (!headers['Upgrade-Insecure-Requests']) {
             headers['Upgrade-Insecure-Requests'] = '1';
         }
-        // Remove Electron-leaked Sec-Fetch headers on main frame navigations and replace with Chrome-authentic values
-        if (details.resourceType === 'mainFrame') {
-            headers['Sec-Fetch-Site'] = 'none';
-            headers['Sec-Fetch-Mode'] = 'navigate';
-            headers['Sec-Fetch-User'] = '?1';
-            headers['Sec-Fetch-Dest'] = 'document';
-        }
         callback({ requestHeaders: headers });
     });
 

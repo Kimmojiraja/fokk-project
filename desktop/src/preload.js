@@ -388,26 +388,70 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
 
                         // 5. Universal CMP / Cookie Overlay Scroll Guard (The Guardian, Sky News, etc.)
                         try {
-                            const unlockScroll = () => {
+                            const unlockScroll = function() {
                                 const html = document.documentElement;
                                 const body = document.body;
-                                if (!html || !body) return;
+                                if (!html) return;
+                                if (html.classList && html.classList.contains('gu-consent-active')) html.classList.remove('gu-consent-active');
+                                if (body && body.classList && body.classList.contains('gu-consent-active')) body.classList.remove('gu-consent-active');
                                 const htmlOverflow = window.getComputedStyle(html).overflowY;
-                                const bodyOverflow = window.getComputedStyle(body).overflowY;
-                                const bodyPos = window.getComputedStyle(body).position;
-                                if (htmlOverflow === 'hidden' || bodyOverflow === 'hidden' || bodyPos === 'fixed' ||
-                                    html.classList.contains('gu-consent-active') || body.classList.contains('gu-consent-active')) {
+                                const bodyOverflow = body ? window.getComputedStyle(body).overflowY : '';
+                                const bodyPos = body ? window.getComputedStyle(body).position : '';
+                                if (htmlOverflow === 'hidden') {
                                     html.style.setProperty('overflow', 'auto', 'important');
                                     html.style.setProperty('overflow-y', 'auto', 'important');
+                                }
+                                if (body && (bodyOverflow === 'hidden' || bodyPos === 'fixed')) {
                                     body.style.setProperty('overflow', 'auto', 'important');
                                     body.style.setProperty('overflow-y', 'auto', 'important');
                                     body.style.setProperty('position', 'static', 'important');
-                                    document.querySelectorAll('div[id^="sp_message_container"], div[class*="sp_message"], .gu-cmp-banner, .tp-backdrop').forEach(el => el.remove());
                                 }
+                                document.querySelectorAll('div[id^="sp_message_container"], div[class*="sp_message"], .gu-cmp-banner, .tp-backdrop, iframe[id^="sp_message_iframe"]').forEach(function(el) { el.remove(); });
                             };
                             window.addEventListener('load', unlockScroll);
-                            setTimeout(unlockScroll, 800);
-                            setTimeout(unlockScroll, 2000);
+                            window.addEventListener('DOMContentLoaded', unlockScroll);
+                            if (window.MutationObserver && document.documentElement) {
+                                const cmpObs = new MutationObserver(unlockScroll);
+                                cmpObs.observe(document.documentElement, { attributes: true, childList: true, subtree: true, attributeFilter: ['class', 'style'] });
+                            }
+                            let cmpCount = 0;
+                            const cmpTimer = setInterval(function() {
+                                unlockScroll();
+                                if (++cmpCount > 15) clearInterval(cmpTimer);
+                            }, 500);
+                        } catch (_) {}
+
+                        // 6. Access Denied / Akamai Block Instant Auto-Defuser In-Page Banner
+                        try {
+                            const detectAndInjectDefuserBar = function() {
+                                const title = (document.title || '').toLowerCase();
+                                const bodyText = document.body ? document.body.innerText.substring(0, 600).toLowerCase() : '';
+                                const isBlocked = title.includes('access denied') || bodyText.includes('access denied') || bodyText.includes("you don't have permission") || bodyText.includes('errors.edgesuite.net');
+                                if (isBlocked && !document.getElementById('fokk-defuser-bar')) {
+                                    const bar = document.createElement('div');
+                                    bar.id = 'fokk-defuser-bar';
+                                    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(90deg,#0a192f,#1e293b);border-bottom:2px solid #00E5FF;color:#fff;padding:12px 18px;display:flex;align-items:center;gap:14px;z-index:2147483647;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,0.8);';
+                                    bar.innerHTML = '<span style="font-weight:700;color:#00E5FF;">&#9889; Fokk AI Defuser:</span><span>This page was restricted by publisher CDN.</span><button id="fokk-btn-archive" style="background:#00E5FF;color:#0a192f;border:none;padding:6px 14px;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;">Instant Archive Bypass</button><button id="fokk-btn-dismiss" style="background:transparent;border:1px solid #64748b;color:#cbd5e1;padding:5px 10px;border-radius:5px;font-size:11px;cursor:pointer;margin-left:auto;">Dismiss</button>';
+                                    if (document.body) {
+                                        document.body.prepend(bar);
+                                        const btnArchive = document.getElementById('fokk-btn-archive');
+                                        if (btnArchive) {
+                                            btnArchive.onclick = function() {
+                                                window.location.href = 'https://web.archive.org/web/' + encodeURIComponent(window.location.href);
+                                            };
+                                        }
+                                        const btnDismiss = document.getElementById('fokk-btn-dismiss');
+                                        if (btnDismiss) {
+                                            btnDismiss.onclick = function() {
+                                                bar.remove();
+                                            };
+                                        }
+                                    }
+                                }
+                            };
+                            window.addEventListener('load', detectAndInjectDefuserBar);
+                            setTimeout(detectAndInjectDefuserBar, 600);
+                            setTimeout(detectAndInjectDefuserBar, 1500);
                         } catch (_) {}
                     })();
                 `

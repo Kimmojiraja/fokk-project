@@ -29,6 +29,12 @@ function cleanTrackingUrl(rawUrl) {
     try {
         const parsed = new URL(trimmed);
 
+        // Auto-upgrade insecure http:// to https:// for modern web and CDN-protected sites
+        if (parsed.protocol === 'http:' && !parsed.hostname.startsWith('localhost') && !parsed.hostname.startsWith('127.0.0.1')) {
+            parsed.protocol = 'https:';
+            stripped = true;
+        }
+
         // 1. Resolve redirect trampoline wrappers (Facebook, Google, Reddit trampolines)
         if (parsed.hostname.includes('facebook.com') && parsed.pathname === '/l.php' && parsed.searchParams.has('u')) {
             const target = parsed.searchParams.get('u');
