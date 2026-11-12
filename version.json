@@ -1,6 +1,6 @@
 {
-  "versionCode": 236,
-  "versionName": "2.3.6",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.3.6/app-debug.apk",
-  "changelog": "- Crystal Clear Article View: Eliminates transparent canvas blackout on BBC News, Wikipedia, and editorial publishers.\n- Next-Gen YouTube Ad Shield: Fully defuses feed banners, authenticated ad placements, and resolves playback glitches for signed-in Google accounts.\n- Enhanced Content Security & AdBlock Defusers: Seamless video streaming with zero buffer underruns."
+  "versionCode": 237,
+  "versionName": "2.3.7",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.3.7/app-debug.apk",
+  "changelog": "- Universal Article & News Defuser: Completely neutralizes Sourcepoint, OneTrust, Didomi, and CMP consent walls and scroll locks across The Guardian, Sky News, and all global publisher sites.\n- Anti-Bot & Client Hints Cloaking: Defeats Akamai EdgeSuite bot gates with realistic client hints and navigator properties.\n- AI CDN Block Defuser: In-page fallback banner for 403 Forbidden / Access Denied publisher CDN traps with 1-tap Archive and Google Cache bypass."
 }

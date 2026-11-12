@@ -91,6 +91,60 @@
         if (window.__fokk_main_defused) return;
         window.__fokk_main_defused = true;
 
+        // Anti-bot & Client Hints Cloak (Defeats Akamai EdgeSuite bot detection on The Guardian, Sky News, BBC)
+        try {
+            Object.defineProperty(navigator, 'webdriver', {
+                get: function() { return undefined; },
+                configurable: true
+            });
+        } catch (_) {}
+
+        try {
+            const fakeBrands = [
+                { brand: 'Chromium', version: '124' },
+                { brand: 'Google Chrome', version: '124' },
+                { brand: 'Not-A.Brand', version: '99' }
+            ];
+            const fakeFullBrands = [
+                { brand: 'Chromium', version: '124.0.6367.243' },
+                { brand: 'Google Chrome', version: '124.0.6367.243' },
+                { brand: 'Not-A.Brand', version: '99.0.0.0' }
+            ];
+            const fakeUAD = {
+                brands: fakeBrands,
+                mobile: true,
+                platform: 'Android',
+                getHighEntropyValues: function(hints) {
+                    return Promise.resolve({
+                        brands: fakeBrands,
+                        mobile: true,
+                        platform: 'Android',
+                        platformVersion: '14.0.0',
+                        architecture: 'arm64',
+                        model: 'Pixel 7',
+                        uaFullVersion: '124.0.6367.243',
+                        fullVersionList: fakeFullBrands
+                    });
+                },
+                toJSON: function() {
+                    return {
+                        brands: fakeBrands,
+                        mobile: true,
+                        platform: 'Android'
+                    };
+                }
+            };
+            Object.defineProperty(navigator, 'userAgentData', {
+                get: function() { return fakeUAD; },
+                configurable: true
+            });
+        } catch (_) {}
+
+        try {
+            Object.defineProperty(navigator, 'hardwareConcurrency', { get: function() { return 8; }, configurable: true });
+            Object.defineProperty(navigator, 'deviceMemory', { get: function() { return 8; }, configurable: true });
+        } catch (_) {}
+
         // 0. Intelligent Popunder & Malicious window.open Defuser
         try {
             const origWindowOpen = window.open;
@@ -1260,9 +1314,24 @@
             if (document.body) document.body.style.overflow = 'auto';
         }
 
-        // 2. Generic OneTrust, Cookiebot, & popular consent banners
-        document.querySelectorAll('#onetrust-consent-sdk, #CybotCookiebotDialog, .qc-cmp2-container, .fc-consent-root').forEach(function(el) {
-            try { el.remove(); } catch (e) { el.style.setProperty('display', 'none', 'important'); }
+        // 2. Comprehensive Cookiebot, OneTrust, Sourcepoint, Didomi, Funding Choices, & CMP banners
+        const cmpRemoveSelectors = [
+            '#onetrust-consent-sdk', '#onetrust-banner-sdk', '.onetrust-pc-dark-filter', 'div[id*="onetrust"]',
+            '#CybotCookiebotDialog', '#CybotCookiebotDialogBodyUnderlay',
+            '.qc-cmp2-container', '.qc-cmp-cleanslate', '.qc-cmp-ui-container',
+            '.fc-consent-root', '.fc-dialog-container', '.fc-ab-root', '.fc-whitelist-root', '.fc-message-root',
+            'div[id^="sp_message_container"]', 'div[class*="sp_message"]', 'iframe[id^="sp_message_iframe"]', '.sp_veil', 'div[id*="sp_message"]',
+            '.gu-cmp-banner', 'div[data-component="cmp-banner"]',
+            'div[id*="didomi-host"]', 'div[id*="didomi-notice"]', '.didomi-popup-backdrop',
+            '.tp-backdrop', '.tp-modal', 'iframe[id^="piano_lightbox"]',
+            '.admiral-root', 'div[class*="admiral-"]', '.admiral-overlay',
+            'div[id*="truste"]', '.truste_box_overlay',
+            'div[id^="cmp-"]', 'div[class*="cmp-modal"]', '.cmp-root', 'div[class*="cookie-modal"]', 'div[class*="consent-modal"]', 'div[class*="consent-overlay"]', '.adblock-overlay'
+        ];
+        document.querySelectorAll(cmpRemoveSelectors.join(', ')).forEach(function(el) {
+            if (el && !el.querySelector('video, audio, main, article, [class*="player"]')) {
+                try { el.remove(); } catch (e) { el.style.setProperty('display', 'none', 'important'); }
+            }
         });
 
         // 3. Auto-click popular reject / accept buttons to save preference quietly
@@ -1271,6 +1340,13 @@
             '#onetrust-accept-btn-handler',
             '#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll',
             '#CybotCookiebotDialogBodyButtonAccept',
+            'button.sp_choice_type_11',
+            'button.sp_choice_type_12',
+            'button.sp_choice_type_13',
+            'button[title="Accept"]',
+            'button[title="Agree"]',
+            'button[aria-label="Accept"]',
+            'button[aria-label="Agree"]',
             'button[id*="reject-all"]',
             'button[id*="accept-all"]'
         ];
@@ -1280,6 +1356,7 @@
                 try { btn.click(); break; } catch (e) {}
             }
         }
+        unlockPageScrolling();
     }
 
     // =========================================================================
@@ -1909,29 +1986,72 @@
     // =========================================================================
     function unlockPageScrolling() {
         try {
+            const host = window.location.hostname;
+            if (host.includes('youtube.com') || host.includes('youtu.be')) return;
+
             const docEl = document.documentElement;
             const body = document.body;
-            if (!docEl || !body) return;
+            if (!docEl) return;
 
-            // Check if page scrolling has been frozen by anti-adblock or third party modal scripts
-            const docOverflow = docEl.style.overflow;
-            const bodyOverflow = body.style.overflow;
-            if (docOverflow === 'hidden' || docOverflow === 'clip') {
+            // 1. Universal strip of common scroll lock and CMP classes from html & body
+            const lockClasses = [
+                'gu-consent-active', 'sp_message_open', 'sp-message-open', 'has-consent-overlay',
+                'didomi-popup-open', 'ot-overlay-open', 'qc-cmp2-ui-open', 'modal-open',
+                'no-scroll', 'noscroll', 'overflow-hidden', 'disable-scroll', 'freeze-scroll',
+                'is-scroll-locked', 'lock-scroll', 'scroll-locked', 'stop-scrolling',
+                'prevent-scroll', 'cmp-open', 'cmp-active', 'fnc-open', 'tp-modal-open'
+            ];
+            for (let i = 0; i < lockClasses.length; i++) {
+                const c = lockClasses[i];
+                if (docEl.classList && docEl.classList.contains(c)) docEl.classList.remove(c);
+                if (body && body.classList && body.classList.contains(c)) body.classList.remove(c);
+            }
+
+            // 2. Computed style scroll check & unlock on documentElement
+            const docStyle = window.getComputedStyle(docEl);
+            if (docStyle.overflowY === 'hidden' || docStyle.overflowY === 'clip' || docStyle.overflow === 'hidden') {
                 docEl.style.setProperty('overflow', 'auto', 'important');
                 docEl.style.setProperty('overflow-y', 'auto', 'important');
             }
-            if (bodyOverflow === 'hidden' || bodyOverflow === 'clip') {
-                body.style.setProperty('overflow', 'auto', 'important');
-                body.style.setProperty('overflow-y', 'auto', 'important');
+
+            // 3. Computed style scroll & fixed-position check & unlock on body
+            if (body) {
+                const bodyStyle = window.getComputedStyle(body);
+                if (bodyStyle.overflowY === 'hidden' || bodyStyle.overflowY === 'clip' || bodyStyle.overflow === 'hidden') {
+                    body.style.setProperty('overflow', 'auto', 'important');
+                    body.style.setProperty('overflow-y', 'auto', 'important');
+                }
+                if (bodyStyle.position === 'fixed') {
+                    body.style.setProperty('position', 'static', 'important');
+                }
+                if (body.style.position === 'fixed') {
+                    body.style.setProperty('position', 'static', 'important');
+                }
+                if (bodyStyle.filter && bodyStyle.filter.includes('blur')) {
+                    body.style.setProperty('filter', 'none', 'important');
+                }
             }
-            if (body.style.position === 'fixed') {
-                body.style.setProperty('position', 'static', 'important');
-            }
-            // Strip common anti-scroll lock classes from body
-            if (body.classList.contains('modal-open') || body.classList.contains('no-scroll') ||
-                body.classList.contains('overflow-hidden') || body.classList.contains('disable-scroll')) {
-                body.classList.remove('modal-open', 'no-scroll', 'overflow-hidden', 'disable-scroll');
-            }
+
+            // 4. Universal CMP / Cookie Overlay element removal
+            const cmpSelectors = [
+                'div[id^="sp_message_container"]', 'div[class*="sp_message"]', 'iframe[id^="sp_message_iframe"]', '.sp_veil', 'div[id*="sp_message"]',
+                '.gu-cmp-banner', 'div[data-component="cmp-banner"]',
+                '#onetrust-consent-sdk', '#onetrust-banner-sdk', '.onetrust-pc-dark-filter', 'div[id*="onetrust"]',
+                'div[id*="didomi-host"]', 'div[id*="didomi-notice"]', '.didomi-popup-backdrop',
+                '#CybotCookiebotDialog', '#CybotCookiebotDialogBodyUnderlay',
+                '.qc-cmp2-container', '.qc-cmp-cleanslate', '.qc-cmp-ui-container',
+                '.fc-consent-root', '.fc-dialog-container', '.fc-ab-root', '.fc-whitelist-root', '.fc-message-root',
+                '.tp-backdrop', '.tp-modal', 'iframe[id^="piano_lightbox"]',
+                '.admiral-root', 'div[class*="admiral-"]', '.admiral-overlay',
+                'div[id*="truste"]', '.truste_box_overlay',
+                'div[id^="cmp-"]', 'div[class*="cmp-modal"]', '.cmp-root', 'div[class*="cookie-modal"]', 'div[class*="consent-modal"]', 'div[class*="consent-overlay"]', '.adblock-overlay'
+            ];
+            document.querySelectorAll(cmpSelectors.join(', ')).forEach(function(el) {
+                if (el && !el.querySelector('video, audio, main, article, [class*="player"]')) {
+                    el.style.setProperty('display', 'none', 'important');
+                    try { el.remove(); } catch (_) {}
+                }
+            });
         } catch(e) {}
     }
 
@@ -2070,9 +2190,71 @@
         });
         observer.observe(document.documentElement, {
             childList: true,
-            subtree: true
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class', 'style']
         });
+
+        if (!host.includes('youtube.com') && !host.includes('youtu.be')) {
+            window.addEventListener('load', unlockPageScrolling);
+            window.addEventListener('DOMContentLoaded', unlockPageScrolling);
+            let cmpPollCount = 0;
+            const cmpPollTimer = setInterval(function() {
+                unlockPageScrolling();
+                if (++cmpPollCount > 16) clearInterval(cmpPollTimer);
+            }, 500);
+        }
     } catch (e) {}
+
+    // =========================================================================
+    // Access Denied / Akamai Block Instant Auto-Defuser In-Page Banner for Mobile
+    // =========================================================================
+    function detectAndInjectDefuserBar() {
+        try {
+            const host = window.location.hostname;
+            if (host.includes('youtube.com') || host.includes('youtu.be') || host.includes('google.')) return;
+            const title = (document.title || '').toLowerCase();
+            const bodyText = document.body ? document.body.innerText.substring(0, 600).toLowerCase() : '';
+            const isBlocked = title.includes('access denied') || bodyText.includes('access denied') || bodyText.includes("you don't have permission") || bodyText.includes('errors.edgesuite.net') || title.includes('403 forbidden');
+            if (isBlocked && !document.getElementById('fokk-defuser-bar')) {
+                const bar = document.createElement('div');
+                bar.id = 'fokk-defuser-bar';
+                bar.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(90deg,#0a192f,#1e293b);border-bottom:2px solid #00E5FF;color:#fff;padding:10px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;z-index:2147483647;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;font-size:12px;box-shadow:0 4px 20px rgba(0,0,0,0.8);';
+                bar.innerHTML = '<div style="display:flex;align-items:center;gap:6px;width:100%;margin-bottom:4px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span style="font-weight:700;color:#00E5FF;">Fokk AI Defuser:</span><span>Publisher CDN access block detected.</span><button id="fokk-btn-dismiss" style="background:transparent;border:1px solid #64748b;color:#cbd5e1;padding:2px 8px;border-radius:4px;font-size:11px;cursor:pointer;margin-left:auto;">✕</button></div><div style="display:flex;gap:6px;flex-wrap:wrap;width:100%;"><button id="fokk-btn-cache" style="background:#00E5FF;color:#0a192f;border:none;padding:6px 12px;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;flex:1;min-width:110px;">Google Cache</button><button id="fokk-btn-archive" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;cursor:pointer;flex:1;min-width:110px;">Archive Bypass</button><button id="fokk-btn-search" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;cursor:pointer;flex:1;min-width:100px;">Find Story</button></div>';
+                if (document.body) {
+                    document.body.prepend(bar);
+                    const btnCache = document.getElementById('fokk-btn-cache');
+                    if (btnCache) {
+                        btnCache.onclick = function() {
+                            window.location.href = 'https://webcache.googleusercontent.com/search?q=cache:' + encodeURIComponent(window.location.href);
+                        };
+                    }
+                    const btnArchive = document.getElementById('fokk-btn-archive');
+                    if (btnArchive) {
+                        btnArchive.onclick = function() {
+                            window.location.href = 'https://web.archive.org/web/' + encodeURIComponent(window.location.href);
+                        };
+                    }
+                    const btnSearch = document.getElementById('fokk-btn-search');
+                    if (btnSearch) {
+                        btnSearch.onclick = function() {
+                            let q = window.location.pathname.split('/').pop().replace(/-\d+$/, '').replace(/-/g, ' ');
+                            window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(q || document.title);
+                        };
+                    }
+                    const btnDismiss = document.getElementById('fokk-btn-dismiss');
+                    if (btnDismiss) {
+                        btnDismiss.onclick = function() {
+                            bar.remove();
+                        };
+                    }
+                }
+            }
+        } catch (_) {}
+    }
+    window.addEventListener('load', detectAndInjectDefuserBar);
+    setTimeout(detectAndInjectDefuserBar, 600);
+    setTimeout(detectAndInjectDefuserBar, 1500);
 
     function runInitialScrub() {
         const host = window.location.hostname;

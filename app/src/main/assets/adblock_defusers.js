@@ -28,6 +28,60 @@
     function installMainWorldDefusers() {
         if (window.__fokk_main_defusers_installed) return;
         window.__fokk_main_defusers_installed = true;
+
+        // Anti-bot & Client Hints Cloak (Defeats Akamai EdgeSuite bot detection on The Guardian, Sky News, BBC)
+        try {
+            Object.defineProperty(navigator, 'webdriver', {
+                get: function() { return undefined; },
+                configurable: true
+            });
+        } catch (_) {}
+
+        try {
+            var fakeBrands = [
+                { brand: 'Chromium', version: '124' },
+                { brand: 'Google Chrome', version: '124' },
+                { brand: 'Not-A.Brand', version: '99' }
+            ];
+            var fakeFullBrands = [
+                { brand: 'Chromium', version: '124.0.6367.243' },
+                { brand: 'Google Chrome', version: '124.0.6367.243' },
+                { brand: 'Not-A.Brand', version: '99.0.0.0' }
+            ];
+            var fakeUAD = {
+                brands: fakeBrands,
+                mobile: true,
+                platform: 'Android',
+                getHighEntropyValues: function(hints) {
+                    return Promise.resolve({
+                        brands: fakeBrands,
+                        mobile: true,
+                        platform: 'Android',
+                        platformVersion: '14.0.0',
+                        architecture: 'arm64',
+                        model: 'Pixel 7',
+                        uaFullVersion: '124.0.6367.243',
+                        fullVersionList: fakeFullBrands
+                    });
+                },
+                toJSON: function() {
+                    return {
+                        brands: fakeBrands,
+                        mobile: true,
+                        platform: 'Android'
+                    };
+                }
+            };
+            Object.defineProperty(navigator, 'userAgentData', {
+                get: function() { return fakeUAD; },
+                configurable: true
+            });
+        } catch (_) {}
+
+        try {
+            Object.defineProperty(navigator, 'hardwareConcurrency', { get: function() { return 8; }, configurable: true });
+            Object.defineProperty(navigator, 'deviceMemory', { get: function() { return 8; }, configurable: true });
+        } catch (_) {}
     var noopObjInstance = new Proxy({}, {
         get: function(target, prop) {
             if (prop === 'then') return undefined;
@@ -474,24 +528,51 @@
         try {
             var docEl = document.documentElement;
             var body = document.body;
-            if (docEl) {
-                var s = docEl.style;
-                if (s.overflow === 'hidden' || s.overflowY === 'hidden') {
-                    s.setProperty('overflow', 'visible', 'important');
-                    s.setProperty('overflow-y', 'auto', 'important');
+            if (!docEl) return;
+
+            // Strip common anti-scroll lock & CMP classes
+            var lockClasses = [
+                'gu-consent-active', 'sp_message_open', 'sp-message-open', 'has-consent-overlay',
+                'didomi-popup-open', 'ot-overlay-open', 'qc-cmp2-ui-open', 'modal-open',
+                'no-scroll', 'noscroll', 'overflow-hidden', 'disable-scroll', 'freeze-scroll',
+                'is-scroll-locked', 'lock-scroll', 'scroll-locked', 'stop-scrolling',
+                'prevent-scroll', 'cmp-open', 'cmp-active', 'fnc-open', 'tp-modal-open'
+            ];
+            for (var i = 0; i < lockClasses.length; i++) {
+                var c = lockClasses[i];
+                if (docEl.classList && docEl.classList.contains(c)) docEl.classList.remove(c);
+                if (body && body.classList && body.classList.contains(c)) body.classList.remove(c);
+            }
+
+            // Universal computed style scroll check & unlock on documentElement
+            var docStyle = window.getComputedStyle(docEl);
+            if (docStyle.overflowY === 'hidden' || docStyle.overflowY === 'clip' || docStyle.overflow === 'hidden') {
+                docEl.style.setProperty('overflow', 'auto', 'important');
+                docEl.style.setProperty('overflow-y', 'auto', 'important');
+            }
+
+            // Universal computed style scroll check & unlock on body
+            if (body) {
+                var bodyStyle = window.getComputedStyle(body);
+                if (bodyStyle.overflowY === 'hidden' || bodyStyle.overflowY === 'clip' || bodyStyle.overflow === 'hidden') {
+                    body.style.setProperty('overflow', 'auto', 'important');
+                    body.style.setProperty('overflow-y', 'auto', 'important');
+                }
+                if (bodyStyle.position === 'fixed' || body.style.position === 'fixed') {
+                    body.style.setProperty('position', 'static', 'important');
+                }
+                if (bodyStyle.filter && bodyStyle.filter.indexOf('blur') !== -1) {
+                    body.style.setProperty('filter', 'none', 'important');
                 }
             }
-            if (body) {
-                var bs = body.style;
-                if (bs.overflow === 'hidden' || bs.overflowY === 'hidden' || bs.position === 'fixed') {
-                    bs.setProperty('overflow', 'visible', 'important');
-                    bs.setProperty('overflow-y', 'auto', 'important');
-                    if (bs.position === 'fixed') {
-                        bs.setProperty('position', 'static', 'important');
-                    }
-                }
-                if (bs.filter && bs.filter.indexOf('blur') !== -1) {
-                    bs.setProperty('filter', 'none', 'important');
+
+            // Remove persistent CMP / Cookie overlay backdrops
+            var cmpOverlays = document.querySelectorAll('div[id^="sp_message_container"], div[class*="sp_message"], iframe[id^="sp_message_iframe"], .sp_veil, div[id*="sp_message"], .gu-cmp-banner, div[data-component="cmp-banner"], #onetrust-consent-sdk, #onetrust-banner-sdk, .onetrust-pc-dark-filter, #CybotCookiebotDialog, .qc-cmp2-container, .fc-consent-root, .tp-backdrop');
+            for (var m = 0; m < cmpOverlays.length; m++) {
+                var cov = cmpOverlays[m];
+                if (cov && !cov.querySelector('video, audio, main, article, [class*="player"]')) {
+                    cov.style.setProperty('display', 'none', 'important');
+                    try { cov.remove(); } catch (_) {}
                 }
             }
         } catch(e) {}
@@ -641,40 +722,52 @@
         var nagScheduled = false;
         var nagObserver = new MutationObserver(function(mutations) {
             if (nagScheduled) return;
-            var hasRelevantAddition = false;
+            var hasRelevantChange = false;
             for (var i = 0; i < mutations.length; i++) {
-                var added = mutations[i].addedNodes;
+                var m = mutations[i];
+                if (m.type === 'attributes') {
+                    hasRelevantChange = true;
+                    break;
+                }
+                var added = m.addedNodes;
                 if (added && added.length > 0) {
                     for (var j = 0; j < added.length; j++) {
                         var node = added[j];
                         if (node.nodeType === 1) {
                             var tag = node.tagName;
-                            if (tag === 'DIV' || tag === 'SECTION' || tag === 'ASIDE' || tag === 'DIALOG') {
-                                hasRelevantAddition = true;
+                            if (tag === 'DIV' || tag === 'SECTION' || tag === 'ASIDE' || tag === 'DIALOG' || tag === 'IFRAME') {
+                                hasRelevantChange = true;
                                 break;
                             }
                         }
                     }
                 }
-                if (hasRelevantAddition) break;
+                if (hasRelevantChange) break;
             }
-            if (!hasRelevantAddition) return;
+            if (!hasRelevantChange) return;
 
             nagScheduled = true;
             setTimeout(function() {
                 nagScheduled = false;
                 scrubNagElements();
-            }, 350);
+                restoreScroll();
+            }, 300);
         });
 
         var targetObserveNode = document.body || document.documentElement;
         if (targetObserveNode) {
-            nagObserver.observe(targetObserveNode, { childList: true, subtree: true });
+            nagObserver.observe(targetObserveNode, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
         } else {
             document.addEventListener('DOMContentLoaded', function() {
-                if (document.body) nagObserver.observe(document.body, { childList: true, subtree: true });
+                if (document.body) nagObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
             });
         }
+
+        var nagPollCount = 0;
+        var nagPollTimer = setInterval(function() {
+            restoreScroll();
+            if (++nagPollCount > 16) clearInterval(nagPollTimer);
+        }, 500);
     } catch(e) {}
 
 })();
