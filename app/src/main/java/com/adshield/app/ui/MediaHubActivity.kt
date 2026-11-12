@@ -3012,6 +3012,17 @@ open class MediaHubActivity : AppCompatActivity() {
                     val js = "javascript:(function(){let vp=document.querySelector('meta[name=\"viewport\"]');if(vp){vp.setAttribute('content','width=1280, initial-scale=0.85');}})();"
                     view?.evaluateJavascript(js, null)
                 }
+
+                // Universal article scroll-lock and CMP defuser sweep
+                val targetHost = try { pageUrl?.let { Uri.parse(it).host?.lowercase(Locale.ROOT) } } catch (_: Exception) { null }
+                if (targetHost != null && !targetHost.contains("youtube.com") && !targetHost.contains("youtu.be")) {
+                    view?.postDelayed({
+                        view.evaluateJavascript("if (typeof unlockPageScrolling === 'function') unlockPageScrolling();", null)
+                    }, 500)
+                    view?.postDelayed({
+                        view.evaluateJavascript("if (typeof unlockPageScrolling === 'function') unlockPageScrolling();", null)
+                    }, 1500)
+                }
             }
 
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
@@ -3938,7 +3949,9 @@ open class MediaHubActivity : AppCompatActivity() {
             lower.contains("standard.co.uk") || lower.contains("dailymail.co.uk") || lower.contains("telegraph.co.uk") ||
             lower.contains("bloomberg.com") || lower.contains("reuters.com") || lower.contains("nytimes.com") ||
             lower.contains("washingtonpost.com") || lower.contains("usatoday.com") || lower.contains("latimes.com") ||
-            lower.contains("onmanorama.com") || lower.contains("indiatimes.com") || lower.contains("ndtv.com")
+            lower.contains("sky.com") || lower.contains("news.sky.com") || lower.contains("bbc.com") || lower.contains("bbc.co.uk") ||
+            lower.contains("thetimes.co.uk") || lower.contains("wsj.com") || lower.contains("ft.com") || lower.contains("cnn.com") ||
+            lower.contains("apnews.com") || lower.contains("onmanorama.com") || lower.contains("indiatimes.com") || lower.contains("ndtv.com")
     }
 
     private fun isSocialAppHost(host: String?): Boolean {
