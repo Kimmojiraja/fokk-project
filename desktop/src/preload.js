@@ -33,6 +33,9 @@ if (isInternalPage) {
     getTabCount: () => {
         return ipcRenderer.sendSync('fokk-get-tab-count');
     },
+    getAppVersion: () => {
+        try { return ipcRenderer.sendSync('fokk-get-app-version') || '1.2.0'; } catch (_) { return '1.2.0'; }
+    },
 
     // Search Engine & Omnibox Sync
     getSearchEngine: () => {

@@ -1,6 +1,14 @@
 const { ipcRenderer } = require('electron');
 const path = require('path');
 
+const CURRENT_APP_VERSION = (function() {
+    try {
+        return ipcRenderer.sendSync('fokk-get-app-version') || '1.2.0';
+    } catch (_) {
+        return '1.2.0';
+    }
+})();
+
 // Helper: file:// URL for a UI page in the same directory as browser.html
 function uiPageUrl(filename) {
     return 'file:///' + path.join(__dirname, filename).replace(/\\/g, '/');
@@ -12,7 +20,7 @@ function uiPageUrl(filename) {
 async function exportEncryptedVault(password) {
     const payload = {
         app: 'Fokk Browser',
-        version: '1.1.0',
+        version: CURRENT_APP_VERSION,
         exportedAt: new Date().toISOString(),
         bookmarks: JSON.parse(localStorage.getItem('fokk_bookmarks') || '[]'),
         shortcuts: JSON.parse(localStorage.getItem('fokk_desktop_shortcuts') || '[]'),
@@ -3722,6 +3730,16 @@ setInterval(() => {
         }
     });
 }, 60000);
+
+// Sync Version Badges Across UI
+(function syncVersionUI() {
+    try {
+        const verBadge = document.getElementById('appVersionBadge');
+        if (verBadge) verBadge.textContent = 'v' + CURRENT_APP_VERSION;
+        const aboutHubSub = document.getElementById('aboutHubSub');
+        if (aboutHubSub) aboutHubSub.textContent = `Manifesto, GitHub, Version ${CURRENT_APP_VERSION}`;
+    } catch (_) {}
+})();
 
 // Initialize Initial Tab
 createTab(START_PAGE_URL);
