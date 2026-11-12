@@ -1,6 +1,6 @@
 {
-  "versionCode": 235,
-  "versionName": "2.3.5",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.3.5/app-debug.apk",
-  "changelog": "- Visuals & Wallpapers Hub: Directly accessible via browser menu with unlimited 4K visuals, sailboats, and custom image upload from device.\n- Streamlined Pulse Top Bar: Tight country selector spacing and clean, non-overlapping home trending toggle button.\n- Enhanced Article Cards: Taller 16:9 cinematic imagery and expanded editorial content with zero dead blank space."
+  "versionCode": 236,
+  "versionName": "2.3.6",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.3.6/app-debug.apk",
+  "changelog": "- Crystal Clear Article View: Eliminates transparent canvas blackout on BBC News, Wikipedia, and editorial publishers.\n- Next-Gen YouTube Ad Shield: Fully defuses feed banners, authenticated ad placements, and resolves playback glitches for signed-in Google accounts.\n- Enhanced Content Security & AdBlock Defusers: Seamless video streaming with zero buffer underruns."
 }

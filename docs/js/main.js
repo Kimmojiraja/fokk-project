@@ -70,28 +70,28 @@ function detectUserPlatform() {
     let os = 'windows';
     let osLabel = 'Windows';
     let fileFormat = '.exe / .zip';
-    let downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.1.0/Fokk.Browser.1.1.0.exe';
+    let downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.2.0/Fokk.Browser.1.2.0.exe';
 
     if (/android/i.test(ua)) {
         os = 'android';
         osLabel = 'Android';
         fileFormat = '.apk';
-        downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/v2.3.5/app-debug.apk';
+        downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/v2.3.6/app-debug.apk';
     } else if (/macintosh|mac os x/i.test(ua)) {
         os = 'mac';
         osLabel = 'macOS';
         fileFormat = '.zip';
-        downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.1.0/Fokk.Browser-1.1.0-arm64-mac.zip';
+        downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.2.0/Fokk.Browser-1.2.0-arm64-mac.zip';
     } else if (/linux/i.test(ua)) {
         os = 'linux';
         osLabel = 'Linux';
         fileFormat = '.AppImage / .deb';
-        downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.1.0/Fokk.Browser-1.1.0.AppImage';
+        downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.2.0/Fokk.Browser-1.2.0.AppImage';
     } else if (/windows/i.test(ua)) {
         os = 'windows';
         osLabel = 'Windows';
         fileFormat = '.exe / .zip';
-        downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.1.0/Fokk.Browser.1.1.0.exe';
+        downloadUrl = 'https://github.com/Kimmojiraja/fokk-project/releases/download/desktop-v1.2.0/Fokk.Browser.1.2.0.exe';
     }
 
     // Update Hero Dynamic Button
@@ -102,7 +102,7 @@ function detectUserPlatform() {
     if (heroBtn && heroOsLabel && heroOsSub) {
         heroBtn.href = downloadUrl;
         heroOsLabel.textContent = `Download for ${osLabel}`;
-        heroOsSub.textContent = `v1.1.0 • 64-bit (${fileFormat}) • Free`;
+        heroOsSub.textContent = `v1.2.0 • 64-bit (${fileFormat}) • Free`;
     }
 
     // Highlight Detected Card in Download Grid

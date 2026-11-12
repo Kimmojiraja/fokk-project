@@ -557,6 +557,8 @@ class AdBlockEngine {
                 'ytd-ad-slot-renderer',
                 'ytd-in-feed-ad-layout-renderer',
                 'ytd-banner-promo-renderer',
+                'ytd-brand-video-singleton-renderer',
+                'ytd-primetime-promo-renderer',
                 'ytd-promoted-video-renderer',
                 'ytd-display-ad-renderer',
                 'ytd-statement-banner-renderer',
@@ -568,12 +570,22 @@ class AdBlockEngine {
                 'ytd-compact-promoted-video-renderer',
                 'ytd-compact-promoted-item-renderer',
                 'ytd-search-pyv-renderer',
+                'ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-ads"]',
+                '#panels:has(ytd-ads-engagement-panel-content-renderer)',
+                'ytd-ads-engagement-panel-content-renderer',
+                'ytd-player-legacy-desktop-watch-ads-renderer',
+                'ytd-rich-section-renderer:has(ytd-statement-banner-renderer)',
+                'ytd-rich-section-renderer:has(ytd-brand-video-singleton-renderer)',
+                'ytd-rich-section-renderer:has(ytd-ad-slot-renderer)',
+                'ytd-rich-section-renderer:has(ytd-in-feed-ad-layout-renderer)',
                 'ytd-rich-item-renderer:has(> #content > ytd-ad-slot-renderer)',
                 'ytd-rich-item-renderer:has(> ytd-ad-slot-renderer)',
                 '#contents > ytd-rich-item-renderer:has(> ytd-ad-slot-renderer)',
+                '#contents > ytd-rich-item-renderer:has(.ytd-ad-slot-renderer)',
                 'ytd-rich-item-renderer:has(ytd-in-feed-ad-layout-renderer)',
                 'ytd-rich-item-renderer:has(#ad-badge)',
                 'ytd-rich-item-renderer:has(.badge-style-type-ad)',
+                'ytd-rich-item-renderer:has([aria-label*="Sponsored" i])',
                 'ytd-video-renderer:has(ytd-ad-slot-renderer)',
                 'ytd-video-renderer:has([aria-label*="Sponsored" i])',
                 'ytd-video-renderer:has(.badge-style-type-ad)',
@@ -589,7 +601,10 @@ class AdBlockEngine {
                 '#player-ads',
                 'div[class*="ad-showing"] .ytp-ad-text',
                 '#shopping-timely-shelf',
-                'ytd-merch-shelf-renderer'
+                'ytd-merch-shelf-renderer',
+                'tp-yt-paper-dialog:has(#feedback)',
+                '#fulfillment-element.ytd-ad-slot-renderer',
+                'ytd-watch-next-secondary-results-renderer:has(ytd-compact-promoted-item-renderer)'
             );
         } else {
             // First-class cosmetic selectors for other major platforms
@@ -725,16 +740,29 @@ class AdBlockEngine {
                     if (!window.__fokk_yt_cleaned) {
                         window.__fokk_yt_cleaned = true;
 
-                        const sanitizeYtObject = (obj) => {
+                        const sanitizeYtObject = (obj, depth) => {
                             if (!obj || typeof obj !== 'object') return obj;
+                            if (!depth) depth = 0;
+                            if (depth > 8) return obj;
+                            if (Array.isArray(obj)) {
+                                for (let i = 0; i < obj.length; i++) sanitizeYtObject(obj[i], depth + 1);
+                                return obj;
+                            }
                             if (obj.adPlacements) delete obj.adPlacements;
                             if (obj.playerAds) delete obj.playerAds;
                             if (obj.adSlots) delete obj.adSlots;
                             if (obj.adBreaks) delete obj.adBreaks;
                             if (obj.adPlacementConfig) delete obj.adPlacementConfig;
+                            if (obj.adBreakHeartbeatParams) delete obj.adBreakHeartbeatParams;
                             if (obj.playerConfig && obj.playerConfig.adConfig) delete obj.playerConfig.adConfig;
+                            if (obj.playerConfig && obj.playerConfig.adBreakHeartbeatParams) delete obj.playerConfig.adBreakHeartbeatParams;
+                            if (obj.playbackTracking) {
+                                if (obj.playbackTracking.videostatsPlaybackUrl) delete obj.playbackTracking.videostatsPlaybackUrl;
+                                if (obj.playbackTracking.videostatsDelayplayUrl) delete obj.playbackTracking.videostatsDelayplayUrl;
+                                if (obj.playbackTracking.qoeUrl) delete obj.playbackTracking.qoeUrl;
+                            }
                             if (obj.playerResponse && typeof obj.playerResponse === 'object') {
-                                sanitizeYtObject(obj.playerResponse);
+                                sanitizeYtObject(obj.playerResponse, depth + 1);
                             }
                             return obj;
                         };
@@ -776,21 +804,34 @@ class AdBlockEngine {
                             }
                         } catch(_) {}
 
-                        // 3. Instant Video Ad Skip Trigger (uBlock Origin Compatible Defusers)
+                        // 3. Instant Video Ad Skip & Defuser (Zero Glitch uBlock Origin Compatible)
                         function defuseVideoAd() {
                             const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
                             const isAdActive = !!document.querySelector('.html5-video-player.ad-showing, .html5-video-player.ad-interrupting, .ad-showing video, .ad-interrupting video');
-                            if (isAdActive) {
+                            const video = (player && player.querySelector('video')) || document.querySelector('video.html5-main-video') || document.querySelector('video');
+
+                            if (isAdActive && video) {
+                                try {
+                                    video.muted = true;
+                                    video.playbackRate = 16.0;
+                                    if (video.duration && isFinite(video.duration) && video.duration > 0.5) {
+                                        if (video.currentTime < video.duration - 0.2) {
+                                            video.currentTime = video.duration - 0.1;
+                                        }
+                                    }
+                                } catch (_) {}
                                 if (player && typeof player.skipAd === 'function') {
                                     try { player.skipAd(); } catch (_) {}
                                 }
-                                const video = (player && player.querySelector('video')) || document.querySelector('video.html5-main-video') || document.querySelector('video');
-                                if (video && !isNaN(video.duration) && isFinite(video.duration) && video.duration > 0) {
-                                    try { video.currentTime = video.duration; } catch (_) {}
-                                }
+                            } else if (video && video.playbackRate > 2.0 && !isAdActive) {
+                                try {
+                                    video.playbackRate = 1.0;
+                                    video.muted = false;
+                                } catch (_) {}
                             }
+
                             const skipBtns = document.querySelectorAll(
-                                '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button, .ytp-ad-skip-button-container button'
+                                '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, button.ytp-ad-skip-button, .ytp-ad-skip-button-container button, .ytp-ad-skip-button-slot button, .ytp-ad-overlay-close-button'
                             );
                             skipBtns.forEach(btn => {
                                 try { btn.click(); } catch (_) {}
@@ -803,11 +844,11 @@ class AdBlockEngine {
 
                         // 4. Procedural Sponsored Card Scrubber (Home, Search Results, Up Next, & Shorts)
                         function scrubSponsoredCards() {
-                            const candidates = document.querySelectorAll('ytd-rich-item-renderer, ytd-video-renderer, ytd-reel-video-renderer, ytd-compact-video-renderer');
+                            const candidates = document.querySelectorAll('ytd-rich-item-renderer, ytd-rich-section-renderer, ytd-video-renderer, ytd-reel-video-renderer, ytd-compact-video-renderer');
                             for (let i = 0; i < candidates.length; i++) {
                                 const el = candidates[i];
                                 if (el.style.display === 'none') continue;
-                                if (el.querySelector('ytd-ad-slot-renderer, ytd-in-feed-ad-layout-renderer, .badge-style-type-ad, #ad-badge, [aria-label*="Sponsored" i]')) {
+                                if (el.querySelector('ytd-ad-slot-renderer, ytd-in-feed-ad-layout-renderer, ytd-statement-banner-renderer, ytd-brand-video-singleton-renderer, .badge-style-type-ad, #ad-badge, [aria-label*="Sponsored" i], [aria-label*="Promoted" i]')) {
                                     el.style.setProperty('display', 'none', 'important');
                                     continue;
                                 }
