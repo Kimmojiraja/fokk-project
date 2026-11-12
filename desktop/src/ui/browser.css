@@ -76,6 +76,20 @@ html, body {
     text-shadow: none !important;
 }
 
+.app-version-badge {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--fokk-cyan);
+    background: rgba(0, 229, 255, 0.1);
+    border: 1px solid rgba(0, 229, 255, 0.28);
+    border-radius: 4px;
+    padding: 1px 5px;
+    letter-spacing: 0.05em;
+    line-height: 1.2;
+    user-select: none;
+    pointer-events: none;
+}
+
 .tab-strip {
     flex: 1;
     display: flex;

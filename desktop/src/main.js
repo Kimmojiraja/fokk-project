@@ -372,6 +372,10 @@ ipcMain.on('fokk-get-user-agent', (event) => {
     event.returnValue = CHROME_USER_AGENT;
 });
 
+ipcMain.on('fokk-get-app-version', (event) => {
+    event.returnValue = app.getVersion() || '1.2.0';
+});
+
 // AI Defuser: Stealth-fetch a URL server-side (bypasses browser-level CDN fingerprinting)
 const { net } = require('electron');
 ipcMain.handle('fokk-ai-defuser-fetch', async (event, targetUrl) => {

@@ -1,16 +1,17 @@
 @echo off
 setlocal enabledelayedexpansion
 
-title Fokk Shield Browser
-
-echo ========================================================
-echo                 FOKK SHIELD BROWSER
-echo       Fast, Zero-Ad, Privacy Desktop Browser
-echo ========================================================
-echo.
-
 set "SCRIPT_DIR=%~dp0"
 set "DESKTOP_DIR=%SCRIPT_DIR%desktop"
+
+title Fokk Shield Browser v1.2.0
+
+echo ========================================================
+echo             FOKK SHIELD BROWSER v1.2.0
+echo       Fast, Zero-Ad, Privacy Desktop Browser
+echo       [Live Dev/Runner: Synced with Release v1.2.0]
+echo ========================================================
+echo.
 
 REM 1. Verify desktop directory exists
 if not exist "%DESKTOP_DIR%" (
