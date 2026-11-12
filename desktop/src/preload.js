@@ -250,6 +250,182 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
         webFrame.executeJavaScriptInIsolatedWorld(0, [
             {
                 code: `
+                    // Guarantee standard initial canvas background for websites with transparent root (e.g. BBC News, Wikipedia)
+                    (function ensureStandardCanvas() {
+                        try {
+                            const applyCanvas = function() {
+                                const doc = document.documentElement;
+                                if (!doc) return;
+                                const comp = window.getComputedStyle(doc).backgroundColor;
+                                if (!comp || comp === 'rgba(0, 0, 0, 0)' || comp === 'transparent') {
+                                    doc.style.setProperty('background-color', '#ffffff', 'important');
+                                }
+                                if (document.body) {
+                                    const bComp = window.getComputedStyle(document.body).backgroundColor;
+                                    if (!bComp || bComp === 'rgba(0, 0, 0, 0)' || bComp === 'transparent') {
+                                        if (window.getComputedStyle(doc).backgroundColor === 'rgba(0, 0, 0, 0)' || window.getComputedStyle(doc).backgroundColor === 'transparent') {
+                                            document.body.style.setProperty('background-color', '#ffffff', 'important');
+                                        }
+                                    }
+                                }
+                            };
+                            if (document.readyState === 'loading') {
+                                document.addEventListener('DOMContentLoaded', applyCanvas, { once: true });
+                            } else {
+                                applyCanvas();
+                            }
+                        } catch (_) {}
+                    })();
+
+                    // Targeted YouTube Ultra-Shield at Document-Start (uBlock Origin Architecture for Authenticated Google Accounts)
+                    (function initYouTubeDocumentStartShield() {
+                        try {
+                            const isYt = window.location.hostname.includes('youtube.com') || window.location.hostname.includes('youtu.be');
+                            if (!isYt) return;
+
+                            const sanitizeYtData = function(obj, depth) {
+                                if (!obj || typeof obj !== 'object') return obj;
+                                if (!depth) depth = 0;
+                                if (depth > 8) return obj;
+                                if (Array.isArray(obj)) {
+                                    for (let i = 0; i < obj.length; i++) sanitizeYtData(obj[i], depth + 1);
+                                    return obj;
+                                }
+                                delete obj.adPlacements;
+                                delete obj.playerAds;
+                                delete obj.adSlots;
+                                delete obj.adBreaks;
+                                delete obj.adPlacementConfig;
+                                delete obj.adBreakHeartbeatParams;
+                                if (obj.playerConfig && obj.playerConfig.adConfig) delete obj.playerConfig.adConfig;
+                                if (obj.playerConfig && obj.playerConfig.adBreakHeartbeatParams) delete obj.playerConfig.adBreakHeartbeatParams;
+                                if (obj.playbackTracking) {
+                                    delete obj.playbackTracking.videostatsPlaybackUrl;
+                                    delete obj.playbackTracking.videostatsDelayplayUrl;
+                                    delete obj.playbackTracking.qoeUrl;
+                                }
+                                if (obj.playerResponse && typeof obj.playerResponse === 'object') {
+                                    sanitizeYtData(obj.playerResponse, depth + 1);
+                                }
+                                return obj;
+                            };
+
+                            // 1. Guard window.ytInitialPlayerResponse
+                            if (window.ytInitialPlayerResponse) {
+                                sanitizeYtData(window.ytInitialPlayerResponse);
+                            }
+                            let _ytResp = window.ytInitialPlayerResponse;
+                            try {
+                                Object.defineProperty(window, 'ytInitialPlayerResponse', {
+                                    get: () => _ytResp,
+                                    set: (v) => { _ytResp = sanitizeYtData(v); },
+                                    configurable: true
+                                });
+                            } catch (_) {}
+
+                            // 2. Intercept window.fetch for /youtubei/v1/player
+                            try {
+                                const _origFetch = window.fetch;
+                                window.fetch = async function(...args) {
+                                    const u = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url ? args[0].url : '');
+                                    const isPlayerReq = u.includes('/youtubei/v1/player') || u.includes('/youtubei/v1/next');
+                                    const res = await _origFetch.apply(this, args);
+                                    if (isPlayerReq) {
+                                        try {
+                                            const clone = res.clone();
+                                            const p = clone.json().then(data => {
+                                                sanitizeYtData(data);
+                                                return data;
+                                            });
+                                            res.json = () => p;
+                                            res.text = async () => JSON.stringify(await p);
+                                        } catch (_) {}
+                                    }
+                                    return res;
+                                };
+                            } catch (_) {}
+
+                            // 3. Intercept XMLHttpRequest for /youtubei/v1/player
+                            try {
+                                const _origOpen = XMLHttpRequest.prototype.open;
+                                const _origSend = XMLHttpRequest.prototype.send;
+                                XMLHttpRequest.prototype.open = function(method, url) {
+                                    this._fokkUrl = url;
+                                    return _origOpen.apply(this, arguments);
+                                };
+                                XMLHttpRequest.prototype.send = function() {
+                                    if (this._fokkUrl && (this._fokkUrl.includes('/youtubei/v1/player') || this._fokkUrl.includes('/youtubei/v1/next'))) {
+                                        this.addEventListener('readystatechange', () => {
+                                            if (this.readyState === 4) {
+                                                try {
+                                                    const parsed = JSON.parse(this.responseText);
+                                                    sanitizeYtData(parsed);
+                                                    Object.defineProperty(this, 'responseText', { value: JSON.stringify(parsed), configurable: true });
+                                                    Object.defineProperty(this, 'response', { value: JSON.stringify(parsed), configurable: true });
+                                                } catch (_) {}
+                                            }
+                                        });
+                                    }
+                                    return _origSend.apply(this, arguments);
+                                };
+                            } catch (_) {}
+
+                            // 4. Intercept JSON.parse for player responses
+                            try {
+                                const _origJsonParse = JSON.parse;
+                                JSON.parse = function(text, reviver) {
+                                    const val = _origJsonParse.apply(this, arguments);
+                                    if (val && typeof val === 'object' && (val.adPlacements || val.adSlots || val.playerAds)) {
+                                        sanitizeYtData(val);
+                                    }
+                                    return val;
+                                };
+                            } catch (_) {}
+
+                            // 5. Instant Cosmetic CSS for YouTube Ads & Banners
+                            try {
+                                const s = document.createElement('style');
+                                s.id = 'fokk-yt-anti-banner';
+                                s.textContent = \`
+                                    #masthead-ad, ytd-ad-slot-renderer, ytd-in-feed-ad-layout-renderer,
+                                    ytd-banner-promo-renderer, ytd-brand-video-singleton-renderer, ytd-primetime-promo-renderer,
+                                    ytd-promoted-video-renderer, ytd-display-ad-renderer, ytd-statement-banner-renderer,
+                                    .ytd-action-companion-ad-renderer, ytd-companion-slot-renderer, ytd-mealbar-promo-renderer,
+                                    ytd-promoted-sparkles-web-renderer, ytd-promoted-sparkles-text-search-renderer,
+                                    ytd-compact-promoted-video-renderer, ytd-compact-promoted-item-renderer, ytd-search-pyv-renderer,
+                                    ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-ads"],
+                                    #panels:has(ytd-ads-engagement-panel-content-renderer), ytd-ads-engagement-panel-content-renderer,
+                                    ytd-player-legacy-desktop-watch-ads-renderer,
+                                    ytd-rich-section-renderer:has(ytd-statement-banner-renderer),
+                                    ytd-rich-section-renderer:has(ytd-brand-video-singleton-renderer),
+                                    ytd-rich-section-renderer:has(ytd-ad-slot-renderer),
+                                    ytd-rich-section-renderer:has(ytd-in-feed-ad-layout-renderer),
+                                    ytd-rich-item-renderer:has(> #content > ytd-ad-slot-renderer),
+                                    ytd-rich-item-renderer:has(> ytd-ad-slot-renderer),
+                                    #contents > ytd-rich-item-renderer:has(> ytd-ad-slot-renderer),
+                                    #contents > ytd-rich-item-renderer:has(.ytd-ad-slot-renderer),
+                                    ytd-rich-item-renderer:has(ytd-in-feed-ad-layout-renderer),
+                                    ytd-rich-item-renderer:has(#ad-badge), ytd-rich-item-renderer:has(.badge-style-type-ad),
+                                    ytd-rich-item-renderer:has([aria-label*="Sponsored" i]),
+                                    ytd-video-renderer:has(ytd-ad-slot-renderer), ytd-video-renderer:has([aria-label*="Sponsored" i]),
+                                    ytd-video-renderer:has(.badge-style-type-ad),
+                                    ytd-reel-video-renderer:has(ytd-ad-slot-renderer),
+                                    #shorts-inner-container > .ytd-shorts:has(> .ytd-reel-video-renderer > ytd-ad-slot-renderer),
+                                    .ytp-ad-module, .ytp-ad-overlay-container, .ytp-ad-message-container, .ytp-ad-text,
+                                    .ytp-ad-preview-text, .ytp-ad-progress-list, #player-ads, #shopping-timely-shelf,
+                                    ytd-merch-shelf-renderer, tp-yt-paper-dialog:has(#feedback), #fulfillment-element.ytd-ad-slot-renderer {
+                                        display: none !important;
+                                        visibility: hidden !important;
+                                        height: 0 !important;
+                                        min-height: 0 !important;
+                                        max-height: 0 !important;
+                                    }
+                                \`;
+                                (document.head || document.documentElement).appendChild(s);
+                            } catch (_) {}
+                        } catch (_) {}
+                    })();
+
                     // Authentic window.chrome object matching real Google Chrome / Brave
                     if (!window.chrome) {
                         window.chrome = {};

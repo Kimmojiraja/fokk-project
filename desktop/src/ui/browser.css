@@ -567,7 +567,7 @@ webview {
     height: 100%;
     display: none;
     border: none;
-    background-color: #090A0C !important;
+    background-color: #FFFFFF;
 }
 
 webview.active {

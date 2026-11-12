@@ -11,6 +11,31 @@
         return; // Zero overhead on performance benchmarking suites!
     }
 
+    // Guarantee standard initial canvas background for websites with transparent root (e.g. BBC News, Wikipedia)
+    try {
+        const applyCanvas = function() {
+            const doc = document.documentElement;
+            if (!doc) return;
+            const comp = window.getComputedStyle(doc).backgroundColor;
+            if (!comp || comp === 'rgba(0, 0, 0, 0)' || comp === 'transparent') {
+                doc.style.setProperty('background-color', '#ffffff', 'important');
+            }
+            if (document.body) {
+                const bComp = window.getComputedStyle(document.body).backgroundColor;
+                if (!bComp || bComp === 'rgba(0, 0, 0, 0)' || bComp === 'transparent') {
+                    if (window.getComputedStyle(doc).backgroundColor === 'rgba(0, 0, 0, 0)' || window.getComputedStyle(doc).backgroundColor === 'transparent') {
+                        document.body.style.setProperty('background-color', '#ffffff', 'important');
+                    }
+                }
+            }
+        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', applyCanvas, { once: true });
+        } else {
+            applyCanvas();
+        }
+    } catch (_) {}
+
     function hostIs(name) {
         return currentHost === name || currentHost.endsWith('.' + name);
     }
