@@ -4,12 +4,12 @@ setlocal enabledelayedexpansion
 set "SCRIPT_DIR=%~dp0"
 set "DESKTOP_DIR=%SCRIPT_DIR%desktop"
 
-title Fokk Shield Browser v1.2.0
+title Fokk Shield Browser v1.3.0
 
 echo ========================================================
-echo             FOKK SHIELD BROWSER v1.2.0
+echo             FOKK SHIELD BROWSER v1.3.0
 echo       Fast, Zero-Ad, Privacy Desktop Browser
-echo       [Live Dev/Runner: Synced with Release v1.2.0]
+echo       [Live Dev/Runner: Synced with Release v1.3.0]
 echo ========================================================
 echo.
 
