@@ -163,7 +163,7 @@ Fokk Browser is independently developed without venture funding or telemetry mon
 
 ### Online Sponsoring
 - **GitHub Sponsors**: [Sponsor @Kimmojiraja on GitHub](https://github.com/sponsors/Kimmojiraja) (Monthly or one-time)
-- **Buy Me a Coffee**: [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-yellow?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/k_raja)
+
 
 ### Direct Cryptocurrency Support
 | Cryptocurrency | Network | Receiving Address |
