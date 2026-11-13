@@ -107,30 +107,15 @@ class AdShieldApp : Application() {
     fun getBlockedAdsCount(): Long = prefs.getLong(KEY_BLOCKED_ADS, 0L)
 
     fun getCrossSiteTrackersCount(): Long {
-        val count = prefs.getLong(KEY_CROSS_SITE_TRACKERS, 0L)
-        if (count == 0L) {
-            val total = getBlockedAdsCount()
-            if (total > 0L) return (total * 0.42).toLong().coerceAtLeast(1L)
-        }
-        return count
+        return prefs.getLong(KEY_CROSS_SITE_TRACKERS, 0L)
     }
 
     fun getSocialTrackersCount(): Long {
-        val count = prefs.getLong(KEY_SOCIAL_TRACKERS, 0L)
-        if (count == 0L) {
-            val total = getBlockedAdsCount()
-            if (total > 0L) return (total * 0.18).toLong().coerceAtLeast(1L)
-        }
-        return count
+        return prefs.getLong(KEY_SOCIAL_TRACKERS, 0L)
     }
 
     fun getDeceptiveTrapsCount(): Long {
-        val count = prefs.getLong(KEY_DECEPTIVE_TRAPS, 0L)
-        if (count == 0L) {
-            val total = getBlockedAdsCount()
-            if (total > 0L) return (total * 0.15).toLong().coerceAtLeast(1L)
-        }
-        return count
+        return prefs.getLong(KEY_DECEPTIVE_TRAPS, 0L)
     }
 
     companion object {

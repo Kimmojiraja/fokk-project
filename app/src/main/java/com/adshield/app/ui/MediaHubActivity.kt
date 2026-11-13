@@ -5544,6 +5544,18 @@ open class MediaHubActivity : AppCompatActivity() {
             showShieldSettingsDialog()
         }
 
+        val activeVpnMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
+        sheetBinding.textMenuVpnStatus.text = when (activeVpnMode) {
+            com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "OFF"
+            com.adshield.app.engine.VpnEngine.VpnMode.WARP -> "WARP"
+            com.adshield.app.engine.VpnEngine.VpnMode.TOR -> "TOR"
+            com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> "CUSTOM"
+        }
+        sheetBinding.btnToolVpnMode.setOnClickListener {
+            dialog.dismiss()
+            showVpnModeSelector()
+        }
+
         val activePrivacyTab = activeTab
         sheetBinding.textMenuBlockedInfo.text =
             "Always ON · WebView observed ${activePrivacyTab?.thirdPartyRequests ?: 0} cross-site requests · Fokk filtered ${activePrivacyTab?.filteredRequests ?: 0}"
@@ -6186,51 +6198,68 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     private fun showFundraisingContributingDialog() {
-        val dialog = BottomSheetDialog(this)
-        val b = SheetFundraisingContributeBinding.inflate(layoutInflater)
-        dialog.setContentView(b.root)
+        addNewTab("file:///android_asset/fokk_contributing.html", isPrivate = false)
+    }
 
-        b.btnCloseFundraising.setOnClickListener { dialog.dismiss() }
-
-        b.cardSponsorGitHub.setOnClickListener {
-            dialog.dismiss()
-            addNewTab("https://github.com/sponsors/Kimmojiraja", isPrivate = false)
+    private fun showVpnModeSelector() {
+        val modes = arrayOf(
+            "Direct Connection (Off)",
+            "Cloudflare WARP (127.0.0.1:40000)",
+            "Tor / Orbot Onion Router (127.0.0.1:9050)",
+            "Custom SOCKS5 / HTTP Proxy"
+        )
+        val current = com.adshield.app.engine.VpnEngine.getActiveMode(this)
+        val checked = when (current) {
+            com.adshield.app.engine.VpnEngine.VpnMode.OFF -> 0
+            com.adshield.app.engine.VpnEngine.VpnMode.WARP -> 1
+            com.adshield.app.engine.VpnEngine.VpnMode.TOR -> 2
+            com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> 3
         }
 
-        b.cardBuyMeCoffee.setOnClickListener {
-            dialog.dismiss()
-            addNewTab("https://www.buymeacoffee.com/k_raja", isPrivate = false)
+        AlertDialog.Builder(this)
+            .setTitle("Stealth VPN & Proxy")
+            .setSingleChoiceItems(modes, checked) { dialog, which ->
+                dialog.dismiss()
+                when (which) {
+                    0 -> com.adshield.app.engine.VpnEngine.applyVpnMode(this, com.adshield.app.engine.VpnEngine.VpnMode.OFF) { _, msg ->
+                        runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                    }
+                    1 -> com.adshield.app.engine.VpnEngine.applyVpnMode(this, com.adshield.app.engine.VpnEngine.VpnMode.WARP) { _, msg ->
+                        runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                    }
+                    2 -> com.adshield.app.engine.VpnEngine.applyVpnMode(this, com.adshield.app.engine.VpnEngine.VpnMode.TOR) { _, msg ->
+                        runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                    }
+                    3 -> showCustomProxyDialog()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showCustomProxyDialog() {
+        val input = EditText(this).apply {
+            hint = "socks5://127.0.0.1:1080"
+            setText(com.adshield.app.engine.VpnEngine.getCustomProxy(this@MediaHubActivity))
+            setSingleLine()
         }
-
-        b.cardContributeCode.setOnClickListener {
-            dialog.dismiss()
-            addNewTab("https://github.com/Kimmojiraja/fokk-project", isPrivate = false)
-        }
-
-        val copyAddress: (String, String) -> Unit = { label, text ->
-            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
-            Toast.makeText(this, "$label address copied to clipboard!", Toast.LENGTH_SHORT).show()
-        }
-
-        val btcAddress = "bc1qwxnv6uphj0ke8q50gdx6ew8j3lgvwhk6k2kaet"
-        val ethAddress = "0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525"
-        val bnbAddress = "0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525"
-        val solAddress = "DqgAgDj4PjvR4K1wtYfpaZuYNeNZgj2fQoKnXApWKuTj"
-
-        b.cardCryptoBtc.setOnClickListener { copyAddress("Bitcoin", btcAddress) }
-        b.btnCopyBtc.setOnClickListener { copyAddress("Bitcoin", btcAddress) }
-
-        b.cardCryptoEth.setOnClickListener { copyAddress("Ethereum", ethAddress) }
-        b.btnCopyEth.setOnClickListener { copyAddress("Ethereum", ethAddress) }
-
-        b.cardCryptoBnb.setOnClickListener { copyAddress("BNB Smart Chain", bnbAddress) }
-        b.btnCopyBnb.setOnClickListener { copyAddress("BNB Smart Chain", bnbAddress) }
-
-        b.cardCryptoSol.setOnClickListener { copyAddress("Solana", solAddress) }
-        b.btnCopySol.setOnClickListener { copyAddress("Solana", solAddress) }
-
-        dialog.show()
+        AlertDialog.Builder(this)
+            .setTitle("Custom Proxy Address")
+            .setView(input)
+            .setPositiveButton("Apply") { _, _ ->
+                val proxyUrl = input.text.toString().trim()
+                if (proxyUrl.isNotEmpty()) {
+                    com.adshield.app.engine.VpnEngine.applyVpnMode(
+                        this,
+                        com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM,
+                        proxyUrl
+                    ) { _, msg ->
+                        runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun clearBrowsingData() {
@@ -7719,6 +7748,8 @@ open class MediaHubActivity : AppCompatActivity() {
             "video.twimg.com", "ton.twitter.com",
             // News & Sports article video delivery infrastructure
             "video.yahoo.com", "yql.yahoo.com", "bats.video.yahoo.com",
+            "yahoo.com", "yimg.com", "s.yimg.com", "v.yimg.com", "media.zenfs.com",
+            "video.media.yql.yahoo.com", "yvp.yahoo.com", "sports.yahoo.com",
             "vidgyor.com", "playstream.media", "htmedia.in",
             "connatix.com", "cnevids.com", "anvato.net", "kaltura.com",
             "sendtonews.com", "ex.co", "playwire.com", "brid.tv", "videoelephant.com"

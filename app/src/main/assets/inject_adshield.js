@@ -620,6 +620,64 @@
                 return origReplaceState.apply(this, arguments);
             };
 
+            // YouTube Shorts Tap-to-Pause Handler
+            // Allows tapping anywhere on a Short video to toggle play/pause cleanly
+            // without interfering with swipe reels, comments, like buttons, or audio.
+            let shortsTouchX = 0, shortsTouchY = 0, shortsTouchTime = 0;
+            window.addEventListener('touchstart', function(e) {
+                if (!window.location.pathname.includes('/shorts')) return;
+                if (e.touches && e.touches.length === 1) {
+                    shortsTouchX = e.touches[0].clientX;
+                    shortsTouchY = e.touches[0].clientY;
+                    shortsTouchTime = Date.now();
+                }
+            }, { capture: true, passive: true });
+
+            window.addEventListener('touchend', function(e) {
+                if (!window.location.pathname.includes('/shorts')) return;
+                if (!e.changedTouches || e.changedTouches.length !== 1) return;
+
+                const dt = Date.now() - shortsTouchTime;
+                const dx = Math.abs(e.changedTouches[0].clientX - shortsTouchX);
+                const dy = Math.abs(e.changedTouches[0].clientY - shortsTouchY);
+
+                // Tap detection: short duration, minimal displacement (< 20px)
+                if (dt < 400 && dx < 20 && dy < 20) {
+                    const target = e.target;
+                    // Do not toggle if tapping interactive UI controls
+                    if (target && target.closest && (
+                        target.closest('button') ||
+                        target.closest('a') ||
+                        target.closest('[role="button"]') ||
+                        target.closest('.pivot-bar-item-tab') ||
+                        target.closest('ytm-pivot-bar-renderer') ||
+                        target.closest('.reel-player-overlay-actions') ||
+                        target.closest('#comments-button') ||
+                        target.closest('[aria-label*="Like" i]') ||
+                        target.closest('[aria-label*="Dislike" i]') ||
+                        target.closest('[aria-label*="Share" i]') ||
+                        target.closest('[aria-label*="Subscribe" i]')
+                    )) {
+                        return;
+                    }
+
+                    // Toggle active Short video
+                    const vids = document.querySelectorAll('video');
+                    for (let i = 0; i < vids.length; i++) {
+                        const v = vids[i];
+                        const r = v.getBoundingClientRect();
+                        if (r.top < window.innerHeight && r.bottom > 0 && r.height > 100) {
+                            if (v.paused) {
+                                v.play().catch(function() {});
+                            } else {
+                                v.pause();
+                            }
+                            break;
+                        }
+                    }
+                }
+            }, { capture: true, passive: true });
+
             // YouTube Resume & Foreground Playback Resync:
             // When app is minimized or user switches apps, video continues playing in background.
             // On returning to foreground, YouTube's UI overlay may be stuck displaying a buffering spinner
@@ -1496,27 +1554,26 @@
     // Universal Skippable Video Ad Blocker (Tube, Adult, Streaming & Web Video)
     // =========================================================================
     // VAST / VMAP / Preroll Ad Manifest Network Suppressor
-    // Intercepts XHR and fetch requests for ad manifests at the network level
-    // and returns empty responses — prevents the ad video from ever loading.
+    // Intercepts dedicated ad manifest endpoints only — strictly protects
+    // legitimate video streams, HLS manifests, Yahoo media, and editorial players.
     // =========================================================================
     (function installVastSuppressor() {
         const host = window.location.hostname;
-        if (host.includes('youtube.com')) return; // YouTube has its own engine — never touch
+        if (host.includes('youtube.com') || host.includes('yahoo.com') || host.includes('yimg.com')) return;
 
         const isAdManifestUrl = function(url) {
             if (!url) return false;
             const u = url.toLowerCase();
+            // NEVER intercept actual media streams, playlists or scripts
+            if (u.includes('.m3u8') || u.includes('.mpd') || u.includes('.mp4') || u.includes('.webm') ||
+                u.includes('.m4s') || u.includes('.ts') || u.includes('videoplayback') ||
+                u.includes('yahoo.com') || u.includes('yimg.com') || u.includes('zenfs.com')) {
+                return false;
+            }
             return (
-                u.includes('/vast') || u.includes('vast.xml') || u.includes('vast?') ||
-                u.includes('/vmap') || u.includes('vmap.xml') || u.includes('vmap?') ||
-                u.includes('ad_break') || u.includes('adbreak') ||
-                u.includes('preroll') || u.includes('midroll') || u.includes('postroll') ||
-                u.includes('ad-manifest') || u.includes('admanifest') ||
-                u.includes('/ads/vast') || u.includes('/ads/vmap') ||
-                (u.includes('/ads/') && (u.includes('.xml') || u.includes('type=vast'))) ||
-                u.includes('doubleclick.net/pagead/ads') ||
-                u.includes('imasdk.googleapis.com') ||
-                u.includes('securepubads.g.doubleclick.net')
+                (u.includes('/vast') && (u.includes('.xml') || u.includes('format=vast') || u.includes('output=vast') || u.includes('type=vast'))) ||
+                (u.includes('/vmap') && (u.includes('.xml') || u.includes('format=vmap') || u.includes('output=vmap'))) ||
+                (u.includes('doubleclick.net/pagead/ads') && (u.includes('output=vast') || u.includes('output=xml_vast')))
             );
         };
 
@@ -1574,8 +1631,8 @@
             return;
         }
 
-        // STRICT USER SAFETY: Never tamper with Twitter / X, Instagram, or Reddit video streams
-        if (host.includes('twitter.com') || host.includes('x.com') || host.includes('instagram.com') || host.includes('reddit.com')) {
+        // STRICT USER SAFETY: Never tamper with Twitter / X, Instagram, Reddit, or Yahoo video streams
+        if (host.includes('twitter.com') || host.includes('x.com') || host.includes('instagram.com') || host.includes('reddit.com') || host.includes('yahoo.com') || host.includes('yimg.com')) {
             return;
         }
 
@@ -1705,7 +1762,7 @@
 
     if (!window.location.hostname.includes('youtube.com')) {
         const host = window.location.hostname;
-        if (!host.includes('twitter.com') && !host.includes('x.com') && !host.includes('instagram.com') && !host.includes('reddit.com')) {
+        if (!host.includes('twitter.com') && !host.includes('x.com') && !host.includes('instagram.com') && !host.includes('reddit.com') && !host.includes('yahoo.com') && !host.includes('yimg.com')) {
             setInterval(runUniversalVideoAdSkipper, 800);
             document.addEventListener('loadeddata', runUniversalVideoAdSkipper, { capture: true, passive: true });
             document.addEventListener('playing', runUniversalVideoAdSkipper, { capture: true, passive: true });
