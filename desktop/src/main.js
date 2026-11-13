@@ -753,44 +753,6 @@ ipcMain.on('fokk-set-doh', (event, providerKey) => {
     }
 });
 
-// 5c. Software Update Checker via GitHub Releases API
-ipcMain.handle('fokk-check-update', async () => {
-    return new Promise((resolve) => {
-        const currentVersion = app.getVersion() || '1.2.0';
-        const req = https.get('https://api.github.com/repos/Kimmojiraja/fokk-project/releases/latest', {
-            headers: { 'User-Agent': 'Fokk-Browser-Desktop/' + currentVersion }
-        }, (res) => {
-            let body = '';
-            res.on('data', chunk => { body += chunk; });
-            res.on('end', () => {
-                try {
-                    const data = JSON.parse(body);
-                    const tagName = data.tag_name || '';
-                    const cleanTag = tagName.replace(/^desktop-v|^v/, '');
-                    resolve({
-                        success: true,
-                        currentVersion,
-                        latestVersion: cleanTag,
-                        tag: tagName,
-                        htmlUrl: data.html_url || 'https://github.com/Kimmojiraja/fokk-project/releases',
-                        name: data.name || tagName,
-                        publishedAt: data.published_at
-                    });
-                } catch (e) {
-                    resolve({ success: false, currentVersion, error: e.message });
-                }
-            });
-        });
-        req.on('error', (err) => {
-            resolve({ success: false, currentVersion, error: err.message });
-        });
-        req.setTimeout(8000, () => {
-            req.destroy();
-            resolve({ success: false, currentVersion, error: 'Request timed out' });
-        });
-    });
-});
-
 // 5b. Fokk Shield Tunnel (Privacy VPN & Relay)
 ipcMain.on('fokk-vpn-get-status', (event) => {
     event.returnValue = vpnEngine ? vpnEngine.getStatus() : { state: 'disconnected' };
