@@ -201,6 +201,7 @@ open class MediaHubActivity : AppCompatActivity() {
     private var previousRequestedOrientation: Int? = null
     private var previousWindowWasFullscreen: Boolean? = null
     private var browserChromeHidden = false
+    private var ignoreScrollUntilMs: Long = 0L
     private var defusersScript = ""
     private var injectionScript = ""
     private var fokkoScript = ""
@@ -2663,27 +2664,42 @@ open class MediaHubActivity : AppCompatActivity() {
         val isTop = prefs.getString(PREF_TOOLBAR_POSITION, "bottom") == "top"
         val density = resources.displayMetrics.density
         val barHeight = if (binding.topBar.height > 0) binding.topBar.height.toFloat() else 56 * density
-        // Use only translationY — NEVER mutate containerLp margins here (causes requestLayout jitter on scroll)
-        val slideDistance = barHeight
+        val slideDistance = barHeight + (8 * density)
 
         binding.layoutCollapsedBar.visibility = View.GONE
+        val containerLp = binding.mainContentLayout.layoutParams as? RelativeLayout.LayoutParams
 
         val isHome = isHomePageUrl(activeWebView?.url)
         if (isHome) {
             binding.topBar.visibility = View.GONE
             browserChromeHidden = false
+            containerLp?.let {
+                it.topMargin = 0
+                it.bottomMargin = 0
+                binding.mainContentLayout.layoutParams = it
+            }
             binding.mainContentLayout.translationY = 0f
             return
         }
 
-        binding.mainContentLayout.animate().cancel()
         binding.mainContentLayout.translationY = 0f
 
         if (visible) {
             if (!browserChromeHidden) return
             browserChromeHidden = false
+            ignoreScrollUntilMs = System.currentTimeMillis() + 350L
 
-            // Animate bar back into view using translationY only — margins stay fixed from applyToolbarPosition
+            // Restore margin so the bar docks cleanly without covering page content
+            containerLp?.let {
+                val targetTop = if (isTop) (56 * density).toInt() else 0
+                val targetBottom = if (isTop) 0 else (56 * density).toInt()
+                if (it.topMargin != targetTop || it.bottomMargin != targetBottom) {
+                    it.topMargin = targetTop
+                    it.bottomMargin = targetBottom
+                    binding.mainContentLayout.layoutParams = it
+                }
+            }
+
             binding.topBar.animate().cancel()
             binding.topBar.visibility = View.VISIBLE
             binding.topBar.animate()
@@ -2695,8 +2711,17 @@ open class MediaHubActivity : AppCompatActivity() {
         } else {
             if (browserChromeHidden || binding.urlInput.hasFocus()) return
             browserChromeHidden = true
+            ignoreScrollUntilMs = System.currentTimeMillis() + 350L
 
-            // Slide bar off-screen using translationY only — never touch layout params here
+            // Expand webpage to fill 100% full screen when bar collapses (zero empty space)
+            containerLp?.let {
+                if (it.topMargin != 0 || it.bottomMargin != 0) {
+                    it.topMargin = 0
+                    it.bottomMargin = 0
+                    binding.mainContentLayout.layoutParams = it
+                }
+            }
+
             val targetY = if (isTop) -slideDistance else slideDistance
             binding.topBar.animate().cancel()
             binding.topBar.animate()
@@ -2705,7 +2730,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 .setDuration(160)
                 .setInterpolator(android.view.animation.AccelerateInterpolator())
                 .withEndAction {
-                    if (browserChromeHidden) binding.topBar.visibility = View.INVISIBLE
+                    if (browserChromeHidden) binding.topBar.visibility = View.GONE
                 }
                 .start()
         }
@@ -3340,6 +3365,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 if (scrolledView !== activeWebView) return@setOnScrollChangeListener
                 if (customView != null || isFullscreenCustomView) return@setOnScrollChangeListener
                 if (isDualDeckMode) return@setOnScrollChangeListener
+                if (System.currentTimeMillis() < ignoreScrollUntilMs) return@setOnScrollChangeListener
                 val currentUrl = activeWebView?.url.orEmpty()
                 val isShorts = currentUrl.contains("/shorts/") || currentUrl.contains("tiktok.com") || currentUrl.contains("instagram.com/reels")
                 val dy = scrollY - oldScrollY
@@ -4620,7 +4646,7 @@ open class MediaHubActivity : AppCompatActivity() {
             }
 
             containerLp?.let {
-                it.topMargin = (56 * density).toInt()
+                it.topMargin = if (browserChromeHidden) 0 else (56 * density).toInt()
                 it.bottomMargin = 0
                 binding.mainContentLayout.layoutParams = it
             }
@@ -4652,7 +4678,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
             containerLp?.let {
                 it.topMargin = 0
-                it.bottomMargin = (56 * density).toInt()
+                it.bottomMargin = if (browserChromeHidden) 0 else (56 * density).toInt()
                 binding.mainContentLayout.layoutParams = it
             }
             binding.mainContentLayout.translationY = 0f

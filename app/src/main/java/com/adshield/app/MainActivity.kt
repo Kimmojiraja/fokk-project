@@ -135,7 +135,7 @@ class MainActivity : AppCompatActivity() {
     private fun showSupportDialog() {
         AlertDialog.Builder(this)
             .setTitle("Fokk Shield Support & License")
-            .setMessage("Version: 2.3.8\nLicense: Apache License 2.0\nArchitecture: Android WebView browser with local Rust/EasyList website filters\nSupported OS: Android 10, 11, 12, 13, 14, 15\n\nFor bug reports, pull requests, or feature inquiries, visit our official repository or contact the project maintainers.")
+            .setMessage("Version: 2.3.9\nLicense: Apache License 2.0\nArchitecture: Android WebView browser with local Rust/EasyList website filters\nSupported OS: Android 10, 11, 12, 13, 14, 15\n\nFor bug reports, pull requests, or feature inquiries, visit our official repository or contact the project maintainers.")
             .setPositiveButton("GitHub Repository") { _, _ ->
                 val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Kimmojiraja/fokk-project"))
                 try {
