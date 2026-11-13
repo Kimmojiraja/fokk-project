@@ -38,13 +38,14 @@ class AdShieldApp : Application() {
         blocklistEngine = BlocklistEngine(this)
         braveEngine = com.adshield.app.model.BraveAdblockEngine(this)
         dohEngine = com.adshield.app.model.DnsOverHttpsEngine().apply {
-            val savedProvider = prefs.getString("fokk_doh_provider", com.adshield.app.model.DnsOverHttpsEngine.PROVIDER_ADGUARD)
-                ?: com.adshield.app.model.DnsOverHttpsEngine.PROVIDER_ADGUARD
+            val savedProvider = prefs.getString("fokk_doh_provider", com.adshield.app.model.DnsOverHttpsEngine.PROVIDER_CLOUDFLARE)
+                ?: com.adshield.app.model.DnsOverHttpsEngine.PROVIDER_CLOUDFLARE
             currentProvider = com.adshield.app.model.DnsOverHttpsEngine.getProviderByName(savedProvider)
             isEnabled = prefs.getBoolean("fokk_doh_tunnel", true)
         }
         applicationScope.launch { blocklistEngine.initialize() }
         applicationScope.launch { braveEngine.initialize() }
+        com.adshield.app.engine.VpnEngine.restoreSavedState(this)
     }
 
     private fun createNotificationChannels() {

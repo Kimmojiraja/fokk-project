@@ -27,6 +27,7 @@ class SettingsActivity : AppCompatActivity() {
         setupCustomRuleButtons()
         setupSearchPrivacy()
         setupPrivateDnsGuide()
+        setupVpnSettings()
         setupPersonalizationButtons()
         setupUpdateChecker()
     }
@@ -100,6 +101,77 @@ class SettingsActivity : AppCompatActivity() {
                 .setNegativeButton("Cancel", null)
                 .show()
         }
+    }
+
+    private fun setupVpnSettings() {
+        updateVpnStatusText()
+        binding.btnConfigureVpn.setOnClickListener {
+            val modes = arrayOf(
+                "Direct Connection (No VPN)",
+                "Cloudflare WARP (Local Agent 127.0.0.1:40000)",
+                "Tor / Orbot Onion Router (127.0.0.1:9050)",
+                "Custom SOCKS5 / HTTP Proxy"
+            )
+            val currentMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
+            val checkedIndex = when (currentMode) {
+                com.adshield.app.engine.VpnEngine.VpnMode.OFF -> 0
+                com.adshield.app.engine.VpnEngine.VpnMode.WARP -> 1
+                com.adshield.app.engine.VpnEngine.VpnMode.TOR -> 2
+                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> 3
+            }
+
+            AlertDialog.Builder(this)
+                .setTitle("Select VPN & Proxy Mode")
+                .setSingleChoiceItems(modes, checkedIndex) { dialog, which ->
+                    dialog.dismiss()
+                    when (which) {
+                        0 -> applyVpn(com.adshield.app.engine.VpnEngine.VpnMode.OFF)
+                        1 -> applyVpn(com.adshield.app.engine.VpnEngine.VpnMode.WARP)
+                        2 -> applyVpn(com.adshield.app.engine.VpnEngine.VpnMode.TOR)
+                        3 -> promptCustomProxy()
+                    }
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+    }
+
+    private fun updateVpnStatusText() {
+        val mode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
+        val text = when (mode) {
+            com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "Active: Direct Connection (Off)"
+            com.adshield.app.engine.VpnEngine.VpnMode.WARP -> "Active: Cloudflare WARP"
+            com.adshield.app.engine.VpnEngine.VpnMode.TOR -> "Active: Tor / Orbot"
+            com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> "Active: Custom (${com.adshield.app.engine.VpnEngine.getCustomProxy(this)})"
+        }
+        binding.textVpnStatus.text = text
+    }
+
+    private fun applyVpn(mode: com.adshield.app.engine.VpnEngine.VpnMode, customProxy: String? = null) {
+        com.adshield.app.engine.VpnEngine.applyVpnMode(this, mode, customProxy) { _, msg ->
+            runOnUiThread {
+                updateVpnStatusText()
+                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun promptCustomProxy() {
+        val input = android.widget.EditText(this).apply {
+            hint = "e.g. socks5://127.0.0.1:1080"
+            setText(com.adshield.app.engine.VpnEngine.getCustomProxy(this@SettingsActivity))
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Enter Proxy URL")
+            .setView(input)
+            .setPositiveButton("Apply") { _, _ ->
+                val proxy = input.text.toString().trim()
+                if (proxy.isNotEmpty()) {
+                    applyVpn(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, proxy)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun setupSearchPrivacy() {

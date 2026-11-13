@@ -269,13 +269,20 @@ function createTab(url = START_PAGE_URL, options = {}) {
     webview.setAttribute('preload', PRELOAD_SCRIPT_PATH);
     webview.setAttribute('allowpopups', 'true');
     webview.setAttribute('useragent', PLATFORM_USER_AGENT);
-    webview.setAttribute('webpreferences', 'contextIsolation=yes, javascript=yes, backgroundThrottling=no');
-    webview.style.backgroundColor = '#090A0C';
+    webview.setAttribute('webpreferences', 'contextIsolation=yes, javascript=yes, backgroundThrottling=no, plugins=yes');
+    const isInternalTarget = !targetUrl || targetUrl.startsWith('file:') || targetUrl.startsWith('fokk:');
+    webview.style.backgroundColor = isInternalTarget ? '#090A0C' : '#ffffff';
     if (isPrivate) {
         webview.setAttribute('partition', 'fokk_incognito_' + Date.now());
     } else {
         webview.setAttribute('partition', 'persist:fokk_default_session');
     }
+
+    webview.addEventListener('did-start-navigation', (e) => {
+        const navUrl = e.url || '';
+        const isExt = navUrl.startsWith('http://') || navUrl.startsWith('https://');
+        webview.style.backgroundColor = isExt ? '#ffffff' : '#090A0C';
+    });
 
     function recordHistoryItem(navUrl, navTitle) {
         if (isPrivate || !navUrl || navUrl.startsWith('file:') || navUrl.startsWith('fokk:')) return;
@@ -1162,7 +1169,7 @@ function updateProUI() {
         } else {
             btnMenuGetPro.classList.remove('is-pro-active');
             btnMenuGetProText.textContent = 'Get Pro';
-            btnMenuGetPro.title = 'Upgrade to Fokk Pro ($4.79/mo)';
+            btnMenuGetPro.title = 'Upgrade to Fokk Pro ($4.99/mo)';
         }
     }
 }
@@ -2838,7 +2845,7 @@ const COMMAND_HUD_REGISTRY = [
     {
         id: 'cmd-contributing',
         category: 'Information & Legal',
-        title: 'Fokk Pro ($4.79/mo) & Contributing',
+        title: 'Fokk Pro ($4.99/mo) & Contributing',
         sub: 'Sustainable zero-ad model, offline license & support',
         shortcut: '',
         iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',

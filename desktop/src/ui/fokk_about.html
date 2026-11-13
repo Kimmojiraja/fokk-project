@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -76,17 +76,46 @@ html,body{background:#090b14;color:#fff;min-height:100vh;overflow-x:hidden}
     </div>
     <div class="hero-version">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Version 1.2.0 · Rust Shield Edition · Chromium 124
+      Version 1.3.0 Â· Rust Shield Edition Â· Chromium 124
     </div>
     <h1 class="hero-title">Fokk Browser</h1>
-    <p class="hero-desc">An ultra-fast, zero-compromise desktop web browser engineered for radical privacy, built-in network-level adblocking, canvas cloaking, DNS-over-HTTPS, and distraction-free browsing — with zero ads, zero telemetry, and zero tracking.</p>
+    <p class="hero-desc">An ultra-fast, zero-compromise desktop web browser engineered for radical privacy, built-in network-level adblocking, canvas cloaking, DNS-over-HTTPS, and distraction-free browsing â€” with zero ads, zero telemetry, and zero tracking.</p>
+  </div>
+
+  <!-- Software Updates -->
+  <div class="section" id="update-section">
+    <div class="section-label">Software Updates</div>
+    <div class="update-card" style="background:rgba(255,255,255,0.03);border:1px solid rgba(0,229,255,0.25);border-radius:16px;padding:22px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px;">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(0,229,255,0.12);display:flex;align-items:center;justify-content:center;color:#00E5FF;flex-shrink:0;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/></svg>
+        </div>
+        <div>
+          <div style="font-size:15px;font-weight:750;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+            <span>Fokk Desktop Release</span>
+            <span id="updateStatusBadge" style="background:rgba(16,185,129,0.15);color:#10B981;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;border:1px solid rgba(16,185,129,0.3);">Up to Date</span>
+          </div>
+          <div id="updateStatusDesc" style="font-size:12.5px;color:rgba(255,255,255,0.6);">Running version 1.3.0 Â· Live GitHub Release Channel</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button id="btnCheckUpdate" class="btn-cta btn-primary-cta" style="padding:10px 20px;font-size:13px;border-radius:10px;cursor:pointer;">
+          <svg id="updateSpinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          <span id="btnCheckUpdateText">Check for Updates</span>
+        </button>
+        <a id="btnDownloadUpdate" href="https://github.com/Kimmojiraja/fokk-project/releases" target="_blank" class="btn-cta btn-secondary-cta" style="display:none;padding:10px 20px;font-size:13px;border-radius:10px;text-decoration:none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Download Latest</span>
+        </a>
+      </div>
+    </div>
   </div>
 
   <!-- Mission -->
   <div class="section">
     <div class="section-label">Our Mission</div>
     <div class="section-title">The internet should be yours, not theirs.</div>
-    <p style="font-size:14.5px;line-height:1.72;color:rgba(255,255,255,0.6)">Every major browser today is funded by advertising revenue, search engine data agreements, or telemetry pipelines that profile your behaviour. Fokk exists to prove that a browser can be blazing fast, richly featured, and 100% private — without selling a single byte of your data. We are building the browser we always wanted to use.</p>
+    <p style="font-size:14.5px;line-height:1.72;color:rgba(255,255,255,0.6)">Every major browser today is funded by advertising revenue, search engine data agreements, or telemetry pipelines that profile your behaviour. Fokk exists to prove that a browser can be blazing fast, richly featured, and 100% private â€” without selling a single byte of your data. We are building the browser we always wanted to use.</p>
   </div>
 
   <!-- Principles -->
@@ -97,7 +126,7 @@ html,body{background:#090b14;color:#fff;min-height:100vh;overflow-x:hidden}
         <div class="principle-icon" style="background:rgba(0,229,255,0.1)">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
-        <div class="principle-title">Privacy First — Always</div>
+        <div class="principle-title">Privacy First â€” Always</div>
         <div class="principle-desc">Zero telemetry, zero crash reporting sent to external servers, no opt-out dark patterns. Privacy is the default, not a premium add-on.</div>
       </div>
       <div class="principle-card">
@@ -133,8 +162,8 @@ html,body{background:#090b14;color:#fff;min-height:100vh;overflow-x:hidden}
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
         <div class="feature-text">
-          <div class="feature-name">Fokk Shield — Network-Level Adblock</div>
-          <div class="feature-sub">Blocks 50,000+ tracker domains, ad networks, and malware hosts at the DNS/request interception layer — before any data leaves your device.</div>
+          <div class="feature-name">Fokk Shield â€” Network-Level Adblock</div>
+          <div class="feature-sub">Blocks 50,000+ tracker domains, ad networks, and malware hosts at the DNS/request interception layer â€” before any data leaves your device.</div>
         </div>
       </div>
       <div class="feature-row">
@@ -143,7 +172,7 @@ html,body{background:#090b14;color:#fff;min-height:100vh;overflow-x:hidden}
         </div>
         <div class="feature-text">
           <div class="feature-name">Stealth Incognito Mode</div>
-          <div class="feature-sub">True zero-history private browsing with isolated cookie stores, no cache, and disabled web storage — engineered for real privacy, not a checkbox.</div>
+          <div class="feature-sub">True zero-history private browsing with isolated cookie stores, no cache, and disabled web storage â€” engineered for real privacy, not a checkbox.</div>
         </div>
       </div>
       <div class="feature-row">
@@ -161,7 +190,7 @@ html,body{background:#090b14;color:#fff;min-height:100vh;overflow-x:hidden}
         </div>
         <div class="feature-text">
           <div class="feature-name">Dual Split-View Browsing</div>
-          <div class="feature-sub">Side-by-side dual-pane layout with adjustable divider, independent tab management, and smart close/swap controls — productively browse two pages simultaneously.</div>
+          <div class="feature-sub">Side-by-side dual-pane layout with adjustable divider, independent tab management, and smart close/swap controls â€” productively browse two pages simultaneously.</div>
         </div>
       </div>
       <div class="feature-row">
@@ -170,7 +199,7 @@ html,body{background:#090b14;color:#fff;min-height:100vh;overflow-x:hidden}
         </div>
         <div class="feature-text">
           <div class="feature-name">Tab Memory Hibernation</div>
-          <div class="feature-sub">Automatically suspends background tabs after 15 minutes of inactivity to reclaim RAM — wakes them instantly on click with zero data loss.</div>
+          <div class="feature-sub">Automatically suspends background tabs after 15 minutes of inactivity to reclaim RAM â€” wakes them instantly on click with zero data loss.</div>
         </div>
       </div>
     </div>
@@ -203,28 +232,28 @@ html,body{background:#090b14;color:#fff;min-height:100vh;overflow-x:hidden}
         <div class="ack-badge" style="background:#1A1A2E;color:#4FC3F7">E</div>
         <div>
           <div class="ack-name">Electron / Chromium</div>
-          <div class="ack-role">Cross-platform desktop shell and rendering engine — BSD / MIT License</div>
+          <div class="ack-role">Cross-platform desktop shell and rendering engine â€” BSD / MIT License</div>
         </div>
       </div>
       <div class="ack-row">
         <div class="ack-badge" style="background:#1A1A2E;color:#A5D6A7">AB</div>
         <div>
           <div class="ack-name">EasyList & uBlock Filter Lists</div>
-          <div class="ack-role">Community-maintained adblock filter ruleset — Creative Commons Attribution-ShareAlike 3.0</div>
+          <div class="ack-role">Community-maintained adblock filter ruleset â€” Creative Commons Attribution-ShareAlike 3.0</div>
         </div>
       </div>
       <div class="ack-row">
         <div class="ack-badge" style="background:#1A1A2E;color:#F48FB1">PL</div>
         <div>
           <div class="ack-name">Peter Lowe's Ad Server List</div>
-          <div class="ack-role">Authoritative tracker/ad domain blocklist — Non-commercial use permitted</div>
+          <div class="ack-role">Authoritative tracker/ad domain blocklist â€” Non-commercial use permitted</div>
         </div>
       </div>
       <div class="ack-row">
         <div class="ack-badge" style="background:#1A1A2E;color:#CE93D8">CF</div>
         <div>
           <div class="ack-name">Cloudflare 1.1.1.1 / Quad9 / Mullvad</div>
-          <div class="ack-role">Privacy-first DNS-over-HTTPS resolvers — respective terms of service apply</div>
+          <div class="ack-role">Privacy-first DNS-over-HTTPS resolvers â€” respective terms of service apply</div>
         </div>
       </div>
     </div>
@@ -233,7 +262,7 @@ html,body{background:#090b14;color:#fff;min-height:100vh;overflow-x:hidden}
   <!-- CTA -->
   <div class="section">
     <div class="section-label">Get Involved</div>
-    <p style="font-size:14px;line-height:1.65;color:rgba(255,255,255,0.55);margin-bottom:0">Fokk is an open-source project sustained by its community. Whether you contribute code, report bugs, sponsor development, or simply spread the word — every action keeps independent privacy software alive.</p>
+    <p style="font-size:14px;line-height:1.65;color:rgba(255,255,255,0.55);margin-bottom:0">Fokk is an open-source project sustained by its community. Whether you contribute code, report bugs, sponsor development, or simply spread the word â€” every action keeps independent privacy software alive.</p>
     <div class="cta-row">
       <a class="btn-cta btn-primary-cta" href="https://github.com/Kimmojiraja/fokk-project" target="_blank">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
@@ -247,5 +276,81 @@ html,body{background:#090b14;color:#fff;min-height:100vh;overflow-x:hidden}
   </div>
 
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const btnCheck = document.getElementById('btnCheckUpdate');
+  const btnCheckText = document.getElementById('btnCheckUpdateText');
+  const btnDownload = document.getElementById('btnDownloadUpdate');
+  const badge = document.getElementById('updateStatusBadge');
+  const desc = document.getElementById('updateStatusDesc');
+
+  if (btnCheck) {
+    btnCheck.onclick = async () => {
+      btnCheck.disabled = true;
+      btnCheckText.textContent = 'Checking GitHub...';
+      badge.textContent = 'Checking...';
+      badge.style.color = '#00E5FF';
+      badge.style.background = 'rgba(0,229,255,0.15)';
+      badge.style.borderColor = 'rgba(0,229,255,0.3)';
+
+      try {
+        let res = null;
+        if (window.FokkShieldBridge && typeof window.FokkShieldBridge.checkForUpdates === 'function') {
+          res = await window.FokkShieldBridge.checkForUpdates();
+        } else {
+          const fetchRes = await fetch('https://api.github.com/repos/Kimmojiraja/fokk-project/releases/latest');
+          const data = await fetchRes.json();
+          res = {
+            success: true,
+            currentVersion: '1.3.0',
+            latestVersion: (data.tag_name || '').replace(/^desktop-v|^v/, ''),
+            tag: data.tag_name || '',
+            htmlUrl: data.html_url || 'https://github.com/Kimmojiraja/fokk-project/releases'
+          };
+        }
+
+        if (res && res.success) {
+          const cur = res.currentVersion || '1.3.0';
+          const latest = res.latestVersion || '1.3.0';
+          const hasUpdate = latest !== cur && latest > cur;
+
+          if (hasUpdate) {
+            badge.textContent = 'Update Available';
+            badge.style.color = '#F59E0B';
+            badge.style.background = 'rgba(245,158,11,0.15)';
+            badge.style.borderColor = 'rgba(245,158,11,0.3)';
+            desc.textContent = `New version ${res.tag || latest} is ready to download! (Running ${cur})`;
+            btnDownload.style.display = 'inline-flex';
+            if (res.htmlUrl) btnDownload.href = res.htmlUrl;
+            btnCheckText.textContent = 'Checked';
+          } else {
+            badge.textContent = 'Up to Date';
+            badge.style.color = '#10B981';
+            badge.style.background = 'rgba(16,185,129,0.15)';
+            badge.style.borderColor = 'rgba(16,185,129,0.3)';
+            desc.textContent = `Fokk Desktop is on the latest release (${cur}). Zero updates required.`;
+            btnCheckText.textContent = 'Check for Updates';
+          }
+        } else {
+          badge.textContent = 'Check Completed';
+          badge.style.color = '#10B981';
+          badge.style.background = 'rgba(16,185,129,0.15)';
+          badge.style.borderColor = 'rgba(16,185,129,0.3)';
+          desc.textContent = `Running stable v1.3.0. Checked against GitHub releases.`;
+          btnCheckText.textContent = 'Check for Updates';
+        }
+      } catch (err) {
+        badge.textContent = 'Offline';
+        badge.style.color = '#EF4444';
+        desc.textContent = 'Unable to reach GitHub. Please check internet connection.';
+        btnCheckText.textContent = 'Retry Check';
+      } finally {
+        btnCheck.disabled = false;
+      }
+    };
+  }
+});
+</script>
 </body>
 </html>

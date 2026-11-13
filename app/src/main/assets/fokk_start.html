@@ -1875,7 +1875,7 @@
         }
 
         .start-command-input { min-width: 0; width: 100%; }
-        .tabs-badge-btn, .menu-dots-btn { width: 34px; min-width: 34px; height: 34px; padding: 0; }
+        .tabs-badge-btn, .menu-dots-btn { width: 44px; min-width: 44px; height: 44px; padding: 0; touch-action: manipulation; -webkit-tap-highlight-color: transparent; cursor: pointer; }
         .tabs-badge-btn .tab-badge-num { width: 24px; height: 24px; font-size: 11px; }
 
         .home-essentials-strip {
@@ -2315,7 +2315,7 @@
 
         @media (max-width: 360px) {
             .start-command-card { gap: 4px; padding: 0 8px; }
-            .tabs-badge-btn, .menu-dots-btn { width: 30px; min-width: 30px; }
+            .tabs-badge-btn, .menu-dots-btn { width: 40px; min-width: 40px; }
             .home-essentials-strip { gap: 10px; }
             .home-essential { width: 46px; height: 46px; min-width: 46px; min-height: 46px; }
         }
@@ -3498,12 +3498,12 @@
                 <div class="command-action-divider"></div>
 
                 <!-- Tabs Badge -->
-                <button class="command-icon-btn tabs-badge-btn" id="commandTabsBtn" onclick="triggerTabsAction(event)" title="Open Tabs">
+                <button class="command-icon-btn tabs-badge-btn" id="commandTabsBtn" ontouchstart="triggerTabsAction(event)" onclick="triggerTabsAction(event)" title="Open Tabs">
                     <span class="tab-badge-num" id="tabBadgeNumber">1</span>
                 </button>
 
                 <!-- Three-Dots Menu (Triangular 3-dots matching reference image) -->
-                <button class="command-icon-btn menu-dots-btn" id="commandMenuBtn" onclick="toggleCommandMenu(event)" title="Options Menu">
+                <button class="command-icon-btn menu-dots-btn" id="commandMenuBtn" ontouchstart="toggleCommandMenu(event)" onclick="toggleCommandMenu(event)" title="Options Menu">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFFFFF">
                         <circle cx="12" cy="6.5" r="2.8" fill="#FFFFFF"/>
                         <circle cx="6.5" cy="16.5" r="2.8" fill="#FFFFFF"/>
