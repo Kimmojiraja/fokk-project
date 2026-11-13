@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fokk Pro & Contributing — Sustainable Privacy</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+html,body{background:#0a0c16;color:#fff;min-height:100vh;overflow-x:hidden}
+
+.page-wrap{max-width:100%;margin:0 auto;padding:16px 14px 40px}
+
+/* Mobile Header */
+.header{text-align:center;padding:10px 0 16px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:16px}
+.header-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.25);border-radius:100px;padding:3px 10px;font-size:10.5px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#00E5FF;margin-bottom:8px}
+.header-title{font-size:24px;font-weight:850;letter-spacing:-0.5px;margin-bottom:6px;background:linear-gradient(135deg,#fff 50%,#00E5FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-desc{font-size:12.5px;line-height:1.5;color:rgba(255,255,255,0.6);margin:0 auto}
+
+/* How Pro Works */
+.how-it-works-box{background:linear-gradient(135deg,rgba(0,229,255,0.05),rgba(139,92,246,0.04));border:1px solid rgba(0,229,255,0.18);border-radius:12px;padding:14px;margin-bottom:16px}
+.how-it-works-title{font-size:12px;font-weight:750;color:#00E5FF;display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.steps-col{display:flex;flex-direction:column;gap:10px}
+.step-item{display:flex;align-items:flex-start;gap:8px;font-size:11.5px;line-height:1.4;color:rgba(255,255,255,0.7)}
+.step-num{width:20px;height:20px;border-radius:50%;background:rgba(0,229,255,0.15);color:#00E5FF;font-weight:800;font-size:10.5px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* Plan Cards */
+.plan-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.09);border-radius:14px;padding:16px;margin-bottom:16px;position:relative}
+.plan-card.pro{background:linear-gradient(180deg,rgba(0,229,255,0.06) 0%,rgba(20,24,36,0.7) 100%);border-color:rgba(0,229,255,0.35);box-shadow:0 6px 24px rgba(0,229,255,0.08)}
+.pro-pill{position:absolute;top:-9px;right:16px;background:linear-gradient(135deg,#00E5FF,#8B5CF6);color:#000;font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:100px;letter-spacing:0.5px}
+.plan-header{margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.07)}
+.plan-name{font-size:16px;font-weight:800;margin-bottom:3px}
+.plan-price{font-size:26px;font-weight:900;letter-spacing:-0.5px}
+.plan-price span{font-size:12px;font-weight:500;color:rgba(255,255,255,0.45)}
+.plan-sub{font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px}
+
+.features-list{list-style:none;display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+.features-list li{display:flex;align-items:flex-start;gap:7px;font-size:11.5px;color:rgba(255,255,255,0.75);line-height:1.35}
+.features-list li svg{flex-shrink:0;margin-top:2px}
+
+.btn-tier{display:block;text-align:center;padding:11px 0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;text-decoration:none;width:100%}
+.btn-free{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.12)}
+.btn-pro{background:linear-gradient(135deg,#00E5FF,#0EA5E9);color:#000}
+
+/* License Activation */
+.activation-box{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.09);border-radius:12px;padding:14px;margin-bottom:16px}
+.activation-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.activation-title{font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px}
+.activation-badge{font-size:10px;padding:2px 7px;border-radius:100px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.55)}
+.activation-form{display:flex;flex-direction:column;gap:8px}
+.key-input{background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px 12px;font-size:12px;color:#fff;font-family:monospace;letter-spacing:1px;width:100%}
+.key-input:focus{outline:none;border-color:#00E5FF}
+.btn-activate{background:rgba(0,229,255,0.15);border:1px solid rgba(0,229,255,0.35);color:#00E5FF;font-size:12px;font-weight:700;padding:9px;border-radius:8px;cursor:pointer;width:100%;transition:all 0.15s}
+.btn-activate:hover{background:#00E5FF;color:#000}
+.activation-status{font-size:11px;margin-top:8px;display:none;line-height:1.4}
+.activation-status.success{color:#10B981;display:block}
+.activation-status.error{color:#EF4444;display:block}
+
+/* Crypto Strip */
+.crypto-section{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:14px;margin-bottom:16px}
+.crypto-label{font-size:10.5px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:10px;display:block}
+.crypto-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.crypto-card{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 10px;cursor:pointer;color:rgba(255,255,255,0.85);font-size:11.5px}
+.crypto-card:active{background:rgba(0,229,255,0.1);border-color:rgba(0,229,255,0.3);color:#00E5FF}
+.crypto-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* Footer Links */
+.footer-links{display:flex;align-items:center;justify-content:center;gap:12px;font-size:11px;padding:10px 0}
+.footer-links a{color:rgba(255,255,255,0.5);text-decoration:none}
+.footer-links a:hover{color:#00E5FF}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Independent Privacy Architecture
+    </div>
+    <h1 class="header-title">Fokk Sustainable Model</h1>
+    <p class="header-desc">Zero ads. Zero telemetry. Zero user tracking. Sustained by direct software licensing verified 100% offline without accounts or telemetry.</p>
+  </div>
+
+  <!-- How Offline Licensing Works -->
+  <div class="how-it-works-box">
+    <div class="how-it-works-title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      How Pro Works Without Tracking or Collecting Your Data
+    </div>
+    <div class="steps-col">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div><strong>Purchase Pro:</strong> Support the project on GitHub Sponsors ($4.99/mo). No user data is collected.</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div><strong>Receive Key:</strong> You receive an offline license token (e.g. <code>FOKK-PRO-XXXX</code>).</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div><strong>Offline Verification:</strong> Validated mathematically right on your device. Zero server calls or logs.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Free Tier -->
+  <div class="plan-card">
+    <div class="plan-header">
+      <div class="plan-name">Fokk Core (Free)</div>
+      <div class="plan-price">$0 <span>/ forever</span></div>
+      <div class="plan-sub">Full private mobile browsing for everyone.</div>
+    </div>
+    <ul class="features-list">
+      <li>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span><strong>Fokk Shield Adblocker:</strong> Advanced tracker and ad defense</span>
+      </li>
+      <li>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span><strong>DNS-over-HTTPS Tunnel:</strong> Cloudflare, Quad9, Mullvad</span>
+      </li>
+      <li>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span><strong>Stealth Ghost Mode:</strong> Zero history &amp; ephemeral cookies</span>
+      </li>
+      <li>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span><strong>Multi-Tab Hub:</strong> Split &amp; grid browsing experience</span>
+      </li>
+      <li>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span><strong>100% Open Source:</strong> Fully auditable privacy code</span>
+      </li>
+    </ul>
+    <button class="btn-tier btn-free" disabled>Current Active Plan</button>
+  </div>
+
+  <!-- Pro Tier -->
+  <div class="plan-card pro">
+    <span class="pro-pill">PRO POWER</span>
+    <div class="plan-header">
+      <div class="plan-name" style="color:#00E5FF">Fokk Pro</div>
+      <div class="plan-price">$4.99 <span>/ month</span></div>
+      <div class="plan-sub">Advanced privacy spoofing &amp; power controls.</div>
+    </div>
+    <ul class="features-list">
+      <li>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span><strong>Advanced Fingerprint Cloaker:</strong> Canvas &amp; AudioContext noise injection</span>
+      </li>
+      <li>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span><strong>AES-256 Vault Backup:</strong> Encrypted export of bookmarks &amp; settings</span>
+      </li>
+      <li>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span><strong>Stealth VPN Engine:</strong> One-tap SOCKS5 / Tor / WARP routing</span>
+      </li>
+      <li>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span><strong>Priority GitHub Sponsor Status:</strong> Direct roadmap influence</span>
+      </li>
+    </ul>
+    <a class="btn-tier btn-pro" href="https://github.com/sponsors/Kimmojiraja" target="_blank">Subscribe on GitHub Sponsors ($4.99/mo)</a>
+  </div>
+
+  <!-- Offline License Activation Box -->
+  <div class="activation-box">
+    <div class="activation-header">
+      <div class="activation-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>License Key &amp; Offline Verification</span>
+      </div>
+      <span class="activation-badge" id="licenseStatusBadge">Free Edition Active</span>
+    </div>
+    <div class="activation-form">
+      <input type="text" class="key-input" id="proKeyInput" placeholder="FOKK-PRO-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <button type="button" class="btn-activate" id="btnActivateKey">Activate Pro</button>
+    </div>
+    <div class="activation-status" id="activationStatus"></div>
+  </div>
+
+  <!-- Crypto Donations -->
+  <div class="crypto-section">
+    <span class="crypto-label">Cryptocurrency Support:</span>
+    <div class="crypto-grid">
+      <div class="crypto-card" onclick="copyCrypto('bc1qwxnv6uphj0ke8q50gdx6ew8j3lgvwhk6k2kaet','BTC',this)">
+        <span class="crypto-dot" style="background:#F7931A"></span>
+        <span>Bitcoin (BTC)</span>
+      </div>
+      <div class="crypto-card" onclick="copyCrypto('0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525','ETH',this)">
+        <span class="crypto-dot" style="background:#627EEA"></span>
+        <span>Ethereum (ETH)</span>
+      </div>
+      <div class="crypto-card" onclick="copyCrypto('0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525','BNB',this)">
+        <span class="crypto-dot" style="background:#F0B90B"></span>
+        <span>BNB Chain</span>
+      </div>
+      <div class="crypto-card" onclick="copyCrypto('DqgAgDj4PjvR4K1wtYfpaZuYNeNZgj2fQoKnXApWKuTj','SOL',this)">
+        <span class="crypto-dot" style="background:#14F195"></span>
+        <span>Solana (SOL)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Links -->
+  <div class="footer-links">
+    <a href="https://github.com/Kimmojiraja/fokk-project" target="_blank">GitHub Repository</a>
+    <span>•</span>
+    <a href="fokk_about.html">About Fokk</a>
+    <span>•</span>
+    <a href="fokk_privacy.html">Privacy Policy</a>
+  </div>
+
+</div>
+
+<script>
+function luhnMod16(str) {
+  const hexChars = str.replace(/[^0-9A-F]/g, '');
+  let sum = 0;
+  let alt = false;
+  for (let i = hexChars.length - 1; i >= 0; i--) {
+    let n = parseInt(hexChars[i], 16);
+    if (alt) {
+      n *= 2;
+      if (n > 15) n -= 15;
+    }
+    sum += n;
+    alt = !alt;
+  }
+  return sum % 16 === 0;
+}
+
+function validateFokkKey(raw) {
+  if (!raw || typeof raw !== 'string') return false;
+  const key = raw.trim().toUpperCase();
+  const pattern = /^FOKK-PRO-([A-Z0-9]{4,})-([A-Z0-9]{4,})-([A-Z0-9]{4,})$/;
+  if (!pattern.test(key)) return false;
+  const parts = key.split('-');
+  const payload = parts.slice(2).join('');
+  return luhnMod16(payload);
+}
+
+(function() {
+  const isPro = localStorage.getItem('fokk_pro_status') === 'active';
+  const badge = document.getElementById('licenseStatusBadge');
+  const input = document.getElementById('proKeyInput');
+  const btn = document.getElementById('btnActivateKey');
+
+  if (isPro) {
+    if (badge) {
+      badge.textContent = 'Fokk Pro Active';
+      badge.style.background = 'rgba(0,229,255,0.15)';
+      badge.style.color = '#00E5FF';
+      badge.style.border = '1px solid rgba(0,229,255,0.3)';
+    }
+    if (input) {
+      input.value = localStorage.getItem('fokk_pro_key') || 'FOKK-PRO-ACTIVE';
+      input.disabled = true;
+    }
+    if (btn) {
+      btn.textContent = 'Deactivate License';
+      btn.style.color = '#EF4444';
+      btn.style.borderColor = 'rgba(239,68,68,0.4)';
+    }
+  }
+
+  if (btn) {
+    btn.onclick = () => {
+      const currentlyPro = localStorage.getItem('fokk_pro_status') === 'active';
+      const statusEl = document.getElementById('activationStatus');
+
+      if (currentlyPro) {
+        localStorage.removeItem('fokk_pro_status');
+        localStorage.removeItem('fokk_pro_key');
+        location.reload();
+        return;
+      }
+
+      const raw = (input.value || '').trim();
+      if (!raw || raw.length < 10) {
+        statusEl.className = 'activation-status error';
+        statusEl.textContent = 'Please enter a valid Fokk Pro key (format: FOKK-PRO-XXXX-XXXX-XXXX).';
+        return;
+      }
+
+      const normalised = raw.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
+      if (!validateFokkKey(normalised)) {
+        statusEl.className = 'activation-status error';
+        statusEl.textContent = 'Invalid license key. Keys are issued after sponsoring via GitHub Sponsors. Format: FOKK-PRO-XXXX-XXXX-XXXX.';
+        return;
+      }
+
+      localStorage.setItem('fokk_pro_status', 'active');
+      localStorage.setItem('fokk_pro_key', normalised);
+      statusEl.className = 'activation-status success';
+      statusEl.textContent = 'Pro License Validated & Activated!';
+      setTimeout(() => location.reload(), 1200);
+    };
+  }
+})();
+
+function copyCrypto(addr, symbol, cardEl) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(addr).then(() => {
+      const originalText = cardEl.innerHTML;
+      cardEl.innerHTML = '<span style="color:#10B981;font-weight:bold">' + symbol + ' Copied!</span>';
+      setTimeout(() => { cardEl.innerHTML = originalText; }, 1800);
+    });
+  } else {
+    prompt('Copy ' + symbol + ' address:', addr);
+  }
+}
+</script>
+</body>
+</html>
