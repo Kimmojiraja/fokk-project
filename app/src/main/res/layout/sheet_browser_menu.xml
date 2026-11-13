@@ -903,7 +903,7 @@
                             android:layout_height="26dp"
                             android:background="@drawable/bg_white_disc"
                             android:padding="5dp"
-                            android:src="@drawable/ic_security"
+                            android:src="@drawable/ic_shield_check"
                             app:tint="#000000" />
 
                         <TextView
