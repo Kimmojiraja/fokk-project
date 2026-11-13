@@ -214,6 +214,15 @@ if (isInternalPage) {
         ipcRenderer.on('fokk-vpn-status-changed', (event, data) => cb(data));
     },
 
+    // Software Updates
+    checkForUpdates: async () => {
+        try {
+            return await ipcRenderer.invoke('fokk-check-update');
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    },
+
     // Utilities
     vibrate: () => {},
     toast: (msg) => {
@@ -257,26 +266,35 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                     (function ensureStandardCanvas() {
                         try {
                             const applyCanvas = function() {
-                                const doc = document.documentElement;
-                                if (!doc) return;
-                                const comp = window.getComputedStyle(doc).backgroundColor;
-                                if (!comp || comp === 'rgba(0, 0, 0, 0)' || comp === 'transparent') {
-                                    doc.style.setProperty('background-color', '#ffffff', 'important');
-                                }
-                                if (document.body) {
-                                    const bComp = window.getComputedStyle(document.body).backgroundColor;
-                                    if (!bComp || bComp === 'rgba(0, 0, 0, 0)' || bComp === 'transparent') {
-                                        if (window.getComputedStyle(doc).backgroundColor === 'rgba(0, 0, 0, 0)' || window.getComputedStyle(doc).backgroundColor === 'transparent') {
+                                try {
+                                    const doc = document.documentElement;
+                                    if (!doc) return;
+                                    const comp = window.getComputedStyle(doc).backgroundColor;
+                                    if (!comp || comp === 'rgba(0, 0, 0, 0)' || comp === 'transparent') {
+                                        doc.style.setProperty('background-color', '#ffffff', 'important');
+                                    }
+                                    if (document.body) {
+                                        const bComp = window.getComputedStyle(document.body).backgroundColor;
+                                        if (!bComp || bComp === 'rgba(0, 0, 0, 0)' || bComp === 'transparent') {
                                             document.body.style.setProperty('background-color', '#ffffff', 'important');
                                         }
                                     }
-                                }
+                                    // Robust protection for BBC News and editorial publisher articles with transparent containers
+                                    const host = window.location.hostname.toLowerCase();
+                                    if (host.includes('bbc.com') || host.includes('bbc.co.uk') || host.includes('wikipedia.org')) {
+                                        if (doc) doc.style.setProperty('background-color', '#ffffff', 'important');
+                                        if (document.body) document.body.style.setProperty('background-color', '#ffffff', 'important');
+                                        const mainEl = document.querySelector('main, #main-content, [role="main"], article');
+                                        if (mainEl) mainEl.style.setProperty('background-color', '#ffffff', 'important');
+                                    }
+                                } catch (_) {}
                             };
                             if (document.readyState === 'loading') {
                                 document.addEventListener('DOMContentLoaded', applyCanvas, { once: true });
                             } else {
                                 applyCanvas();
                             }
+                            window.addEventListener('load', applyCanvas, { once: true });
                         } catch (_) {}
                     })();
 
@@ -569,9 +587,19 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                             }
                         } catch (_) {}
 
-                        // 2. AudioContext Oscillator Fingerprint Guard
+                        // 2. AudioContext Oscillator Fingerprint Guard (Preserves Music & Streaming Playback Integrity)
                         try {
-                            if (window.AudioBuffer) {
+                            const host = window.location.hostname.toLowerCase();
+                            const isAudioStreaming = host.includes('spotify.com') ||
+                                host.includes('soundcloud.com') ||
+                                host.includes('deezer.com') ||
+                                host.includes('apple.com') ||
+                                host.includes('youtube.com') ||
+                                host.includes('youtu.be') ||
+                                host.includes('tidal.com') ||
+                                host.includes('pandora.com');
+
+                            if (!isAudioStreaming && window.AudioBuffer) {
                                 const origGetChannelData = AudioBuffer.prototype.getChannelData;
                                 const proxyAudio = function(channel) {
                                     const data = origGetChannelData.call(this, channel);

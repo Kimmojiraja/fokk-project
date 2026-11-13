@@ -1,4 +1,4 @@
-package com.adshield.app
+﻿package com.adshield.app
 
 import android.content.*
 import android.net.Uri
@@ -8,12 +8,10 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.adshield.app.databinding.ActivityMainBinding
-import com.adshield.app.databinding.SheetFundraisingContributeBinding
 import com.adshield.app.model.BrandOptimizationHelper
 import com.adshield.app.ui.BrandGuideActivity
 import com.adshield.app.ui.MediaHubActivity
 import com.adshield.app.ui.SettingsActivity
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
@@ -68,8 +66,8 @@ class MainActivity : AppCompatActivity() {
             showSupportDialog()
         }
 
-        binding.btnFundraising.setOnClickListener {
-            showFundraisingDialog()
+        binding.btnFokkPro.setOnClickListener {
+            showFokkProDialog()
         }
     }
 
@@ -137,7 +135,7 @@ class MainActivity : AppCompatActivity() {
     private fun showSupportDialog() {
         AlertDialog.Builder(this)
             .setTitle("Fokk Shield Support & License")
-            .setMessage("Version: 2.1.0\nLicense: Apache License 2.0\nArchitecture: Android WebView browser with local Rust/EasyList website filters\nSupported OS: Android 10, 11, 12, 13, 14, 15\n\nFor bug reports, pull requests, or feature inquiries, visit our official repository or contact the project maintainers.")
+            .setMessage("Version: 2.3.8\nLicense: Apache License 2.0\nArchitecture: Android WebView browser with local Rust/EasyList website filters\nSupported OS: Android 10, 11, 12, 13, 14, 15\n\nFor bug reports, pull requests, or feature inquiries, visit our official repository or contact the project maintainers.")
             .setPositiveButton("GitHub Repository") { _, _ ->
                 val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Kimmojiraja/fokk-project"))
                 try {
@@ -150,52 +148,26 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun showFundraisingDialog() {
-        val dialog = BottomSheetDialog(this)
-        val b = SheetFundraisingContributeBinding.inflate(layoutInflater)
-        dialog.setContentView(b.root)
-
-        b.btnCloseFundraising.setOnClickListener { dialog.dismiss() }
-
-        b.cardSponsorGitHub.setOnClickListener {
-            dialog.dismiss()
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/sponsors/Kimmojiraja")))
-        }
-
-        b.cardBuyMeCoffee.setOnClickListener {
-            dialog.dismiss()
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.buymeacoffee.com/k_raja")))
-        }
-
-        b.cardContributeCode.setOnClickListener {
-            dialog.dismiss()
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Kimmojiraja/fokk-project")))
-        }
-
-        val copyAddress: (String, String) -> Unit = { label, text ->
-            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
-            Toast.makeText(this, "$label address copied to clipboard!", Toast.LENGTH_SHORT).show()
-        }
-
-        val btcAddress = "bc1qwxnv6uphj0ke8q50gdx6ew8j3lgvwhk6k2kaet"
-        val ethAddress = "0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525"
-        val bnbAddress = "0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525"
-        val solAddress = "DqgAgDj4PjvR4K1wtYfpaZuYNeNZgj2fQoKnXApWKuTj"
-
-        b.cardCryptoBtc.setOnClickListener { copyAddress("Bitcoin", btcAddress) }
-        b.btnCopyBtc.setOnClickListener { copyAddress("Bitcoin", btcAddress) }
-
-        b.cardCryptoEth.setOnClickListener { copyAddress("Ethereum", ethAddress) }
-        b.btnCopyEth.setOnClickListener { copyAddress("Ethereum", ethAddress) }
-
-        b.cardCryptoBnb.setOnClickListener { copyAddress("BNB Smart Chain", bnbAddress) }
-        b.btnCopyBnb.setOnClickListener { copyAddress("BNB Smart Chain", bnbAddress) }
-
-        b.cardCryptoSol.setOnClickListener { copyAddress("Solana", solAddress) }
-        b.btnCopySol.setOnClickListener { copyAddress("Solana", solAddress) }
-
-        dialog.show()
+    private fun showFokkProDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Fokk Pro â€” \$4.99 / month")
+            .setMessage(
+                "Fokk Pro includes:\n\n" +
+                "â€¢ VPN protection with Cloudflare WARP\n" +
+                "â€¢ Advanced shield rules (blocklist+)\n" +
+                "â€¢ Priority updates & early access\n" +
+                "â€¢ Supports independent development\n\n" +
+                "Activate with your FOKK-PRO license key in Settings, or subscribe via GitHub Sponsors."
+            )
+            .setPositiveButton("GitHub Sponsors") { _, _ ->
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/sponsors/Kimmojiraja")))
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Unable to launch browser", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Close", null)
+            .show()
     }
 
     private fun updateDashboard() {

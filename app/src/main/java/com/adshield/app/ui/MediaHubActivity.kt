@@ -2663,20 +2663,15 @@ open class MediaHubActivity : AppCompatActivity() {
         val isTop = prefs.getString(PREF_TOOLBAR_POSITION, "bottom") == "top"
         val density = resources.displayMetrics.density
         val barHeight = if (binding.topBar.height > 0) binding.topBar.height.toFloat() else 56 * density
-        val slideDistance = barHeight + (16 * density)
+        // Use only translationY — NEVER mutate containerLp margins here (causes requestLayout jitter on scroll)
+        val slideDistance = barHeight
 
         binding.layoutCollapsedBar.visibility = View.GONE
-        val containerLp = binding.mainContentLayout.layoutParams as? RelativeLayout.LayoutParams
 
         val isHome = isHomePageUrl(activeWebView?.url)
         if (isHome) {
             binding.topBar.visibility = View.GONE
             browserChromeHidden = false
-            containerLp?.let {
-                it.topMargin = 0
-                it.bottomMargin = 0
-                binding.mainContentLayout.layoutParams = it
-            }
             binding.mainContentLayout.translationY = 0f
             return
         }
@@ -2688,41 +2683,29 @@ open class MediaHubActivity : AppCompatActivity() {
             if (!browserChromeHidden) return
             browserChromeHidden = false
 
-            // Restore margin so the command bar docks cleanly without covering page content
-            containerLp?.let {
-                it.topMargin = if (isTop) (56 * density).toInt() else 0
-                it.bottomMargin = if (isTop) 0 else (56 * density).toInt()
-                binding.mainContentLayout.layoutParams = it
-            }
-
+            // Animate bar back into view using translationY only — margins stay fixed from applyToolbarPosition
             binding.topBar.animate().cancel()
             binding.topBar.visibility = View.VISIBLE
             binding.topBar.animate()
                 .alpha(1f)
                 .translationY(0f)
-                .setDuration(180)
+                .setDuration(160)
                 .setInterpolator(android.view.animation.DecelerateInterpolator())
                 .start()
         } else {
             if (browserChromeHidden || binding.urlInput.hasFocus()) return
             browserChromeHidden = true
 
-            // Automatically expand the webpage to fill the entire screen when command card collapses
-            containerLp?.let {
-                it.topMargin = 0
-                it.bottomMargin = 0
-                binding.mainContentLayout.layoutParams = it
-            }
-
+            // Slide bar off-screen using translationY only — never touch layout params here
             val targetY = if (isTop) -slideDistance else slideDistance
             binding.topBar.animate().cancel()
             binding.topBar.animate()
                 .alpha(0f)
                 .translationY(targetY)
-                .setDuration(180)
+                .setDuration(160)
                 .setInterpolator(android.view.animation.AccelerateInterpolator())
                 .withEndAction {
-                    if (browserChromeHidden) binding.topBar.visibility = View.GONE
+                    if (browserChromeHidden) binding.topBar.visibility = View.INVISIBLE
                 }
                 .start()
         }
@@ -7165,8 +7148,14 @@ open class MediaHubActivity : AppCompatActivity() {
             closePrivateBrowser()
         } else {
             val currentUrl = activeTab?.url.orEmpty()
+            val isPrivateTab = activeTab?.isPrivate == true
             if (currentUrl.isNotBlank() && !currentUrl.contains("fokk_start.html")) {
-                loadUrlInActiveWebView("file:///android_asset/fokk_start.html")
+                // Return to the correct home page — private tabs go back to incognito home, not normal home
+                if (isPrivateTab) {
+                    loadUrlInActiveWebView("file:///android_asset/fokk_start.html?incognito=true")
+                } else {
+                    loadUrlInActiveWebView("file:///android_asset/fokk_start.html")
+                }
             } else {
                 moveTaskToBack(true)
             }

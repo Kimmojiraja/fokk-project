@@ -1494,6 +1494,75 @@
 
     // =========================================================================
     // Universal Skippable Video Ad Blocker (Tube, Adult, Streaming & Web Video)
+    // =========================================================================
+    // VAST / VMAP / Preroll Ad Manifest Network Suppressor
+    // Intercepts XHR and fetch requests for ad manifests at the network level
+    // and returns empty responses — prevents the ad video from ever loading.
+    // =========================================================================
+    (function installVastSuppressor() {
+        const host = window.location.hostname;
+        if (host.includes('youtube.com')) return; // YouTube has its own engine — never touch
+
+        const isAdManifestUrl = function(url) {
+            if (!url) return false;
+            const u = url.toLowerCase();
+            return (
+                u.includes('/vast') || u.includes('vast.xml') || u.includes('vast?') ||
+                u.includes('/vmap') || u.includes('vmap.xml') || u.includes('vmap?') ||
+                u.includes('ad_break') || u.includes('adbreak') ||
+                u.includes('preroll') || u.includes('midroll') || u.includes('postroll') ||
+                u.includes('ad-manifest') || u.includes('admanifest') ||
+                u.includes('/ads/vast') || u.includes('/ads/vmap') ||
+                (u.includes('/ads/') && (u.includes('.xml') || u.includes('type=vast'))) ||
+                u.includes('doubleclick.net/pagead/ads') ||
+                u.includes('imasdk.googleapis.com') ||
+                u.includes('securepubads.g.doubleclick.net')
+            );
+        };
+
+        // Patch fetch
+        const _origFetch = window.fetch;
+        window.fetch = function(input, init) {
+            try {
+                const url = (typeof input === 'string') ? input : (input && input.url) ? input.url : '';
+                if (isAdManifestUrl(url)) {
+                    return Promise.resolve(new Response(
+                        '<?xml version="1.0"?><VAST version="4.0"/>',
+                        { status: 200, headers: { 'Content-Type': 'application/xml' } }
+                    ));
+                }
+            } catch (e) {}
+            return _origFetch.apply(this, arguments);
+        };
+
+        // Patch XMLHttpRequest
+        const _origOpen = XMLHttpRequest.prototype.open;
+        const _origSend = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.open = function(method, url) {
+            this._fokkUrl = url || '';
+            return _origOpen.apply(this, arguments);
+        };
+        XMLHttpRequest.prototype.send = function() {
+            if (isAdManifestUrl(this._fokkUrl)) {
+                try {
+                    Object.defineProperty(this, 'readyState', { get: function() { return 4; }, configurable: true });
+                    Object.defineProperty(this, 'status', { get: function() { return 200; }, configurable: true });
+                    Object.defineProperty(this, 'responseText', { get: function() { return '<?xml version="1.0"?><VAST version="4.0"/>'; }, configurable: true });
+                    Object.defineProperty(this, 'response', { get: function() { return '<?xml version="1.0"?><VAST version="4.0"/>'; }, configurable: true });
+                    setTimeout(() => {
+                        try {
+                            if (typeof this.onreadystatechange === 'function') this.onreadystatechange();
+                            if (typeof this.onload === 'function') this.onload();
+                            this.dispatchEvent(new Event('load'));
+                        } catch (e) {}
+                    }, 0);
+                    return;
+                } catch (e) {}
+            }
+            return _origSend.apply(this, arguments);
+        };
+    })();
+
     // Instantly clicks skip buttons, unblocks countdown timers, defuses VAST
     // Linear ad modes, and fast-forwards dedicated ad preroll video elements.
     // Strictly protects editorial article videos, social embeds, and YouTube uBO standard.
@@ -1656,7 +1725,20 @@
             'div[role="article"]:has(a[href*="/about/ads"])',
             'article:has([aria-label="Sponsored" i])',
             'article:has([aria-label="Paid partnership" i])',
-            'div[class*="x1lliihq"]:has(a[href*="/about/ads"])'
+            'div[class*="x1lliihq"]:has(a[href*="/about/ads"])',
+            // 2024/2025 Instagram Bloks ad markers
+            'div[data-bloks-name*="ads_manager"]',
+            'div[data-bloks-name*="ig_ad"]',
+            'div[data-bloks-name*="ad_unit"]',
+            'div[data-ad-id]',
+            'div[data-is-sponsored="true"]',
+            'div[data-is-ad="true"]',
+            // Stories ad overlay
+            'div[class*="x1i10hfl"]:has([aria-label*="Sponsored" i])',
+            // Reels ads
+            'div[class*="x9f619"]:has([aria-label*="Sponsored" i])',
+            // Shop/product ads in feed
+            'article:has(div[data-bloks-name*="product"])',
         ];
         directAdSelectors.forEach(function(sel) {
             try {

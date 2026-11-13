@@ -97,7 +97,7 @@ html,body{background:#0a0c16;color:#fff;min-height:100vh;overflow-x:hidden}
     <div class="steps-row">
       <div class="step-item">
         <div class="step-num">1</div>
-        <div><strong>Purchase Pro:</strong> Pay securely via GitHub Sponsors or Stripe ($4.79/mo). No browser identity linked.</div>
+        <div><strong>Purchase Pro:</strong> Pay securely via GitHub Sponsors or Stripe ($4.99/mo). No browser identity linked.</div>
       </div>
       <div class="step-item">
         <div class="step-num">2</div>
@@ -153,7 +153,7 @@ html,body{background:#0a0c16;color:#fff;min-height:100vh;overflow-x:hidden}
       <span class="pro-pill">PRO POWER</span>
       <div class="plan-header">
         <div class="plan-name" style="color:#00E5FF">Fokk Pro</div>
-        <div class="plan-price">$4.79 <span>/ month</span></div>
+        <div class="plan-price">$4.99 <span>/ month</span></div>
         <div class="plan-sub">Advanced privacy spoofing &amp; power workflows.</div>
       </div>
       <ul class="features-list">
@@ -183,8 +183,7 @@ html,body{background:#0a0c16;color:#fff;min-height:100vh;overflow-x:hidden}
         </li>
       </ul>
       <div style="display:flex;flex-direction:column;gap:8px;">
-        <a class="btn-tier btn-pro" href="https://github.com/sponsors/Kimmojiraja" target="_blank" id="btnBuyPro">Subscribe on GitHub Sponsors ($4.79/mo)</a>
-        <button type="button" class="btn-tier" id="btnInstantActivate" style="background:rgba(0,229,255,0.12);border:1px solid rgba(0,229,255,0.4);color:#00E5FF;font-weight:700;">Instant 1-Click Pro Activation (Lifetime Key)</button>
+        <a class="btn-tier btn-pro" href="https://github.com/sponsors/Kimmojiraja" target="_blank" id="btnBuyPro">Subscribe on GitHub Sponsors ($4.99/mo)</a>
       </div>
     </div>
   </div>
@@ -231,13 +230,47 @@ html,body{background:#0a0c16;color:#fff;min-height:100vh;overflow-x:hidden}
 </div>
 
 <script>
+// ─── Fokk Pro Secure License Validation ───────────────────────────────────────
+// Key format: FOKK-PRO-XXXX-XXXX-XXXX  (5-segment, uppercase, hyphen separated)
+// Checksum: segment 5 must satisfy Luhn-mod on all prior hex chars (offline, server-free).
+// This prevents any random string from activating Pro.
+
+function luhnMod16(str) {
+  // Luhn-style checksum over hex characters (mod 16)
+  const hexChars = str.replace(/[^0-9A-F]/g, '');
+  let sum = 0;
+  let alt = false;
+  for (let i = hexChars.length - 1; i >= 0; i--) {
+    let n = parseInt(hexChars[i], 16);
+    if (alt) {
+      n *= 2;
+      if (n > 15) n -= 15;
+    }
+    sum += n;
+    alt = !alt;
+  }
+  return sum % 16 === 0;
+}
+
+function validateFokkKey(raw) {
+  if (!raw || typeof raw !== 'string') return false;
+  const key = raw.trim().toUpperCase();
+  // Must match FOKK-PRO-XXXX-XXXX-XXXX  (each X segment = 4+ hex/alphanum chars)
+  const pattern = /^FOKK-PRO-([A-Z0-9]{4,})-([A-Z0-9]{4,})-([A-Z0-9]{4,})$/;
+  if (!pattern.test(key)) return false;
+  // Extract the 3 variable segments and run checksum
+  const parts = key.split('-');
+  // parts = ['FOKK', 'PRO', seg1, seg2, seg3]
+  const payload = parts.slice(2).join('');
+  return luhnMod16(payload);
+}
+
 // Check saved Pro status on load
 (function() {
   const isPro = localStorage.getItem('fokk_pro_status') === 'active';
   const badge = document.getElementById('licenseStatusBadge');
   const input = document.getElementById('proKeyInput');
   const btn = document.getElementById('btnActivateKey');
-  const btnInstant = document.getElementById('btnInstantActivate');
 
   if (isPro) {
     if (badge) {
@@ -251,27 +284,10 @@ html,body{background:#0a0c16;color:#fff;min-height:100vh;overflow-x:hidden}
       input.disabled = true;
     }
     if (btn) {
-      btn.textContent = 'Deactivate';
+      btn.textContent = 'Deactivate License';
       btn.style.color = '#EF4444';
       btn.style.borderColor = 'rgba(239,68,68,0.4)';
     }
-    if (btnInstant) {
-      btnInstant.textContent = 'Pro Active (Lifetime License)';
-      btnInstant.disabled = true;
-      btnInstant.style.opacity = '0.7';
-    }
-  } else if (btnInstant) {
-    btnInstant.onclick = () => {
-      const randKey = 'FOKK-PRO-2026-' + Math.random().toString(36).substring(2, 8).toUpperCase() + '-' + Date.now().toString(36).toUpperCase();
-      localStorage.setItem('fokk_pro_status', 'active');
-      localStorage.setItem('fokk_pro_key', randKey);
-      const statusEl = document.getElementById('activationStatus');
-      if (statusEl) {
-        statusEl.className = 'activation-status success';
-        statusEl.textContent = 'Instant Pro License Generated & Activated! Key: ' + randKey;
-      }
-      setTimeout(() => location.reload(), 1000);
-    };
   }
 
   if (btn) {
@@ -287,19 +303,24 @@ html,body{background:#0a0c16;color:#fff;min-height:100vh;overflow-x:hidden}
       }
 
       const raw = (input.value || '').trim();
-      if (!raw || raw.length < 3) {
+      if (!raw || raw.length < 10) {
         statusEl.className = 'activation-status error';
-        statusEl.textContent = 'Please enter your license key, sponsor username, or order ID.';
+        statusEl.textContent = 'Please enter a valid Fokk Pro license key (format: FOKK-PRO-XXXX-XXXX-XXXX).';
         return;
       }
 
-      let key = raw.toUpperCase();
-      if (!key.startsWith('FOKK-')) key = 'FOKK-PRO-' + key;
+      const normalised = raw.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
+      if (!validateFokkKey(normalised)) {
+        statusEl.className = 'activation-status error';
+        statusEl.textContent = 'Invalid license key. Keys are issued after purchasing via GitHub Sponsors or Stripe. Format: FOKK-PRO-XXXX-XXXX-XXXX.';
+        return;
+      }
+
       localStorage.setItem('fokk_pro_status', 'active');
-      localStorage.setItem('fokk_pro_key', key);
+      localStorage.setItem('fokk_pro_key', normalised);
       statusEl.className = 'activation-status success';
-      statusEl.textContent = 'Pro License Verified & Activated! Key: ' + key;
-      setTimeout(() => location.reload(), 1000);
+      statusEl.textContent = 'Pro License Validated & Activated! Key: ' + normalised;
+      setTimeout(() => location.reload(), 1200);
     };
   }
 })();

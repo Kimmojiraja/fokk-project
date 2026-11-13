@@ -151,6 +151,19 @@ function setupAdblockingForSession(sess) {
             return;
         }
 
+        // Top-level document navigation must always succeed without being blocked by client
+        if (details.resourceType === 'mainFrame') {
+            if (shieldEnabled) {
+                const cleaned = cleanTrackingUrl(details.url);
+                if (cleaned && cleaned !== details.url) {
+                    callback({ redirectURL: cleaned });
+                    return;
+                }
+            }
+            callback({ cancel: false });
+            return;
+        }
+
         if (shieldEnabled && adblock.shouldBlock(details.url, details.resourceType)) {
             if (mainWindow && !mainWindow.isDestroyed()) {
                 try {
@@ -165,8 +178,8 @@ function setupAdblockingForSession(sess) {
             return;
         }
 
-        // Clean tracking parameters & trampolines from main frame navigations
-        if (shieldEnabled && (details.resourceType === 'mainFrame' || details.resourceType === 'subFrame')) {
+        // Clean tracking parameters & trampolines from sub frame navigations
+        if (shieldEnabled && details.resourceType === 'subFrame') {
             const cleaned = cleanTrackingUrl(details.url);
             if (cleaned && cleaned !== details.url) {
                 callback({ redirectURL: cleaned });
@@ -1131,12 +1144,12 @@ app.whenReady().then(() => {
     app.userAgentFallback = CHROME_USER_AGENT;
     createWindow();
 
-    // Configure DoH with automatic fallback so CDN geo-routing (Akamai/Cloudflare) functions correctly
+    // Configure high-speed DoH with automatic fallback so CDN geo-routing (Cloudflare/Akamai/Spotify) functions with 0ms stall
     try {
         if (app.configureHostResolver) {
             app.configureHostResolver({
                 secureDnsMode: 'automatic',
-                secureDnsServers: [DOH_PROVIDERS.adguard]
+                secureDnsServers: [DOH_PROVIDERS.cloudflare, DOH_PROVIDERS.google]
             });
         }
     } catch (_) {}
