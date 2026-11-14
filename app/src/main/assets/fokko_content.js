@@ -838,14 +838,12 @@
 
   const DOMAIN_VOCABULARY = {
     SPORTS_FOOTBALL: [
-      "arsenal", "chelsea", "liverpool", "manchester", "barcelona", "madrid", "bayern", "juventus",
-      "psg", "premier league", "la liga", "bundesliga", "serie a", "champions league", "transfer",
+      "premier league", "la liga", "bundesliga", "serie a", "champions league", "transfer",
       "transfers", "signing", "signed", "sign", "sales", "bid", "fee", "loan", "contract", "target",
-      "midfielder", "striker", "winger", "defender", "goalkeeper", "manager", "fa", "pitch",
-      "pitchside", "match", "back of the net", "net", "football", "soccer", "klopp", "merino",
-      "zubimendi", "frenkie de jong", "de jong", "wirtz", "gruda", "vigar", "haaland", "mbappe",
-      "bellingham", "vinicius", "salah", "arteta", "guardiola", "ancelotti", "academy player",
-      "olise", "michael olise", "konate", "ibrahima konate", "bernabeu", "bernabéu", "reigning"
+      "midfielder", "striker", "winger", "defender", "goalkeeper", "manager", "coach", "fa", "pitch",
+      "pitchside", "match", "back of the net", "net", "football", "soccer", "goal", "fixture",
+      "academy", "club", "league", "tournament", "scouting", "negotiations", "release clause",
+      "squad", "roster", "clean sheet", "friendly"
     ],
     SCIENCE_HEALTH: [
       "dna", "rna", "molecular", "molecule", "molecules", "enzyme", "enzymes", "protein", "proteins",
