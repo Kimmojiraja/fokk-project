@@ -451,6 +451,7 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                     if (!window.chrome) {
                         window.chrome = {};
                     }
+                    try { window.__fokk_is_pro = true; window.__fokk_desktop = true; } catch (_) {}
                     if (!window.chrome.app) {
                         window.chrome.app = {
                             isInstalled: false,

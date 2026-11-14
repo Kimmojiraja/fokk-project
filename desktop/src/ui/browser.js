@@ -337,6 +337,7 @@ function createTab(url = START_PAGE_URL, options = {}) {
                 if (css) webview.insertCSS(css).catch(() => {});
             }).catch(() => {});
             ipcRenderer.invoke('fokk-get-fokko-script').then(js => {
+                webview.executeJavaScript('window.__fokk_is_pro = true; window.__fokk_desktop = true;').catch(() => {});
                 if (js) webview.executeJavaScript(js).catch(() => {});
             }).catch(() => {});
         }

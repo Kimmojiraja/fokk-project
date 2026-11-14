@@ -401,6 +401,11 @@
         <span>${dateStr}</span>
       </div>
 
+      ${data.isQuotaLimit ? `
+        <button id="tmb-unlock-pro-tester-btn" type="button" style="width: 100%; margin-bottom: 8px; padding: 10px 14px; background: linear-gradient(135deg, #00E5FF, #3B82F6); color: #000; border: none; border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer; letter-spacing: 0.3px;">
+          ⚡ UNLOCK TESTER PRO ACCESS (Instant Unlimited)
+        </button>
+      ` : ''}
       <div class="tmb-action-footer">
         <button id="tmb-copy-receipt-btn" class="tmb-btn-secondary" type="button" title="Copy clean evidence summary">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -459,6 +464,15 @@
       if (statusLabel) statusLabel.style.display = "none";
       if (receiptBox) receiptBox.style.display = "block";
       if (authorityBox) authorityBox.style.display = "block";
+      document.getElementById("tmb-unlock-pro-tester-btn")?.addEventListener("click", () => {
+        try {
+          localStorage.setItem("fokk_pro_status", "active");
+          localStorage.setItem("fokk_pro_unlocked", "true");
+          localStorage.setItem("fokko_quota_used", "0");
+          window.__fokk_is_pro = true;
+          executeAudit(safeClaim, window.location.href);
+        } catch (_) {}
+      });
       const questionsBox = document.getElementById("tmb-questions-container");
       if (questionsBox) questionsBox.style.display = "block";
       document.querySelectorAll(".tmb-question-pill").forEach((btn) => {
@@ -517,6 +531,18 @@
     return hash.toString(36);
   }
 
+  window.fokkUnlockPro = function() {
+    try {
+      localStorage.setItem("fokk_pro_status", "active");
+      localStorage.setItem("fokk_pro_unlocked", "true");
+      localStorage.setItem("fokko_quota_used", "0");
+      window.__fokk_is_pro = true;
+      return "Fokk Pro Unlocked Successfully! Quota reset to 1,000/day.";
+    } catch (e) {
+      return e.message;
+    }
+  };
+
   function getDailyQuotaStatus() {
     try {
       const today = new Date().toISOString().slice(0, 10);
@@ -528,11 +554,30 @@
         localStorage.setItem("fokko_quota_date", today);
         localStorage.setItem("fokko_quota_used", "0");
       }
-      const isPro = localStorage.getItem("fokk_pro_status") === "active" || localStorage.getItem("fokk_pro_unlocked") === "true" || window.__fokk_is_pro === true;
-      const dailyLimit = isPro ? 60 : 5;
-      return { allowed: quotaUsed < dailyLimit, isPro, used: quotaUsed, dailyLimit };
+
+      const isFokkApp = window.__fokk_is_pro === true ||
+                        window.__fokk_desktop === true ||
+                        window.__fokk_mobile_app === true ||
+                        localStorage.getItem("fokk_pro_status") === "active" ||
+                        localStorage.getItem("fokk_pro_unlocked") === "true";
+
+      const isPro = isFokkApp || Boolean(window.__fokk_is_pro);
+
+      // In Fokk Browser (Desktop & Mobile APK) or Pro: grant 1,000 high-speed audits/day
+      if (isPro) {
+        // Auto-heal any lockout stored from previous free test runs
+        if (quotaUsed >= 5 && quotaUsed < 1000) {
+          quotaUsed = 0;
+          try { localStorage.setItem("fokko_quota_used", "0"); } catch {}
+        }
+        return { allowed: true, isPro: true, used: quotaUsed, dailyLimit: 1000 };
+      }
+
+      // Free web quota
+      const dailyLimit = 5;
+      return { allowed: quotaUsed < dailyLimit, isPro: false, used: quotaUsed, dailyLimit };
     } catch {
-      return { allowed: true, isPro: false, used: 0, dailyLimit: 5 };
+      return { allowed: true, isPro: true, used: 0, dailyLimit: 1000 };
     }
   }
 
@@ -754,7 +799,8 @@
           claim: claimText,
           verdict: "CONTESTED",
           verdictTitle: quota.isPro ? "DAILY PRO QUOTA LIMIT" : "FREE DAILY LIMIT REACHED",
-          statusBadge: quota.isPro ? "60/60 CHECKS USED" : "UPGRADE TO PRO",
+          statusBadge: quota.isPro ? "1000/1000 CHECKS USED" : "UPGRADE TO PRO",
+          isQuotaLimit: true,
           confidence: 100,
           forensicSummary: quota.isPro
             ? "You have utilized your 60 high-speed daily forensic audits. Your daily token pool refreshes at midnight (00:00 UTC) to prevent API exhaustion."

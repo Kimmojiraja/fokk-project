@@ -3960,6 +3960,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 """.trimIndent()
                 webView.evaluateJavascript(injectCssJs, null)
             }
+            webView.evaluateJavascript("window.__fokk_is_pro = true; window.__fokk_mobile_app = true;", null)
             webView.evaluateJavascript(fokkoScript, null)
         }
 
