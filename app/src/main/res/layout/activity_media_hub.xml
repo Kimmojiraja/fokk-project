@@ -8,7 +8,8 @@
     <FrameLayout
         android:id="@+id/mainContentLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:background="@color/background_dark">
 
         <!-- Pull down at the top of a page to reload it. Full-bleed 100% viewport. -->
         <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -21,12 +22,14 @@
                 android:id="@+id/dualDeckContainer"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:background="@color/background_dark"
                 android:orientation="vertical">
 
                 <FrameLayout
                     android:id="@+id/tabContainer"
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
+                    android:background="@color/background_dark"
                     android:layout_weight="1" />
 
                 <!-- Dual-Deck Interactive Split Control Divider -->

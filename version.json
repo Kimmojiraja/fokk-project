@@ -1,6 +1,6 @@
 {
-  "versionCode": 244,
-  "versionName": "2.4.4",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.4/app-debug.apk",
-  "changelog": "- Fokk Reality Audit Engine: Added dedicated international managerial role and coaching rumor debunking (resolving Klopp/Germany/DFB reality).\n- UI & Scroll Polish: Completely eliminated broken lead image icons on Twitter/X, added responsive 85vh scrolling modal layout, auto-scroll streaming, and updated run_browser.bat with complete V8 and browser cache purging."
+  "versionCode": 245,
+  "versionName": "2.4.5",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.5/app-debug.apk",
+  "changelog": "- YouTube Shorts: Smooth single-tap play/pause without description drawer popping or looping stutter.\n- Smart Minimizing: PiP mode strictly restricted to active playing videos, never minimizing on home or idle pages.\n- Background Media Playback: Audio and video continue playing in background, with dedicated settings toggle.\n- Login & 2FA Fix: Resolved blank screen on x.com and OAuth by implementing onCloseWindow and allowing auth cookies.\n- Command Bar Polish: Removed 0.3s white flash on scrolling to top with instant dark docking.\n- Fokk AI Summary: Pristine editorial article extraction filtering nav junk, source logo, accurate reading time, background notification, and Saved Summaries archive."
 }

@@ -26,10 +26,26 @@ class SettingsActivity : AppCompatActivity() {
         setupToolbar()
         setupCustomRuleButtons()
         setupSearchPrivacy()
+        setupMediaSettings()
         setupPrivateDnsGuide()
         setupVpnSettings()
         setupPersonalizationButtons()
         setupUpdateChecker()
+    }
+
+    private fun setupMediaSettings() {
+        val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+        binding.switchBackgroundPlayback.isChecked = prefs.getBoolean("fokk_background_audio", true)
+        binding.switchBackgroundPlayback.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean("fokk_background_audio", checked).apply()
+            Toast.makeText(this, if (checked) "Background Media Playback Enabled" else "Background Media Playback Disabled", Toast.LENGTH_SHORT).show()
+        }
+
+        binding.switchAutoPip.isChecked = prefs.getBoolean("fokk_auto_pip", true)
+        binding.switchAutoPip.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean("fokk_auto_pip", checked).apply()
+            Toast.makeText(this, if (checked) "Auto Picture-in-Picture Enabled" else "Auto Picture-in-Picture Disabled", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun setupToolbar() {
