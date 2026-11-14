@@ -156,9 +156,12 @@ body[style*="background-color: rgb(247, 249, 249)"] .tmb-inline-trigger:hover .t
 
 #tmb-modal-body {
   overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   flex: 1 1 auto !important;
   min-height: 0 !important;
   padding-right: 6px;
+  box-sizing: border-box;
   scrollbar-width: thin;
   scrollbar-color: #38444d transparent;
 }

@@ -4,13 +4,13 @@ setlocal enabledelayedexpansion
 set "SCRIPT_DIR=%~dp0"
 set "DESKTOP_DIR=%SCRIPT_DIR%desktop"
 
-title Fokk Shield Browser v2.4.0 (Pro Reality Engine)
+title Fokk Shield Browser v2.4.1 (Pro Reality Engine & Context Intelligence)
 
 echo ========================================================
-echo             FOKK SHIELD BROWSER v2.4.0
+echo             FOKK SHIELD BROWSER v2.4.1
 echo       Fast, Zero-Ad, Privacy Desktop Browser
-echo    [Live Dev/Runner: Synced with Release v2.4.0]
-echo    [Multi-Layer Reality Engine & Wire Feeds Active]
+echo    [Live Dev/Runner: Synced with Release v2.4.1]
+echo    [Multi-Layer Context Intelligence & Wire Feeds Active]
 echo ========================================================
 echo.
 
@@ -27,6 +27,14 @@ cd /d "%DESKTOP_DIR%"
 
 REM 2. Clean up any dangling orphan electron instances to prevent locked cache
 taskkill /F /IM electron.exe >nul 2>&1
+
+REM 2b. Check if --clean flag passed to purge stale caches
+if "%1"=="--clean" (
+    echo [INFO] Purging browser disk cache and code caches...
+    rmdir /s /q "%APPDATA%\fokk-desktop\Cache" >nul 2>&1
+    rmdir /s /q "%APPDATA%\fokk-desktop\Code Cache" >nul 2>&1
+    rmdir /s /q "%APPDATA%\fokk-desktop\GPUCache" >nul 2>&1
+)
 
 REM 3. Check Node.js installation
 where node >nul 2>&1
@@ -76,7 +84,7 @@ if not exist "node_modules" (
 )
 
 REM 6. Launch Fokk Browser
-echo [INFO] Starting fresh Fokk Browser instance...
+echo [INFO] Starting fresh Fokk Browser instance with Context Intelligence...
 echo.
 
 if "%~1"=="" (
