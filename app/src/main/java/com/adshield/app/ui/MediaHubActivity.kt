@@ -3189,7 +3189,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
 
                 val isStrictAdblock = prefs.getBoolean(PREF_STRICT_ADBLOCK, true)
-                val isSocialShield = prefs.getBoolean(PREF_SOCIAL_WIDGETS, false)
+                val isSocialShield = prefs.getBoolean(PREF_SOCIAL_WIDGETS, true)
 
                 val isEliteDnsOn = prefs.getBoolean(PREF_ELITE_DNS_FILTER, true)
                 val isEliteBlocked = isEliteDnsOn && isEliteDnsBlocked(host)
@@ -3198,7 +3198,15 @@ open class MediaHubActivity : AppCompatActivity() {
                     host.contains("connect.facebook.net") ||
                     host.contains("graph.facebook.com") ||
                     host.contains("analytics.tiktok.com") ||
-                    host.contains("pixel.wp.com")
+                    host.contains("pixel.wp.com") ||
+                    host.contains("licdn.com") ||
+                    host.contains("linkedin.com/px") ||
+                    host.contains("ads-twitter.com") ||
+                    host.contains("static.ads-twitter.com") ||
+                    host.contains("pinterest.com/v3") ||
+                    host.contains("ct.pinterest.com") ||
+                    host.contains("addthis.com") ||
+                    host.contains("sharethis.com")
                 )
 
                 if (isSocialTracker) {
@@ -6204,7 +6212,7 @@ open class MediaHubActivity : AppCompatActivity() {
     private fun showVpnModeSelector() {
         val modes = arrayOf(
             "Direct Connection (Off)",
-            "Cloudflare WARP (127.0.0.1:40000)",
+            "Cloudflare WARP & DoH (1.1.1.1)",
             "Tor / Orbot Onion Router (127.0.0.1:9050)",
             "Custom SOCKS5 / HTTP Proxy"
         )
