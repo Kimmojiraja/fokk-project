@@ -624,6 +624,7 @@
             // Allows tapping anywhere on a Short video to toggle play/pause cleanly
             // without interfering with swipe reels, comments, like buttons, or audio.
             let shortsTouchX = 0, shortsTouchY = 0, shortsTouchTime = 0;
+            let shortsLastToggleTime = 0;
             window.addEventListener('touchstart', function(e) {
                 if (!window.location.pathname.includes('/shorts')) return;
                 if (e.touches && e.touches.length === 1) {
@@ -643,6 +644,10 @@
 
                 // Tap detection: short duration, minimal displacement (< 20px)
                 if (dt < 400 && dx < 20 && dy < 20) {
+                    const now = Date.now();
+                    if (now - shortsLastToggleTime < 300) return;
+                    shortsLastToggleTime = now;
+
                     const target = e.target;
                     // Do not toggle if tapping interactive UI controls
                     if (target && target.closest && (
@@ -668,9 +673,23 @@
                         const r = v.getBoundingClientRect();
                         if (r.top < window.innerHeight && r.bottom > 0 && r.height > 100) {
                             if (v.paused) {
+                                userExplicitPaused = false;
                                 v.play().catch(function() {});
+                                const player = document.getElementById('movie_player') ||
+                                               v.closest('.html5-video-player') ||
+                                               document.querySelector('.html5-video-player');
+                                if (player && typeof player.playVideo === 'function') {
+                                    try { player.playVideo(); } catch (e) {}
+                                }
                             } else {
+                                userExplicitPaused = true;
                                 v.pause();
+                                const player = document.getElementById('movie_player') ||
+                                               v.closest('.html5-video-player') ||
+                                               document.querySelector('.html5-video-player');
+                                if (player && typeof player.pauseVideo === 'function') {
+                                    try { player.pauseVideo(); } catch (e) {}
+                                }
                             }
                             break;
                         }
@@ -926,10 +945,11 @@
                 ['pointerdown', 'touchstart', 'click'].forEach(function(evt) {
                     document.addEventListener(evt, function(e) {
                         const target = e.target;
-                        if (target && target.closest && target.closest('video, .ytp-play-button, .player-control-play-pause-icon, button[aria-label*="Pause" i], button[aria-label*="Play" i]')) {
+                        const isShorts = window.location.pathname.includes('/shorts');
+                        if (isShorts || (target && target.closest && target.closest('video, .ytp-play-button, .player-control-play-pause-icon, ytm-reel-player-overlay-renderer, .reel-player-overlay, ytm-reel-item-renderer, button[aria-label*="Pause" i], button[aria-label*="Play" i]'))) {
                             userExplicitPaused = true;
                             if (userTapTimer) clearTimeout(userTapTimer);
-                            userTapTimer = setTimeout(function() { userExplicitPaused = false; }, 2000);
+                            userTapTimer = setTimeout(function() { userExplicitPaused = false; }, 3000);
                         }
                     }, true);
                 });
@@ -937,8 +957,9 @@
                 // Intercept HTMLMediaElement.prototype.pause
                 const origMediaPause = HTMLMediaElement.prototype.pause;
                 HTMLMediaElement.prototype.pause = function() {
-                    // If pause was NOT triggered by an explicit user touch/click, disarm it!
-                    if (!userExplicitPaused) {
+                    // When app is in foreground, NEVER drop pause calls — user or site pause must take effect!
+                    // Only disarm pause when the app is actively running in the background and user did not explicitly pause.
+                    if (window.__fokk_is_background && !userExplicitPaused) {
                         return;
                     }
                     return origMediaPause.apply(this, arguments);

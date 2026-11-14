@@ -89,7 +89,7 @@
                 android:layout_weight="1"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_arrow_back"
-                app:tint="#000000"
+                app:tint="#FFFFFF"
                 android:contentDescription="Go Back" />
 
             <ImageButton
@@ -99,7 +99,7 @@
                 android:layout_weight="1"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_arrow_forward"
-                app:tint="#000000"
+                app:tint="#FFFFFF"
                 android:contentDescription="Go Forward" />
 
             <ImageButton
@@ -109,7 +109,7 @@
                 android:layout_weight="1"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_refresh"
-                app:tint="#000000"
+                app:tint="#FFFFFF"
                 android:contentDescription="Refresh Page" />
 
             <ImageButton
@@ -119,7 +119,7 @@
                 android:layout_weight="1"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_home"
-                app:tint="#000000"
+                app:tint="#FFFFFF"
                 android:contentDescription="Go Home" />
 
             <ImageButton
@@ -129,7 +129,7 @@
                 android:layout_weight="1"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_clock"
-                app:tint="#000000"
+                app:tint="#FFFFFF"
                 android:contentDescription="Browsing History" />
 
             <ImageButton
@@ -139,7 +139,7 @@
                 android:layout_weight="1"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_download"
-                app:tint="#000000"
+                app:tint="#FFFFFF"
                 android:contentDescription="Downloads" />
         </LinearLayout>
 
@@ -901,10 +901,10 @@
                         <ImageView
                             android:layout_width="26dp"
                             android:layout_height="26dp"
-                            android:background="@drawable/bg_white_disc"
+                            android:background="@drawable/bg_circle_icon_button"
                             android:padding="5dp"
                             android:src="@drawable/ic_shield_check"
-                            app:tint="#000000" />
+                            app:tint="#00E5FF" />
 
                         <TextView
                             android:layout_width="0dp"
@@ -957,7 +957,83 @@
                     android:textAllCaps="true"
                     android:letterSpacing="0.06" />
 
-                <!-- 1. General & Search Engines -->
+                <!-- 1. Fokk Pro (GitHub Sponsors, Coffee & Pro Features) -->
+                <LinearLayout
+                    android:id="@+id/rowNavFundraising"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="6dp">
+
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:background="@drawable/bg_circle_icon_button"
+                        android:padding="5dp"
+                        android:src="@drawable/ic_sparkle"
+                        app:tint="#F59E0B" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Fokk Pro"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:background="@drawable/bg_badge_pill"
+                                android:paddingHorizontal="6dp"
+                                android:paddingVertical="1dp"
+                                android:text="PRO"
+                                android:textColor="#F59E0B"
+                                android:textSize="9sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Unlock Pro perks, GitHub Sponsors &amp; Coffee support"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11.5sp"
+                            android:ellipsize="end"
+                            android:maxLines="1" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_arrow_forward"
+                        app:tint="@color/text_secondary" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#222225" />
+
+                <!-- 2. General & Search Engines -->
                 <LinearLayout
                     android:id="@+id/rowNavGeneral"
                     android:layout_width="match_parent"
@@ -972,10 +1048,10 @@
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
-                        android:background="@drawable/bg_white_disc"
+                        android:background="@drawable/bg_circle_icon_button"
                         android:padding="5dp"
                         android:src="@drawable/ic_settings"
-                        app:tint="#000000" />
+                        app:tint="#38BDF8" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -1014,7 +1090,7 @@
                     android:layout_height="1dp"
                     android:background="#222225" />
 
-                <!-- 2. Shield & Ghost Stealth -->
+                <!-- 3. Shield & Ghost Stealth -->
                 <LinearLayout
                     android:id="@+id/rowNavShield"
                     android:layout_width="match_parent"
@@ -1029,10 +1105,10 @@
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
-                        android:background="@drawable/bg_white_disc"
+                        android:background="@drawable/bg_circle_icon_button"
                         android:padding="5dp"
                         android:src="@drawable/ic_shield_check"
-                        app:tint="#000000" />
+                        app:tint="#34D399" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -1071,7 +1147,7 @@
                     android:layout_height="1dp"
                     android:background="#222225" />
 
-                <!-- 3. Media, Gestures & PiP -->
+                <!-- 4. Media, Gestures & PiP -->
                 <LinearLayout
                     android:id="@+id/rowNavMedia"
                     android:layout_width="match_parent"
@@ -1086,10 +1162,10 @@
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
-                        android:background="@drawable/bg_white_disc"
+                        android:background="@drawable/bg_circle_icon_button"
                         android:padding="5dp"
                         android:src="@drawable/ic_video"
-                        app:tint="#000000" />
+                        app:tint="#A855F7" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -1128,7 +1204,7 @@
                     android:layout_height="1dp"
                     android:background="#222225" />
 
-                <!-- 4. Biometric Vault & Stealth Decoy -->
+                <!-- 5. Biometric Vault & Stealth Decoy -->
                 <LinearLayout
                     android:id="@+id/rowNavVault"
                     android:layout_width="match_parent"
@@ -1143,10 +1219,10 @@
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
-                        android:background="@drawable/bg_white_disc"
+                        android:background="@drawable/bg_circle_icon_button"
                         android:padding="5dp"
                         android:src="@drawable/ic_lock"
-                        app:tint="#000000" />
+                        app:tint="#F59E0B" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -1185,7 +1261,7 @@
                     android:layout_height="1dp"
                     android:background="#222225" />
 
-                <!-- 5. Extensions & User Scripts -->
+                <!-- 6. Extensions & User Scripts -->
                 <LinearLayout
                     android:id="@+id/rowNavExtensions"
                     android:layout_width="match_parent"
@@ -1200,10 +1276,10 @@
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
-                        android:background="@drawable/bg_white_disc"
+                        android:background="@drawable/bg_circle_icon_button"
                         android:padding="5dp"
                         android:src="@drawable/ic_extension"
-                        app:tint="#000000" />
+                        app:tint="#818CF8" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -1242,7 +1318,7 @@
                     android:layout_height="1dp"
                     android:background="#222225" />
 
-                <!-- 6. About, Privacy & Community -->
+                <!-- 7. About, Privacy & Community -->
                 <LinearLayout
                     android:id="@+id/rowNavAbout"
                     android:layout_width="match_parent"
@@ -1257,10 +1333,10 @@
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
-                        android:background="@drawable/bg_white_disc"
+                        android:background="@drawable/bg_circle_icon_button"
                         android:padding="5dp"
                         android:src="@drawable/ic_info"
-                        app:tint="#000000" />
+                        app:tint="#38BDF8" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -1281,63 +1357,6 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Manifesto, updates, community support, fundraising"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="11.5sp"
-                            android:ellipsize="end"
-                            android:maxLines="1" />
-                    </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_arrow_forward"
-                        app:tint="@color/text_secondary" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="#222225" />
-
-                <!-- 7. Fundraising & Contributing -->
-                <LinearLayout
-                    android:id="@+id/rowNavFundraising"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="6dp">
-
-                    <ImageView
-                        android:layout_width="26dp"
-                        android:layout_height="26dp"
-                        android:background="@drawable/bg_white_disc"
-                        android:padding="5dp"
-                        android:src="@drawable/ic_fundraise"
-                        app:tint="#EC4899" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Fundraising &amp; Contributing"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="GitHub Sponsors, Buy Me a Coffee &amp; code"
                             android:textColor="@color/text_secondary"
                             android:textSize="11.5sp"
                             android:ellipsize="end"

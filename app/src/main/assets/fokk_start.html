@@ -1126,14 +1126,14 @@
             width: 42px;
             height: 42px;
             min-width: 42px;
-            background: #FFFFFF !important;
-            border: none !important;
+            background: #141720 !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
             outline: none !important;
             border-radius: 50% !important;
             padding: 0;
-            color: #000000 !important;
+            color: #FFFFFF !important;
             cursor: pointer;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
             transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
@@ -1901,10 +1901,10 @@
             align-items: center;
             justify-content: center;
             padding: 0;
-            color: #000000;
-            background: rgba(255, 255, 255, 0.95);
-            border: 1.5px solid rgba(255, 255, 255, 0.4);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.32);
+            color: #FFFFFF;
+            background: #141720;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             touch-action: manipulation;
@@ -1916,14 +1916,14 @@
         .home-essential svg { width: 22px; height: 22px; flex: 0 0 auto; pointer-events: none; }
         .home-essential:active {
             transform: translateY(1px) scale(0.94);
-            background: rgba(240, 240, 240, 1);
+            background: #1c212d;
         }
 
         @media (hover: hover) and (pointer: fine) {
             .home-essential:hover {
                 transform: translateY(-2px) scale(1.05);
-                background: #FFFFFF;
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+                background: #1e2433;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
             }
         }
 
@@ -1948,11 +1948,11 @@
             align-items: center;
             justify-content: center;
             border-radius: 50% !important;
-            background: #FFFFFF !important;
-            border: none !important;
+            background: #141720 !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
             outline: none !important;
-            color: #000000;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+            color: #FFFFFF;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
             cursor: pointer;
         }
 
@@ -3428,10 +3428,10 @@
         <!-- Prominent top controls: Cyber Ghost and Truth Pulse with distinctive icons matching reference image -->
         <div class="hero-top-bar">
             <button class="hero-livepulse-btn" onclick="openLivePulseHub()" title="Truth Pulse News Hub" aria-label="Open Truth Pulse">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v16H6.5a2.5 2.5 0 0 0-2.5 2.5z"/>
                     <path d="M6 2v17.5a2.5 2.5 0 0 0 2.5 2.5H20"/>
-                    <rect x="9.5" y="5.5" width="3.5" height="3.5" fill="#000000" stroke="none"/>
+                    <rect x="9.5" y="5.5" width="3.5" height="3.5" fill="#FFFFFF" stroke="none"/>
                     <line x1="15" y1="6" x2="18" y2="6"/>
                     <line x1="15" y1="8.5" x2="18" y2="8.5"/>
                     <line x1="9.5" y1="11.5" x2="18" y2="11.5"/>
@@ -3442,15 +3442,15 @@
             <button class="hero-privacy-btn" id="heroGhostBtn" onclick="toggleGhostMode()" title="Toggle Ghost Mode" aria-label="Toggle Ghost Mode">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                     <!-- Fedora Crown -->
-                    <path d="M6 11.5 L7.8 4.8 C8.2 3.8 9.5 3.8 12 3.8 C14.5 3.8 15.8 3.8 16.2 4.8 L18 11.5 Z" fill="#000000" stroke="none"/>
+                    <path d="M6 11.5 L7.8 4.8 C8.2 3.8 9.5 3.8 12 3.8 C14.5 3.8 15.8 3.8 16.2 4.8 L18 11.5 Z" fill="#FFFFFF" stroke="none"/>
                     <!-- Fedora Brim -->
-                    <path d="M2.5 12 C6.5 10.5 17.5 10.5 21.5 12" stroke="#000000" stroke-width="2.2" stroke-linecap="round"/>
+                    <path d="M2.5 12 C6.5 10.5 17.5 10.5 21.5 12" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"/>
                     <!-- Left Glass -->
-                    <circle cx="8" cy="16.5" r="2.8" stroke="#000000" stroke-width="2" fill="none"/>
+                    <circle cx="8" cy="16.5" r="2.8" stroke="#FFFFFF" stroke-width="2" fill="none"/>
                     <!-- Right Glass -->
-                    <circle cx="16" cy="16.5" r="2.8" stroke="#000000" stroke-width="2" fill="none"/>
+                    <circle cx="16" cy="16.5" r="2.8" stroke="#FFFFFF" stroke-width="2" fill="none"/>
                     <!-- Bridge -->
-                    <path d="M10.8 16.5 Q12 15.2 13.2 16.5" stroke="#000000" stroke-width="2" fill="none"/>
+                    <path d="M10.8 16.5 Q12 15.2 13.2 16.5" stroke="#FFFFFF" stroke-width="2" fill="none"/>
                 </svg>
             </button>
         </div>
@@ -3638,37 +3638,37 @@
         <!-- FOUR HOME ESSENTIALS: sleek circular action discs with strictly black icons matching reference image -->
         <div class="home-essentials-strip" aria-label="Quick actions">
             <button class="home-essential" onclick="openFavoritesAction(event)" title="Favorites" aria-label="Favorites">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="#000000">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="#FFFFFF">
                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
             </button>
             <button class="home-essential" onclick="openDualScreenAction(event)" title="Dual Screen Multitasking" aria-label="Dual Screen">
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
-                    <rect x="3" y="3" width="18" height="18" rx="4" stroke="#000000" stroke-width="2.2"/>
-                    <line x1="3" y1="12" x2="21" y2="12" stroke="#000000" stroke-width="2.2"/>
-                    <circle cx="8" cy="7.5" r="1.3" fill="#000000"/>
-                    <circle cx="8" cy="16.5" r="1.3" fill="#000000"/>
-                    <line x1="11.5" y1="7.5" x2="16.5" y2="7.5" stroke="#000000" stroke-width="1.8" stroke-linecap="round"/>
-                    <line x1="11.5" y1="16.5" x2="16.5" y2="16.5" stroke="#000000" stroke-width="1.8" stroke-linecap="round"/>
+                    <rect x="3" y="3" width="18" height="18" rx="4" stroke="#FFFFFF" stroke-width="2.2"/>
+                    <line x1="3" y1="12" x2="21" y2="12" stroke="#FFFFFF" stroke-width="2.2"/>
+                    <circle cx="8" cy="7.5" r="1.3" fill="#FFFFFF"/>
+                    <circle cx="8" cy="16.5" r="1.3" fill="#FFFFFF"/>
+                    <line x1="11.5" y1="7.5" x2="16.5" y2="7.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+                    <line x1="11.5" y1="16.5" x2="16.5" y2="16.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
                 </svg>
             </button>
             <button class="home-essential" onclick="openShieldAction(event)" title="Fokk Shield Defense" aria-label="Fokk Shield">
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
-                    <path d="M12 2L4 5.5v6c0 5.5 3.4 10.7 8 12.5 4.6-1.8 8-7 8-12.5v-6L12 2z" stroke="#000000" stroke-width="2.2" stroke-linejoin="round"/>
-                    <path d="M9 12.2l2.2 2.3 4.3-4.5" stroke="#000000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 2L4 5.5v6c0 5.5 3.4 10.7 8 12.5 4.6-1.8 8-7 8-12.5v-6L12 2z" stroke="#FFFFFF" stroke-width="2.2" stroke-linejoin="round"/>
+                    <path d="M9 12.2l2.2 2.3 4.3-4.5" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </button>
             <button class="home-essential" onclick="openNativeMenuAction(event)" title="Browser Menu & Features" aria-label="Browser Menu">
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
-                    <circle cx="6" cy="6" r="2.2" fill="#000000"/>
-                    <circle cx="12" cy="6" r="2.2" fill="#000000"/>
-                    <circle cx="18" cy="6" r="2.2" fill="#000000"/>
-                    <circle cx="6" cy="12" r="2.2" fill="#000000"/>
-                    <circle cx="12" cy="12" r="2.2" fill="#000000"/>
-                    <circle cx="18" cy="12" r="2.2" fill="#000000"/>
-                    <circle cx="6" cy="18" r="2.2" fill="#000000"/>
-                    <circle cx="12" cy="18" r="2.2" fill="#000000"/>
-                    <circle cx="18" cy="18" r="2.2" fill="#000000"/>
+                    <circle cx="6" cy="6" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="12" cy="6" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="18" cy="6" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="6" cy="12" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="12" cy="12" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="18" cy="12" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="6" cy="18" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="12" cy="18" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="18" cy="18" r="2.2" fill="#FFFFFF"/>
                 </svg>
             </button>
         </div>
