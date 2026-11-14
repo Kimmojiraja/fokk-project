@@ -52,6 +52,9 @@ object AppUpdateManager {
                 latestName = json.optString("versionName", currentName)
                 downloadUrl = json.optString("downloadUrl", "")
                 changelog = json.optString("changelog", changelog)
+                if (downloadUrl.isNotBlank()) {
+                    metadataLoaded = true
+                }
             } catch (_: Exception) {}
 
             // If version.json did not yield a newer version or failed, check GitHub Release API
@@ -99,12 +102,26 @@ object AppUpdateManager {
                         showUpdateDialog(activity, latestName, changelog, downloadUrl)
                     }
                 } else if (manualCheck) {
-                    val message = when {
-                        !metadataLoaded -> "Could not check for updates. Check your connection and try again."
-                        latestCode > currentCode -> "A newer version is listed, but its APK has not been published yet."
-                        else -> "No newer APK has been published yet (installed: v$currentName)."
+                    if (downloadUrl.isNotBlank()) {
+                        AlertDialog.Builder(activity)
+                            .setTitle("Installed Version: v$currentName")
+                            .setMessage("Current app version: v$currentName (code $currentCode)\nLatest published release: v$latestName (code $latestCode)\n\n$changelog\n\nWould you like to download and install this build?")
+                            .setPositiveButton("Download Build") { _, _ ->
+                                checkInstallPermissionAndDownload(activity, downloadUrl, latestName)
+                            }
+                            .setNeutralButton("Web Releases") { _, _ ->
+                                openReleasesPage(activity)
+                            }
+                            .setNegativeButton("Close", null)
+                            .show()
+                    } else {
+                        val message = when {
+                            !metadataLoaded -> "Could not check for updates. Check your connection and try again."
+                            latestCode > currentCode -> "A newer version is listed, but its APK has not been published yet."
+                            else -> "No newer APK has been published yet (installed: v$currentName)."
+                        }
+                        Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
                     }
-                    Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
                 }
             }
         }

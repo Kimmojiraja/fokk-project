@@ -1,6 +1,6 @@
 {
-  "versionCode": 240,
-  "versionName": "2.4.0",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.0/app-debug.apk",
+  "versionCode": 241,
+  "versionName": "2.4.1",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.1/app-debug.apk",
   "changelog": "- YouTube Shorts Tap-to-Pause: Fix foreground pause suppression and synchronize HTML5 video with YouTube player state without restarting playback.\n- Sleek Dark UI: Swapped glowing white backgrounds and black icons to professional dark surfaces (#141720 / #16161A) with crisp white icons across bottom menu nav and start page action discs.\n- Realistic Shield Protection Matrix: Dynamic baseline seeding for Social Trackers and Deceptive Traps with formatted count counters.\n- Fokk Pro Feature Hub: Elevated to top of Feature Hubs with golden PRO badge and direct sponsorship activation.\n- Resilient Stealth VPN & Proxy Engine: Graceful direct connection fallback (.addDirect()), Cloudflare 1.1.1.1 Encrypted DoH DNS resolver integration, Orbot Tor routing, and active connection status probing."
 }
