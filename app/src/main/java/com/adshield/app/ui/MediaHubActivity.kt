@@ -3942,6 +3942,27 @@ open class MediaHubActivity : AppCompatActivity() {
             webView.evaluateJavascript("if (typeof setAiFilterEnabled === 'function') setAiFilterEnabled(false);", null)
         }
 
+        // Fokko AI Ambient Reality Inspector (Twitter/X, Reddit, Threads, YouTube, Web Selections)
+        val isFokkoAi = prefs.getBoolean(PREF_FOKKO_AI, true)
+        val isWebHttp = pageUrl?.startsWith("http://") == true || pageUrl?.startsWith("https://") == true
+        if (isFokkoAi && isWebHttp && fokkoScript.isNotEmpty()) {
+            if (fokkoCss.isNotEmpty()) {
+                val cssSafe = fokkoCss.replace("\\", "\\\\").replace("`", "\\`")
+                val injectCssJs = """
+                    (function() {
+                        if (!document.getElementById('fokko-ai-css')) {
+                            var s = document.createElement('style');
+                            s.id = 'fokko-ai-css';
+                            s.textContent = `$cssSafe`;
+                            (document.head || document.documentElement).appendChild(s);
+                        }
+                    })();
+                """.trimIndent()
+                webView.evaluateJavascript(injectCssJs, null)
+            }
+            webView.evaluateJavascript(fokkoScript, null)
+        }
+
         // Custom User CSS
         val customCss = prefs.getString(PREF_CUSTOM_CSS, "") ?: ""
         if (customCss.isNotEmpty()) {

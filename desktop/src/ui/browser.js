@@ -352,6 +352,14 @@ function createTab(url = START_PAGE_URL, options = {}) {
                     if (rule.css) webview.insertCSS(rule.css);
                     if (rule.js) webview.executeJavaScript(rule.js);
                 }
+
+                // Auto-inject Fokko AI Ambient Reality Inspector on web pages
+                ipcRenderer.invoke('fokk-get-fokko-css').then(css => {
+                    if (css) webview.insertCSS(css).catch(() => {});
+                }).catch(() => {});
+                ipcRenderer.invoke('fokk-get-fokko-script').then(js => {
+                    if (js) webview.executeJavaScript(js).catch(() => {});
+                }).catch(() => {});
             }
         } catch (_) {}
     });

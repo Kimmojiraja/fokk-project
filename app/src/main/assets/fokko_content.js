@@ -196,6 +196,13 @@
     const safeClaim = String(data.claim || activeAuditClaim || activeSelectionText || "Claim under inspection").trim();
     data.claim = safeClaim;
 
+    // Cache valid forensic verdicts locally to preserve future tokens
+    try {
+      if (safeClaim && !data.statusBadge?.includes("PRO") && !data.statusBadge?.includes("QUOTA")) {
+        localStorage.setItem("fokko_cache_" + getClaimHash(safeClaim), JSON.stringify(data));
+      }
+    } catch {}
+
     const body = document.getElementById("tmb-modal-body");
     const isDebunked = data.verdict === "DEBUNKED" || (data.statusBadge || "").includes("CAP");
     const isVerified = data.verdict === "VERIFIED" || (data.statusBadge || "").includes("FACT") || (data.statusBadge || "").includes("VERIFIED");
@@ -450,12 +457,89 @@
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // LOCAL CACHE & TOKEN-PRESERVING QUOTA MANAGER
+  // Free: 5 audits / day | Pro: 60 audits / day
+  // Uses hash caching to ensure repeated viral claims consume 0 tokens.
+  // ═══════════════════════════════════════════════════════════════
+  function getClaimHash(str) {
+    let hash = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      hash ^= str.charCodeAt(i);
+      hash = (hash * 16777619) >>> 0;
+    }
+    return hash.toString(36);
+  }
+
+  function getDailyQuotaStatus() {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      let quotaDate = localStorage.getItem("fokko_quota_date");
+      let quotaUsed = parseInt(localStorage.getItem("fokko_quota_used") || "0", 10);
+      if (quotaDate !== today) {
+        quotaDate = today;
+        quotaUsed = 0;
+        localStorage.setItem("fokko_quota_date", today);
+        localStorage.setItem("fokko_quota_used", "0");
+      }
+      const isPro = localStorage.getItem("fokk_pro_status") === "active" || localStorage.getItem("fokk_pro_unlocked") === "true" || window.__fokk_is_pro === true;
+      const dailyLimit = isPro ? 60 : 5;
+      return { allowed: quotaUsed < dailyLimit, isPro, used: quotaUsed, dailyLimit };
+    } catch {
+      return { allowed: true, isPro: false, used: 0, dailyLimit: 5 };
+    }
+  }
+
+  function recordQuotaUsage() {
+    try {
+      const status = getDailyQuotaStatus();
+      localStorage.setItem("fokko_quota_used", (status.used + 1).toString());
+    } catch {}
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // AUDIT ENGINE CALL WITH INSTANT TIMEOUT & PARALLEL FALLBACK
   // ═══════════════════════════════════════════════════════════════
   async function executeAudit(claimText, postUrl) {
     if (!claimText || claimText.trim().length < 4) return;
-    activeAuditClaim = claimText.trim();
+    claimText = claimText.trim().slice(0, 240); // Cap tokens per request
+    activeAuditClaim = claimText;
     showLoading(claimText);
+
+    // 1. Check local hash cache (Zero Tokens consumed on cached/viral claims)
+    const cacheKey = "fokko_cache_" + getClaimHash(claimText);
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const cachedData = JSON.parse(cached);
+        if (cachedData && (cachedData.verdict || cachedData.forensicSummary)) {
+          setTimeout(() => showVerdict(cachedData), 200);
+          return;
+        }
+      }
+    } catch {}
+
+    // 2. Check Daily Token Quota (Free = 5/day, Pro = 60/day)
+    const quota = getDailyQuotaStatus();
+    if (!quota.allowed) {
+      setTimeout(() => {
+        showVerdict({
+          claim: claimText,
+          verdict: "CONTESTED",
+          verdictTitle: quota.isPro ? "DAILY PRO QUOTA LIMIT" : "FREE DAILY LIMIT REACHED",
+          statusBadge: quota.isPro ? "60/60 CHECKS USED" : "UPGRADE TO PRO",
+          confidence: 100,
+          forensicSummary: quota.isPro
+            ? "You have utilized your 60 high-speed daily forensic audits. Your daily token pool refreshes at midnight (00:00 UTC) to prevent API exhaustion."
+            : "You have used your 5 free reality checks for today. Upgrade to Fokk Pro for 60 high-speed audits/day, or your free quota will refresh tomorrow at 00:00 UTC.",
+          primarySource: { name: quota.isPro ? "Active Pro Subscriber" : "Get Fokk Pro", url: "https://kimmojiraja.github.io/fokk-project/#pro" },
+          deepLink: "https://kimmojiraja.github.io/fokk-project/#pro"
+        });
+      }, 300);
+      return;
+    }
+
+    // Record usage
+    recordQuotaUsage();
 
     const platform = window.location.hostname.includes("x.com") || window.location.hostname.includes("twitter.com")
       ? "twitter"

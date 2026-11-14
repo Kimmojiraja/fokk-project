@@ -791,6 +791,14 @@ ipcMain.handle('fokk-get-summarizer-script', () => {
     return adblock.summarizerJs || '';
 });
 
+ipcMain.handle('fokk-get-fokko-script', () => {
+    return adblock.fokkoJs || '';
+});
+
+ipcMain.handle('fokk-get-fokko-css', () => {
+    return adblock.fokkoCss || '';
+});
+
 ipcMain.handle('fokk-get-torrent-url', () => {
     const torrentPath = path.join(ASSETS_DIR, 'fokk_webtorrent.html');
     if (fs.existsSync(torrentPath)) return `file://${torrentPath}`;

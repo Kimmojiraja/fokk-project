@@ -325,6 +325,8 @@ class AdBlockEngine {
         this.defusersJs = '';
         this.readerJs = '';
         this.summarizerJs = '';
+        this.fokkoJs = '';
+        this.fokkoCss = '';
 
         try {
             const injectPath = path.join(this.assetsDir, 'inject_adshield.js');
@@ -338,6 +340,12 @@ class AdBlockEngine {
 
             const summarizerPath = path.join(this.assetsDir, 'fokk_summarizer.js');
             if (fs.existsSync(summarizerPath)) this.summarizerJs = fs.readFileSync(summarizerPath, 'utf8');
+
+            const fokkoJsPath = path.join(this.assetsDir, 'fokko_content.js');
+            if (fs.existsSync(fokkoJsPath)) this.fokkoJs = fs.readFileSync(fokkoJsPath, 'utf8');
+
+            const fokkoCssPath = path.join(this.assetsDir, 'fokko_content.css');
+            if (fs.existsSync(fokkoCssPath)) this.fokkoCss = fs.readFileSync(fokkoCssPath, 'utf8');
         } catch (e) {
             console.error('[AdBlock] Error loading injection scripts:', e);
         }
