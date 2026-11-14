@@ -136,12 +136,15 @@ body[style*="background-color: rgb(247, 249, 249)"] .tmb-inline-trigger:hover .t
    ═══════════════════════════════════════════════════════════════ */
 .tmb-forensic-card {
   width: 100%;
-  max-width: 540px;
+  max-width: 560px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
   background: #000000;
   border: 1.5px solid #2f3336;
   border-radius: 16px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.04);
-  padding: 24px 24px 20px 24px;
+  padding: 20px 22px 18px 22px;
   color: #e7e9ea;
   font-family: TwitterChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   position: relative;
@@ -149,6 +152,44 @@ body[style*="background-color: rgb(247, 249, 249)"] .tmb-inline-trigger:hover .t
   transform: translateY(10px) scale(0.98);
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-sizing: border-box;
+}
+
+#tmb-modal-body {
+  overflow-y: auto !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: #38444d transparent;
+}
+
+#tmb-modal-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+#tmb-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#tmb-modal-body::-webkit-scrollbar-thumb {
+  background: #38444d;
+  border-radius: 9999px;
+}
+
+#tmb-modal-body::-webkit-scrollbar-thumb:hover {
+  background: #71767b;
+}
+
+.tmb-card-header {
+  flex-shrink: 0;
+}
+
+.tmb-hairline {
+  flex-shrink: 0;
+}
+
+.tmb-action-footer {
+  flex-shrink: 0;
 }
 
 .tmb-modal-backdrop.tmb-open .tmb-forensic-card {

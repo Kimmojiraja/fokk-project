@@ -825,10 +825,18 @@ ipcMain.handle('fokk-audit-fetch', async (event, url) => {
 });
 
 ipcMain.handle('fokk-get-fokko-script', () => {
+    try {
+        const fokkoJsPath = path.join(ASSETS_DIR, 'fokko_content.js');
+        if (fs.existsSync(fokkoJsPath)) return fs.readFileSync(fokkoJsPath, 'utf8');
+    } catch (_) {}
     return adblock.fokkoJs || '';
 });
 
 ipcMain.handle('fokk-get-fokko-css', () => {
+    try {
+        const fokkoCssPath = path.join(ASSETS_DIR, 'fokko_content.css');
+        if (fs.existsSync(fokkoCssPath)) return fs.readFileSync(fokkoCssPath, 'utf8');
+    } catch (_) {}
     return adblock.fokkoCss || '';
 });
 

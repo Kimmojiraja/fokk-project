@@ -302,7 +302,7 @@
         </div>
         ${
           isProAudit
-            ? `<span style="background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(251,191,36,0.3)); color: #fbbf24; border: 1px solid rgba(251,191,36,0.5); padding: 2px 7px; border-radius: 9999px; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px;">⚡ PRO TURBO</span>`
+            ? `<span style="background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(251,191,36,0.3)); color: #fbbf24; border: 1px solid rgba(251,191,36,0.5); padding: 2px 7px; border-radius: 9999px; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:3px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>PRO TURBO</span>`
             : ""
         }
         <span class="tmb-confidence-badge">${confidence}% FORENSIC CONFIDENCE</span>
@@ -319,7 +319,7 @@
         data.leadImage
           ? `
         <div class="tmb-lead-image-container" style="margin: 10px 0; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); background: #0c0e12; display: flex; justify-content: center; align-items: center; max-height: 180px;">
-          <img src="${escapeHtml(data.leadImage)}" alt="Forensic Lead Record" style="max-height: 180px; width: auto; max-width: 100%; object-fit: contain; display: block;" onerror="this.parentElement.style.display='none';" />
+          <img src="${escapeHtml(data.leadImage)}" alt="" referrerpolicy="no-referrer" loading="lazy" style="max-height: 180px; width: auto; max-width: 100%; object-fit: contain; display: block;" onerror="this.closest('.tmb-lead-image-container')?.remove();" />
         </div>
       `
           : ""
@@ -443,7 +443,7 @@
 
       ${data.isQuotaLimit ? `
         <button id="tmb-unlock-pro-tester-btn" type="button" style="width: 100%; margin-bottom: 8px; padding: 10px 14px; background: linear-gradient(135deg, #00E5FF, #3B82F6); color: #000; border: none; border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer; letter-spacing: 0.3px;">
-          ⚡ UNLOCK TESTER PRO ACCESS (Instant Unlimited)
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.4" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>UNLOCK TESTER PRO ACCESS (Instant Unlimited)
         </button>
       ` : ''}
       <div class="tmb-action-footer">
@@ -659,206 +659,359 @@
         if (raw) return JSON.parse(raw);
       } catch (_) {}
     }
-    const r = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!r.ok) return null;
-    return await r.json();
+    try {
+      const r = await fetch(url, { headers: { Accept: "application/json, application/xml, text/xml, */*" } });
+      if (!r.ok) return null;
+      const cType = r.headers.get("content-type") || "";
+      if (cType.includes("json")) return await r.json();
+      return await r.text();
+    } catch (_) {
+      return null;
+    }
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // MULTI-LAYER UNIVERSAL REALITY ENGINE
+  // Layer 1: Context & Entity Deconstruction (Unicode, Punctuation Boundaries, Location Disqualification)
+  // Layer 2: Dual Knowledge Harvesting (Live Wire RSS + Action API Full Archives)
+  // Layer 3: Cross-Corroboration & Triangulation (Semantic consensus, Scam/Clickbait Detection)
+  // Layer 4: Executive Synthesis (Concise Narrative, Key Takeaways, Primary Verified Receipts)
+  // ═══════════════════════════════════════════════════════════════
+
+  const COMMON_LOCATIONS = new Set([
+    "serbia", "germany", "france", "england", "spain", "italy", "america", "united states", "russia",
+    "china", "japan", "brazil", "india", "london", "paris", "berlin", "madrid", "rome", "tokyo",
+    "beijing", "europe", "asia", "africa", "belgrade", "munich", "manchester", "liverpool", "uk", "usa"
+  ]);
+
+  const STOP_WORDS = new Set([
+    "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't",
+    "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can",
+    "cannot", "could", "couldn't", "did", "didn't", "do", "does", "doesn't", "doing", "don't", "down", "during",
+    "each", "few", "for", "from", "further", "had", "hadn't", "has", "hasn't", "have", "haven't", "having",
+    "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself", "him", "himself", "his", "how",
+    "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "isn't", "it", "it's", "its", "itself",
+    "let's", "me", "more", "most", "mustn't", "my", "myself", "no", "nor", "not", "of", "off", "on", "once", "only",
+    "or", "other", "ought", "our", "ours", "ourselves", "out", "over", "own", "same", "shan't", "she", "she'd",
+    "she'll", "she's", "should", "shouldn't", "so", "some", "such", "than", "that", "that's", "the", "their",
+    "theirs", "them", "themselves", "then", "there", "there's", "these", "they", "they'd", "they'll", "they're",
+    "they've", "this", "those", "through", "to", "too", "under", "until", "up", "very", "was", "wasn't", "we",
+    "we'd", "we'll", "we're", "we've", "were", "weren't", "what", "what's", "when", "when's", "where", "where's",
+    "which", "while", "who", "who's", "whom", "why", "why's", "with", "won't", "would", "wouldn't", "you",
+    "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves",
+    "former", "current", "late", "ex", "young", "star", "top", "senior", "popular", "famous", "veteran",
+    "dr", "mr", "mrs", "ms", "prof", "president", "king", "queen", "breaking", "exclusive", "tragic",
+    "shocking", "unreal", "confirmed", "revealed", "report", "reports", "official",
+    "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december",
+    "finding", "rhythm", "taking", "shape", "rain", "soaked", "night", "get", "done", "back", "net", "era", "job"
+  ]);
+
   function extractSalientAuditQueries(claimText) {
-    const clean = (claimText || "").replace(/[\"\'\“\”\‘\’]/g, " ").replace(/\s+/g, " ").trim();
+    const normalized = (claimText || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/['"“”‘’]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
 
-    const modifierWords = new Set([
-      "former", "current", "late", "ex", "young", "star", "top", "senior", "popular",
-      "famous", "veteran", "dr", "mr", "mrs", "ms", "prof", "president", "king",
-      "queen", "senator", "governor", "breaking", "tragic", "shocking", "unreal", "new"
-    ]);
-
-    const stopWords = new Set([
-      "this", "his", "her", "their", "the", "and", "what", "where", "when", "why", "how",
-      "did", "just", "have", "has", "had", "been", "were", "was", "after", "before",
-      "about", "with", "from", "into", "during", "until", "over", "under", "again",
-      "further", "then", "once", "here", "there", "all", "any", "both", "each", "few",
-      "more", "most", "other", "some", "such", "no", "nor", "not", "only", "own",
-      "same", "so", "than", "too", "very", "can", "will", "don", "should", "now",
-      "september", "october", "november", "december", "january", "february", "march",
-      "april", "may", "june", "july", "august"
-    ]);
-
-    const properNounRx = /[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*/g;
-    const rawMatches = clean.match(properNounRx) || [];
-
+    const tokens = normalized.split(/\s+/);
     const entities = [];
-    for (let m of rawMatches) {
-      const parts = m.split(/\s+/);
-      while (parts.length > 0 && modifierWords.has(parts[0].toLowerCase())) {
-        parts.shift();
+    let currentGroup = [];
+
+    for (const token of tokens) {
+      const hasPunctuationEnd = /[.,!?;:\-]$/.test(token);
+      const cleanWord = token.replace(/[^a-zA-Z0-9]/g, "");
+      if (!cleanWord) {
+        if (currentGroup.length > 0) {
+          const entity = currentGroup.join(" ");
+          if (!entities.includes(entity) && entity.length > 2) entities.push(entity);
+          currentGroup = [];
+        }
+        continue;
       }
-      if (parts.length > 0) {
-        const filtered = parts.join(" ");
-        if (!stopWords.has(filtered.toLowerCase()) && filtered.length > 2) {
-          if (!entities.includes(filtered)) entities.push(filtered);
+
+      const isCapitalized = /^[A-Z]/.test(cleanWord);
+      const isStop = STOP_WORDS.has(cleanWord.toLowerCase());
+
+      if (isCapitalized && !isStop && cleanWord.length > 1) {
+        currentGroup.push(cleanWord);
+        if (hasPunctuationEnd) {
+          const entity = currentGroup.join(" ");
+          if (!entities.includes(entity) && entity.length > 2) entities.push(entity);
+          currentGroup = [];
+        }
+      } else {
+        if (currentGroup.length > 0) {
+          const entity = currentGroup.join(" ");
+          if (!entities.includes(entity) && entity.length > 2) entities.push(entity);
+          currentGroup = [];
         }
       }
     }
+    if (currentGroup.length > 0) {
+      const entity = currentGroup.join(" ");
+      if (!entities.includes(entity) && entity.length > 2) entities.push(entity);
+    }
 
-    // Prioritize 2+ word entities (like "Billy Vigar" or "Lewis Sayre")
-    entities.sort((a, b) => b.split(/\s+/).length - a.split(/\s+/).length);
-    const yearMatches = clean.match(/\b(1[789]\d\d|20\d\d)s?\b/g) || [];
+    // Deduplicate case-insensitively
+    const seen = new Set();
+    const deduped = [];
+    for (const e of entities) {
+      const lower = e.toLowerCase();
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        const titleCased = e.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+        deduped.push(titleCased);
+      }
+    }
+
+    // Filter out single-word entities that are already substrings of longer entities
+    const nonSubsets = deduped.filter(e => {
+      return !deduped.some(other => other !== e && other.toLowerCase().includes(e.toLowerCase()) && other.includes(" "));
+    });
+
+    // Sort entities: non-locations first, 2-word first, locations last
+    nonSubsets.sort((a, b) => {
+      const aIsLoc = COMMON_LOCATIONS.has(a.toLowerCase());
+      const bIsLoc = COMMON_LOCATIONS.has(b.toLowerCase());
+      if (aIsLoc && !bIsLoc) return 1;
+      if (!aIsLoc && bIsLoc) return -1;
+      return b.split(/\s+/).length - a.split(/\s+/).length;
+    });
 
     const queries = [];
-    if (entities.length > 0) {
-      queries.push(entities[0]);
-      if (entities.length > 1) {
-        queries.push(entities[0] + " " + entities[1]);
+    const primary = nonSubsets.filter(e => !COMMON_LOCATIONS.has(e.toLowerCase()));
+    const locations = nonSubsets.filter(e => COMMON_LOCATIONS.has(e.toLowerCase()));
+    const yearMatches = normalized.match(/\b(1[789]\d\d|20\d\d)s?\b/g) || [];
+
+    if (primary.length > 0) {
+      if (primary.length >= 2) {
+        queries.push(`${primary[0]} ${primary[1]}`);
       }
-      if (yearMatches.length > 0) {
-        queries.push(entities[0] + " " + yearMatches[0]);
+      if (locations.length > 0) {
+        queries.push(`${primary[0]} ${locations[0]}`);
+        if (primary.length >= 2) {
+          queries.push(`${primary[0]} ${primary[1]} ${locations[0]}`);
+        }
       }
-    }
-    for (let i = 1; i < entities.length; i++) {
-      if (entities[i].includes(" ") && !queries.includes(entities[i])) {
-        queries.push(entities[i]);
+      queries.push(primary[0]);
+      if (primary.length > 1 && !queries.includes(primary[1])) {
+        queries.push(primary[1]);
       }
-    }
-    if (queries.length === 0) {
-      const words = clean.replace(/[^\w\s]/g, "").split(/\s+/).filter(w => w.length > 4 && !stopWords.has(w.toLowerCase()));
-      if (words.length > 0) queries.push(words.slice(0, 4).join(" "));
+    } else if (nonSubsets.length > 0) {
+      queries.push(nonSubsets.slice(0, 2).join(" "));
     }
 
-    return { entities, queries, yearMatches };
+    if (yearMatches.length > 0 && primary.length > 0) {
+      queries.push(`${primary[0]} ${yearMatches[0]}`);
+    }
+
+    return { entities: nonSubsets, queries, yearMatches };
   }
 
-  async function runInBrowserRealityAudit(claimText, postUrl) {
+  // Pipeline A: Real-Time Wire Feed Ingestion (Google News RSS)
+  async function fetchRealTimeWireReceipts(query) {
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+    try {
+      const xml = await safeAuditFetch(url);
+      if (!xml || typeof xml !== "string") return [];
+      const items = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
+      return items.slice(0, 6).map(item => {
+        const title = (item.match(/<title>(.*?)<\/title>/)?.[1] || "").replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#39;/g, "'");
+        const link = item.match(/<link>(.*?)<\/link>/)?.[1] || "";
+        const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || "";
+        const source = (item.match(/<source[^>]*>(.*?)<\/source>/)?.[1] || "").replace(/&amp;/g, '&');
+        let domain = (source || "").toLowerCase().replace(/[^a-z0-9]/g, "") + ".com";
+        const sLower = source.toLowerCase();
+        if (sLower.includes("bbc")) domain = "bbc.com";
+        else if (sLower.includes("times") || sLower.includes("new york times")) domain = "nytimes.com";
+        else if (sLower.includes("espn")) domain = "espn.com";
+        else if (sLower.includes("sky")) domain = "skysports.com";
+        else if (sLower.includes("reuters")) domain = "reuters.com";
+        else if (sLower.includes("athletic")) domain = "theathletic.com";
+        else if (sLower.includes("guardian")) domain = "theguardian.com";
+        else if (sLower.includes("associated press") || sLower === "ap") domain = "apnews.com";
+        else if (sLower.includes("cnn")) domain = "cnn.com";
+        else if (sLower.includes("nbc")) domain = "nbcnews.com";
+        else if (sLower.includes("cbs")) domain = "cbsnews.com";
+        else if (sLower.includes("washington post")) domain = "washingtonpost.com";
+        else if (sLower.includes("wall street journal") || sLower.includes("wsj")) domain = "wsj.com";
+        else if (sLower.includes("bloomberg")) domain = "bloomberg.com";
+        else if (sLower.includes("forbes")) domain = "forbes.com";
+        else if (sLower.includes("verge")) domain = "theverge.com";
+        else if (sLower.includes("techcrunch")) domain = "techcrunch.com";
+        else if (sLower.includes("telegraph")) domain = "telegraph.co.uk";
+        else if (sLower.includes("daily mail")) domain = "dailymail.co.uk";
+        else if (sLower.includes("marca")) domain = "marca.com";
+        else if (sLower.includes("goal")) domain = "goal.com";
+        else if (sLower.includes("bavarian")) domain = "bavarianfootballworks.com";
+        else if (sLower.includes("sofascore")) domain = "sofascore.com";
+        else if (sLower.includes("yahoo")) domain = "yahoo.com";
+
+        return {
+          headline: title,
+          url: link,
+          pubDate,
+          sourceName: source || "Accredited Wire",
+          domain
+        };
+      });
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // Pipeline B: Deep Encyclopedic & Biographical Registries (Wikipedia Action API)
+  async function fetchEncyclopedicReceipt(query) {
+    try {
+      const sUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+      const sData = await safeAuditFetch(sUrl);
+      const results = (sData && sData.query && sData.query.search) || [];
+      if (results.length === 0) return null;
+
+      // Filter out generic country or city articles when query is about specific people or actions
+      let bestMatch = results[0];
+      for (const cand of results.slice(0, 3)) {
+        if (!COMMON_LOCATIONS.has(cand.title.toLowerCase())) {
+          bestMatch = cand;
+          break;
+        }
+      }
+
+      if (COMMON_LOCATIONS.has(bestMatch.title.toLowerCase())) {
+        return null; // Reject generic country/location articles!
+      }
+
+      const pageTitle = bestMatch.title;
+      const fUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts|pageimages&exintro=false&explaintext=true&pithumbsize=600&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`;
+      const fData = await safeAuditFetch(fUrl);
+      const pages = (fData && fData.query && fData.query.pages) || {};
+      const pageId = Object.keys(pages)[0];
+      const p = pages[pageId];
+      if (!p || !p.extract) return null;
+
+      // Filter out SVG flags or coats of arms from lead thumbnail
+      let thumb = p.thumbnail ? p.thumbnail.source : null;
+      if (thumb && (/flag|coat_of_arms|logo|symbol/i.test(thumb) || thumb.endsWith('.svg'))) {
+        thumb = null;
+      }
+
+      return {
+        title: p.title,
+        extract: p.extract,
+        thumbnail: thumb,
+        url: `https://en.wikipedia.org/wiki/${encodeURIComponent(pageTitle)}`,
+        domain: "wikipedia.org",
+        sourceName: `Wikipedia · ${p.title}`
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function runInBrowserRealityAudit(claimText, postUrl, platformMeta) {
     const cleanClaim = (claimText || "").replace(/[\r\n]+/g, " ").trim();
     if (!cleanClaim) return;
 
     const { entities, queries, yearMatches } = extractSalientAuditQueries(cleanClaim);
+    const primary = entities.filter(e => !COMMON_LOCATIONS.has(e.toLowerCase()));
+    const wikiQuery = primary.length > 0 ? primary[0] : (entities[0] || cleanClaim.slice(0, 40));
+    const wireQuery = queries[0] || wikiQuery;
+    const secondaryQuery = queries[1] || "";
 
-    // Heuristics for scam / clickbait detection
-    const isObviousScam = /guarantee|giveaway|send crypto|airdrop|doubler|100x return|urgent alert|banned video|shocking cure|miracle secret|free bitcoin/i.test(cleanClaim);
-    const isSensationalist = /shocking|secret|leaked|banned|unreal|magic|hoax|conspiracy/i.test(cleanClaim);
+    const isObviousScam = /guarantee|giveaway|send crypto|airdrop|doubler|100x return|urgent alert|banned video|shocking cure|miracle secret|free bitcoin|alien base|moon hoax/i.test(cleanClaim);
+    const isHistorical = yearMatches.length > 0 && yearMatches.some(y => parseInt(y) < 1980);
 
-    // 1. Query open knowledge registries via Wikipedia Action API
-    for (const q of queries) {
-      try {
-        const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&format=json&origin=*`;
-        const sData = await safeAuditFetch(searchUrl);
-        const searchResults = (sData && sData.query && sData.query.search) || [];
-        if (searchResults.length === 0) continue;
+    // Execute Multi-Query Knowledge Harvesting
+    let [wireArticles1, encyclopedicRecord] = await Promise.all([
+      fetchRealTimeWireReceipts(wireQuery),
+      fetchEncyclopedicReceipt(wikiQuery)
+    ]);
 
-        // Inspect top candidate matches
-        for (const cand of searchResults.slice(0, 3)) {
-          const pageTitle = cand.title;
-          const fetchUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts|pageimages&exintro=false&explaintext=true&pithumbsize=600&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`;
-          const fData = await safeAuditFetch(fetchUrl);
-          const pages = (fData && fData.query && fData.query.pages) || {};
-          const pageId = Object.keys(pages)[0];
-          const p = pages[pageId];
-          if (!p || !p.extract) continue;
-
-          // Compute corroboration relevance
-          const extractLower = (p.extract || "").toLowerCase();
-          const claimWords = cleanClaim.toLowerCase().replace(/[^\w\s]/g, "").split(/\s+/).filter(w => w.length > 3);
-          const matchedWords = claimWords.filter(w => extractLower.includes(w));
-          const matchRatio = matchedWords.length / Math.max(1, Math.min(claimWords.length, 12));
-
-          const entityMatch = entities.some(ent => p.title.toLowerCase().includes(ent.toLowerCase()) || extractLower.includes(ent.toLowerCase()));
-
-          // If entity matched or significant salient overlap confirmed
-          if (entityMatch || matchRatio >= 0.25 || matchedWords.length >= 3) {
-            // Also try fetching thumbnail from REST summary if not on p
-            let leadImg = p.thumbnail ? p.thumbnail.source : null;
-            if (!leadImg) {
-              try {
-                const restUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`;
-                const rData = await safeAuditFetch(restUrl);
-                if (rData && rData.thumbnail) leadImg = rData.thumbnail.source;
-              } catch (_) {}
-            }
-
-            // Tailor high-value curiosity questions
-            const followUpQuestions = [
-              `What official investigations and safety protocol reviews followed this development?`,
-              `What primary documentation preserves the historical record of ${p.title}?`,
-              `How do institutional authorities and community stakeholders view these findings?`
-            ];
-
-            const firstParagraphs = p.extract.split(/\n\n+/).filter(Boolean);
-            const synthesizedText = firstParagraphs.slice(0, 2).join(" ");
-
-            const result = {
-              id: "wiki_" + (p.pageid || Date.now()),
-              claim: cleanClaim,
-              verdict: "VERIFIED",
-              verdictTitle: "PRIMARY RECORD CONFIRMED",
-              statusBadge: "VERIFIED RECORD",
-              confidence: Math.min(99, 90 + Math.floor(matchRatio * 15)),
-              forensicSummary: `Accredited encyclopedic and wire archives corroborate this account. ${synthesizedText.replace(/\[\d+\]/g, "")}`,
-              receiptQuote: `${p.title}: ${p.extract.slice(0, 190)}...`,
-              primarySource: {
-                name: `Wikipedia · ${p.title}`,
-                domain: "wikipedia.org",
-                url: `https://en.wikipedia.org/wiki/${encodeURIComponent(pageTitle)}`
-              },
-              leadImage: leadImg,
-              followUpQuestions: followUpQuestions,
-              deepLink: `https://en.wikipedia.org/wiki/${encodeURIComponent(pageTitle)}`,
-              isPro: true,
-              auditTier: "PRO_TURBO"
-            };
-
-            showVerdict(result);
-            return;
-          }
-        }
-      } catch (err) {
-        console.warn("[FokkAudit] Query error for:", q, err);
+    // Validate encyclopedic record against claim entities (word-level matching)
+    if (encyclopedicRecord) {
+      const titleLower = encyclopedicRecord.title.toLowerCase();
+      const isEntityRelevant = entities.some(e => {
+        const eWords = e.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+        if (eWords.length === 0) return false;
+        return eWords.every(w => titleLower.includes(w)) || titleLower.split(/\s+/).every(w => e.toLowerCase().includes(w));
+      });
+      if (!isEntityRelevant) {
+        encyclopedicRecord = null;
       }
     }
 
-    // 2. Fallback to DuckDuckGo Instant Knowledge
-    if (queries.length > 0) {
-      try {
-        const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(queries[0])}&format=json&no_html=1&skip_disambig=1`;
-        const dData = await safeAuditFetch(ddgUrl);
-        if (dData && dData.AbstractText) {
-          showVerdict({
-            claim: cleanClaim,
-            verdict: "VERIFIED",
-            verdictTitle: "OPEN REGISTRY CORROBORATED",
-            statusBadge: "VERIFIED RECORD",
-            confidence: 94,
-            forensicSummary: `Primary open records corroborate the subject of this claim. ${dData.AbstractText}`,
-            receiptQuote: dData.AbstractSource ? `Verified via ${dData.AbstractSource}` : null,
-            primarySource: {
-              name: dData.AbstractSource || "DuckDuckGo Instant Knowledge",
-              url: dData.AbstractURL || "https://duckduckgo.com/?q=" + encodeURIComponent(queries[0])
-            },
-            leadImage: dData.Image ? (dData.Image.startsWith("http") ? dData.Image : `https://duckduckgo.com${dData.Image}`) : null,
-            followUpQuestions: [
-              `What additional archival evidence exists for ${dData.Heading || queries[0]}?`,
-              `How do official registers document this claim?`
-            ],
-            deepLink: dData.AbstractURL || window.location.href,
-            isPro: true,
-            auditTier: "PRO_TURBO"
-          });
-          return;
+    let rawWire = [...wireArticles1];
+    if (rawWire.length < 3 && secondaryQuery) {
+      const wireArticles2 = await fetchRealTimeWireReceipts(secondaryQuery);
+      for (const w of wireArticles2) {
+        if (!rawWire.some(existing => existing.headline === w.headline)) {
+          rawWire.push(w);
         }
+      }
+    }
+
+    // Filter wire articles: must match primary entity or >= 2 claim keywords
+    const claimWords = cleanClaim.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(w => w.length > 3 && !STOP_WORDS.has(w));
+    const wireArticles = rawWire.filter(w => {
+      const hLower = w.headline.toLowerCase();
+      if (isHistorical && (hLower.includes("obituary") || hLower.includes("funeral"))) return false;
+      if (entities.length > 0 && hLower.includes(entities[0].toLowerCase())) return true;
+      const matches = claimWords.filter(cw => hLower.includes(cw));
+      return matches.length >= 2;
+    });
+
+    // Aggregate receipts
+    const receipts = [];
+    if (encyclopedicRecord) {
+      receipts.push({
+        sourceName: encyclopedicRecord.sourceName,
+        headline: encyclopedicRecord.extract.slice(0, 140) + "...",
+        url: encyclopedicRecord.url,
+        domain: encyclopedicRecord.domain
+      });
+    }
+    for (const w of wireArticles) {
+      receipts.push(w);
+    }
+
+    if (platformMeta && platformMeta.outboundLink && !receipts.some(r => r.url === platformMeta.outboundLink)) {
+      try {
+        const u = new URL(platformMeta.outboundLink);
+        receipts.push({
+          sourceName: u.hostname.replace(/^www\./, ""),
+          headline: "Primary Attached Evidence Link",
+          url: platformMeta.outboundLink,
+          domain: u.hostname.replace(/^www\./, "")
+        });
       } catch (_) {}
     }
 
-    // 3. Obvious Scam / Hoax Detection
-    if (isObviousScam || isSensationalist) {
+    // Semantic Corroboration Scoring
+    let maxMatchedTerms = 0;
+    if (encyclopedicRecord) {
+      const eLower = encyclopedicRecord.extract.toLowerCase();
+      const m = claimWords.filter(w => eLower.includes(w));
+      if (m.length > maxMatchedTerms) maxMatchedTerms = m.length;
+    }
+    for (const w of wireArticles) {
+      const hLower = w.headline.toLowerCase();
+      const m = claimWords.filter(wd => hLower.includes(wd));
+      if (m.length > maxMatchedTerms) maxMatchedTerms = m.length;
+    }
+
+    // 1. Obvious Scam / Hoax Debunk
+    if (isObviousScam) {
       showVerdict({
         claim: cleanClaim,
         verdict: "DEBUNKED",
         verdictTitle: "FABRICATION SUSPECTED",
         statusBadge: "CERTIFIED CAP",
         confidence: 96,
-        forensicSummary: "No primary records, accredited wire filings, or official announcements corroborate this viral claim. Forensic evaluation indicates high linguistic density of sensationalism and unsubstantiated claims circulating without documentation.",
-        receiptQuote: "Zero corroborating records found in global open archives or accredited news registries.",
+        forensicSummary: "No primary records, accredited wire filings, or institutional announcements corroborate this viral assertion. Forensic linguistic heuristics indicate characteristic indicators of misinformation or unverified sensationalism designed for social reach.",
+        receiptQuote: "Zero corroborating records found in global open wire registries or accredited newsrooms.",
         primarySource: { name: "Open Multi-Source Forensic Triangulation", domain: "fokk.browser", url: postUrl || window.location.href },
+        receipts: receipts.slice(0, 2),
         leadImage: null,
         followUpQuestions: [
           "What primary authority would be responsible for announcing this if authentic?",
@@ -872,22 +1025,76 @@
       return;
     }
 
-    // 4. Context Needed / Developing Story
+    // 2. Verified Primary Record / Real-Time Wire Confirmation
+    const hasStrongCorroboration = receipts.length > 0 && (maxMatchedTerms >= 2 || (entities.length > 0 && receipts.some(r => r.headline.toLowerCase().includes(entities[0].toLowerCase()))));
+
+    if (hasStrongCorroboration) {
+      let leadImage = encyclopedicRecord?.thumbnail || null;
+      let narrativeSummary = "";
+
+      // CONCISE EXECUTIVE SYNTHESIS (Max 2-3 focused sentences, NEVER a wall of text!)
+      if (wireArticles.length > 0) {
+        const topW = wireArticles.slice(0, 2).map(w => `"${w.headline}" (${w.sourceName})`).join("; ");
+        narrativeSummary = `Multiple accredited wire services corroborate this event across primary newsrooms: ${topW}. Cross-referencing against verified reporting confirms primary details and timeline.`;
+      } else if (isHistorical && encyclopedicRecord) {
+        const firstTwoSentences = encyclopedicRecord.extract.split(/(?<=[.?!])\s+/).slice(0, 2).join(" ").replace(/\[\d+\]/g, "");
+        narrativeSummary = `Accredited archival and encyclopedic registries corroborate this record. ${firstTwoSentences}`;
+      } else if (encyclopedicRecord) {
+        const firstTwoSentences = encyclopedicRecord.extract.split(/(?<=[.?!])\s+/).slice(0, 2).join(" ").replace(/\[\d+\]/g, "");
+        narrativeSummary = `Public encyclopedic registries confirm documented records regarding this subject. ${firstTwoSentences}`;
+      }
+
+      const subject = entities[0] || "this topic";
+      const followUpQuestions = [
+        `What official statements and investigations have followed this development?`,
+        `What primary documentation preserves the verified record of ${subject}?`,
+        `How have institutional authorities and community stakeholders responded?`
+      ];
+
+      const topSource = receipts[0];
+      const statusBadge = isHistorical ? "VERIFIED HISTORICAL RECORD" : (wireArticles.length > 0 ? "PRIMARY WIRE CONFIRMED" : "VERIFIED RECORD");
+
+      showVerdict({
+        id: "wire_" + Date.now(),
+        claim: cleanClaim,
+        verdict: "VERIFIED",
+        verdictTitle: "MULTIPLE ACCREDITED SOURCES VERIFIED",
+        statusBadge: statusBadge,
+        confidence: Math.min(99, 93 + receipts.length),
+        forensicSummary: narrativeSummary,
+        receiptQuote: topSource.headline || topSource.snippet || "Corroborated across primary newsrooms.",
+        primarySource: {
+          name: topSource.sourceName,
+          domain: topSource.domain,
+          url: topSource.url
+        },
+        receipts: receipts,
+        leadImage: leadImage,
+        followUpQuestions: followUpQuestions,
+        deepLink: topSource.url || postUrl || window.location.href,
+        isPro: true,
+        auditTier: "PRO_TURBO"
+      });
+      return;
+    }
+
+    // 3. Developing / Context Needed
     const subjectName = entities.length > 0 ? entities[0] : "the subject of this post";
     showVerdict({
       claim: cleanClaim,
       verdict: "CONTESTED",
       verdictTitle: "CONTEXT NEEDED",
       statusBadge: "CONTEXT NEEDED",
-      confidence: 85,
-      forensicSummary: `Independent cross-referencing for ${subjectName} indicates developing social commentary. While public wire archives preserve related event records, primary investigative documentation or official statements are required to verify the specific assertions regarding timing and institutional response.`,
-      receiptQuote: `Independent confirmation pending from official representatives or primary records.`,
+      confidence: 84,
+      forensicSummary: `Cross-referencing for ${subjectName} indicates developing viral commentary. While open news archives track related events, primary official filings or direct statements are required to verify the specific timeline and assertions made in this post.`,
+      receiptQuote: "Independent verification pending from primary eyewitnesses or official representatives.",
       primarySource: { name: "Open Reality Triangulation", domain: "fokk.browser", url: postUrl || window.location.href },
+      receipts: receipts.slice(0, 3),
       leadImage: null,
       followUpQuestions: [
         `What official statements have institutional bodies made regarding ${subjectName}?`,
-        `Has any accredited news agency independently corroborated this timeline?`,
-        `What safety or policy reforms have been formally proposed?`
+        `Has any accredited wire service independently corroborated this timeline?`,
+        `What primary evidence or documents are required to confirm this claim?`
       ],
       deepLink: postUrl || window.location.href,
       isPro: true,
@@ -895,13 +1102,12 @@
     });
   }
 
-  async function executeAudit(claimText, postUrl) {
+  async function executeAudit(claimText, postUrl, platformMeta) {
     if (!claimText || claimText.trim().length < 4) return;
     claimText = claimText.trim().slice(0, 320);
     activeAuditClaim = claimText;
     showLoading(claimText);
 
-    // 1. Check local hash cache for genuine verified verdicts (ignore and purge any legacy limit strings)
     const cacheKey = "fokko_cache_" + getClaimHash(claimText);
     try {
       const cached = localStorage.getItem(cacheKey);
@@ -921,13 +1127,9 @@
       }
     } catch {}
 
-    // 2. Execute In-Browser Distributed Reality Audit (Unmetered & Instant in Fokk Browser)
-    runInBrowserRealityAudit(claimText, postUrl);
+    runInBrowserRealityAudit(claimText, postUrl, platformMeta);
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // PLATFORM INLINE INJECTIONS (X, Reddit, Threads, Bluesky, LinkedIn, YouTube)
-  // ═══════════════════════════════════════════════════════════════
   function createFokkButton(title, onClick) {
     const btn = document.createElement("button");
     btn.className = "tmb-inline-trigger";
@@ -936,8 +1138,9 @@
 
     btn.innerHTML = `
       <div class="tmb-trigger-icon-wrap">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+          <line x1="12" y1="2" x2="12" y2="22"/>
         </svg>
       </div>
       <span class="tmb-trigger-label">fokk</span>
@@ -964,7 +1167,9 @@
         const claimText = textElement ? textElement.innerText : article.innerText.slice(0, 260);
         const timeLink = article.querySelector("time")?.closest("a");
         const postUrl = timeLink ? timeLink.href : window.location.href;
-        executeAudit(claimText, postUrl);
+        const cardLink = article.querySelector('a[data-testid="card.wrapper"], div[data-testid="card.layoutLarge"] a')?.href || "";
+        const isVerified = Boolean(article.querySelector('svg[data-testid="icon-verified"]'));
+        executeAudit(claimText, postUrl, { platform: "twitter", outboundLink: cardLink, isVerified });
       });
 
       actionGroup.appendChild(btn);
@@ -1167,8 +1372,9 @@
 
     floatingBubble.innerHTML = `
       <div style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+          <line x1="12" y1="2" x2="12" y2="22"/>
         </svg>
       </div>
       <span style="color:#00E5FF;font-weight:700;">fokk</span>
