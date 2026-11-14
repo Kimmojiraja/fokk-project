@@ -331,6 +331,14 @@ function createTab(url = START_PAGE_URL, options = {}) {
                     }
                 } catch(_) {}
             `).catch(() => {});
+        } else if (u.startsWith('http')) {
+            // Auto-inject Fokko AI Ambient Reality Inspector on web pages as soon as DOM is ready
+            ipcRenderer.invoke('fokk-get-fokko-css').then(css => {
+                if (css) webview.insertCSS(css).catch(() => {});
+            }).catch(() => {});
+            ipcRenderer.invoke('fokk-get-fokko-script').then(js => {
+                if (js) webview.executeJavaScript(js).catch(() => {});
+            }).catch(() => {});
         }
     });
 
@@ -451,10 +459,9 @@ function createTab(url = START_PAGE_URL, options = {}) {
     });
 
     webview.addEventListener('new-window', (e) => {
-        if (e.disposition === 'new-window' || (e.options && (e.options.width || e.options.height))) {
-            return;
+        if (e.url) {
+            createTab(e.url, { isPrivate });
         }
-        createTab(e.url, { isPrivate });
     });
 
     viewsContainer.appendChild(webview);

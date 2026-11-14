@@ -7,65 +7,57 @@
 .tmb-inline-trigger {
   display: inline-flex !important;
   align-items: center !important;
-  gap: 3px !important;
-  background: transparent !important;
-  border: none !important;
+  gap: 4px !important;
+  background: rgba(0, 229, 255, 0.08) !important;
+  border: 1px solid rgba(0, 229, 255, 0.28) !important;
   outline: none !important;
   box-shadow: none !important;
-  padding: 0 4px !important;
+  padding: 3px 9px !important;
   border-radius: 9999px !important;
   font-family: TwitterChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  color: #71767b !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #00E5FF !important;
   cursor: pointer !important;
-  transition: color 0.15s ease !important;
+  transition: all 0.2s ease !important;
   user-select: none !important;
-  margin-left: 2px !important;
+  margin: 2px 6px !important;
   vertical-align: middle !important;
+  z-index: 10 !important;
+}
+
+.tmb-inline-trigger:hover {
+  background: rgba(0, 229, 255, 0.22) !important;
+  border-color: #00E5FF !important;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.4) !important;
+  color: #ffffff !important;
 }
 
 .tmb-inline-trigger .tmb-trigger-icon-wrap {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 9999px;
-  transition: background-color 0.15s ease, transform 0.15s ease;
+  width: 16px;
+  height: 16px;
+  transition: transform 0.15s ease;
 }
 
 .tmb-inline-trigger:hover .tmb-trigger-icon-wrap {
-  background-color: rgba(255, 255, 255, 0.08);
-  transform: scale(1.06);
-}
-
-.tmb-inline-trigger .tmb-trigger-logo {
-  width: 17px;
-  height: 17px;
-  object-fit: contain;
-  opacity: 0.82;
-  transition: opacity 0.15s ease, filter 0.15s ease;
-  display: block;
-}
-
-.tmb-inline-trigger:hover .tmb-trigger-logo {
-  opacity: 1;
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.5));
+  transform: scale(1.15);
 }
 
 .tmb-inline-trigger .tmb-trigger-label {
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  color: #71767b;
-  transition: color 0.15s ease;
-  line-height: 1;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  color: #00E5FF !important;
+  transition: color 0.15s ease !important;
+  line-height: 1 !important;
 }
 
 .tmb-inline-trigger:hover .tmb-trigger-label {
-  color: #eff3f4;
+  color: #ffffff !important;
 }
 
 /* Light Mode auto-detection for X */

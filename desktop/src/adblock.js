@@ -427,6 +427,30 @@ class AdBlockEngine {
             return false; // All other youtube.com requests (video, thumbnails, guide) are allowed
         }
 
+        // Twitter / X internal requests isolation - MUST run before whitelist walk
+        const isXHost = host === 'twitter.com' || host.endsWith('.twitter.com') || host === 'x.com' || host.endsWith('.x.com') || host === 'twimg.com' || host.endsWith('.twimg.com') || host === 't.co';
+        if (isXHost) {
+            const isXAd = lowerUrl.includes('ads-api.twitter.com') ||
+                lowerUrl.includes('ads-twitter.com') ||
+                lowerUrl.includes('static.ads-twitter.com') ||
+                lowerUrl.includes('/i/api/1.1/promoted_trend') ||
+                lowerUrl.includes('/i/api/2/promoted_trend');
+            if (isXAd) {
+                return this.recordBlock(url);
+            }
+            return false; // All other twitter.com / x.com requests (auth, timeline, onboarding, tweets, Arkose challenges) are allowed
+        }
+
+        // Reddit internal requests isolation - MUST run before generic lists
+        const isRedditHost = host === 'reddit.com' || host.endsWith('.reddit.com') || host === 'redd.it' || host.endsWith('.redd.it') || host === 'redditmedia.com' || host.endsWith('.redditmedia.com') || host === 'redditstatic.com' || host.endsWith('.redditstatic.com');
+        if (isRedditHost) {
+            const isRedditAd = lowerUrl.includes('/api/v2/ads') || lowerUrl.includes('/ads/display');
+            if (isRedditAd) {
+                return this.recordBlock(url);
+            }
+            return false; // Allow all normal reddit feed, auth, comments, static assets
+        }
+
         // Critical-safe domains: exact hostname AND parent domain walk (payments, auth, CDNs)
         // These are small, well-known and don't have tracking subdomains that need blocking.
         const CRITICAL_SAFE_PARENTS = new Set([
@@ -443,6 +467,8 @@ class AdBlockEngine {
             'microsoft.com', 'azure.com', 'windows.com', 'live.com', 'outlook.com',
             'amazon.com', 'amazon.co.uk', 'amazon.de', 'amazon.in', 'amazon.ca',
             'amazonaws.com', 'cloudfront.net',
+            'twitter.com', 'x.com', 'twimg.com', 't.co', 'arkoselabs.com',
+            'reddit.com', 'redditmedia.com', 'redditstatic.com',
             'recaptcha.net', 'hcaptcha.com'
         ]);
         if (host) {
@@ -662,7 +688,21 @@ class AdBlockEngine {
                 selectors.push(
                     'shreddit-comment-ad', 'shreddit-ad-post', '[data-promoted=true]',
                     '.promoted-custom-collection-item', '[promoted=true]', '.PromotedLink',
-                    'shreddit-async-loader[bundlename="feed_ads"]', 'div[data-adclicklocation]'
+                    'shreddit-async-loader[bundlename="feed_ads"]', 'div[data-adclicklocation]',
+                    'shreddit-async-loader[bundlename="login_bottom_sheet"]',
+                    'shreddit-async-loader[bundlename="bottom_sheet"]',
+                    'shreddit-async-loader[bundlename*="login"]',
+                    'shreddit-async-loader[bundlename*="signup"]',
+                    'shreddit-async-loader[bundlename*="frontpage_signup"]',
+                    'shreddit-login-interstitial',
+                    '#login-interstitial',
+                    'div[data-testid="login-prompt-banner"]',
+                    'div[data-testid="frontpage-signup"]',
+                    'aside:has([data-testid="login-prompt-banner"])',
+                    'aside:has([data-testid="frontpage-signup"])',
+                    'aside:has(button[aria-label*="Google"])',
+                    '.login-prompt', '[class*="login-prompt"]',
+                    'shreddit-experience-tree:has([data-testid="login-prompt-banner"])'
                 );
             } else if (hostname.includes('linkedin.')) {
                 selectors.push(
@@ -924,6 +964,57 @@ class AdBlockEngine {
                 } catch(e) {}
             `;
             webContents.executeJavaScript(igCleanScript).catch(() => {});
+            return;
+        }
+
+        const isReddit = hostname.includes('reddit.com') || hostname.includes('redd.it');
+        if (isReddit) {
+            // Reddit unauthenticated feed defusers: purge left-side login interstitial & un-squish layout
+            const redditCleanScript = `
+                try {
+                    if (!window.__fokk_reddit_cleaned) {
+                        window.__fokk_reddit_cleaned = true;
+                        const style = document.createElement('style');
+                        style.textContent = \`
+                            shreddit-async-loader[bundlename*="login"],
+                            shreddit-async-loader[bundlename*="signup"],
+                            shreddit-async-loader[bundlename*="bottom_sheet"],
+                            shreddit-async-loader[bundlename*="frontpage_signup"],
+                            shreddit-login-interstitial,
+                            #login-interstitial,
+                            div[data-testid="login-prompt-banner"],
+                            div[data-testid="frontpage-signup"],
+                            aside:has([data-testid="login-prompt-banner"]),
+                            aside:has([data-testid="frontpage-signup"]),
+                            aside:has(button[aria-label*="Google"]),
+                            .login-prompt,
+                            [class*="login-prompt"] {
+                                display: none !important;
+                                visibility: hidden !important;
+                                width: 0 !important;
+                                height: 0 !important;
+                                pointer-events: none !important;
+                            }
+                            #main-content, main, shreddit-feed {
+                                max-width: 1200px !important;
+                                margin: 0 auto !important;
+                            }
+                        \`;
+                        (document.head || document.documentElement).appendChild(style);
+
+                        const unSquishReddit = () => {
+                            const banners = document.querySelectorAll('div[data-testid="login-prompt-banner"], div[data-testid="frontpage-signup"], shreddit-login-interstitial, #login-interstitial');
+                            banners.forEach(b => {
+                                const container = b.closest('aside') || b.closest('shreddit-async-loader') || b.parentElement;
+                                if (container) container.style.setProperty('display', 'none', 'important');
+                            });
+                        };
+                        unSquishReddit();
+                        setInterval(unSquishReddit, 800);
+                    }
+                } catch (e) {}
+            `;
+            webContents.executeJavaScript(redditCleanScript).catch(() => {});
             return;
         }
 

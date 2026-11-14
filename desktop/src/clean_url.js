@@ -42,9 +42,14 @@ function cleanTrackingUrl(rawUrl) {
         if (lowerHost.includes('accounts.google.') ||
             lowerHost.includes('login.microsoftonline.com') ||
             lowerHost.includes('appleid.apple.com') ||
+            lowerHost.includes('twitter.com') ||
+            lowerHost.includes('x.com') ||
+            lowerHost.includes('arkoselabs.com') ||
+            lowerPath.includes('/login') ||
             lowerPath.includes('/signin') ||
             lowerPath.includes('/oauth') ||
             lowerPath.includes('/challenge') ||
+            lowerPath.includes('/flow/') ||
             lowerPath.includes('/checkcookie')) {
             return stripped ? parsed.toString() : null;
         }

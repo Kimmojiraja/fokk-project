@@ -668,11 +668,11 @@
     btn.type = "button";
     btn.setAttribute("title", title || "fokk — Verify Reality with Fokkoo");
 
-    const logoUrl = getAppLogoUrl();
-
     btn.innerHTML = `
       <div class="tmb-trigger-icon-wrap">
-        <img class="tmb-trigger-logo" src="${logoUrl}" alt="fokk" onerror="this.style.display='none'" />
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
       </div>
       <span class="tmb-trigger-label">fokk</span>
     `;
@@ -685,9 +685,9 @@
   function injectXButtons() {
     if (!window.location.hostname.includes("twitter.com") && !window.location.hostname.includes("x.com")) return;
 
-    const tweetArticles = document.querySelectorAll('article[data-testid="tweet"]:not([data-tmb-injected="true"])');
+    const tweetArticles = document.querySelectorAll('article[data-testid="tweet"]');
     tweetArticles.forEach((article) => {
-      article.setAttribute("data-tmb-injected", "true");
+      if (article.querySelector('.tmb-inline-trigger')) return;
       const actionGroup = article.querySelector('div[role="group"]');
       if (!actionGroup) return;
 
@@ -702,28 +702,72 @@
       });
 
       actionGroup.appendChild(btn);
+      article.setAttribute("data-tmb-injected", "true");
     });
+  }
+
+  // Modern Reddit action row resolver (custom components, shadow roots & classic)
+  function findRedditActionRow(post) {
+    if (!post) return null;
+    const standardRow = post.querySelector('shreddit-post-action-row, [slot="action-row"], [slot="actions"], div[data-testid="action-row"]');
+    if (standardRow) return standardRow;
+
+    const shareBtn = post.querySelector('button[aria-label*="share" i], button[name="share-button"], shreddit-post-share-button, [data-testid="share-button"]');
+    if (shareBtn && shareBtn.parentElement) return shareBtn.parentElement;
+
+    const commentBtn = post.querySelector('button[aria-label*="comment" i], a[slot="comments-button"], a[data-click-id="comments"]');
+    if (commentBtn && commentBtn.parentElement) return commentBtn.parentElement;
+
+    const oldRow = post.querySelector('ul.flat-list, div.buttons, div[data-click-id="comments"]');
+    if (oldRow) return oldRow.parentElement || oldRow;
+
+    if (post.shadowRoot) {
+      const shadowRow = post.shadowRoot.querySelector('shreddit-post-action-row, [slot="action-row"], div.action-row');
+      if (shadowRow) return shadowRow;
+    }
+    return null;
+  }
+
+  function getRedditPostText(post) {
+    if (!post) return "";
+    const titleEl = post.querySelector('h1, h2, [slot="title"], a[data-click-id="body"], a[slot="full-post-link"]');
+    const titleText = titleEl ? titleEl.innerText.trim() : "";
+    const bodyEl = post.querySelector('[slot="text-body"], div[data-click-id="text"], p');
+    const bodyText = bodyEl ? bodyEl.innerText.trim().slice(0, 200) : "";
+    return (titleText + (bodyText ? " - " + bodyText : "")).slice(0, 240) || post.innerText.slice(0, 220);
+  }
+
+  function getRedditPostUrl(post) {
+    if (!post) return window.location.href;
+    const permalink = post.getAttribute("permalink") || post.getAttribute("content-href");
+    if (permalink) {
+      return permalink.startsWith("http") ? permalink : `https://www.reddit.com${permalink}`;
+    }
+    const linkEl = post.querySelector('a[slot="full-post-link"], a[data-click-id="body"], a[href*="/comments/"]');
+    if (linkEl && linkEl.href) return linkEl.href;
+    return window.location.href;
   }
 
   // 2. REDDIT INJECTION
   function injectRedditButtons() {
     if (!window.location.hostname.includes("reddit.com")) return;
 
-    const posts = document.querySelectorAll('shreddit-post:not([data-tmb-injected="true"]), div[data-testid="post-container"]:not([data-tmb-injected="true"])');
+    const posts = document.querySelectorAll('shreddit-post, div[data-testid="post-container"], article[data-testid="post-container"], div.Post, .thing.link');
     posts.forEach((post) => {
-      post.setAttribute("data-tmb-injected", "true");
-      const actionRow = post.querySelector('div[slot="actions"], div[data-click-id="comments"]')?.parentElement;
+      if (post.querySelector('.tmb-inline-trigger') || (post.shadowRoot && post.shadowRoot.querySelector('.tmb-inline-trigger'))) return;
+      const actionRow = findRedditActionRow(post);
       if (!actionRow) return;
 
       const btn = createFokkButton("fokk — Verify Reality with Fokkoo", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const titleElement = post.querySelector('h1, h2, [slot="title"]');
-        const postTitle = titleElement ? titleElement.innerText : post.innerText.slice(0, 220);
-        executeAudit(postTitle, window.location.href);
+        const claimText = getRedditPostText(post);
+        const postUrl = getRedditPostUrl(post);
+        executeAudit(claimText, postUrl);
       });
 
       actionRow.appendChild(btn);
+      post.setAttribute("data-tmb-injected", "true");
     });
   }
 
@@ -731,9 +775,9 @@
   function injectThreadsButtons() {
     if (!window.location.hostname.includes("threads.net")) return;
 
-    const posts = document.querySelectorAll('div[data-pressable-container="true"]:not([data-tmb-injected="true"])');
+    const posts = document.querySelectorAll('div[data-pressable-container="true"]');
     posts.forEach((post) => {
-      post.setAttribute("data-tmb-injected", "true");
+      if (post.querySelector('.tmb-inline-trigger')) return;
       const actionGroup = post.querySelector('div[role="button"]')?.parentElement;
       if (!actionGroup) return;
 
@@ -746,6 +790,7 @@
       });
 
       actionGroup.appendChild(btn);
+      post.setAttribute("data-tmb-injected", "true");
     });
   }
 
@@ -753,9 +798,9 @@
   function injectBlueskyButtons() {
     if (!window.location.hostname.includes("bsky.app")) return;
 
-    const posts = document.querySelectorAll('div[data-testid^="feedItem-"]:not([data-tmb-injected="true"]), div[data-testid^="postThreadItem"]:not([data-tmb-injected="true"])');
+    const posts = document.querySelectorAll('div[data-testid^="feedItem-"], div[data-testid^="postThreadItem"]');
     posts.forEach((post) => {
-      post.setAttribute("data-tmb-injected", "true");
+      if (post.querySelector('.tmb-inline-trigger')) return;
       const actionRow = post.querySelector('div[data-testid="replyBtn"]')?.parentElement;
       if (!actionRow) return;
 
@@ -768,6 +813,7 @@
       });
 
       actionRow.appendChild(btn);
+      post.setAttribute("data-tmb-injected", "true");
     });
   }
 
@@ -775,9 +821,9 @@
   function injectLinkedInButtons() {
     if (!window.location.hostname.includes("linkedin.com")) return;
 
-    const updates = document.querySelectorAll('div.feed-shared-update-v2:not([data-tmb-injected="true"]), div[data-urn*="activity"]:not([data-tmb-injected="true"])');
+    const updates = document.querySelectorAll('div.feed-shared-update-v2, div[data-urn*="activity"]');
     updates.forEach((update) => {
-      update.setAttribute("data-tmb-injected", "true");
+      if (update.querySelector('.tmb-inline-trigger')) return;
       const actionRow = update.querySelector('div.feed-shared-social-actions, div.social-actions-and-comments');
       if (!actionRow) return;
 
@@ -790,6 +836,7 @@
       });
 
       actionRow.appendChild(btn);
+      update.setAttribute("data-tmb-injected", "true");
     });
   }
 
@@ -797,9 +844,8 @@
   function injectYouTubeButtons() {
     if (!window.location.hostname.includes("youtube.com")) return;
 
-    const actionContainer = document.querySelector('ytd-watch-metadata #actions-inner #top-level-buttons-computed:not([data-tmb-injected="true"])');
-    if (actionContainer) {
-      actionContainer.setAttribute("data-tmb-injected", "true");
+    const actionContainer = document.querySelector('ytd-watch-metadata #actions-inner #top-level-buttons-computed');
+    if (actionContainer && !actionContainer.querySelector('.tmb-inline-trigger')) {
       const btn = createFokkButton("fokk — Verify Video Claims with Fokkoo", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -808,6 +854,7 @@
         executeAudit(claimText, window.location.href);
       });
       actionContainer.appendChild(btn);
+      actionContainer.setAttribute("data-tmb-injected", "true");
     }
   }
 
@@ -817,11 +864,14 @@
   function setupFloatingBubble() {
     floatingBubble = document.createElement("div");
     floatingBubble.className = "tmb-floating-bubble";
-    const logoUrl = getAppLogoUrl();
 
     floatingBubble.innerHTML = `
-      <img class="tmb-trigger-logo" src="${logoUrl}" alt="fokk" style="width: 14px; height: 14px; object-fit: contain;" onerror="this.style.display='none'" />
-      <span>fokk</span>
+      <div style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+      </div>
+      <span style="color:#00E5FF;font-weight:700;">fokk</span>
     `;
 
     floatingBubble.addEventListener("mousedown", (e) => {

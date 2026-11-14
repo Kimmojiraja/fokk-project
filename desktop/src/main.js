@@ -273,7 +273,7 @@ function createWindow() {
         // Guarantee immediate disk flush when auth/session cookies change (fixes YouTube & Google sign-in persistence)
         if (persistSess && persistSess.cookies) {
             persistSess.cookies.on('changed', (event, cookie, cause, removed) => {
-                if (!removed && (cookie.domain.includes('google.') || cookie.domain.includes('youtube.') || cookie.domain.includes('github.'))) {
+                if (!removed && (cookie.domain.includes('google.') || cookie.domain.includes('youtube.') || cookie.domain.includes('github.') || cookie.domain.includes('twitter.') || cookie.domain.includes('x.com') || cookie.domain.includes('reddit.'))) {
                     persistSess.cookies.flushStore().catch(() => {});
                 }
             });
