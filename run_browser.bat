@@ -4,13 +4,13 @@ setlocal enabledelayedexpansion
 set "SCRIPT_DIR=%~dp0"
 set "DESKTOP_DIR=%SCRIPT_DIR%desktop"
 
-title Fokk Shield Browser v2.4.1 (Pro Reality Engine & Context Intelligence)
+title Fokk Shield Browser v2.4.2 (Fokk AI Reality Engine & Multi-Source Intelligence)
 
 echo ========================================================
-echo             FOKK SHIELD BROWSER v2.4.1
+echo             FOKK SHIELD BROWSER v2.4.2
 echo       Fast, Zero-Ad, Privacy Desktop Browser
-echo    [Live Dev/Runner: Synced with Release v2.4.1]
-echo    [Multi-Layer Context Intelligence & Wire Feeds Active]
+echo    [Live Dev/Runner: Synced with Release v2.4.2]
+echo    [Fokk AI Multi-Layer Context Intelligence Active]
 echo ========================================================
 echo.
 
@@ -27,14 +27,18 @@ cd /d "%DESKTOP_DIR%"
 
 REM 2. Clean up any dangling orphan electron instances to prevent locked cache
 taskkill /F /IM electron.exe >nul 2>&1
+taskkill /F /IM fokk-desktop.exe >nul 2>&1
+taskkill /F /IM fokk.exe >nul 2>&1
+timeout /t 1 /nobreak >nul 2>&1
 
-REM 2b. Check if --clean flag passed to purge stale caches
-if "%1"=="--clean" (
-    echo [INFO] Purging browser disk cache and code caches...
-    rmdir /s /q "%APPDATA%\fokk-desktop\Cache" >nul 2>&1
-    rmdir /s /q "%APPDATA%\fokk-desktop\Code Cache" >nul 2>&1
-    rmdir /s /q "%APPDATA%\fokk-desktop\GPUCache" >nul 2>&1
-)
+REM 2b. Automatically purge stale caches on launch so updated scripts load fresh
+echo [INFO] Purging browser disk cache and code caches for fresh script reload...
+rmdir /s /q "%APPDATA%\fokk-desktop\Cache" >nul 2>&1
+rmdir /s /q "%APPDATA%\fokk-desktop\Code Cache" >nul 2>&1
+rmdir /s /q "%APPDATA%\fokk-desktop\GPUCache" >nul 2>&1
+rmdir /s /q "%APPDATA%\fokk-desktop\DawnGraphiteCache" >nul 2>&1
+rmdir /s /q "%APPDATA%\fokk-desktop\DawnWebGPUCache" >nul 2>&1
+rmdir /s /q "%APPDATA%\fokk-desktop\Service Worker" >nul 2>&1
 
 REM 3. Check Node.js installation
 where node >nul 2>&1
@@ -84,13 +88,13 @@ if not exist "node_modules" (
 )
 
 REM 6. Launch Fokk Browser
-echo [INFO] Starting fresh Fokk Browser instance with Context Intelligence...
+echo [INFO] Starting fresh Fokk Browser instance with Fokk AI Reality Engine...
 echo.
 
 if "%~1"=="" (
-    call npm start
+    call npm start -- --disable-http-cache --js-flags="--no-v8-cache"
 ) else (
-    call npm start -- %*
+    call npm start -- --disable-http-cache --js-flags="--no-v8-cache" %*
 )
 
 set "EXIT_CODE=%ERRORLEVEL%"

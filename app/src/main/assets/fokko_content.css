@@ -160,6 +160,7 @@ body[style*="background-color: rgb(247, 249, 249)"] .tmb-inline-trigger:hover .t
   -webkit-overflow-scrolling: touch;
   flex: 1 1 auto !important;
   min-height: 0 !important;
+  max-height: calc(85vh - 75px) !important;
   padding-right: 6px;
   box-sizing: border-box;
   scrollbar-width: thin;

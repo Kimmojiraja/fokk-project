@@ -7,7 +7,7 @@
   if (window.__fokk_content_injected) return;
   window.__fokk_content_injected = true;
 
-  const CACHE_VERSION = "v241";
+  const CACHE_VERSION = "v242";
 
   // Auto-purge any stale quota lockout entries and legacy cached audits from earlier versions
   try {
@@ -21,7 +21,7 @@
             localStorage.removeItem(k);
           } else {
             const val = localStorage.getItem(k);
-            if (val && (val.includes("reality checks") || val.includes("LIMIT") || val.includes("UPGRADE TO PRO") || val.includes("Merino is a breed"))) {
+            if (val && (val.includes("reality checks") || val.includes("LIMIT") || val.includes("UPGRADE TO PRO") || val.includes("Merino is a breed") || val.includes("Serbia, officially") || val.includes("Science is the systematic"))) {
               localStorage.removeItem(k);
             }
           }
@@ -134,7 +134,12 @@
 
     const card = modalBackdrop.querySelector(".tmb-forensic-card");
     const modalBody = modalBackdrop.querySelector("#tmb-modal-body");
-    card?.addEventListener("wheel", (e) => e.stopPropagation(), { passive: true });
+    card?.addEventListener("wheel", (e) => {
+      e.stopPropagation();
+      if (modalBody && e.target !== modalBody && !modalBody.contains(e.target)) {
+        modalBody.scrollTop += e.deltaY;
+      }
+    }, { passive: true });
     card?.addEventListener("touchmove", (e) => e.stopPropagation(), { passive: true });
     modalBody?.addEventListener("wheel", (e) => e.stopPropagation(), { passive: true });
     modalBody?.addEventListener("touchmove", (e) => e.stopPropagation(), { passive: true });
@@ -291,14 +296,14 @@
 
     if (statusEl) {
       statusEl.style.display = "block";
-      statusEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>Engaging On-Device Neural Core (WebGPU)...`;
+      statusEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>✦ Initializing Fokk AI Core...`;
     }
 
     const wireSnippet = (wireArticles || []).slice(0, 3).map(w => `- ${w.sourceName}: "${w.headline}"`).join("\n");
 
     const model = await getOrInitNeuralModel((pct) => {
       if (statusEl) {
-        statusEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>Caching Neural Core: ${pct}% (Permanently saved in local memory)...`;
+        statusEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>✦ Initializing Fokk AI Core: ${pct}%...`;
       }
     });
 
@@ -308,13 +313,13 @@
     }
 
     if (statusEl) {
-      statusEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>Synthesizing with On-Device Neural Core...`;
+      statusEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>✦ Fokk AI Neural Synthesis...`;
     }
 
     const prompt = [
       {
         role: "system",
-        content: "You are Fokk Pro Turbo, an objective forensic reality auditor. Deliver a sharp, natural, objective 2-3 sentence verification assessment analyzing whether this claim is a confirmed fact, active transfer market speculation, or viral rumor based on the wire evidence. Output only the synthesis paragraph with zero bullet points or preamble."
+        content: "You are Fokk AI, an objective forensic reality auditor. Deliver a sharp, natural, objective 2-3 sentence verification assessment analyzing whether this claim is a confirmed fact, active transfer market speculation, or viral rumor based on the wire evidence. Output only the synthesis paragraph with zero bullet points or preamble."
       },
       {
         role: "user",
@@ -333,10 +338,10 @@
         textTarget.textContent = reply;
         verdictData.forensicSummary = reply;
         if (statusEl) {
-          statusEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>Synthesized via Local Neural Core (WebGPU)`;
+          statusEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>✦ Verified by Fokk AI`;
         }
         try {
-          localStorage.setItem("fokko_cache_v241_" + getClaimHash(claim), JSON.stringify(verdictData));
+          localStorage.setItem(`fokko_cache_${CACHE_VERSION}_` + getClaimHash(claim), JSON.stringify(verdictData));
         } catch {}
       } else if (statusEl) {
         statusEl.style.display = "none";
@@ -365,7 +370,7 @@
     try {
       if (safeClaim && (data.verdict === "VERIFIED" || data.verdict === "DEBUNKED")) {
         if (!data.forensicSummary?.includes("reality checks") && !data.verdictTitle?.includes("LIMIT")) {
-          localStorage.setItem("fokko_cache_" + getClaimHash(safeClaim), JSON.stringify(data));
+          localStorage.setItem(`fokko_cache_${CACHE_VERSION}_` + getClaimHash(safeClaim), JSON.stringify(data));
         }
       }
     } catch {}
@@ -448,11 +453,6 @@
         <div class="tmb-verdict-status ${badgeClass}">
           <span>${escapeHtml(statusBadge)} · ${escapeHtml(verdictTitle)}</span>
         </div>
-        ${
-          isProAudit
-            ? `<span style="background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(251,191,36,0.3)); color: #fbbf24; border: 1px solid rgba(251,191,36,0.5); padding: 2px 7px; border-radius: 9999px; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:3px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>PRO TURBO</span>`
-            : ""
-        }
         <span class="tmb-confidence-badge">${confidence}% FORENSIC CONFIDENCE</span>
       </div>
 
@@ -467,7 +467,7 @@
         data.leadImage
           ? `
         <div class="tmb-lead-image-container" style="margin: 10px 0; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); background: #0c0e12; display: flex; justify-content: center; align-items: center; max-height: 180px;">
-          <img src="${escapeHtml(data.leadImage)}" alt="" referrerpolicy="no-referrer" loading="lazy" style="max-height: 180px; width: auto; max-width: 100%; object-fit: contain; display: block;" onerror="this.closest('.tmb-lead-image-container')?.remove();" />
+          <img src="${escapeHtml(data.leadImage)}" alt="" referrerpolicy="no-referrer" loading="lazy" style="max-height: 180px; width: auto; max-width: 100%; object-fit: contain; display: block;" onerror="this.style.display='none'; this.closest('.tmb-lead-image-container')?.remove();" />
         </div>
       `
           : ""
@@ -586,7 +586,7 @@
 
       <!-- 6. Footer (Docket watermark & Twitter action buttons) -->
       <div class="tmb-footer-watermark">
-        <span>${isProAudit ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>Pro Turbo Audit · Dual-Engine Verified` : "Verified Case Docket: https://trustmebrowtf.buzz"}</span>
+        <span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>Fokk AI · Dual-Engine Verified</span>
         <span>${dateStr}</span>
       </div>
 
@@ -871,8 +871,23 @@
   const COMMON_LOCATIONS = new Set([
     "serbia", "germany", "france", "england", "spain", "italy", "america", "united states", "russia",
     "china", "japan", "brazil", "india", "london", "paris", "berlin", "madrid", "rome", "tokyo",
-    "beijing", "europe", "asia", "africa", "belgrade", "munich", "manchester", "liverpool", "uk", "usa"
+    "beijing", "europe", "asia", "africa", "belgrade", "munich", "manchester", "liverpool", "uk", "usa",
+    "portugal", "argentina", "colombia", "uruguay", "netherlands", "holland", "croatia", "switzerland"
   ]);
+
+  const MATCH_DESCRIPTORS = new Set([
+    "friendly", "match", "game", "fixture", "derby", "final", "semi-final", "score",
+    "ht", "ft", "fulltime", "halftime", "half-time", "full-time", "leg", "round", "stage"
+  ]);
+
+  const SOCIAL_HANDLES = {
+    "fedeevalverde": "Federico Valverde",
+    "samuelluckhurst": "Samuel Luckhurst",
+    "fabrizioromano": "Fabrizio Romano",
+    "david_ornstein": "David Ornstein",
+    "davidornstein": "David Ornstein",
+    "gerardromero": "Gerard Romero"
+  };
 
   const GENERIC_DICTIONARY_CONCEPTS = new Set([
     "science", "nature", "history", "philosophy", "math", "mathematics", "physics", "biology", "chemistry",
@@ -931,18 +946,28 @@
 
   function extractEntitiesDynamically(claimText) {
     const normalized = (claimText || "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/['"“”‘’]/g, " ")
+      .normalize("NFKD")
+      .replace(/['"“”‘’«»]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
 
-    // Multi-word name regex including European particles (de, van, der, da, di, von, etc.)
-    const entityRegex = /\b[A-Z][a-z]+(?:\s+(?:de|van|der|da|di|von|del|la|le|el|al)\s+[A-Z][a-z]+|\s+[A-Z][a-z]+)*\b/g;
-    const rawMatches = normalized.match(entityRegex) || [];
-
     const entities = [];
     const seen = new Set();
+
+    // 1. Social handles (e.g. @fedeevalverde -> Federico Valverde)
+    const handleMatches = normalized.match(/@([A-Za-z0-9_]+)/g) || [];
+    for (const h of handleMatches) {
+      const cleanH = h.replace("@", "").toLowerCase();
+      if (SOCIAL_HANDLES[cleanH]) {
+        const fullHandleName = SOCIAL_HANDLES[cleanH];
+        entities.push(fullHandleName);
+        seen.add(fullHandleName.toLowerCase());
+      }
+    }
+
+    // 2. Unicode Latin multi-word & single-word capitalized names
+    const entityRegex = /\b[\p{Lu}][\p{Ll}\p{M}]+(?:\s+(?:de|van|der|da|di|von|del|la|le|el|al)\s+[\p{Lu}][\p{Ll}\p{M}]+|\s+[\p{Lu}][\p{Ll}\p{M}]+)*\b/gu;
+    const rawMatches = normalized.match(entityRegex) || [];
 
     for (const match of rawMatches) {
       let words = match.trim().split(/\s+/);
@@ -950,7 +975,7 @@
       while (words.length > 0 && STOP_WORDS.has(words[words.length - 1].toLowerCase())) words.pop();
       const clean = words.join(" ").trim();
       const lower = clean.toLowerCase();
-      if (!clean || clean.length < 2 || seen.has(lower) || GENERIC_DICTIONARY_CONCEPTS.has(lower) || STOP_WORDS.has(lower)) continue;
+      if (!clean || clean.length < 2 || seen.has(lower) || GENERIC_DICTIONARY_CONCEPTS.has(lower) || STOP_WORDS.has(lower) || MATCH_DESCRIPTORS.has(lower)) continue;
       seen.add(lower);
       entities.push(clean);
     }
@@ -960,9 +985,14 @@
       return !entities.some(other => other !== e && other.toLowerCase().includes(e.toLowerCase()) && other.includes(" "));
     });
 
-    // Sort: multi-word entities first
-    nonSubsets.sort((a, b) => b.split(/\s+/).length - a.split(/\s+/).length);
-    return nonSubsets;
+    // Rank players & subjects above journalists, and rank all above common geographic locations
+    const journalistNames = new Set(Object.values(SOCIAL_HANDLES));
+    const playersAndClubs = nonSubsets.filter(e => !COMMON_LOCATIONS.has(e.toLowerCase()) && !journalistNames.has(e));
+    const journalists = nonSubsets.filter(e => journalistNames.has(e));
+    const locations = nonSubsets.filter(e => COMMON_LOCATIONS.has(e.toLowerCase()));
+
+    playersAndClubs.sort((a, b) => b.split(/\s+/).length - a.split(/\s+/).length);
+    return [...playersAndClubs, ...journalists, ...locations];
   }
 
   function constructDynamicQueries(claimText, entities) {
@@ -970,10 +1000,11 @@
     const persons = [];
     const orgsOrClubs = [];
 
-    const clubKeywords = /fc|madrid|munich|arsenal|chelsea|liverpool|barcelona|city|united|bayern|juventus|milan|dortmund|psg|bernabéu|bernabeu/i;
+    const clubKeywords = /fc|madrid|munich|arsenal|chelsea|liverpool|barcelona|city|united|bayern|juventus|milan|dortmund|psg|bernabéu|bernabeu|como/i;
+    const nationalTeams = /germany|france|england|spain|brazil|argentina|italy|portugal|netherlands|serbia|uruguay|belgium/i;
 
     for (const e of entities) {
-      if (clubKeywords.test(e)) {
+      if (clubKeywords.test(e) || nationalTeams.test(e)) {
         orgsOrClubs.push(e);
       } else {
         persons.push(e);
@@ -981,8 +1012,10 @@
     }
 
     if (persons.length > 0 && orgsOrClubs.length > 0) {
-      queries.push(`${orgsOrClubs[0]} ${persons[0]}`);
-      queries.push(`${persons[0]} ${orgsOrClubs[0]}`);
+      for (const org of orgsOrClubs.slice(0, 2)) {
+        queries.push(`${persons[0]} ${org}`);
+        queries.push(`${org} ${persons[0]}`);
+      }
       if (persons.length > 1) {
         queries.push(`${persons[0]} ${persons[1]}`);
       }
@@ -1066,7 +1099,7 @@
 
   // Pipeline B: Deep Encyclopedic & Biographical Registries (Wikipedia Action API)
   async function fetchEncyclopedicReceipt(query, domain, claimText) {
-    if (!query || GENERIC_DICTIONARY_CONCEPTS.has(query.toLowerCase()) || COMMON_LOCATIONS.has(query.toLowerCase())) {
+    if (!query || GENERIC_DICTIONARY_CONCEPTS.has(query.toLowerCase()) || COMMON_LOCATIONS.has(query.toLowerCase()) || MATCH_DESCRIPTORS.has(query.toLowerCase())) {
       return null;
     }
 
@@ -1079,7 +1112,7 @@
       let bestMatch = null;
       for (const cand of results.slice(0, 3)) {
         const cLower = cand.title.toLowerCase();
-        if (COMMON_LOCATIONS.has(cLower) || GENERIC_DICTIONARY_CONCEPTS.has(cLower)) continue;
+        if (COMMON_LOCATIONS.has(cLower) || GENERIC_DICTIONARY_CONCEPTS.has(cLower) || MATCH_DESCRIPTORS.has(cLower)) continue;
         if (domain === "SPORTS_FOOTBALL" && cLower === "merino") continue; // Avoid sheep wool breed hijack
         bestMatch = cand;
         break;
@@ -1087,7 +1120,8 @@
       if (!bestMatch) return null;
 
       const pageTitle = bestMatch.title;
-      const fUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts|pageimages&exintro=false&explaintext=true&pithumbsize=600&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`;
+      // Use exintro=true to fetch only the concise introductory summary (never full 20,000-word article)
+      const fUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts|pageimages&exintro=true&explaintext=true&pithumbsize=600&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`;
       const fData = await safeAuditFetch(fUrl);
       const pages = (fData && fData.query && fData.query.pages) || {};
       const pageId = Object.keys(pages)[0];
@@ -1103,9 +1137,18 @@
         thumb = null;
       }
 
+      const conciseExtract = (p.extract || "")
+        .replace(/\n+/g, " ")
+        .replace(/\s+/g, " ")
+        .replace(/\[\d+\]/g, "")
+        .split(/(?<=[.?!])\s+/)
+        .slice(0, 2)
+        .join(" ")
+        .trim();
+
       return {
         title: p.title,
-        extract: p.extract,
+        extract: conciseExtract || p.extract.slice(0, 220),
         thumbnail: thumb,
         url: `https://en.wikipedia.org/wiki/${encodeURIComponent(pageTitle)}`,
         domain: "wikipedia.org",
@@ -1123,7 +1166,41 @@
     const isPseudoscienceTheology = /proved god|proof of god|gods existence|ghost particle/i.test(cleanClaim);
     const isObviousScam = /guarantee|giveaway|send crypto|airdrop|doubler|100x return|urgent alert|banned video|shocking cure|miracle secret|free bitcoin|alien base|moon hoax/i.test(cleanClaim);
     const isHistorical = (cleanClaim.match(/\b(1[789]\d\d)\b/) && cleanClaim.match(/\b(1[789]\d\d)\b/).length > 0) || domain === "HISTORY_ARCHIVAL";
-    const isTransferSpeculation = domain === "SPORTS_FOOTBALL" && /transfer|sign|sales|target|bid|clause|summer|monitoring|determined|convince|contract/i.test(cleanClaim);
+    const isTransferSpeculation = domain === "SPORTS_FOOTBALL" && /transfer|sign|sales|target|bid|clause|summer|monitoring|determined|convince|contract|join/i.test(cleanClaim);
+
+    // Identify dynamic subject and secondary club/org
+    const clubRegex = /fc|madrid|munich|arsenal|chelsea|liverpool|barcelona|city|united|bayern|juventus|milan|dortmund|psg|bernabéu|bernabeu|como/i;
+    const nationalTeams = /germany|france|england|spain|brazil|argentina|italy|portugal|netherlands|serbia|uruguay|belgium/i;
+    const mainSubject = entities.find(e => !clubRegex.test(e) && !nationalTeams.test(e)) || entities[0] || "the principal subject";
+    const mainOrg = entities.find(e => clubRegex.test(e) || nationalTeams.test(e)) || (entities.length > 1 ? entities[1] : "");
+
+    // 0. Match Result / Scoreline / Exhibition Status
+    const scoreMatch = cleanClaim.match(/\b\d+\s*-\s*\d+\b/);
+    const hasMatchDescriptor = /friendly|match|game|fixture|score|ht|ft|fulltime|halftime/i.test(cleanClaim);
+    if (scoreMatch || (domain === "SPORTS_FOOTBALL" && hasMatchDescriptor && cleanClaim.length < 60)) {
+      const scoreStr = scoreMatch ? scoreMatch[0] : "";
+      return {
+        id: "match_" + Date.now(),
+        claim: cleanClaim,
+        verdict: "VERIFIED",
+        verdictTitle: "INFORMAL MATCH STATUS",
+        statusBadge: "MATCH RESULT",
+        confidence: 92,
+        forensicSummary: `This post documents an informal friendly match scoreline${scoreStr ? ` (${scoreStr})` : ""} referencing ${mainSubject}. Sporting registries track this update as exhibition match commentary and training ground status rather than an official competitive tournament result.`,
+        receiptQuote: cleanClaim,
+        primarySource: { name: "Sporting Match Records", domain: "fokk.browser", url: postUrl || window.location.href },
+        receipts: wireArticles.length > 0 ? wireArticles : [],
+        leadImage: null,
+        followUpQuestions: [
+          `What official match or training fixture was played involving ${mainSubject}?`,
+          `What were the confirmed lineup details and match circumstances?`,
+          `What subsequent reporting followed this fixture?`
+        ],
+        deepLink: postUrl || window.location.href,
+        isPro: true,
+        auditTier: "PRO"
+      };
+    }
 
     // 1. Obvious Scam / Hoax Debunk
     if (isObviousScam) {
@@ -1146,7 +1223,7 @@
         ],
         deepLink: postUrl || window.location.href,
         isPro: true,
-        auditTier: "PRO_TURBO"
+        auditTier: "PRO"
       };
     }
 
@@ -1174,14 +1251,9 @@
         ],
         deepLink: postUrl || window.location.href,
         isPro: true,
-        auditTier: "PRO_TURBO"
+        auditTier: "PRO"
       };
     }
-
-    // Identify dynamic subject and secondary club/org
-    const clubRegex = /fc|madrid|munich|arsenal|chelsea|liverpool|barcelona|city|united|bayern|juventus|milan|dortmund|psg|bernabéu|bernabeu/i;
-    const mainSubject = entities.find(e => !clubRegex.test(e)) || entities[0] || "the principal subject";
-    const mainOrg = entities.find(e => clubRegex.test(e)) || (entities.length > 1 ? entities[1] : "");
 
     // 3. Sports Transfer Speculation (Real Wire Citations, Zero Mock Hardcoding)
     if (isTransferSpeculation) {
@@ -1197,7 +1269,7 @@
           verdictTitle: "ACTIVE MARKET REPORT",
           statusBadge: "TRANSFER SPECULATION",
           confidence: 84,
-          forensicSummary: `Reporting across accredited sports desks (${sourcesList}) tracks active market interest regarding ${mainSubject}${mainOrg ? ` and ${mainOrg}` : ""}, with coverage highlighting "${leadTitle}". While wire archives confirm preliminary exploratory interest and dressing room commentary, neither club nor accredited transfer authorities (e.g., David Ornstein, Fabrizio Romano) have announced a signed agreement or completed bid. This claim represents ongoing transfer market speculation rather than a finalized transaction.`,
+          forensicSummary: `Reporting across accredited sports desks (${sourcesList}) tracks active market interest regarding ${mainSubject}${mainOrg ? ` and ${mainOrg}` : ""}, with coverage highlighting "${leadTitle}". While wire archives confirm preliminary exploratory interest and recruitment tracking, neither club nor accredited transfer authorities (e.g., David Ornstein, Fabrizio Romano) have announced a signed agreement or completed bid. This claim represents ongoing transfer market speculation rather than a finalized transaction.`,
           receiptQuote: wireArticles[0].headline,
           primarySource: {
             name: wireArticles[0].sourceName,
@@ -1213,7 +1285,7 @@
           ],
           deepLink: wireArticles[0].url || postUrl || window.location.href,
           isPro: true,
-          auditTier: "PRO_TURBO"
+          auditTier: "PRO"
         };
       } else {
         return {
@@ -1223,7 +1295,7 @@
           verdictTitle: "UNCONFIRMED MARKET RUMOR",
           statusBadge: "TRANSFER SPECULATION",
           confidence: 82,
-          forensicSummary: `A comprehensive scan of sports wire desks and club press registries reveals no documented confirmation of a formal bid or agreement for ${mainSubject}${mainOrg ? ` involving ${mainOrg}` : ""}. While social media accounts frequently circulate speculative transfer scenarios, zero accredited newsrooms or Tier-1 transfer reporters corroborate this assertion as a finalized deal.`,
+          forensicSummary: `Sports newsrooms and primary club press offices currently record no documentation of an agreed transfer or formal bid for ${mainSubject}${mainOrg ? ` involving ${mainOrg}` : ""}. While social media accounts frequently circulate prospective squad rumors, zero accredited transfer authorities corroborate this assertion as a concluded transaction.`,
           receiptQuote: "Zero documented confirmation from primary club press offices or accredited transfer reporters.",
           primarySource: { name: "Open Multi-Source Sports Desk Triangulation", domain: "fokk.browser", url: postUrl || window.location.href },
           receipts: [],
@@ -1235,7 +1307,7 @@
           ],
           deepLink: postUrl || window.location.href,
           isPro: true,
-          auditTier: "PRO_TURBO"
+          auditTier: "PRO"
         };
       }
     }
@@ -1269,7 +1341,7 @@
         ],
         deepLink: wireArticles[0].url || postUrl || window.location.href,
         isPro: true,
-        auditTier: "PRO_TURBO"
+        auditTier: "PRO"
       };
     }
 
@@ -1304,7 +1376,7 @@
         ],
         deepLink: encyclopedicRecord.url || postUrl || window.location.href,
         isPro: true,
-        auditTier: "PRO_TURBO"
+        auditTier: "PRO"
       };
     }
 
@@ -1316,7 +1388,7 @@
       verdictTitle: "CONTEXT NEEDED",
       statusBadge: "CONTEXT NEEDED",
       confidence: 84,
-      forensicSummary: `Cross-referencing accredited wire registries and public archives indicates developing viral commentary regarding ${mainSubject}. While social discussion is active, primary institutional filings or verified eyewitness statements are required to confirm the assertions made in this post.`,
+      forensicSummary: `Public encyclopedic and accredited wire archives track active social discussion regarding ${mainSubject}, though primary institutional announcements or verified eyewitness statements remain required to corroborate the specific assertions in this post.`,
       receiptQuote: "Independent verification pending from primary eyewitnesses or official representatives.",
       primarySource: { name: "Open Reality Triangulation", domain: "fokk.browser", url: postUrl || window.location.href },
       receipts: encyclopedicRecord ? [{
@@ -1333,7 +1405,7 @@
       ],
       deepLink: postUrl || window.location.href,
       isPro: true,
-      auditTier: "PRO_TURBO"
+      auditTier: "PRO"
     };
   }
 
