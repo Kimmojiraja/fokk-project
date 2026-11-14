@@ -241,7 +241,10 @@
             <div style="background: #0E121B; border: 1px solid rgba(0,229,255,0.28); border-radius: 24px 24px 0 0; width: 100%; max-width: 620px; padding: 24px; max-height: 88vh; overflow-y: auto; color: #FFFFFF; box-shadow: 0 -12px 48px rgba(0,0,0,0.75);">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="background: rgba(0,229,255,0.15); color: #00E5FF; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 800; border: 1px solid rgba(0,229,255,0.35); letter-spacing: 0.5px;">⚡ FOKK SUMMARY</span>
+                        <span style="background: rgba(0,229,255,0.15); color: #00E5FF; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 800; border: 1px solid rgba(0,229,255,0.35); letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 5px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
+                            <span>FOKK SUMMARY</span>
+                        </span>
                         <span style="font-size: 11.5px; color: #94A3B8;">${data.readingTime} &bull; In-Browser &bull; Zero Cloud</span>
                     </div>
                     <button onclick="document.getElementById('__fokk_summary_modal').remove()" style="background: rgba(255,255,255,0.08); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; font-size: 14px; cursor: pointer;">✕</button>

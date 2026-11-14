@@ -346,44 +346,65 @@
         }
       </div>
 
-      <!-- 5. Source Attribution Pill (Official logo + clean source name + click to navigate) -->
+      <!-- 5. Multiple Primary Verified Sources (Tier 1 Wires & Public Registries) -->
       <div id="tmb-authority-container" style="display: none;">
         ${
-          hasNavUrl || cleanSourceName
+          data.receipts && data.receipts.length > 0
             ? `
-          <div class="tmb-source-bar">
-            ${
-              hasNavUrl
-                ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="tmb-source-link" title="Open source: ${escapeHtml(cleanSourceName)}">
-                    <div class="tmb-source-meta">
-                      ${
-                        faviconUrl
-                          ? `<img src="${faviconUrl}" alt="" class="tmb-source-icon" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';" />
-                             <span class="tmb-source-fallback-globe" style="display:none;">
-                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/></svg>
-                             </span>`
-                          : `<span class="tmb-source-fallback-globe">
-                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/></svg>
-                             </span>`
-                      }
-                      <span class="tmb-source-name">${escapeHtml(cleanSourceName)}</span>
-                    </div>
-                    <span class="tmb-source-cta">Open Source ↗</span>
-                  </a>`
-                : `<div class="tmb-source-link tmb-source-link-disabled">
-                    <div class="tmb-source-meta">
-                      ${
-                        faviconUrl
-                          ? `<img src="${faviconUrl}" alt="" class="tmb-source-icon" onerror="this.style.display='none';" />`
-                          : ""
-                      }
-                      <span class="tmb-source-name">${escapeHtml(cleanSourceName)}</span>
-                    </div>
-                  </div>`
-            }
+          <div class="tmb-sources-section" style="margin-top: 14px;">
+            <div style="font-size: 10px; font-weight: 700; color: #8892b0; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 5px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+              <span>VERIFIED MULTI-SOURCE RECEIPTS (${data.receipts.length})</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              ${data.receipts.slice(0, 5).map(s => `
+                <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer" class="tmb-source-link" style="padding: 7px 10px; display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; text-decoration: none; color: #E2E8F0; font-size: 11.5px; transition: all 0.15s ease;" onmouseover="this.style.background='rgba(0,229,255,0.06)';this.style.borderColor='rgba(0,229,255,0.3)';" onmouseout="this.style.background='rgba(255,255,255,0.03)';this.style.borderColor='rgba(255,255,255,0.08)';">
+                  <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                    <img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(s.domain || 'google.com')}&sz=32" alt="" style="width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;" onerror="this.style.display='none'" />
+                    <span style="font-weight: 700; color: #00E5FF; flex-shrink: 0;">${escapeHtml(s.sourceName || s.domain)}</span>
+                    <span style="color: #94A3B8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(s.headline || s.snippet || '')}</span>
+                  </div>
+                  <span style="color: #00E5FF; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-left: 8px;">Open ↗</span>
+                </a>
+              `).join('')}
+            </div>
           </div>
         `
-            : ""
+            : (hasNavUrl || cleanSourceName
+                ? `
+              <div class="tmb-source-bar">
+                ${
+                  hasNavUrl
+                    ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="tmb-source-link" title="Open source: ${escapeHtml(cleanSourceName)}">
+                        <div class="tmb-source-meta">
+                          ${
+                            faviconUrl
+                              ? `<img src="${faviconUrl}" alt="" class="tmb-source-icon" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';" />
+                                 <span class="tmb-source-fallback-globe" style="display:none;">
+                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                 </span>`
+                              : `<span class="tmb-source-fallback-globe">
+                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                 </span>`
+                          }
+                          <span class="tmb-source-name">${escapeHtml(cleanSourceName)}</span>
+                        </div>
+                        <span class="tmb-source-cta">Open Source ↗</span>
+                      </a>`
+                    : `<div class="tmb-source-link tmb-source-link-disabled">
+                        <div class="tmb-source-meta">
+                          ${
+                            faviconUrl
+                              ? `<img src="${faviconUrl}" alt="" class="tmb-source-icon" onerror="this.style.display='none';" />`
+                              : ""
+                          }
+                          <span class="tmb-source-name">${escapeHtml(cleanSourceName)}</span>
+                        </div>
+                      </div>`
+                }
+              </div>
+            `
+                : "")
         }
       </div>
 
@@ -1103,6 +1124,40 @@
     }
   }
 
+  // 7. INSTAGRAM (instagram.com) INJECTION
+  function injectInstagramButtons() {
+    if (!window.location.hostname.includes("instagram.com")) return;
+
+    const posts = document.querySelectorAll('article, div[role="dialog"] article, section > main article');
+    posts.forEach((post) => {
+      if (post.querySelector('.tmb-inline-trigger') || post.getAttribute("data-tmb-injected")) return;
+
+      const actionRow = post.querySelector('section span svg[aria-label="Like"], section span svg[aria-label="Comment"], section span svg[aria-label="Share Post"]')?.closest('section');
+      if (!actionRow) return;
+
+      const btn = createFokkButton("fokk — Verify Reality with Fokkoo", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const captionEl = post.querySelector('h1, span._aaco, span._aacl, div[class*="caption"], article span[dir="auto"]');
+        const claimText = captionEl ? captionEl.innerText : post.innerText.slice(0, 300);
+
+        const authorEl = post.querySelector('header a, a[role="link"]');
+        const author = authorEl ? authorEl.innerText.trim() : "";
+
+        const linkEl = post.querySelector('a[href*="/p/"], a[href*="/reel/"]');
+        const postUrl = linkEl ? linkEl.href : window.location.href;
+
+        executeAudit(claimText, postUrl, { platform: "instagram", author });
+      });
+
+      btn.style.marginLeft = "8px";
+      btn.style.alignSelf = "center";
+      actionRow.appendChild(btn);
+      post.setAttribute("data-tmb-injected", "true");
+    });
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // AMBIENT HIGHLIGHT HOVER BUBBLE (On any web page)
   // ═══════════════════════════════════════════════════════════════
@@ -1189,7 +1244,7 @@
 
   const host = window.location.hostname;
   const isSocialPlatform = host.includes("twitter.com") || host.includes("x.com") ||
-      host.includes("reddit.com") || host.includes("threads.net") ||
+      host.includes("reddit.com") || host.includes("instagram.com") || host.includes("threads.net") ||
       host.includes("bsky.app") || host.includes("linkedin.com") ||
       host.includes("youtube.com");
 
@@ -1198,6 +1253,7 @@
     function runActiveInjector() {
       if (host.includes("twitter.com") || host.includes("x.com")) injectXButtons();
       else if (host.includes("reddit.com")) injectRedditButtons();
+      else if (host.includes("instagram.com")) injectInstagramButtons();
       else if (host.includes("threads.net")) injectThreadsButtons();
       else if (host.includes("bsky.app")) injectBlueskyButtons();
       else if (host.includes("linkedin.com")) injectLinkedInButtons();

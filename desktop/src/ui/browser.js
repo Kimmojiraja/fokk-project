@@ -1307,7 +1307,10 @@ function openSummaryModal(summary) {
 
     featureModalBody.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
-            <span style="background: rgba(0,229,255,0.15); color: var(--fokk-cyan); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">⚡ 100% In-Browser Engine · Zero Cloud</span>
+            <span style="background: rgba(0,229,255,0.15); color: var(--fokk-cyan); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
+                <span>100% In-Browser Engine · Zero Cloud</span>
+            </span>
             <span style="font-size: 11.5px; color: var(--text-secondary);">${summary.readingTime || '1 min'} read · ${summary.wordCount || 0} words</span>
         </div>
         ${imageHtml}
