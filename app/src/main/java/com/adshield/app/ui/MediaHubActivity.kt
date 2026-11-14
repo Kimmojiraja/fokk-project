@@ -7138,7 +7138,6 @@ open class MediaHubActivity : AppCompatActivity() {
 
         dialog.show()
     }
-    }
 
     private fun configureTtsVoice(isMale: Boolean) {
         textToSpeech?.let { tts ->
