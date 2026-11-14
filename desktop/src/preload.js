@@ -451,6 +451,11 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                     if (!window.chrome) {
                         window.chrome = {};
                     }
+                    try {
+                        window.__fokk_is_pro = true;
+                        window.__fokk_desktop = true;
+                        window.__fokk_audit_fetch = (url) => ipcRenderer.invoke('fokk-audit-fetch', url);
+                    } catch (_) {}
                     if (!window.chrome.app) {
                         window.chrome.app = {
                             isInstalled: false,
@@ -492,12 +497,15 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                         };
                     }
 
-                    // Clean navigator.webdriver fallback
+                    // Clean navigator.webdriver fallback - match authentic Google Chrome (false on prototype, not undefined on instance)
                     try {
-                        Object.defineProperty(navigator, 'webdriver', {
-                            get: () => undefined,
-                            configurable: true
-                        });
+                        delete navigator.webdriver;
+                        if (Object.getPrototypeOf(navigator)) {
+                            Object.defineProperty(Object.getPrototypeOf(navigator), 'webdriver', {
+                                get: () => false,
+                                configurable: true
+                            });
+                        }
                     } catch (_) {}
 
                     // Clean navigator.userAgentData to completely eliminate Electron brand traces for Akamai / Cloudflare
@@ -564,6 +572,14 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                     // =========================================================================
                     (function() {
                         'use strict';
+                        const host = window.location.hostname.toLowerCase();
+                        // Never alter WebGL or AudioBuffer on Arkose Labs or Twitter/X auth - prevents silent bot-challenge failure
+                        const isStrictAuthHost = host.includes('twitter.com') ||
+                            host.includes('x.com') ||
+                            host.includes('twimg.com') ||
+                            host.includes('arkoselabs.com');
+                        if (isStrictAuthHost) return;
+
                         const seed = Math.floor(Math.random() * 10) + 1;
 
                         // 1. WebGL Hardware & Shader Masking with Native Signature Preservation

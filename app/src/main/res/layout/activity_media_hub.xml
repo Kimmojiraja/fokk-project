@@ -193,7 +193,7 @@
                 android:src="@drawable/ic_sparkle"
                 app:tint="@color/fokk_cyan"
                 android:visibility="gone"
-                android:contentDescription="AI Page summary" />
+                android:contentDescription="Fokk Summary" />
 
             <ImageButton
                 android:id="@+id/btnClearUrl"

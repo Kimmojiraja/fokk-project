@@ -2004,6 +2004,19 @@ open class MediaHubActivity : AppCompatActivity() {
                 Toast.makeText(activity, label, Toast.LENGTH_SHORT).show()
             }
         }
+
+        @JavascriptInterface
+        fun auditFetch(url: String): String {
+            return try {
+                val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 7000
+                conn.readTimeout = 7000
+                conn.setRequestProperty("User-Agent", "FokkBrowser/2.4.0 (Android; RealityAudit)")
+                conn.inputStream.bufferedReader().use { it.readText() }
+            } catch (e: Exception) {
+                ""
+            }
+        }
     }
 
     private fun canUseBiometric(): Boolean {
@@ -3940,6 +3953,28 @@ open class MediaHubActivity : AppCompatActivity() {
         val isAiFilter = prefs.getBoolean(PREF_AI_FILTER, true)
         if (!isAiFilter) {
             webView.evaluateJavascript("if (typeof setAiFilterEnabled === 'function') setAiFilterEnabled(false);", null)
+        }
+
+        // Fokko AI Ambient Reality Inspector (Twitter/X, Reddit, Threads, YouTube, Web Selections)
+        val isFokkoAi = prefs.getBoolean(PREF_FOKKO_AI, true)
+        val isWebHttp = pageUrl?.startsWith("http://") == true || pageUrl?.startsWith("https://") == true
+        if (isFokkoAi && isWebHttp && fokkoScript.isNotEmpty()) {
+            if (fokkoCss.isNotEmpty()) {
+                val cssSafe = fokkoCss.replace("\\", "\\\\").replace("`", "\\`")
+                val injectCssJs = """
+                    (function() {
+                        if (!document.getElementById('fokko-ai-css')) {
+                            var s = document.createElement('style');
+                            s.id = 'fokko-ai-css';
+                            s.textContent = `$cssSafe`;
+                            (document.head || document.documentElement).appendChild(s);
+                        }
+                    })();
+                """.trimIndent()
+                webView.evaluateJavascript(injectCssJs, null)
+            }
+            webView.evaluateJavascript("window.__fokk_is_pro = true; window.__fokk_mobile_app = true;", null)
+            webView.evaluateJavascript(fokkoScript, null)
         }
 
         // Custom User CSS
@@ -6831,7 +6866,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
             sheetBinding.btnCopySummary.setOnClickListener {
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("Fokk AI Summary", fullText.toString().trim()))
+                clipboard.setPrimaryClip(ClipData.newPlainText("Fokk Summary", fullText.toString().trim()))
                 Toast.makeText(this, "Summary copied to clipboard", Toast.LENGTH_SHORT).show()
                 sheetDialog.dismiss()
             }
@@ -7000,7 +7035,7 @@ open class MediaHubActivity : AppCompatActivity() {
             return
         }
 
-        Toast.makeText(this, "Generating on-device AI summary...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Generating Fokk Summary...", Toast.LENGTH_SHORT).show()
 
         webView.evaluateJavascript("if (typeof triggerFokkSummarizer === 'function') { triggerFokkSummarizer(); } else { 'loading'; }") { res ->
             if (res == null || res == "null" || res.contains("loading")) {

@@ -143,6 +143,27 @@ function setupAdblockingForSession(sess) {
         callback({ requestHeaders: headers });
     });
 
+    // Relax CSP for in-page forensic audits & on-device neural model loading
+    sess.webRequest.onHeadersReceived((details, callback) => {
+        const responseHeaders = Object.assign({}, details.responseHeaders);
+        for (const k of Object.keys(responseHeaders)) {
+            if (k.toLowerCase() === 'content-security-policy') {
+                let csp = (responseHeaders[k] || []).join('; ');
+                if (csp.includes('connect-src')) {
+                    csp = csp.replace(/connect-src\s+([^;]+)/i, "connect-src $1 https://*.wikipedia.org https://api.duckduckgo.com https://upload.wikimedia.org https://news.google.com https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://hf.co https://*.hf.space blob: data:");
+                }
+                if (csp.includes('script-src')) {
+                    csp = csp.replace(/script-src\s+([^;]+)/i, "script-src $1 https://cdn.jsdelivr.net 'unsafe-eval' blob:");
+                }
+                if (csp.includes('worker-src')) {
+                    csp = csp.replace(/worker-src\s+([^;]+)/i, "worker-src $1 blob: https://cdn.jsdelivr.net");
+                }
+                responseHeaders[k] = [csp];
+            }
+        }
+        callback({ responseHeaders });
+    });
+
     sess.webRequest.onBeforeRequest((details, callback) => {
         // Enforce HTTPS upgrade for all external web requests
         if (details.url.startsWith('http://') && !details.url.includes('localhost') && !details.url.includes('127.0.0.1')) {
@@ -273,7 +294,7 @@ function createWindow() {
         // Guarantee immediate disk flush when auth/session cookies change (fixes YouTube & Google sign-in persistence)
         if (persistSess && persistSess.cookies) {
             persistSess.cookies.on('changed', (event, cookie, cause, removed) => {
-                if (!removed && (cookie.domain.includes('google.') || cookie.domain.includes('youtube.') || cookie.domain.includes('github.'))) {
+                if (!removed && (cookie.domain.includes('google.') || cookie.domain.includes('youtube.') || cookie.domain.includes('github.') || cookie.domain.includes('twitter.') || cookie.domain.includes('x.com') || cookie.domain.includes('reddit.'))) {
                     persistSess.cookies.flushStore().catch(() => {});
                 }
             });
@@ -789,6 +810,41 @@ ipcMain.handle('fokk-get-reader-script', () => {
 
 ipcMain.handle('fokk-get-summarizer-script', () => {
     return adblock.summarizerJs || '';
+});
+
+ipcMain.handle('fokk-audit-fetch', async (event, url) => {
+    try {
+        const https = require('https');
+        const http = require('http');
+        return await new Promise((resolve) => {
+            const client = (url || '').startsWith('https:') ? https : http;
+            client.get(url, { headers: { 'User-Agent': 'FokkBrowser/2.4.0 (Windows; ForensicRealityAudit)' } }, (res) => {
+                let body = '';
+                res.on('data', chunk => body += chunk);
+                res.on('end', () => {
+                    try { resolve(JSON.parse(body)); } catch (_) { resolve(null); }
+                });
+            }).on('error', () => resolve(null));
+        });
+    } catch (_) {
+        return null;
+    }
+});
+
+ipcMain.handle('fokk-get-fokko-script', () => {
+    try {
+        const fokkoJsPath = path.join(ASSETS_DIR, 'fokko_content.js');
+        if (fs.existsSync(fokkoJsPath)) return fs.readFileSync(fokkoJsPath, 'utf8');
+    } catch (_) {}
+    return adblock.fokkoJs || '';
+});
+
+ipcMain.handle('fokk-get-fokko-css', () => {
+    try {
+        const fokkoCssPath = path.join(ASSETS_DIR, 'fokko_content.css');
+        if (fs.existsSync(fokkoCssPath)) return fs.readFileSync(fokkoCssPath, 'utf8');
+    } catch (_) {}
+    return adblock.fokkoCss || '';
 });
 
 ipcMain.handle('fokk-get-torrent-url', () => {

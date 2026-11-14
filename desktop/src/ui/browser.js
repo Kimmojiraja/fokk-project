@@ -331,6 +331,15 @@ function createTab(url = START_PAGE_URL, options = {}) {
                     }
                 } catch(_) {}
             `).catch(() => {});
+        } else if (u.startsWith('http')) {
+            // Auto-inject Fokko AI Ambient Reality Inspector on web pages as soon as DOM is ready
+            ipcRenderer.invoke('fokk-get-fokko-css').then(css => {
+                if (css) webview.insertCSS(css).catch(() => {});
+            }).catch(() => {});
+            ipcRenderer.invoke('fokk-get-fokko-script').then(js => {
+                webview.executeJavaScript('window.__fokk_is_pro = true; window.__fokk_desktop = true;').catch(() => {});
+                if (js) webview.executeJavaScript(js).catch(() => {});
+            }).catch(() => {});
         }
     });
 
@@ -352,6 +361,14 @@ function createTab(url = START_PAGE_URL, options = {}) {
                     if (rule.css) webview.insertCSS(rule.css);
                     if (rule.js) webview.executeJavaScript(rule.js);
                 }
+
+                // Auto-inject Fokko AI Ambient Reality Inspector on web pages
+                ipcRenderer.invoke('fokk-get-fokko-css').then(css => {
+                    if (css) webview.insertCSS(css).catch(() => {});
+                }).catch(() => {});
+                ipcRenderer.invoke('fokk-get-fokko-script').then(js => {
+                    if (js) webview.executeJavaScript(js).catch(() => {});
+                }).catch(() => {});
             }
         } catch (_) {}
     });
@@ -443,10 +460,9 @@ function createTab(url = START_PAGE_URL, options = {}) {
     });
 
     webview.addEventListener('new-window', (e) => {
-        if (e.disposition === 'new-window' || (e.options && (e.options.width || e.options.height))) {
-            return;
+        if (e.url) {
+            createTab(e.url, { isPrivate });
         }
-        createTab(e.url, { isPrivate });
     });
 
     viewsContainer.appendChild(webview);
@@ -1243,7 +1259,7 @@ const actBookmarks = document.getElementById('actBookmarks');
 
 function openSummaryModal(summary) {
     if (!featureHubModal || !featureModalTitle || !featureModalBody) return;
-    featureModalTitle.textContent = 'Fokk On-Device AI Summary';
+    featureModalTitle.textContent = 'Fokk Summary';
 
     const bulletsHtml = (summary.bullets || []).map(b => `
         <li style="display: flex; gap: 10px; font-size: 13px; line-height: 1.5; color: #E2E8F0; margin-bottom: 8px;">
@@ -1255,30 +1271,104 @@ function openSummaryModal(summary) {
     let metricsHtml = '';
     if (summary.metrics && summary.metrics.length > 0) {
         metricsHtml = `
-            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08);">
-                ${summary.metrics.map(m => `<span style="background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.25); color: var(--fokk-cyan); padding: 2px 8px; border-radius: 4px; font-size: 11px;">${m}</span>`).join('')}
+            <div style="margin-top: 14px;">
+                <span style="font-size: 10.5px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">Key Figures &amp; Data Points</span>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                    ${summary.metrics.map(m => `<span style="background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.25); color: var(--fokk-cyan); padding: 2px 8px; border-radius: 4px; font-size: 11px;">${m}</span>`).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    let questionsHtml = '';
+    if (summary.followUpQuestions && summary.followUpQuestions.length > 0) {
+        questionsHtml = `
+            <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08);">
+                <span style="font-size: 10.5px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">Deep-Dive Questions</span>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    ${summary.followUpQuestions.map(q => `
+                        <div style="font-size: 12px; color: var(--fokk-cyan); background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.15); border-radius: 6px; padding: 6px 10px;">
+                            <span>✦ ${q}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    let imageHtml = '';
+    if (summary.leadImage) {
+        imageHtml = `
+            <div style="margin-bottom: 14px; border-radius: 10px; overflow: hidden; max-height: 180px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center;">
+                <img src="${summary.leadImage}" alt="" style="max-height: 180px; width: 100%; object-fit: cover;" onerror="this.parentElement.style.display='none'" />
             </div>
         `;
     }
 
     featureModalBody.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
-            <span style="background: rgba(0,229,255,0.15); color: var(--fokk-cyan); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">100% On-Device NLP · Zero Cloud</span>
+            <span style="background: rgba(0,229,255,0.15); color: var(--fokk-cyan); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
+                <span>100% In-Browser Engine · Zero Cloud</span>
+            </span>
             <span style="font-size: 11.5px; color: var(--text-secondary);">${summary.readingTime || '1 min'} read · ${summary.wordCount || 0} words</span>
         </div>
-        <h3 style="color: #FFF; font-size: 15px; font-weight: 700; margin-bottom: 14px; line-height: 1.4;">${summary.title || 'Extracted Summary'}</h3>
-        <ul style="list-style: none; padding: 0; margin: 0;">
-            ${bulletsHtml}
-        </ul>
-        ${metricsHtml}
-        <button class="modal-btn secondary" id="btnCloseSummary" style="width: 100%; margin-top: 16px;">Done</button>
+        ${imageHtml}
+        <h3 style="color: #FFF; font-size: 15px; font-weight: 700; margin-bottom: 12px; line-height: 1.4;">${summary.title || 'Executive Brief'}</h3>
+
+        <!-- Executive Narrative Paragraph with live typing stream -->
+        <div style="background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.18); border-radius: 10px; padding: 12px; margin-bottom: 14px; line-height: 1.6; font-size: 13px; color: #E2E8F0;">
+            <span style="font-size: 10.5px; font-weight: 800; color: var(--fokk-cyan); letter-spacing: 0.8px; text-transform: uppercase; display: block; margin-bottom: 4px;">Executive Brief</span>
+            <span id="__fokk_desktop_exec_text"></span><span id="__fokk_desktop_exec_cursor" style="color: var(--fokk-cyan); font-weight: bold;">▌</span>
+        </div>
+
+        <div id="__fokk_desktop_bullets" style="opacity: 0; transition: opacity 0.3s ease;">
+            <span style="font-size: 10.5px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 8px;">Key Takeaways</span>
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                ${bulletsHtml}
+            </ul>
+            ${metricsHtml}
+            ${questionsHtml}
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-top: 16px;">
+            <button class="modal-btn secondary" id="btnCopyFokkSummary" style="flex: 1;">Copy Summary</button>
+            <button class="modal-btn primary" id="btnCloseSummary" style="flex: 1;">Done</button>
+        </div>
     `;
 
     document.getElementById('btnCloseSummary').onclick = () => {
         featureHubModal.classList.add('hidden');
     };
 
+    document.getElementById('btnCopyFokkSummary').onclick = (e) => {
+        const fullContent = (summary.executiveSummary ? summary.executiveSummary + '\n\n' : '') + (summary.bullets || []).join('\n\n');
+        navigator.clipboard.writeText(fullContent);
+        e.target.textContent = 'Copied!';
+        setTimeout(() => { if (e.target) e.target.textContent = 'Copy Summary'; }, 2000);
+    };
+
     featureHubModal.classList.remove('hidden');
+
+    // Live Typewriter Streaming
+    const execTarget = document.getElementById('__fokk_desktop_exec_text');
+    const execCursor = document.getElementById('__fokk_desktop_exec_cursor');
+    const bulletsBox = document.getElementById('__fokk_desktop_bullets');
+    const textToStream = summary.executiveSummary || (summary.bullets && summary.bullets[0]) || "";
+    let sIdx = 0;
+
+    function streamNextChunk() {
+        if (sIdx < textToStream.length) {
+            const chunk = textToStream.slice(sIdx, sIdx + 4);
+            sIdx += 4;
+            if (execTarget) execTarget.textContent += chunk;
+            setTimeout(streamNextChunk, 14);
+        } else {
+            if (execCursor) execCursor.style.display = 'none';
+            if (bulletsBox) bulletsBox.style.opacity = '1';
+        }
+    }
+    streamNextChunk();
 }
 
 if (actNewTab) actNewTab.onclick = () => { createTab(START_PAGE_URL); desktopBrowserMenu.classList.add('hidden'); };
@@ -1290,7 +1380,7 @@ if (actSmartSummary) {
         desktopBrowserMenu.classList.add('hidden');
         const active = getActiveWebview();
         if (!active) return;
-        showToast('Analyzing page with local AI summarizer...');
+        showToast('Generating Fokk Summary...');
         try {
             const script = await ipcRenderer.invoke('fokk-get-summarizer-script');
             const summary = await active.executeJavaScript(`
@@ -1305,13 +1395,13 @@ if (actSmartSummary) {
                 })();
             `);
 
-            if (summary && summary.bullets && summary.bullets.length > 0) {
+            if (summary && (summary.bullets || summary.executiveSummary)) {
                 openSummaryModal(summary);
             } else {
                 showToast('Not enough article content found to summarize', true);
             }
         } catch (e) {
-            showToast('Summarizer error: ' + (e.message || e), true);
+            showToast('Fokk Summary error: ' + (e.message || e), true);
         }
     };
 }

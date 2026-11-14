@@ -1,6 +1,6 @@
 {
-  "versionCode": 242,
-  "versionName": "2.4.2",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.2/app-debug.apk",
-  "changelog": "- Real Stealth VPN & Orbot Engine: Streamlined VPN options, added active Orbot 127.0.0.1:9050 daemon detection with 1-tap launcher, and built-in live Public IP verification.\n- Dark Menu UI: Swapped all stark white circle backgrounds to sleek dark discs (#222225) with crisp white/accent icons.\n- Fokk Pro Royal Crown: Replaced sparkle with elegant royal gold crown emblem.\n- Shield Protection Matrix: Removed inflated mock counters and restored clean, realistic real-time tracker numbers."
+  "versionCode": 244,
+  "versionName": "2.4.4",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.4/app-debug.apk",
+  "changelog": "- Fokk Reality Audit Engine: Added dedicated international managerial role and coaching rumor debunking (resolving Klopp/Germany/DFB reality).\n- UI & Scroll Polish: Completely eliminated broken lead image icons on Twitter/X, added responsive 85vh scrolling modal layout, auto-scroll streaming, and updated run_browser.bat with complete V8 and browser cache purging."
 }
