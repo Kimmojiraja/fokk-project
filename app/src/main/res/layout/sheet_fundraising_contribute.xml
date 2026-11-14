@@ -124,7 +124,7 @@
                 android:orientation="vertical"
                 android:padding="4dp">
 
-                <!-- GitHub Sponsors Row -->
+                <!-- Lemon Squeezy Store Row -->
                 <LinearLayout
                     android:id="@+id/cardSponsorGitHub"
                     android:layout_width="match_parent"
@@ -141,8 +141,8 @@
                         android:layout_height="28dp"
                         android:background="@drawable/bg_circle_icon_button"
                         android:padding="5dp"
-                        android:src="@drawable/ic_github"
-                        app:tint="#FFFFFF" />
+                        android:src="@drawable/ic_crown"
+                        app:tint="#F59E0B" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -154,7 +154,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="GitHub Sponsors"
+                            android:text="Fokk Pro Store"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -163,7 +163,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="github.com/sponsors/Kimmojiraja"
+                            android:text="Fixed tiers: $4.99/mo, $29.99/yr, $49.99 Lifetime"
                             android:textColor="@color/text_secondary"
                             android:textSize="11.5sp" />
                     </LinearLayout>
@@ -211,13 +211,26 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Fokk Pro ($4.99/mo)"
+                            android:text="Activate License Key"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Enter automated license key from purchase"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11.5sp" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_arrow_forward"
+                        app:tint="@color/text_secondary" />
+                </LinearLayout>
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="Offline license &amp; privacy cloaking"

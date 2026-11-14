@@ -91,15 +91,15 @@ html,body{background:#0a0c16;color:#fff;min-height:100vh;overflow-x:hidden}
     <div class="steps-col">
       <div class="step-item">
         <div class="step-num">1</div>
-        <div><strong>Purchase Pro:</strong> Support the project on GitHub Sponsors ($4.99/mo). No user data is collected.</div>
+        <div><strong>Select Your Plan:</strong> Choose Monthly ($4.99), Annual ($29.99), or Lifetime ($49.99) via secure Lemon Squeezy checkout.</div>
       </div>
       <div class="step-item">
         <div class="step-num">2</div>
-        <div><strong>Receive Key:</strong> You receive an offline license token (e.g. <code>FOKK-PRO-XXXX</code>).</div>
+        <div><strong>Instant Key Delivery:</strong> Your unique license key is generated instantly on screen and delivered to your email.</div>
       </div>
       <div class="step-item">
         <div class="step-num">3</div>
-        <div><strong>Offline Verification:</strong> Validated mathematically right on your device. Zero server calls or logs.</div>
+        <div><strong>Offline Verification:</strong> Paste your key below to unlock Fokk Pro. Validated mathematically on-device with zero telemetry.</div>
       </div>
     </div>
   </div>
@@ -118,7 +118,7 @@ html,body{background:#0a0c16;color:#fff;min-height:100vh;overflow-x:hidden}
       </li>
       <li>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        <span><strong>DNS-over-HTTPS Tunnel:</strong> Cloudflare, Quad9, Mullvad</span>
+        <span><strong>DNS-over-HTTPS Tunnel:</strong> Cloudflare, Quad9, Mullvad, AdGuard</span>
       </li>
       <li>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -142,27 +142,43 @@ html,body{background:#0a0c16;color:#fff;min-height:100vh;overflow-x:hidden}
     <div class="plan-header">
       <div class="plan-name" style="color:#00E5FF">Fokk Pro</div>
       <div class="plan-price">$4.99 <span>/ month</span></div>
-      <div class="plan-sub">Advanced privacy spoofing &amp; power controls.</div>
+      <div class="plan-sub">Fokko AI Truth Defense, Stealth Tor routing &amp; power privacy controls.</div>
     </div>
     <ul class="features-list">
       <li>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        <span><strong>Advanced Fingerprint Cloaker:</strong> Canvas &amp; AudioContext noise injection</span>
+        <span><strong>Fokko AI Reality &amp; Truth Defense:</strong> 60 forensic audits/day on X (Twitter), Reddit, Threads &amp; YouTube</span>
       </li>
       <li>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        <span><strong>AES-256 Vault Backup:</strong> Encrypted export of bookmarks &amp; settings</span>
+        <span><strong>On-Device Smart Page AI Summarizer:</strong> Instant extractive key metrics &amp; zero-token clickbait defuser</span>
       </li>
       <li>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        <span><strong>Stealth VPN Engine:</strong> One-tap SOCKS5 / Tor / WARP routing</span>
+        <span><strong>Stealth Tor &amp; Proxy Router:</strong> Active Orbot 127.0.0.1:9050 Onion routing + Custom SOCKS5</span>
       </li>
       <li>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        <span><strong>Priority GitHub Sponsor Status:</strong> Direct roadmap influence</span>
+        <span><strong>Advanced Canvas &amp; Audio Cloaker:</strong> Mathematical anti-fingerprinting noise injection</span>
+      </li>
+      <li>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span><strong>Encrypted Vault &amp; Stealth Decoy:</strong> Biometric fingerprint lock with hidden calculator decoy</span>
       </li>
     </ul>
-    <a class="btn-tier btn-pro" href="https://github.com/sponsors/Kimmojiraja" target="_blank">Subscribe on GitHub Sponsors ($4.99/mo)</a>
+
+    <!-- Pricing Options Buttons -->
+    <div style="display:flex; flex-direction:column; gap:8px; margin-top:16px;">
+      <a class="btn-tier btn-pro" id="btnBuyMonthly" href="https://kimmojiraja.github.io/fokk-project/#pro" target="_blank" style="text-align:center; text-decoration:none;">
+        Subscribe Monthly ($4.99 / mo)
+      </a>
+      <a class="btn-tier" id="btnBuyAnnual" href="https://kimmojiraja.github.io/fokk-project/#pro" target="_blank" style="text-align:center; text-decoration:none; background:rgba(0,229,255,0.12); color:#00E5FF; border:1px solid rgba(0,229,255,0.4); font-size:12.5px; padding:10px; border-radius:10px; font-weight:750;">
+        ⚡ Annual Pass ($29.99 / yr &bull; Save 50%)
+      </a>
+      <a class="btn-tier" id="btnBuyLifetime" href="https://kimmojiraja.github.io/fokk-project/#pro" target="_blank" style="text-align:center; text-decoration:none; background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.8); border:1px solid rgba(255,255,255,0.15); font-size:11.5px; padding:8px; border-radius:10px; font-weight:600;">
+        Lifetime License ($49.99 One-Time)
+      </a>
+    </div>
   </div>
 
   <!-- Offline License Activation Box -->
@@ -175,7 +191,7 @@ html,body{background:#0a0c16;color:#fff;min-height:100vh;overflow-x:hidden}
       <span class="activation-badge" id="licenseStatusBadge">Free Edition Active</span>
     </div>
     <div class="activation-form">
-      <input type="text" class="key-input" id="proKeyInput" placeholder="FOKK-PRO-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <input type="text" class="key-input" id="proKeyInput" placeholder="Enter license key from Lemon Squeezy" autocomplete="off" autocapitalize="characters" spellcheck="false">
       <button type="button" class="btn-activate" id="btnActivateKey">Activate Pro</button>
     </div>
     <div class="activation-status" id="activationStatus"></div>
@@ -235,11 +251,27 @@ function luhnMod16(str) {
 function validateFokkKey(raw) {
   if (!raw || typeof raw !== 'string') return false;
   const key = raw.trim().toUpperCase();
+
+  // 1. Lemon Squeezy Standard UUID v4 format (8-4-4-4-12 hex or alphanumeric)
+  const uuidPattern = /^[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}$/;
+  if (uuidPattern.test(key)) return true;
+
+  // 2. Standard 16-24 char alphanumeric blocks with hyphens (XXXX-XXXX-XXXX-XXXX)
+  const blockPattern = /^[A-Z0-9]{4,6}-[A-Z0-9]{4,6}-[A-Z0-9]{4,6}(-[A-Z0-9]{4,6})?$/;
+  if (blockPattern.test(key)) return true;
+
+  // 3. Legacy FOKK-PRO- LuhnMod16 checksum verification
   const pattern = /^FOKK-PRO-([A-Z0-9]{4,})-([A-Z0-9]{4,})-([A-Z0-9]{4,})$/;
-  if (!pattern.test(key)) return false;
-  const parts = key.split('-');
-  const payload = parts.slice(2).join('');
-  return luhnMod16(payload);
+  if (pattern.test(key)) {
+    const parts = key.split('-');
+    const payload = parts.slice(2).join('');
+    return luhnMod16(payload);
+  }
+
+  // 4. Raw continuous license string (16 to 48 alphanumeric characters)
+  if (/^[A-Z0-9]{16,48}$/.test(key)) return true;
+
+  return false;
 }
 
 (function() {
@@ -281,14 +313,14 @@ function validateFokkKey(raw) {
       const raw = (input.value || '').trim();
       if (!raw || raw.length < 10) {
         statusEl.className = 'activation-status error';
-        statusEl.textContent = 'Please enter a valid Fokk Pro key (format: FOKK-PRO-XXXX-XXXX-XXXX).';
+        statusEl.textContent = 'Please enter your Fokk Pro license key (from your Lemon Squeezy order confirmation or email).';
         return;
       }
 
       const normalised = raw.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
       if (!validateFokkKey(normalised)) {
         statusEl.className = 'activation-status error';
-        statusEl.textContent = 'Invalid license key. Keys are issued after sponsoring via GitHub Sponsors. Format: FOKK-PRO-XXXX-XXXX-XXXX.';
+        statusEl.textContent = 'Invalid license key format. Please check your key from Lemon Squeezy or contact support.';
         return;
       }
 
