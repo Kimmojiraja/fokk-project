@@ -7,6 +7,19 @@
   if (window.__fokk_content_injected) return;
   window.__fokk_content_injected = true;
 
+  // Auto-purge any stale quota lockout entries from legacy test sessions
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith("fokko_quota_") || k.startsWith("fokko_cache_"))) {
+        const val = localStorage.getItem(k);
+        if (k.startsWith("fokko_quota_") || (val && (val.includes("reality checks") || val.includes("LIMIT") || val.includes("UPGRADE TO PRO")))) {
+          localStorage.removeItem(k);
+        }
+      }
+    }
+  } catch (_) {}
+
   const currentHost = ((window.location && window.location.hostname) || '').toLowerCase();
   if (currentHost.includes('webxprt') || currentHost.includes('principledtechnologies') || currentHost.includes('browserbench') ||
       currentHost.includes('speedometer') || currentHost.includes('kraken-benchmark') || currentHost.includes('octane') ||
@@ -196,10 +209,16 @@
     const safeClaim = String(data.claim || activeAuditClaim || activeSelectionText || "Claim under inspection").trim();
     data.claim = safeClaim;
 
-    // Cache valid forensic verdicts locally to preserve future tokens
+    // In Fokk Browser, all reality audits run with full Pro Turbo engine
+    data.isPro = true;
+    data.auditTier = "PRO_TURBO";
+
+    // Cache valid verified / debunked forensic verdicts locally (never cache errors or limits)
     try {
-      if (safeClaim && !data.statusBadge?.includes("PRO") && !data.statusBadge?.includes("QUOTA")) {
-        localStorage.setItem("fokko_cache_" + getClaimHash(safeClaim), JSON.stringify(data));
+      if (safeClaim && (data.verdict === "VERIFIED" || data.verdict === "DEBUNKED")) {
+        if (!data.forensicSummary?.includes("reality checks") && !data.verdictTitle?.includes("LIMIT")) {
+          localStorage.setItem("fokko_cache_" + getClaimHash(safeClaim), JSON.stringify(data));
+        }
       }
     } catch {}
 
@@ -774,47 +793,31 @@
   // ═══════════════════════════════════════════════════════════════
   async function executeAudit(claimText, postUrl) {
     if (!claimText || claimText.trim().length < 4) return;
-    claimText = claimText.trim().slice(0, 320); // Cap tokens per request
+    claimText = claimText.trim().slice(0, 320);
     activeAuditClaim = claimText;
     showLoading(claimText);
 
-    // 1. Check local hash cache (Zero latency & zero compute on cached/viral claims)
+    // 1. Check local hash cache for genuine verified verdicts (ignore and purge any legacy limit strings)
     const cacheKey = "fokko_cache_" + getClaimHash(claimText);
     try {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const cachedData = JSON.parse(cached);
-        if (cachedData && (cachedData.verdict || cachedData.forensicSummary)) {
-          setTimeout(() => showVerdict(cachedData), 150);
-          return;
+        if (cachedData && (cachedData.verdict === "VERIFIED" || cachedData.verdict === "DEBUNKED")) {
+          if (!cachedData.forensicSummary?.includes("reality checks") && !cachedData.verdictTitle?.includes("LIMIT")) {
+            cachedData.isPro = true;
+            setTimeout(() => showVerdict(cachedData), 120);
+            return;
+          } else {
+            localStorage.removeItem(cacheKey);
+          }
+        } else {
+          localStorage.removeItem(cacheKey);
         }
       }
     } catch {}
 
-    // 2. Check Daily Token Quota (Free = 5/day, Pro = 60/day)
-    const quota = getDailyQuotaStatus();
-    if (!quota.allowed) {
-      setTimeout(() => {
-        showVerdict({
-          claim: claimText,
-          verdict: "CONTESTED",
-          verdictTitle: quota.isPro ? "DAILY PRO QUOTA LIMIT" : "FREE DAILY LIMIT REACHED",
-          statusBadge: quota.isPro ? "1000/1000 CHECKS USED" : "UPGRADE TO PRO",
-          isQuotaLimit: true,
-          confidence: 100,
-          forensicSummary: quota.isPro
-            ? "You have utilized your 60 high-speed daily forensic audits. Your daily token pool refreshes at midnight (00:00 UTC) to prevent API exhaustion."
-            : "You have used your 5 free reality checks for today. Upgrade to Fokk Pro for 60 high-speed audits/day, or your free quota will refresh tomorrow at 00:00 UTC.",
-          primarySource: { name: quota.isPro ? "Active Pro Subscriber" : "Get Fokk Pro", url: "https://kimmojiraja.github.io/fokk-project/#pro" },
-          deepLink: "https://kimmojiraja.github.io/fokk-project/#pro"
-        });
-      }, 300);
-      return;
-    }
-
-    recordQuotaUsage();
-
-    // 3. Execute in-browser reality audit directly
+    // 2. Execute In-Browser Distributed Reality Audit (Unmetered & Instant in Fokk Browser)
     runInBrowserRealityAudit(claimText, postUrl);
   }
 
