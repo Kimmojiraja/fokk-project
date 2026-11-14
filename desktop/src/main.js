@@ -143,6 +143,20 @@ function setupAdblockingForSession(sess) {
         callback({ requestHeaders: headers });
     });
 
+    // Relax CSP connect-src for in-page forensic audits (Wikipedia, DuckDuckGo)
+    sess.webRequest.onHeadersReceived((details, callback) => {
+        const responseHeaders = Object.assign({}, details.responseHeaders);
+        for (const k of Object.keys(responseHeaders)) {
+            if (k.toLowerCase() === 'content-security-policy') {
+                const csp = (responseHeaders[k] || []).join('; ');
+                if (csp.includes('connect-src')) {
+                    responseHeaders[k] = [csp.replace(/connect-src\s+([^;]+)/i, "connect-src $1 https://*.wikipedia.org https://api.duckduckgo.com https://upload.wikimedia.org")];
+                }
+            }
+        }
+        callback({ responseHeaders });
+    });
+
     sess.webRequest.onBeforeRequest((details, callback) => {
         // Enforce HTTPS upgrade for all external web requests
         if (details.url.startsWith('http://') && !details.url.includes('localhost') && !details.url.includes('127.0.0.1')) {
@@ -789,6 +803,25 @@ ipcMain.handle('fokk-get-reader-script', () => {
 
 ipcMain.handle('fokk-get-summarizer-script', () => {
     return adblock.summarizerJs || '';
+});
+
+ipcMain.handle('fokk-audit-fetch', async (event, url) => {
+    try {
+        const https = require('https');
+        const http = require('http');
+        return await new Promise((resolve) => {
+            const client = (url || '').startsWith('https:') ? https : http;
+            client.get(url, { headers: { 'User-Agent': 'FokkBrowser/2.4.0 (Windows; ForensicRealityAudit)' } }, (res) => {
+                let body = '';
+                res.on('data', chunk => body += chunk);
+                res.on('end', () => {
+                    try { resolve(JSON.parse(body)); } catch (_) { resolve(null); }
+                });
+            }).on('error', () => resolve(null));
+        });
+    } catch (_) {
+        return null;
+    }
 });
 
 ipcMain.handle('fokk-get-fokko-script', () => {

@@ -2004,6 +2004,19 @@ open class MediaHubActivity : AppCompatActivity() {
                 Toast.makeText(activity, label, Toast.LENGTH_SHORT).show()
             }
         }
+
+        @JavascriptInterface
+        fun auditFetch(url: String): String {
+            return try {
+                val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 7000
+                conn.readTimeout = 7000
+                conn.setRequestProperty("User-Agent", "FokkBrowser/2.4.0 (Android; RealityAudit)")
+                conn.inputStream.bufferedReader().use { it.readText() }
+            } catch (e: Exception) {
+                ""
+            }
+        }
     }
 
     private fun canUseBiometric(): Boolean {
