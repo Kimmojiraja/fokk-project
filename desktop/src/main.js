@@ -143,15 +143,22 @@ function setupAdblockingForSession(sess) {
         callback({ requestHeaders: headers });
     });
 
-    // Relax CSP connect-src for in-page forensic audits (Wikipedia, DuckDuckGo)
+    // Relax CSP for in-page forensic audits & on-device neural model loading
     sess.webRequest.onHeadersReceived((details, callback) => {
         const responseHeaders = Object.assign({}, details.responseHeaders);
         for (const k of Object.keys(responseHeaders)) {
             if (k.toLowerCase() === 'content-security-policy') {
-                const csp = (responseHeaders[k] || []).join('; ');
+                let csp = (responseHeaders[k] || []).join('; ');
                 if (csp.includes('connect-src')) {
-                    responseHeaders[k] = [csp.replace(/connect-src\s+([^;]+)/i, "connect-src $1 https://*.wikipedia.org https://api.duckduckgo.com https://upload.wikimedia.org")];
+                    csp = csp.replace(/connect-src\s+([^;]+)/i, "connect-src $1 https://*.wikipedia.org https://api.duckduckgo.com https://upload.wikimedia.org https://news.google.com https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://hf.co https://*.hf.space blob: data:");
                 }
+                if (csp.includes('script-src')) {
+                    csp = csp.replace(/script-src\s+([^;]+)/i, "script-src $1 https://cdn.jsdelivr.net 'unsafe-eval' blob:");
+                }
+                if (csp.includes('worker-src')) {
+                    csp = csp.replace(/worker-src\s+([^;]+)/i, "worker-src $1 blob: https://cdn.jsdelivr.net");
+                }
+                responseHeaders[k] = [csp];
             }
         }
         callback({ responseHeaders });

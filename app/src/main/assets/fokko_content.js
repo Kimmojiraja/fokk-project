@@ -216,6 +216,137 @@
   // ═══════════════════════════════════════════════════════════════
   // VERDICT CARD DISPLAY & AI GENERATING STREAM
   // ═══════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════
+  // ON-DEVICE PRO NEURAL CORE (Transformers.js + WebGPU / WASM)
+  // Unlimited, Zero-API Cost On-Device Intelligence with Pro Tier Gate
+  // ═══════════════════════════════════════════════════════════════
+  let neuralPipeline = null;
+  let isNeuralInitializing = false;
+
+  function checkProSubscriptionStatus() {
+    // 1. Current Developer / Free Tester Mode: Active & Unlimited
+    const isTesterSession = true;
+    if (isTesterSession) {
+      return { isPro: true, status: "active", isTester: true, tier: "PRO_TURBO" };
+    }
+
+    // 2. Future Production License & Monthly Subscription Check
+    const proStatus = localStorage.getItem("fokk_pro_status");
+    const expiresAtStr = localStorage.getItem("fokk_pro_expires_at");
+    const expiresAt = expiresAtStr ? parseInt(expiresAtStr, 10) : 0;
+
+    if (proStatus === "active") {
+      if (expiresAt && Date.now() > expiresAt) {
+        // Monthly tier expired -> automatically stop access!
+        localStorage.setItem("fokk_pro_status", "expired");
+        return { isPro: false, status: "expired", isTester: false, tier: "FREE" };
+      }
+      return { isPro: true, status: "active", isTester: false, tier: "PRO_TURBO" };
+    }
+
+    return { isPro: false, status: "inactive", isTester: false, tier: "FREE" };
+  }
+
+  async function getOrInitNeuralModel(onProgress) {
+    if (neuralPipeline) return neuralPipeline;
+    if (isNeuralInitializing) return null;
+
+    isNeuralInitializing = true;
+    try {
+      // Dynamic import of Transformers.js v3 from CDN
+      const { pipeline } = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3");
+
+      const hasWebGPU = typeof navigator !== "undefined" && Boolean(navigator.gpu);
+      const device = hasWebGPU ? "webgpu" : "wasm";
+
+      // Lightweight ~180MB model: SmolLM2-360M-Instruct (Quantized q4 ONNX)
+      const modelId = "HuggingFaceTB/SmolLM2-360M-Instruct";
+
+      neuralPipeline = await pipeline("text-generation", modelId, {
+        device: device,
+        dtype: "q4",
+        progress_callback: (prog) => {
+          if (prog && prog.status === "progress") {
+            const p = Math.round((prog.loaded / (prog.total || 1)) * 100);
+            if (typeof onProgress === "function") onProgress(p);
+          }
+        }
+      });
+      isNeuralInitializing = false;
+      return neuralPipeline;
+    } catch (e) {
+      console.warn("[Fokk Neural Core] Falling back to instant dynamic synthesis:", e);
+      isNeuralInitializing = false;
+      return null;
+    }
+  }
+
+  async function streamNeuralSynthesis(claim, verdictData, wireArticles) {
+    const status = checkProSubscriptionStatus();
+    if (!status.isPro) return;
+
+    const textTarget = document.getElementById("tmb-stream-text");
+    const statusEl = document.getElementById("tmb-neural-status");
+    if (!textTarget) return;
+
+    if (statusEl) {
+      statusEl.style.display = "block";
+      statusEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>Engaging On-Device Neural Core (WebGPU)...`;
+    }
+
+    const wireSnippet = (wireArticles || []).slice(0, 3).map(w => `- ${w.sourceName}: "${w.headline}"`).join("\n");
+
+    const model = await getOrInitNeuralModel((pct) => {
+      if (statusEl) {
+        statusEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>Caching Neural Core: ${pct}% (Permanently saved in local memory)...`;
+      }
+    });
+
+    if (!model) {
+      if (statusEl) statusEl.style.display = "none";
+      return;
+    }
+
+    if (statusEl) {
+      statusEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>Synthesizing with On-Device Neural Core...`;
+    }
+
+    const prompt = [
+      {
+        role: "system",
+        content: "You are Fokk Pro Turbo, an objective forensic reality auditor. Deliver a sharp, natural, objective 2-3 sentence verification assessment analyzing whether this claim is a confirmed fact, active transfer market speculation, or viral rumor based on the wire evidence. Output only the synthesis paragraph with zero bullet points or preamble."
+      },
+      {
+        role: "user",
+        content: `TARGET CLAIM: "${claim}"\n\nACCREDITED WIRE RECEIPTS:\n${wireSnippet || "None found"}`
+      }
+    ];
+
+    try {
+      const out = await model(prompt, {
+        max_new_tokens: 160,
+        temperature: 0.6,
+        do_sample: true
+      });
+      const reply = out?.[0]?.generated_text?.at(-1)?.content?.trim();
+      if (reply && reply.length > 35) {
+        textTarget.textContent = reply;
+        verdictData.forensicSummary = reply;
+        if (statusEl) {
+          statusEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>Synthesized via Local Neural Core (WebGPU)`;
+        }
+        try {
+          localStorage.setItem("fokko_cache_v241_" + getClaimHash(claim), JSON.stringify(verdictData));
+        } catch {}
+      } else if (statusEl) {
+        statusEl.style.display = "none";
+      }
+    } catch (err) {
+      console.warn("[Fokk Neural Core] Generation completed with dynamic fallback:", err);
+      if (statusEl) statusEl.style.display = "none";
+    }
+  }
+
   function showVerdict(data) {
     if (loadingInterval) {
       clearInterval(loadingInterval);
@@ -346,6 +477,7 @@
       <div class="tmb-analysis-section">
         <div class="tmb-forensic-summary" id="tmb-summary-box">
           <span id="tmb-stream-text"></span><span class="tmb-cursor" id="tmb-stream-cursor">▌</span>
+          <div id="tmb-neural-status" style="font-size: 10.5px; color: #00E5FF; margin-top: 6px; font-weight: 700; letter-spacing: 0.4px; display: none;"></div>
         </div>
       </div>
 
@@ -572,6 +704,13 @@
 
     // Start streaming immediately
     streamStep();
+
+    // Pro Turbo: Stream natural on-device neural synthesis in background
+    if (data.isPro || data.auditTier === "PRO_TURBO") {
+      setTimeout(() => {
+        streamNeuralSynthesis(safeClaim, data, data.receipts || []);
+      }, 400);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
