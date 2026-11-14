@@ -4,12 +4,13 @@ setlocal enabledelayedexpansion
 set "SCRIPT_DIR=%~dp0"
 set "DESKTOP_DIR=%SCRIPT_DIR%desktop"
 
-title Fokk Shield Browser v1.3.0
+title Fokk Shield Browser v2.4.0 (Pro Reality Engine)
 
 echo ========================================================
-echo             FOKK SHIELD BROWSER v1.3.0
+echo             FOKK SHIELD BROWSER v2.4.0
 echo       Fast, Zero-Ad, Privacy Desktop Browser
-echo       [Live Dev/Runner: Synced with Release v1.3.0]
+echo    [Live Dev/Runner: Synced with Release v2.4.0]
+echo    [Multi-Layer Reality Engine & Wire Feeds Active]
 echo ========================================================
 echo.
 
@@ -24,7 +25,10 @@ if not exist "%DESKTOP_DIR%" (
 
 cd /d "%DESKTOP_DIR%"
 
-REM 2. Check Node.js installation
+REM 2. Clean up any dangling orphan electron instances to prevent locked cache
+taskkill /F /IM electron.exe >nul 2>&1
+
+REM 3. Check Node.js installation
 where node >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Node.js is not installed or not found in system PATH.
@@ -35,7 +39,7 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-REM 3. Check npm installation
+REM 4. Check npm installation
 where npm >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] npm is not found in your system PATH.
@@ -45,7 +49,7 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-REM 4. Verify dependencies
+REM 5. Verify dependencies
 if not exist "node_modules" (
     echo [INFO] Dependencies not found. Installing node packages...
     call npm install
@@ -71,8 +75,8 @@ if not exist "node_modules" (
     )
 )
 
-REM 5. Launch Fokk Browser
-echo [INFO] Starting Fokk Browser...
+REM 6. Launch Fokk Browser
+echo [INFO] Starting fresh Fokk Browser instance...
 echo.
 
 if "%~1"=="" (
