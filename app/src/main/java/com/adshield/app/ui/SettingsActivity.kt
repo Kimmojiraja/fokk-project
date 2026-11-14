@@ -34,7 +34,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupMediaSettings() {
-        val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+        val prefs = getSharedPreferences("fokk_browser_settings_v2", Context.MODE_PRIVATE)
         binding.switchBackgroundPlayback.isChecked = prefs.getBoolean("fokk_background_audio", true)
         binding.switchBackgroundPlayback.setOnCheckedChangeListener { _, checked ->
             prefs.edit().putBoolean("fokk_background_audio", checked).apply()
