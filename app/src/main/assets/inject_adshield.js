@@ -621,10 +621,12 @@
             };
 
             // YouTube Shorts Tap-to-Pause Handler
-            // Allows tapping anywhere on a Short video to toggle play/pause cleanly
-            // without interfering with swipe reels, comments, like buttons, or audio.
+            // Silky smooth single-tap play/pause without opening description drawers,
+            // double-toggling, or interfering with vertical swipe reels, comments, or like buttons.
             let shortsTouchX = 0, shortsTouchY = 0, shortsTouchTime = 0;
+            let shortsTapHandled = false;
             let shortsLastToggleTime = 0;
+
             window.addEventListener('touchstart', function(e) {
                 if (!window.location.pathname.includes('/shorts')) return;
                 if (e.touches && e.touches.length === 1) {
@@ -642,14 +644,13 @@
                 const dx = Math.abs(e.changedTouches[0].clientX - shortsTouchX);
                 const dy = Math.abs(e.changedTouches[0].clientY - shortsTouchY);
 
-                // Tap detection: short duration, minimal displacement (< 20px)
-                if (dt < 400 && dx < 20 && dy < 20) {
+                // Precise tap detection: short touch duration (40-420ms) and minimal finger movement (< 18px)
+                if (dt >= 40 && dt < 420 && dx < 18 && dy < 18) {
                     const now = Date.now();
-                    if (now - shortsLastToggleTime < 300) return;
-                    shortsLastToggleTime = now;
+                    if (now - shortsLastToggleTime < 280) return;
 
                     const target = e.target;
-                    // Do not toggle if tapping interactive UI controls
+                    // Never intercept interactive UI controls (like, comments, share, channel link, subscribe, audio pivot)
                     if (target && target.closest && (
                         target.closest('button') ||
                         target.closest('a') ||
@@ -658,44 +659,71 @@
                         target.closest('ytm-pivot-bar-renderer') ||
                         target.closest('.reel-player-overlay-actions') ||
                         target.closest('#comments-button') ||
+                        target.closest('.metadata-container') ||
+                        target.closest('ytm-reel-player-header-renderer') ||
+                        target.closest('.reel-player-header') ||
                         target.closest('[aria-label*="Like" i]') ||
                         target.closest('[aria-label*="Dislike" i]') ||
                         target.closest('[aria-label*="Share" i]') ||
+                        target.closest('[aria-label*="Comments" i]') ||
                         target.closest('[aria-label*="Subscribe" i]')
                     )) {
                         return;
                     }
 
-                    // Toggle active Short video
+                    // Block synthetic click event from falling through to YouTube's native overlay
+                    if (e.cancelable) {
+                        e.preventDefault();
+                    }
+                    e.stopPropagation();
+                    shortsTapHandled = true;
+                    shortsLastToggleTime = now;
+
+                    // Locate the active visible Short video nearest to viewport vertical center
                     const vids = document.querySelectorAll('video');
+                    let activeVideo = null;
+                    const cy = window.innerHeight / 2;
                     for (let i = 0; i < vids.length; i++) {
                         const v = vids[i];
                         const r = v.getBoundingClientRect();
-                        if (r.top < window.innerHeight && r.bottom > 0 && r.height > 100) {
-                            if (v.paused) {
-                                userExplicitPaused = false;
-                                v.play().catch(function() {});
-                                const player = document.getElementById('movie_player') ||
-                                               v.closest('.html5-video-player') ||
-                                               document.querySelector('.html5-video-player');
-                                if (player && typeof player.playVideo === 'function') {
-                                    try { player.playVideo(); } catch (e) {}
-                                }
-                            } else {
-                                userExplicitPaused = true;
-                                v.pause();
-                                const player = document.getElementById('movie_player') ||
-                                               v.closest('.html5-video-player') ||
-                                               document.querySelector('.html5-video-player');
-                                if (player && typeof player.pauseVideo === 'function') {
-                                    try { player.pauseVideo(); } catch (e) {}
-                                }
-                            }
+                        if (r.top <= cy && r.bottom >= cy && r.height > 100) {
+                            activeVideo = v;
                             break;
                         }
                     }
+                    if (!activeVideo && vids.length > 0) {
+                        for (let i = 0; i < vids.length; i++) {
+                            const v = vids[i];
+                            const r = v.getBoundingClientRect();
+                            if (r.top < window.innerHeight && r.bottom > 0 && r.height > 100) {
+                                activeVideo = v;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (activeVideo) {
+                        if (activeVideo.paused) {
+                            userExplicitPaused = false;
+                            activeVideo.play().catch(function() {});
+                        } else {
+                            userExplicitPaused = true;
+                            activeVideo.pause();
+                        }
+                    }
                 }
-            }, { capture: true, passive: true });
+            }, { capture: true, passive: false });
+
+            // Suppress trailing click event following a handled Shorts tap
+            window.addEventListener('click', function(e) {
+                if (!window.location.pathname.includes('/shorts')) return;
+                if (shortsTapHandled) {
+                    shortsTapHandled = false;
+                    if (e.cancelable) e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                }
+            }, { capture: true, passive: false });
 
             // YouTube Resume & Foreground Playback Resync:
             // When app is minimized or user switches apps, video continues playing in background.
@@ -940,16 +968,14 @@
                     }, true);
                 });
 
-                // Detect actual user tap on player controls
-                let userTapTimer = null;
+                // Detect actual user tap on native player controls (YouTube, Vimeo, etc.)
                 ['pointerdown', 'touchstart', 'click'].forEach(function(evt) {
                     document.addEventListener(evt, function(e) {
                         const target = e.target;
-                        const isShorts = window.location.pathname.includes('/shorts');
-                        if (isShorts || (target && target.closest && target.closest('video, .ytp-play-button, .player-control-play-pause-icon, ytm-reel-player-overlay-renderer, .reel-player-overlay, ytm-reel-item-renderer, button[aria-label*="Pause" i], button[aria-label*="Play" i]'))) {
+                        if (target && target.closest && target.closest('.ytp-play-button, .player-control-play-pause-icon, button[aria-label*="Pause" i]')) {
                             userExplicitPaused = true;
-                            if (userTapTimer) clearTimeout(userTapTimer);
-                            userTapTimer = setTimeout(function() { userExplicitPaused = false; }, 3000);
+                        } else if (target && target.closest && target.closest('button[aria-label*="Play" i]')) {
+                            userExplicitPaused = false;
                         }
                     }, true);
                 });
@@ -2114,9 +2140,9 @@
         } catch (e) {}
     }
 
-    function hookVideoPlayback(video) {
-        if (!video || video.__fokk_hooked) return;
-        video.__fokk_hooked = true;
+    function hookMediaPlayback(media) {
+        if (!media || media.__fokk_hooked) return;
+        media.__fokk_hooked = true;
 
         let pendingState = false;
         const updateState = function() {
@@ -2124,22 +2150,32 @@
             pendingState = true;
             requestAnimationFrame(function() {
                 pendingState = false;
-                const isPlaying = !video.paused && !video.ended;
-                const hasActiveVideo = video.currentTime > 0 && !video.ended;
+                const isPlaying = !media.paused && !media.ended;
+                const isVideo = media.tagName === 'VIDEO';
+                const hasActiveVideo = isVideo && media.currentTime > 0 && !media.ended;
                 notifyNativePlayback(isPlaying, hasActiveVideo);
             });
         };
 
-        video.addEventListener('play', updateState);
-        video.addEventListener('playing', updateState);
-        video.addEventListener('pause', updateState);
-        video.addEventListener('ended', updateState);
-        video.addEventListener('emptied', updateState);
+        media.addEventListener('play', updateState);
+        media.addEventListener('playing', updateState);
+        media.addEventListener('pause', updateState);
+        media.addEventListener('ended', updateState);
+        media.addEventListener('emptied', updateState);
 
-        if (!video.paused && !video.ended) {
-            notifyNativePlayback(true, true);
+        if (!media.paused && !media.ended) {
+            notifyNativePlayback(true, media.tagName === 'VIDEO');
         }
     }
+    const hookVideoPlayback = hookMediaPlayback;
+
+    try {
+        const origMediaPlay = HTMLMediaElement.prototype.play;
+        HTMLMediaElement.prototype.play = function() {
+            hookMediaPlayback(this);
+            return origMediaPlay.apply(this, arguments);
+        };
+    } catch (e) {}
 
     // =========================================================================
     // Heuristic AI Blocker: Dynamic Pattern & Overlay Trap Buster
@@ -2345,7 +2381,7 @@
                     defuseDeceptiveButtons();
                     unlockPageScrolling();
                 }
-                document.querySelectorAll('video').forEach(hookVideoPlayback);
+                document.querySelectorAll('video, audio').forEach(hookMediaPlayback);
             }, 500);
         });
         observer.observe(document.documentElement, {
@@ -2435,7 +2471,7 @@
             defuseDeceptiveButtons();
             unlockPageScrolling();
         }
-        document.querySelectorAll('video').forEach(hookVideoPlayback);
+        document.querySelectorAll('video, audio').forEach(hookMediaPlayback);
     }
 
     // Initial pass on DOMContentLoaded

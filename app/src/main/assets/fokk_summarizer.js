@@ -1,6 +1,6 @@
-// Fokk Summary - 100% In-Browser Intelligence Engine
-// Features: Executive narrative paragraph, deduplicated key takeaways, lead image extraction,
-// contextual deep-dive questions, and live typewriter generation animation. Zero cloud dependency.
+// Fokk Summary - High-Precision On-Device Intelligence Engine
+// Features: Zero cloud dependency, robust editorial DOM extraction, boilerplate & nav filtering,
+// source logo & metadata detection, deduplicated key takeaways, and executive briefing synthesis.
 
 (function() {
     'use strict';
@@ -25,13 +25,59 @@
         "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves"
     ]);
 
-    // Token overlap similarity to eliminate redundant/duplicate sentences
+    // Token overlap similarity to eliminate redundant sentences
     function calculateSimilarity(tokensA, tokensB) {
         if (!tokensA.size || !tokensB.size) return 0;
         let intersection = 0;
         tokensA.forEach(t => { if (tokensB.has(t)) intersection++; });
         const union = tokensA.size + tokensB.size - intersection;
         return union > 0 ? intersection / union : 0;
+    }
+
+    // Clean human-friendly Title extractor
+    function extractArticleTitle() {
+        let title = '';
+        const ogTitle = document.querySelector('meta[property="og:title"]')?.content ||
+                        document.querySelector('meta[name="twitter:title"]')?.content;
+        if (ogTitle && ogTitle.trim().length > 5) {
+            title = ogTitle.trim();
+        } else {
+            const h1 = document.querySelector('article h1, main h1, h1');
+            if (h1 && h1.innerText && h1.innerText.trim().length > 5) {
+                title = h1.innerText.trim();
+            } else {
+                title = (document.title || '').trim();
+            }
+        }
+
+        // Clean out site branding suffix like " - BBC News", " | Reuters", " :: The Verge"
+        title = title.replace(/\s*[-–—|:]\s*(BBC News|BBC|CNN|Reuters|The Guardian|The New York Times|The Verge|Bloomberg|TechCrunch|Forbes|YouTube|Wikipedia).*$/i, '').trim();
+        return title || 'Article Summary';
+    }
+
+    // Clean Source Name & Logo Extractor
+    function extractSourceMeta() {
+        const host = window.location.hostname.replace(/^www\./i, '');
+        let sourceName = document.querySelector('meta[property="og:site_name"]')?.content || '';
+        if (!sourceName) {
+            // Capitalize clean hostname (e.g. bbc.co.uk -> BBC, theverge.com -> The Verge)
+            const parts = host.split('.');
+            sourceName = parts.length > 1 ? parts[0] : host;
+            sourceName = sourceName.charAt(0).toUpperCase() + sourceName.slice(1);
+        }
+
+        let favicon = '';
+        const appleIcon = document.querySelector('link[rel="apple-touch-icon"]')?.href;
+        const icon = document.querySelector('link[rel="icon"]')?.href || document.querySelector('link[rel="shortcut icon"]')?.href;
+        if (appleIcon && appleIcon.startsWith('http')) {
+            favicon = appleIcon;
+        } else if (icon && icon.startsWith('http')) {
+            favicon = icon;
+        } else {
+            favicon = `https://www.google.com/s2/favicons?domain=${host}&sz=128`;
+        }
+
+        return { source: sourceName, sourceHost: host, favicon: favicon };
     }
 
     // Lead Image Extractor
@@ -54,15 +100,77 @@
         return null;
     }
 
+    // High-Precision Editorial Content Extractor
+    // Strips out all navigation junk, skip-links, breadcrumbs, social widgets, and boilerplate
+    function extractCleanEditorialParagraphs() {
+        const blacklistSelector = [
+            'header', 'footer', 'nav', 'aside',
+            '[role="navigation"]', '[role="banner"]', '[role="search"]', '[role="complementary"]',
+            '.navigation', '.nav', '.menu', '.navbar',
+            '.breadcrumb', '[aria-label*="breadcrumb" i]',
+            '.share', '.social', '.social-share', '[aria-label*="share" i]',
+            '.comments', '.related', '.sidebar',
+            '.cookie', '.banner', '.advert', '.ad', '.ads',
+            '.skip', '.skip-link', 'a[href*="#content"]', 'a[href*="#main"]',
+            '[aria-hidden="true"]', 'script', 'style', 'noscript'
+        ].join(', ');
+
+        // 1. Locate primary editorial container
+        const candidateContainers = document.querySelectorAll(
+            'article, [role="main"], main, .article-body, .story-body, .post-content, .entry-content, [itemprop="articleBody"], #main-content, #content'
+        );
+
+        let rootContainer = null;
+        for (let i = 0; i < candidateContainers.length; i++) {
+            const c = candidateContainers[i];
+            const pCount = c.querySelectorAll('p').length;
+            if (pCount >= 2 && c.innerText.length > 250) {
+                rootContainer = c;
+                break;
+            }
+        }
+
+        if (!rootContainer) {
+            rootContainer = document.body;
+        }
+
+        // 2. Query paragraphs strictly inside editorial context
+        const rawParagraphElements = rootContainer.querySelectorAll('p, blockquote');
+        const paragraphs = [];
+
+        rawParagraphElements.forEach(p => {
+            // Must NOT be inside blacklisted navigation/boilerplate
+            if (p.closest(blacklistSelector)) return;
+
+            const text = (p.innerText || '').replace(/\s+/g, ' ').trim();
+            if (text.length < 35) return; // Too short to be informative editorial body
+
+            // Discard link rolls and navigation lists (link text exceeds 35% of total text)
+            const links = p.querySelectorAll('a');
+            let linkCharCount = 0;
+            links.forEach(a => { linkCharCount += (a.innerText || '').length; });
+            if (linkCharCount / text.length > 0.35) return;
+
+            // Discard common web boilerplates
+            if (/^(sign in|subscribe|log in|cookie|all rights reserved|terms of use|privacy policy|share this|follow us on|read more:|photo by|getty images|advertisement)/i.test(text)) {
+                return;
+            }
+
+            paragraphs.push(text);
+        });
+
+        return paragraphs;
+    }
+
     // Contextual Curiosity Questions Generator
     function generateCuriosityQuestions(title, text, topEntities) {
         const questions = [];
         if (topEntities.length > 0) {
-            questions.push(`What is the broader impact of ${topEntities[0]} in this development?`);
+            questions.push(`What are the broader strategic implications of ${topEntities[0]} in this development?`);
         }
         if (/\b(?:AI|tech|model|software|data|google|microsoft|apple|nvidia|meta)\b/i.test(text)) {
             questions.push(`How does this development influence the future trajectory of the technology ecosystem?`);
-        } else if (/\b(?:economy|market|inflation|stocks|shares|crypto|price|growth|revenue)\b/i.test(text)) {
+        } else if (/\b(?:economy|market|inflation|stocks|shares|crypto|price|growth|revenue|budget|tax)\b/i.test(text)) {
             questions.push(`What are the key financial and market implications moving forward?`);
         } else if (/\b(?:health|disease|medical|doctor|treatment|hospital|patient|cure|spine)\b/i.test(text)) {
             questions.push(`How does this compare to current clinical practices and medical consensus?`);
@@ -72,42 +180,52 @@
         if (topEntities.length > 1) {
             questions.push(`How do the findings regarding ${topEntities[1]} connect to historical developments?`);
         } else {
-            questions.push(`What evidence or primary documentation supports these conclusions?`);
+            questions.push(`What primary documentation or official announcements corroborate these assertions?`);
         }
         return questions.slice(0, 3);
     }
 
     window.generatePageSummary = function() {
-        const title = (document.title || '').trim();
-        let text = window.__fokk_current_article_text || '';
-        if (!text || text.length < 200) {
-            const bodyClone = document.body.cloneNode(true);
-            bodyClone.querySelectorAll('script, style, noscript, nav, header, footer, aside, .ad, .ads, [role="navigation"], [role="banner"], [role="complementary"]').forEach(el => el.remove());
-            text = bodyClone.innerText;
-        }
+        const title = extractArticleTitle();
+        const sourceMeta = extractSourceMeta();
+        const cleanParagraphs = extractCleanEditorialParagraphs();
+        const fullArticleText = cleanParagraphs.join('\n\n');
 
-        // 1. Sentence Tokenization & Cleaning
-        const rawSentences = text
-            .split(/(?<=[.?!])\s+(?=[A-Z0-9\"\'\‘\“])/)
-            .map(s => s.replace(/\s+/g, ' ').trim())
-            .filter(s => s.length >= 40 && s.length <= 320 &&
-                         !s.includes('{') && !s.includes('function(') &&
-                         !/^(sign in|subscribe|cookies|terms|privacy|copyright|all rights reserved|click here|follow us)/i.test(s));
+        // Sentence Tokenization from genuine editorial paragraphs
+        const rawSentences = [];
+        cleanParagraphs.forEach(para => {
+            const sentences = para
+                .split(/(?<=[.?!])\s+(?=[A-Z0-9\"\'\‘\“])/)
+                .map(s => s.replace(/\s+/g, ' ').trim())
+                .filter(s => s.length >= 35 && s.length <= 320 &&
+                             !s.includes('{') && !s.includes('function(') &&
+                             !/^(sign in|subscribe|cookies|terms|privacy|copyright|all rights reserved|click here|follow us)/i.test(s));
+            rawSentences.push(...sentences);
+        });
+
+        const totalWords = fullArticleText.split(/\s+/).filter(Boolean).length;
+        const readingTimeMin = Math.max(1, Math.round(totalWords / 200));
+        const readingTime = `${readingTimeMin} min read`;
+        const leadImage = extractLeadImage();
 
         if (rawSentences.length === 0) {
             return {
                 title: title,
+                source: sourceMeta.source,
+                sourceHost: sourceMeta.sourceHost,
+                favicon: sourceMeta.favicon,
                 executiveSummary: "Page does not contain enough clean textual content to synthesize a Fokk Summary.",
-                bullets: ["Insufficient body text found on this webpage."],
+                summary: "Page does not contain enough clean textual content to synthesize a Fokk Summary.",
+                bullets: ["Insufficient editorial body text found on this webpage."],
                 metrics: [],
                 followUpQuestions: [],
-                leadImage: null,
-                readingTime: "1 min",
-                wordCount: 0
+                leadImage: leadImage,
+                readingTime: readingTime,
+                wordCount: totalWords
             };
         }
 
-        // 2. Word Frequencies & Entities
+        // Word Frequencies & Significant Named Entities
         const titleTokens = new Set((title.toLowerCase().match(/\b[a-z]{3,}\b/g) || []).filter(w => !STOP_WORDS.has(w)));
         const wordFreq = {};
         const entityCounts = {};
@@ -129,7 +247,7 @@
             .map(e => e[0])
             .slice(0, 5);
 
-        // 3. Sentence Scoring
+        // Sentence Scoring
         const scoredSentences = rawSentences.map((s, idx) => {
             const words = (s.toLowerCase().match(/\b[a-z]{3,}\b/g) || []).filter(w => !STOP_WORDS.has(w));
             let score = 0;
@@ -141,11 +259,13 @@
 
             score = score / Math.sqrt(words.length || 1);
 
-            if (idx === 0) score *= 2.3;
-            else if (idx === 1) score *= 1.9;
-            else if (idx < 5) score *= 1.4;
+            // Lead paragraphs carry core news facts
+            if (idx === 0) score *= 2.0;
+            else if (idx === 1) score *= 1.7;
+            else if (idx < 5) score *= 1.35;
 
-            if (/\d+%|\$\d+|\b\d{4}\b|\b\d+(?:\.\d+)?\s*(?:billion|million|trillion|percent|users|shares|record|study|confirmed)\b/i.test(s)) {
+            // Fact, data, and metric bonus
+            if (/\d+%|\$\d+|\b\d{4}\b|\b\d+(?:\.\d+)?\s*(?:billion|million|trillion|percent|users|shares|record|study|confirmed|report)\b/i.test(s)) {
                 score *= 1.35;
             }
 
@@ -157,32 +277,33 @@
             };
         });
 
-        // 4. Non-Redundant Selection (Deduplication)
+        // Non-Redundant Selection (Deduplication)
         scoredSentences.sort((a, b) => b.score - a.score);
         const selected = [];
 
         for (const item of scoredSentences) {
             let isDuplicate = false;
             for (const prev of selected) {
-                if (calculateSimilarity(item.tokens, prev.tokens) > 0.42) {
+                if (calculateSimilarity(item.tokens, prev.tokens) > 0.40) {
                     isDuplicate = true;
                     break;
                 }
             }
             if (!isDuplicate) {
                 selected.push(item);
-                if (selected.length >= 4) break;
+                if (selected.length >= 5) break;
             }
         }
         selected.sort((a, b) => a.index - b.index);
 
-        // 5. Synthesize Executive Narrative Paragraph in its own distinct voice
+        // Synthesize Executive Brief (Cohesive 1-2 sentence narrative)
         let executiveSummary = "";
         if (selected.length > 0) {
             const lead = selected[0].sentence.replace(/^[\s“"‘']+/, '').replace(/[\s”"’']+$/, '');
             const second = selected.length > 1 ? selected[1].sentence.replace(/^[\s“"‘']+/, '').replace(/[\s”"’']+$/, '') : '';
-            if (second && !second.toLowerCase().includes(lead.slice(0, 30).toLowerCase())) {
-                executiveSummary = `${lead} Furthermore, ${second.charAt(0).toLowerCase() + second.slice(1)}`;
+            if (second && !second.toLowerCase().includes(lead.slice(0, 25).toLowerCase())) {
+                const secondClean = second.charAt(0).toLowerCase() + second.slice(1);
+                executiveSummary = `${lead} Furthermore, ${secondClean}`;
             } else {
                 executiveSummary = lead;
             }
@@ -190,27 +311,29 @@
             executiveSummary = rawSentences[0];
         }
 
+        // Key Insights & Analysis bullets (distinct takeaways)
         const bullets = selected.map(item => item.sentence);
 
-        // 6. Extract Key Figures & Metrics
+        // Extract Key Figures & Metrics
         const metricRegex = /(?:\$\d+(?:\.\d+)?\s*(?:billion|million|trillion|k|m|b)?|\d+(?:\.\d+)?%|\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b|\b20\d{2}\b)/gi;
-        const matches = text.match(metricRegex) || [];
+        const matches = fullArticleText.match(metricRegex) || [];
         const uniqueMetrics = Array.from(new Set(matches)).slice(0, 6);
 
-        const wordCount = text.split(/\s+/).length;
-        const readingTime = Math.max(1, Math.round(wordCount / 200)) + " min read";
-        const leadImage = extractLeadImage();
-        const followUpQuestions = generateCuriosityQuestions(title, text, topEntities);
+        const followUpQuestions = generateCuriosityQuestions(title, fullArticleText, topEntities);
 
         return {
             title: title,
+            source: sourceMeta.source,
+            sourceHost: sourceMeta.sourceHost,
+            favicon: sourceMeta.favicon,
             executiveSummary: executiveSummary,
+            summary: executiveSummary, // backward compatibility
             bullets: bullets,
             metrics: uniqueMetrics,
             followUpQuestions: followUpQuestions,
             leadImage: leadImage,
             readingTime: readingTime,
-            wordCount: wordCount
+            wordCount: totalWords
         };
     };
 
@@ -245,7 +368,7 @@
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
                             <span>FOKK SUMMARY</span>
                         </span>
-                        <span style="font-size: 11.5px; color: #94A3B8;">${data.readingTime} &bull; In-Browser &bull; Zero Cloud</span>
+                        <span style="font-size: 11.5px; color: #94A3B8;">${data.readingTime} &bull; ${data.source || data.sourceHost}</span>
                     </div>
                     <button onclick="document.getElementById('__fokk_summary_modal').remove()" style="background: rgba(255,255,255,0.08); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; font-size: 14px; cursor: pointer;">✕</button>
                 </div>
@@ -256,16 +379,16 @@
                     </div>
                 ` : ''}
 
-                <h3 style="color: #FFF; font-size: 16px; font-weight: 800; margin-bottom: 14px; line-height: 1.4;">${data.title || 'Executive Brief'}</h3>
+                <h3 style="color: #FFF; font-size: 17px; font-weight: 800; margin-bottom: 14px; line-height: 1.4;">${data.title || 'Executive Brief'}</h3>
 
-                <!-- Executive Paragraph with live typewriter animation -->
+                <!-- Executive Paragraph -->
                 <div style="background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.18); border-radius: 14px; padding: 14px; margin-bottom: 18px; line-height: 1.6; font-size: 13.5px; color: #E2E8F0;">
                     <span style="font-size: 10.5px; font-weight: 800; color: #00E5FF; letter-spacing: 0.8px; text-transform: uppercase; display: block; margin-bottom: 6px;">Executive Brief</span>
-                    <span id="__fokk_exec_text"></span><span id="__fokk_exec_cursor" style="color: #00E5FF; font-weight: bold;">▌</span>
+                    <span>${data.executiveSummary}</span>
                 </div>
 
-                <!-- Key Takeaways (Bullets) -->
-                <div id="__fokk_bullets_section" style="opacity: 0; transition: opacity 0.4s ease; display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
+                <!-- Key Takeaways -->
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
                     <span style="font-size: 11px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">Key Takeaways</span>
                     ${data.bullets.map(b => `
                         <div style="display: flex; gap: 10px; font-size: 13px; line-height: 1.5; background: rgba(255,255,255,0.03); padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
@@ -284,42 +407,9 @@
                     </div>
                 ` : ''}
 
-                ${data.followUpQuestions && data.followUpQuestions.length > 0 ? `
-                    <div style="margin-bottom: 20px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08);">
-                        <span style="font-size: 10.5px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 8px;">Deep-Dive Questions</span>
-                        <div style="display: flex; flex-direction: column; gap: 6px;">
-                            ${data.followUpQuestions.map(q => `
-                                <div style="font-size: 12px; color: #00E5FF; background: rgba(0,229,255,0.04); border: 1px solid rgba(0,229,255,0.12); border-radius: 8px; padding: 7px 10px; cursor: default;">
-                                    <span>✦ ${q}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-
                 <button onclick="navigator.clipboard.writeText(${JSON.stringify((data.executiveSummary ? data.executiveSummary + '\n\n' : '') + data.bullets.join('\n\n'))}); this.innerText='Summary Copied!';" style="width: 100%; background: linear-gradient(135deg, #00E5FF, #3B82F6); border: none; border-radius: 12px; padding: 12px; color: #000; font-weight: 800; font-size: 13px; cursor: pointer; transition: transform 0.15s ease;">Copy Fokk Summary</button>
             </div>
         `;
         document.body.appendChild(modal);
-
-        // Live Typewriter Effect for Executive Summary
-        const execTarget = document.getElementById('__fokk_exec_text');
-        const execCursor = document.getElementById('__fokk_exec_cursor');
-        const bulletsSec = document.getElementById('__fokk_bullets_section');
-        const fullExec = data.executiveSummary || (data.bullets && data.bullets[0]) || "";
-        let cIdx = 0;
-
-        function typeNext() {
-            if (cIdx < fullExec.length) {
-                const chunk = fullExec.slice(cIdx, cIdx + 3);
-                cIdx += 3;
-                if (execTarget) execTarget.textContent += chunk;
-                setTimeout(typeNext, 12);
-            } else {
-                if (execCursor) execCursor.style.display = 'none';
-                if (bulletsSec) bulletsSec.style.opacity = '1';
-            }
-        }
-        typeNext();
     }
 })();

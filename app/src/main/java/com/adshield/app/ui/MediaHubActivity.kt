@@ -16,6 +16,7 @@ import android.speech.RecognizerIntent
 import android.app.DownloadManager
 import android.app.PictureInPictureParams
 import android.app.NotificationManager
+import android.app.NotificationChannel
 import android.app.PendingIntent
 import androidx.core.app.NotificationCompat
 import android.content.Context
@@ -69,6 +70,7 @@ import androidx.webkit.WebViewFeature
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -88,6 +90,8 @@ import com.adshield.app.AdShieldApp
 import com.adshield.app.MainActivity
 import com.adshield.app.R
 import com.adshield.app.model.OfflinePageStore
+import com.adshield.app.model.SavedSummariesStore
+import com.adshield.app.model.SavedSummary
 import com.adshield.app.util.AppUpdateManager
 import com.adshield.app.databinding.ActivityMediaHubBinding
 import com.adshield.app.databinding.ItemTabCardBinding
@@ -95,6 +99,7 @@ import com.adshield.app.databinding.SheetBrowserMenuBinding
 import com.adshield.app.databinding.SheetExtensionsManagerBinding
 import com.adshield.app.databinding.SheetHistoryBinding
 import com.adshield.app.databinding.SheetPrivacyAccountBinding
+import com.adshield.app.databinding.SheetSavedSummariesBinding
 import com.adshield.app.databinding.SheetTabSwitcherBinding
 import com.adshield.app.databinding.SheetGeneralSettingsBinding
 import com.adshield.app.databinding.SheetShieldSettingsBinding
@@ -634,6 +639,12 @@ open class MediaHubActivity : AppCompatActivity() {
     private val offlinePageStore: OfflinePageStore by lazy {
         OfflinePageStore(filesDir, localPrefs)
     }
+    private val savedSummariesStore: SavedSummariesStore by lazy {
+        SavedSummariesStore(this)
+    }
+    private var hasActiveVideo: Boolean = false
+    private var isActivityResumed: Boolean = false
+    private var lastGeneratedSummaryJson: String? = null
 
     private fun migrateLegacyBrowserPreferences() {
         val legacy = getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE)
@@ -1273,6 +1284,12 @@ open class MediaHubActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (intent?.getBooleanExtra("EXTRA_OPEN_AI_SUMMARY", false) == true) {
+            val summaryJson = intent.getStringExtra("EXTRA_AI_SUMMARY_JSON") ?: lastGeneratedSummaryJson
+            if (!summaryJson.isNullOrBlank()) {
+                mainHandler.postDelayed({ showAiSummarySheet(summaryJson) }, 250L)
+            }
+        }
         when (intent?.action) {
             ACTION_WIPE_GHOST_SESSION -> {
                 wipeAllPrivateTabsAndSession()
@@ -2714,13 +2731,9 @@ open class MediaHubActivity : AppCompatActivity() {
             }
 
             binding.topBar.animate().cancel()
+            binding.topBar.translationY = 0f
+            binding.topBar.alpha = 1f
             binding.topBar.visibility = View.VISIBLE
-            binding.topBar.animate()
-                .alpha(1f)
-                .translationY(0f)
-                .setDuration(160)
-                .setInterpolator(android.view.animation.DecelerateInterpolator())
-                .start()
         } else {
             if (browserChromeHidden || binding.urlInput.hasFocus()) return
             browserChromeHidden = true
@@ -2753,6 +2766,8 @@ open class MediaHubActivity : AppCompatActivity() {
     private fun createTab(url: String, isPrivate: Boolean = false): BrowserTab {
         val webView = FocusedPaneWebView(this)
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        webView.setBackgroundColor(android.graphics.Color.parseColor("#090D14"))
+        webView.overScrollMode = View.OVER_SCROLL_NEVER
         webView.layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT
@@ -2894,9 +2909,15 @@ open class MediaHubActivity : AppCompatActivity() {
                     }
                 }
                 if (view != null) {
+                    val isAuthHost = pageUrl?.let { url ->
+                        val host = runCatching { Uri.parse(url).host?.lowercase(Locale.ROOT) }.getOrNull().orEmpty()
+                        host.contains("x.com") || host.contains("twitter.com") || host.contains("arkoselabs.com") ||
+                        host.contains("google.") || host.contains("apple.") || host.contains("facebook.") ||
+                        host.contains("github.com") || host.contains("live.com") || host.contains("microsoft.com")
+                    } ?: false
                     CookieManager.getInstance().setAcceptThirdPartyCookies(
                         view,
-                        false
+                        isAuthHost
                     )
                 }
                 setBridgeEnabled(view, pageUrl)
@@ -3294,6 +3315,16 @@ open class MediaHubActivity : AppCompatActivity() {
                 message.sendToTarget()
                 updateTabCounter()
                 return true
+            }
+
+            override fun onCloseWindow(window: WebView?) {
+                runOnUiThread {
+                    val tabToClose = tabs.firstOrNull { it.webView === window }
+                    if (tabToClose != null) {
+                        val index = tabs.indexOf(tabToClose)
+                        closeTab(index)
+                    }
+                }
             }
 
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
@@ -5542,6 +5573,11 @@ open class MediaHubActivity : AppCompatActivity() {
             showSmartPageSummaryDialog()
         }
 
+        sheetBinding.btnToolSavedSummaries.setOnClickListener {
+            dialog.dismiss()
+            showSavedSummariesDialog()
+        }
+
         val updateAiBlockerUi: (Boolean) -> Unit = { active ->
             sheetBinding.textAiBlockerStatus.text = if (active) "ON" else "OFF"
             val color = if (active) android.graphics.Color.parseColor("#34D399") else android.graphics.Color.parseColor("#94A3B8")
@@ -6748,16 +6784,80 @@ open class MediaHubActivity : AppCompatActivity() {
         try {
             val json = JSONObject(summaryJson)
             val title = json.optString("title", "Article Summary")
+            val source = json.optString("source", "").ifBlank { json.optString("sourceHost", "") }
+            val sourceHost = json.optString("sourceHost", "")
+            val favicon = json.optString("favicon", "")
             val readingTime = json.optString("readingTime", "3 min read")
+            val wordCount = json.optInt("wordCount", 0)
             val bulletsArray = json.optJSONArray("bullets") ?: JSONArray()
             val metricsArray = json.optJSONArray("metrics") ?: JSONArray()
+            val explicitSummary = json.optString("executiveSummary", json.optString("summary", "")).trim()
+            val activeUrl = json.optString("url", activeWebView?.url.orEmpty())
+
+            lastGeneratedSummaryJson = summaryJson
+
+            // If user has switched apps or tabs or minimized the app, post system notification
+            if (!isActivityResumed || isFinishing || isDestroyed) {
+                postAiSummaryNotification(title, source.ifBlank { "Fokk AI" }, readingTime, explicitSummary, summaryJson)
+                return
+            }
 
             val sheetDialog = BottomSheetDialog(this)
             val sheetBinding = SheetAiSummaryBinding.inflate(layoutInflater)
             sheetDialog.setContentView(sheetBinding.root)
 
             sheetBinding.textSummaryTitle.text = title
-            sheetBinding.textSummaryMeta.text = "$readingTime • 100% On-Device AI • Zero Server Latency"
+            val metaText = if (wordCount > 0) "$readingTime • $wordCount words • 100% On-Device AI" else "$readingTime • 100% On-Device AI • Zero Server Latency"
+            sheetBinding.textSummaryMeta.text = metaText
+
+            if (source.isNotBlank()) {
+                sheetBinding.layoutSourceBadge.visibility = View.VISIBLE
+                sheetBinding.textSourceName.text = source
+            } else {
+                sheetBinding.layoutSourceBadge.visibility = View.GONE
+            }
+
+            // Save / Bookmark button logic
+            var isSaved = savedSummariesStore.isSaved(activeUrl)
+            val updateSaveBtnUi = {
+                if (isSaved) {
+                    sheetBinding.btnSaveSummary.setColorFilter(getColor(R.color.fokk_cyan))
+                } else {
+                    sheetBinding.btnSaveSummary.setColorFilter(getColor(R.color.text_secondary))
+                }
+            }
+            updateSaveBtnUi()
+
+            sheetBinding.btnSaveSummary.setOnClickListener {
+                if (isSaved) {
+                    val existing = savedSummariesStore.list().firstOrNull { it.url == activeUrl }
+                    if (existing != null) savedSummariesStore.delete(existing.id)
+                    isSaved = false
+                    updateSaveBtnUi()
+                    Toast.makeText(this, "Summary removed from Saved Summaries", Toast.LENGTH_SHORT).show()
+                } else {
+                    val bulletsList = mutableListOf<String>()
+                    for (i in 0 until bulletsArray.length()) bulletsList.add(bulletsArray.getString(i))
+                    val metricsList = mutableListOf<String>()
+                    for (i in 0 until metricsArray.length()) metricsList.add(metricsArray.getString(i))
+                    val item = SavedSummary(
+                        url = activeUrl,
+                        title = title,
+                        source = source,
+                        sourceHost = sourceHost,
+                        favicon = favicon,
+                        readingTime = readingTime,
+                        wordCount = wordCount,
+                        executiveSummary = explicitSummary,
+                        bullets = bulletsList,
+                        metrics = metricsList
+                    )
+                    savedSummariesStore.save(item)
+                    isSaved = true
+                    updateSaveBtnUi()
+                    Toast.makeText(this, "Summary saved to Saved Summaries archive", Toast.LENGTH_SHORT).show()
+                }
+            }
 
             var isMale = prefs.getBoolean("pref_tts_male_voice", true)
             val updateVoiceBtn = {
@@ -6777,7 +6877,6 @@ open class MediaHubActivity : AppCompatActivity() {
             val bulletsCount = bulletsArray.length()
 
             // Executive Summary Paragraph
-            val explicitSummary = json.optString("summary", "").trim()
             val execSummary = if (explicitSummary.isNotBlank()) {
                 explicitSummary
             } else if (bulletsCount > 0) {
@@ -6881,6 +6980,165 @@ open class MediaHubActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, "Could not render summary", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun postAiSummaryNotification(title: String, source: String, readingTime: String, summaryText: String, summaryJson: String) {
+        try {
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(
+                    "fokk_ai_summaries",
+                    "Fokk AI Summaries",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Notifications when Fokk AI article summaries finish synthesizing"
+                }
+                notificationManager.createNotificationChannel(channel)
+            }
+
+            val intent = Intent(this, MediaHubActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("EXTRA_OPEN_AI_SUMMARY", true)
+                putExtra("EXTRA_AI_SUMMARY_JSON", summaryJson)
+            }
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+            val pendingIntent = PendingIntent.getActivity(this, 9091, intent, flags)
+
+            val builder = NotificationCompat.Builder(this, "fokk_ai_summaries")
+                .setSmallIcon(R.drawable.ic_sparkle)
+                .setContentTitle("Fokk Summary: $title")
+                .setContentText("$readingTime • $source: Tap to view executive briefing")
+                .setStyle(NotificationCompat.BigTextStyle().bigText(if (summaryText.isNotBlank()) summaryText else "Your on-device executive briefing is ready."))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent)
+
+            notificationManager.notify(9091, builder.build())
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to post AI summary notification", e)
+        }
+    }
+
+    fun showSavedSummariesDialog() {
+        val dialog = BottomSheetDialog(this)
+        val b = SheetSavedSummariesBinding.inflate(layoutInflater)
+        dialog.setContentView(b.root)
+
+        b.btnCloseSavedSummaries.setOnClickListener { dialog.dismiss() }
+
+        val summaries = savedSummariesStore.list()
+        b.textSavedSummariesCount.text = "${summaries.size} summaries stored on-device"
+
+        if (summaries.isEmpty()) {
+            b.textEmptySavedSummaries.visibility = View.VISIBLE
+        } else {
+            b.textEmptySavedSummaries.visibility = View.GONE
+            val density = resources.displayMetrics.density
+            summaries.forEach { item ->
+                val card = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_stat_chip)
+                    setPadding((14 * density).toInt(), (12 * density).toInt(), (14 * density).toInt(), (12 * density).toInt())
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        bottomMargin = (10 * density).toInt()
+                    }
+                    isClickable = true
+                    isFocusable = true
+                }
+
+                val headerRow = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+                }
+
+                val sourceTv = TextView(this).apply {
+                    text = item.source.ifBlank { item.sourceHost.ifBlank { "Article" } }
+                    setTextColor(ContextCompat.getColor(this@MediaHubActivity, R.color.fokk_cyan))
+                    textSize = 11.5f
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                }
+
+                val readTimeTv = TextView(this).apply {
+                    text = item.readingTime
+                    setTextColor(ContextCompat.getColor(this@MediaHubActivity, R.color.text_secondary))
+                    textSize = 11f
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        marginEnd = (8 * density).toInt()
+                    }
+                }
+
+                val deleteBtn = ImageButton(this).apply {
+                    layoutParams = LinearLayout.LayoutParams((28 * density).toInt(), (28 * density).toInt())
+                    background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_circle_icon_button)
+                    setImageResource(R.drawable.ic_delete)
+                    setColorFilter(ContextCompat.getColor(this@MediaHubActivity, R.color.text_secondary))
+                    contentDescription = "Delete Summary"
+                    setOnClickListener {
+                        savedSummariesStore.delete(item.id)
+                        dialog.dismiss()
+                        showSavedSummariesDialog()
+                        Toast.makeText(this@MediaHubActivity, "Summary deleted", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                headerRow.addView(sourceTv)
+                headerRow.addView(readTimeTv)
+                headerRow.addView(deleteBtn)
+
+                val titleTv = TextView(this).apply {
+                    text = item.title
+                    setTextColor(ContextCompat.getColor(this@MediaHubActivity, R.color.text_primary))
+                    textSize = 14.5f
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    maxLines = 2
+                    ellipsize = TextUtils.TruncateAt.END
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        topMargin = (6 * density).toInt()
+                    }
+                }
+
+                val snippetTv = TextView(this).apply {
+                    text = item.executiveSummary.ifBlank { item.bullets.firstOrNull().orEmpty() }
+                    setTextColor(ContextCompat.getColor(this@MediaHubActivity, R.color.text_secondary))
+                    textSize = 12.5f
+                    maxLines = 2
+                    ellipsize = TextUtils.TruncateAt.END
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        topMargin = (4 * density).toInt()
+                    }
+                }
+
+                card.addView(headerRow)
+                card.addView(titleTv)
+                card.addView(snippetTv)
+
+                card.setOnClickListener {
+                    dialog.dismiss()
+                    showAiSummarySheet(item.toJson().toString())
+                }
+
+                b.layoutSavedSummariesList.addView(card)
+            }
+        }
+
+        dialog.show()
     }
 
     private fun configureTtsVoice(isMale: Boolean) {
@@ -7058,6 +7316,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        isActivityResumed = true
         activeWebView?.onResume()
         activeWebView?.resumeTimers()
         activeWebView?.evaluateJavascript(
@@ -7112,9 +7371,9 @@ open class MediaHubActivity : AppCompatActivity() {
         super.onUserLeaveHint()
         val currentUrl = activeTab?.url.orEmpty()
         val isStartPage = currentUrl.contains("fokk_start.html")
-        val recentMedia = (System.currentTimeMillis() - lastMediaPlayingTime) < 15000L
-        val isMediaSite = isThirdPartyMediaService(currentUrl) || currentUrl.contains("youtube.com") || currentUrl.contains("youtu.be") || currentUrl.contains("vimeo.com") || currentUrl.contains("twitch.tv")
-        if (!isStartPage && (isMediaPlaying || recentMedia || customView != null || isMediaSite)) {
+        val autoPipEnabled = prefs.getBoolean("fokk_auto_pip", true)
+        // PiP strictly triggers ONLY when an active video is actively playing!
+        if (!isStartPage && autoPipEnabled && isMediaPlaying && (hasActiveVideo || customView != null)) {
             enterPipMode()
         }
     }
@@ -7149,6 +7408,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        isActivityResumed = false
         persistSession()
         updateGhostModeNotification()
         val bgAudio = prefs.getBoolean("fokk_background_audio", true)
@@ -7644,12 +7904,15 @@ open class MediaHubActivity : AppCompatActivity() {
 
     fun onMediaPlaybackUpdated(isPlaying: Boolean, hasActiveVideo: Boolean, title: String? = null) {
         isMediaPlaying = isPlaying
+        this.hasActiveVideo = hasActiveVideo
         if (!title.isNullOrBlank()) {
             currentMediaTitle = title
         }
         val host = activeTab?.url?.let { runCatching { Uri.parse(it).host }.getOrNull() } ?: "Fokk Shield"
         val bgAudio = prefs.getBoolean("fokk_background_audio", true)
-        if (isPlaying || hasActiveVideo) {
+        val autoPipEnabled = prefs.getBoolean("fokk_auto_pip", true)
+
+        if (isPlaying) {
             stopPlaybackRunnable?.let { mainHandler.removeCallbacks(it) }
             stopPlaybackRunnable = null
             lastMediaPlayingTime = System.currentTimeMillis()
@@ -7663,16 +7926,16 @@ open class MediaHubActivity : AppCompatActivity() {
             if (mediaWakeLock?.isHeld == false) {
                 try { mediaWakeLock?.acquire(3 * 60 * 60 * 1000L) } catch (e: Exception) {}
             }
-            updateMediaSessionPlaybackState(isPlaying = isPlaying)
+            updateMediaSessionPlaybackState(isPlaying = true)
             if (bgAudio) {
-                com.adshield.app.service.FokkMediaPlaybackService.start(this, currentMediaTitle, host, isPlaying)
+                com.adshield.app.service.FokkMediaPlaybackService.start(this, currentMediaTitle, host, isPlaying = true)
             } else {
-                updateMediaPlaybackNotification(isPlaying = isPlaying, title = currentMediaTitle)
+                updateMediaPlaybackNotification(isPlaying = true, title = currentMediaTitle)
             }
         } else {
             stopPlaybackRunnable?.let { mainHandler.removeCallbacks(it) }
             val runnable = Runnable {
-                if (!isMediaPlaying && !hasActiveVideo) {
+                if (!isMediaPlaying) {
                     if (mediaWakeLock?.isHeld == true) {
                         try { mediaWakeLock?.release() } catch (e: Exception) {}
                     }
@@ -7692,10 +7955,12 @@ open class MediaHubActivity : AppCompatActivity() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val isStartPage = activeTab?.url?.contains("fokk_start.html") == true
-            val canAutoPip = (isPlaying || hasActiveVideo) && !isStartPage
+            val canAutoPip = isPlaying && (hasActiveVideo || customView != null) && !isStartPage && autoPipEnabled
             try {
+                val isShorts = activeTab?.url?.contains("/shorts/") == true || activeTab?.url?.contains("tiktok.com") == true || activeTab?.url?.contains("instagram.com/reels") == true
+                val ratio = if (isShorts) Rational(9, 16) else Rational(16, 9)
                 val builder = PictureInPictureParams.Builder()
-                    .setAspectRatio(Rational(16, 9))
+                    .setAspectRatio(ratio)
                     .setAutoEnterEnabled(canAutoPip)
                     .setSeamlessResizeEnabled(true)
                 setPictureInPictureParams(builder.build())
