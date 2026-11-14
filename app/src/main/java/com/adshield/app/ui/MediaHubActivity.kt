@@ -6852,7 +6852,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
             sheetBinding.btnCopySummary.setOnClickListener {
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("Fokk AI Summary", fullText.toString().trim()))
+                clipboard.setPrimaryClip(ClipData.newPlainText("Fokk Summary", fullText.toString().trim()))
                 Toast.makeText(this, "Summary copied to clipboard", Toast.LENGTH_SHORT).show()
                 sheetDialog.dismiss()
             }
@@ -7021,7 +7021,7 @@ open class MediaHubActivity : AppCompatActivity() {
             return
         }
 
-        Toast.makeText(this, "Generating on-device AI summary...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Generating Fokk Summary...", Toast.LENGTH_SHORT).show()
 
         webView.evaluateJavascript("if (typeof triggerFokkSummarizer === 'function') { triggerFokkSummarizer(); } else { 'loading'; }") { res ->
             if (res == null || res == "null" || res.contains("loading")) {
