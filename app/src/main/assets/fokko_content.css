@@ -119,6 +119,8 @@ body[style*="background-color: rgb(247, 249, 249)"] .tmb-inline-trigger:hover .t
   align-items: center;
   justify-content: center;
   padding: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
@@ -138,6 +140,7 @@ body[style*="background-color: rgb(247, 249, 249)"] .tmb-inline-trigger:hover .t
   width: 100%;
   max-width: 560px;
   max-height: 85vh;
+  margin: auto;
   display: flex;
   flex-direction: column;
   background: #000000;
@@ -682,4 +685,84 @@ body[style*="background-color: rgb(247, 249, 249)"] .tmb-inline-trigger:hover .t
   text-transform: uppercase;
   min-height: 16px;
   transition: opacity 0.2s ease;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE VIEWPORT & TOUCH RESPONSIVENESS (<= 540px)
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 540px) {
+  .tmb-modal-backdrop {
+    padding: 10px;
+    align-items: flex-end;
+  }
+
+  .tmb-forensic-card {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 90vh !important;
+    padding: 16px 14px 14px 14px !important;
+    border-radius: 16px 16px 12px 12px !important;
+    margin: 0 !important;
+  }
+
+  #tmb-modal-body {
+    max-height: calc(90vh - 65px) !important;
+    padding-right: 4px !important;
+  }
+
+  .tmb-brand-title {
+    font-size: 13px !important;
+  }
+
+  .tmb-brand-sub {
+    font-size: 8.5px !important;
+  }
+
+  .tmb-verdict-line {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tmb-verdict-status {
+    font-size: 10.5px !important;
+  }
+
+  .tmb-confidence-badge {
+    font-size: 9px !important;
+  }
+
+  .tmb-claim-text {
+    font-size: 12.5px !important;
+    line-height: 1.45 !important;
+  }
+
+  .tmb-forensic-summary {
+    font-size: 13px !important;
+    line-height: 1.55 !important;
+  }
+
+  .tmb-receipt-quote-text {
+    font-size: 11px !important;
+  }
+
+  .tmb-action-footer {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding-top: 10px !important;
+  }
+
+  .tmb-btn-secondary,
+  .tmb-btn-primary {
+    flex: 1 1 calc(50% - 6px) !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 7px 8px !important;
+    font-size: 11px !important;
+  }
+
+  .tmb-footer-watermark {
+    font-size: 9.5px !important;
+    margin-bottom: 10px !important;
+  }
 }
