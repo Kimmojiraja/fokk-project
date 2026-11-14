@@ -231,19 +231,6 @@
                         android:src="@drawable/ic_arrow_forward"
                         app:tint="@color/text_secondary" />
                 </LinearLayout>
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="Offline license &amp; privacy cloaking"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="11.5sp" />
-                    </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_arrow_forward"
-                        app:tint="@color/text_secondary" />
-                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
