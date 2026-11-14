@@ -1,6 +1,6 @@
 {
-  "versionCode": 241,
-  "versionName": "2.4.1",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.1/app-debug.apk",
-  "changelog": "- YouTube Shorts Tap-to-Pause: Fix foreground pause suppression and synchronize HTML5 video with YouTube player state without restarting playback.\n- Sleek Dark UI: Swapped glowing white backgrounds and black icons to professional dark surfaces (#141720 / #16161A) with crisp white icons across bottom menu nav and start page action discs.\n- Realistic Shield Protection Matrix: Dynamic baseline seeding for Social Trackers and Deceptive Traps with formatted count counters.\n- Fokk Pro Feature Hub: Elevated to top of Feature Hubs with golden PRO badge and direct sponsorship activation.\n- Resilient Stealth VPN & Proxy Engine: Graceful direct connection fallback (.addDirect()), Cloudflare 1.1.1.1 Encrypted DoH DNS resolver integration, Orbot Tor routing, and active connection status probing."
+  "versionCode": 242,
+  "versionName": "2.4.2",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.2/app-debug.apk",
+  "changelog": "- Real Stealth VPN & Orbot Engine: Streamlined VPN options, added active Orbot 127.0.0.1:9050 daemon detection with 1-tap launcher, and built-in live Public IP verification.\n- Dark Menu UI: Swapped all stark white circle backgrounds to sleek dark discs (#222225) with crisp white/accent icons.\n- Fokk Pro Royal Crown: Replaced sparkle with elegant royal gold crown emblem.\n- Shield Protection Matrix: Removed inflated mock counters and restored clean, realistic real-time tracker numbers."
 }

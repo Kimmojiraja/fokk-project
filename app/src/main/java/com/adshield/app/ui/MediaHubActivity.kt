@@ -5555,10 +5555,12 @@ open class MediaHubActivity : AppCompatActivity() {
         val activeVpnMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
         sheetBinding.textMenuVpnStatus.text = when (activeVpnMode) {
             com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "OFF"
-            com.adshield.app.engine.VpnEngine.VpnMode.WARP -> "WARP"
-            com.adshield.app.engine.VpnEngine.VpnMode.TOR -> "TOR"
-            com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> "CUSTOM"
+            com.adshield.app.engine.VpnEngine.VpnMode.TOR -> "TOR ON"
+            com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> "PROXY"
         }
+        sheetBinding.textMenuVpnStatus.setTextColor(
+            if (activeVpnMode != com.adshield.app.engine.VpnEngine.VpnMode.OFF) 0xFF34D399.toInt() else 0xFF00E5FF.toInt()
+        )
         sheetBinding.btnToolVpnMode.setOnClickListener {
             dialog.dismiss()
             showVpnModeSelector()
@@ -6210,18 +6212,18 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     private fun showVpnModeSelector() {
-        val modes = arrayOf(
-            "Direct Connection (Off)",
-            "Cloudflare WARP & DoH (1.1.1.1)",
-            "Tor / Orbot Onion Router (127.0.0.1:9050)",
-            "Custom SOCKS5 / HTTP Proxy"
-        )
         val current = com.adshield.app.engine.VpnEngine.getActiveMode(this)
+        val modes = arrayOf(
+            "Direct Connection (No VPN / Direct ISP)",
+            "Tor Onion Routing (Orbot 127.0.0.1:9050)",
+            "Custom SOCKS5 / HTTP Proxy",
+            "🔍 Verify My Current Public IP"
+        )
         val checked = when (current) {
             com.adshield.app.engine.VpnEngine.VpnMode.OFF -> 0
-            com.adshield.app.engine.VpnEngine.VpnMode.WARP -> 1
-            com.adshield.app.engine.VpnEngine.VpnMode.TOR -> 2
-            com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> 3
+            com.adshield.app.engine.VpnEngine.VpnMode.TOR -> 1
+            com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> 2
+            else -> 0
         }
 
         AlertDialog.Builder(this)
@@ -6232,17 +6234,84 @@ open class MediaHubActivity : AppCompatActivity() {
                     0 -> com.adshield.app.engine.VpnEngine.applyVpnMode(this, com.adshield.app.engine.VpnEngine.VpnMode.OFF) { _, msg ->
                         runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
                     }
-                    1 -> com.adshield.app.engine.VpnEngine.applyVpnMode(this, com.adshield.app.engine.VpnEngine.VpnMode.WARP) { _, msg ->
-                        runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                    1 -> {
+                        kotlin.concurrent.thread {
+                            val isRunning = com.adshield.app.engine.VpnEngine.isOrbotRunning()
+                            runOnUiThread {
+                                if (isRunning) {
+                                    com.adshield.app.engine.VpnEngine.applyVpnMode(this, com.adshield.app.engine.VpnEngine.VpnMode.TOR) { _, msg ->
+                                        runOnUiThread { Toast.makeText(this, "Tor Active: Routing through Orbot (127.0.0.1:9050)", Toast.LENGTH_LONG).show() }
+                                    }
+                                } else {
+                                    showOrbotGuideDialog()
+                                }
+                            }
+                        }
                     }
-                    2 -> com.adshield.app.engine.VpnEngine.applyVpnMode(this, com.adshield.app.engine.VpnEngine.VpnMode.TOR) { _, msg ->
-                        runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
-                    }
-                    3 -> showCustomProxyDialog()
+                    2 -> showCustomProxyDialog()
+                    3 -> showVerifyIpDialog()
                 }
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun showOrbotGuideDialog() {
+        val isInstalled = com.adshield.app.engine.VpnEngine.isOrbotInstalled(this)
+        val msg = if (isInstalled) {
+            "Orbot is installed on your phone, but the Tor daemon is not running on 127.0.0.1:9050.\n\nTo mask your IP address:\n1. Tap 'Launch Orbot' below.\n2. Tap the big 'Start' button inside Orbot.\n3. Return here and tap Tor mode again."
+        } else {
+            "Tor Onion Routing requires the free Orbot (Tor for Android) app running on your phone to provide the 127.0.0.1:9050 proxy.\n\nWould you like to install Orbot from Google Play to route your traffic through the Tor network?"
+        }
+
+        val positiveBtn = if (isInstalled) "Launch Orbot" else "Install Orbot"
+
+        AlertDialog.Builder(this)
+            .setTitle("Orbot Required for Tor Routing")
+            .setMessage(msg)
+            .setPositiveButton(positiveBtn) { _, _ ->
+                com.adshield.app.engine.VpnEngine.launchOrbot(this)
+            }
+            .setNeutralButton("Enable Anyway") { _, _ ->
+                com.adshield.app.engine.VpnEngine.applyVpnMode(this, com.adshield.app.engine.VpnEngine.VpnMode.TOR) { _, msg ->
+                    runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showVerifyIpDialog() {
+        val progress = android.app.ProgressDialog(this).apply {
+            setMessage("Checking current public IP...")
+            setCancelable(false)
+            show()
+        }
+        com.adshield.app.engine.VpnEngine.checkPublicIp { ip, err ->
+            runOnUiThread {
+                try { progress.dismiss() } catch (_: Exception) {}
+                val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
+                val isProxyOn = activeMode != com.adshield.app.engine.VpnEngine.VpnMode.OFF
+                if (ip != null) {
+                    val statusText = if (isProxyOn) {
+                        "🔒 VPN / Proxy Routing Active\nYour internet traffic is exiting through proxy IP $ip."
+                    } else {
+                        "⚠️ Direct Connection (No VPN)\nYour real public ISP IP address is $ip (Exposed)."
+                    }
+                    AlertDialog.Builder(this)
+                        .setTitle("Public IP Verification")
+                        .setMessage("Detected Public IP: $ip\nMode: ${activeMode.title}\n\n$statusText")
+                        .setPositiveButton("OK", null)
+                        .show()
+                } else {
+                    AlertDialog.Builder(this)
+                        .setTitle("IP Verification Failed")
+                        .setMessage("Could not query public IP ($err). Please check your internet connection.")
+                        .setPositiveButton("OK", null)
+                        .show()
+                }
+            }
+        }
     }
 
     private fun showCustomProxyDialog() {
