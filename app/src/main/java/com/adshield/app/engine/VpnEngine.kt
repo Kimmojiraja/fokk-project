@@ -1,23 +1,22 @@
 package com.adshield.app.engine
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
 import androidx.webkit.WebViewFeature
-import com.adshield.app.AdShieldApp
-import com.adshield.app.model.DnsOverHttpsEngine
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URI
 import java.util.concurrent.Executors
 
 /**
- * Fokk Browser VPN & Stealth Proxy Engine for Android.
+ * Fokk Browser Stealth VPN & Proxy Engine for Android.
  * Leverages AndroidX WebKit ProxyController to route browser traffic through:
- * - Cloudflare WARP local agent & Cloudflare 1.1.1.1 Encrypted DoH Resolver
- * - Orbot / Tor anonymity network (SOCKS5 127.0.0.1:9050, HTTP 127.0.0.1:8118)
- * - Custom SOCKS5, SOCKS, or HTTP/HTTPS proxy with graceful Direct fallback
- * Zero battery drain, zero accessibility service requirements, never offline.
+ * - Tor / Orbot onion routing network (SOCKS5 127.0.0.1:9050 / 9150)
+ * - Custom SOCKS5, SOCKS, or HTTP/HTTPS proxy
+ * - Live public IP verification and health checks
  */
 object VpnEngine {
 
@@ -27,8 +26,7 @@ object VpnEngine {
 
     enum class VpnMode(val id: String, val title: String, val proxyUrl: String) {
         OFF("off", "Direct Connection (VPN Disabled)", ""),
-        WARP("warp", "Cloudflare WARP & DoH (1.1.1.1)", "socks5://127.0.0.1:40000"),
-        TOR("tor", "Tor / Orbot Onion Router (127.0.0.1:9050)", "socks5://127.0.0.1:9050"),
+        TOR("tor", "Tor Onion Routing (Orbot 127.0.0.1:9050)", "socks5://127.0.0.1:9050"),
         CUSTOM("custom", "Custom SOCKS5 / HTTP Proxy", "")
     }
 
@@ -47,6 +45,75 @@ object VpnEngine {
     fun getCustomProxy(context: Context): String {
         val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
         return prefs.getString(KEY_CUSTOM_PROXY, "socks5://127.0.0.1:1080") ?: "socks5://127.0.0.1:1080"
+    }
+
+    fun isOrbotRunning(): Boolean {
+        return try {
+            Socket().use { s ->
+                s.connect(InetSocketAddress("127.0.0.1", 9050), 400)
+                true
+            }
+        } catch (_: Exception) {
+            try {
+                Socket().use { s ->
+                    s.connect(InetSocketAddress("127.0.0.1", 9150), 300)
+                    true
+                }
+            } catch (_: Exception) {
+                false
+            }
+        }
+    }
+
+    fun isOrbotInstalled(context: Context): Boolean {
+        return try {
+            context.packageManager.getPackageInfo("org.torproject.android", 0)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun launchOrbot(context: Context) {
+        val launchIntent = context.packageManager.getLaunchIntentForPackage("org.torproject.android")
+        if (launchIntent != null) {
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(launchIntent)
+        } else {
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=org.torproject.android")).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+            } catch (_: Exception) {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=org.torproject.android")).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+            }
+        }
+    }
+
+    fun checkPublicIp(onResult: (ip: String?, error: String?) -> Unit) {
+        executor.execute {
+            try {
+                val url = java.net.URL("https://api.ipify.org?format=json")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 5000
+                conn.readTimeout = 5000
+                conn.setRequestProperty("User-Agent", "Fokk-Shield-Privacy-Probe")
+                if (conn.responseCode == 200) {
+                    val text = conn.inputStream.bufferedReader().use { it.readText() }
+                    val json = org.json.JSONObject(text)
+                    val ip = json.optString("ip", "")
+                    onResult(ip, null)
+                } else {
+                    onResult(null, "HTTP ${conn.responseCode}")
+                }
+            } catch (e: Exception) {
+                onResult(null, e.localizedMessage ?: "Timeout")
+            }
+        }
     }
 
     fun applyVpnMode(
@@ -79,26 +146,6 @@ object VpnEngine {
         var probePort = 0
 
         when (mode) {
-            VpnMode.WARP -> {
-                // Configure Cloudflare 1.1.1.1 Encrypted DoH DNS resolver
-                try {
-                    AdShieldApp.instance.dohEngine.currentProvider = DnsOverHttpsEngine.Provider.CLOUDFLARE
-                    AdShieldApp.instance.dohEngine.isEnabled = true
-                    context.getSharedPreferences(AdShieldApp.PREFS_NAME, Context.MODE_PRIVATE)
-                        .edit()
-                        .putString("fokk_doh_provider", DnsOverHttpsEngine.PROVIDER_CLOUDFLARE)
-                        .putBoolean("fokk_doh_tunnel", true)
-                        .apply()
-                } catch (_: Exception) {}
-
-                // Cloudflare WARP local proxy ports (desktop agent, mobile proxy modes)
-                builder.addProxyRule("socks5://127.0.0.1:40000")
-                builder.addProxyRule("socks://127.0.0.1:40000")
-                builder.addProxyRule("http://127.0.0.1:40000")
-                builder.addProxyRule("socks5://127.0.0.1:1080")
-                probeHost = "127.0.0.1"
-                probePort = 40000
-            }
             VpnMode.TOR -> {
                 // Tor / Orbot standard SOCKS5 and HTTP ports
                 builder.addProxyRule("socks5://127.0.0.1:9050")
@@ -134,8 +181,7 @@ object VpnEngine {
             VpnMode.OFF -> {}
         }
 
-        // Essential: Add direct connection fallback so browser NEVER goes completely offline
-        // if the proxy daemon is unreachable or starting up.
+        // Direct fallback keeps the WebView alive if the proxy daemon disconnects
         builder.addDirect()
         builder.addBypassRule("<local>")
         builder.addBypassRule("localhost")
@@ -158,12 +204,10 @@ object VpnEngine {
 
                     val msg = if (reachable) {
                         "Connected to ${mode.title} · Traffic secured"
-                    } else if (mode == VpnMode.WARP) {
-                        "Cloudflare WARP DoH (1.1.1.1) Active · Encrypted DNS Enabled"
                     } else if (mode == VpnMode.TOR) {
-                        "Tor Mode configured (Ensure Orbot is started on 127.0.0.1:9050)"
+                        "Tor mode configured. (Make sure Orbot is active on 127.0.0.1:9050)"
                     } else {
-                        "Custom proxy configured · Direct fallback active"
+                        "Proxy configured · Ready"
                     }
 
                     onComplete?.invoke(true, msg)

@@ -172,10 +172,10 @@
                     <ImageView
                         android:layout_width="28dp"
                         android:layout_height="28dp"
-                        android:background="@drawable/bg_white_disc"
+                        android:background="@drawable/bg_circle_icon_button"
                         android:padding="5dp"
                         android:src="@drawable/ic_shield_check"
-                        app:tint="#000000" />
+                        app:tint="#34D399" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -314,10 +314,10 @@
                         <ImageView
                             android:layout_width="26dp"
                             android:layout_height="26dp"
-                            android:background="@drawable/bg_white_disc"
+                            android:background="@drawable/bg_circle_icon_button"
                             android:padding="5dp"
                             android:src="@drawable/ic_add"
-                            app:tint="#000000" />
+                            app:tint="#FFFFFF" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -344,10 +344,10 @@
                         <ImageView
                             android:layout_width="26dp"
                             android:layout_height="26dp"
-                            android:background="@drawable/bg_white_disc"
+                            android:background="@drawable/bg_circle_icon_button"
                             android:padding="5dp"
                             android:src="@drawable/ic_incognito"
-                            app:tint="#000000" />
+                            app:tint="#FFFFFF" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -374,10 +374,10 @@
                         <ImageView
                             android:layout_width="26dp"
                             android:layout_height="26dp"
-                            android:background="@drawable/bg_white_disc"
+                            android:background="@drawable/bg_circle_icon_button"
                             android:padding="5dp"
                             android:src="@drawable/ic_reader"
-                            app:tint="#000000" />
+                            app:tint="#FFFFFF" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -417,10 +417,10 @@
                         <ImageView
                             android:layout_width="26dp"
                             android:layout_height="26dp"
-                            android:background="@drawable/bg_white_disc"
+                            android:background="@drawable/bg_circle_icon_button"
                             android:padding="5dp"
                             android:src="@drawable/ic_desktop"
-                            app:tint="#000000" />
+                            app:tint="#FFFFFF" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -456,10 +456,10 @@
                         <ImageView
                             android:layout_width="26dp"
                             android:layout_height="26dp"
-                            android:background="@drawable/bg_white_disc"
+                            android:background="@drawable/bg_circle_icon_button"
                             android:padding="5dp"
                             android:src="@drawable/ic_dark_mode"
-                            app:tint="#000000" />
+                            app:tint="#FFFFFF" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -495,10 +495,10 @@
                         <ImageView
                             android:layout_width="26dp"
                             android:layout_height="26dp"
-                            android:background="@drawable/bg_white_disc"
+                            android:background="@drawable/bg_circle_icon_button"
                             android:padding="5dp"
                             android:src="@drawable/ic_share"
-                            app:tint="#000000" />
+                            app:tint="#FFFFFF" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -537,10 +537,10 @@
                         <ImageView
                             android:layout_width="26dp"
                             android:layout_height="26dp"
-                            android:background="@drawable/bg_white_disc"
+                            android:background="@drawable/bg_circle_icon_button"
                             android:padding="5dp"
                             android:src="@drawable/ic_home"
-                            app:tint="#000000" />
+                            app:tint="#FFFFFF" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -566,10 +566,10 @@
                         <ImageView
                             android:layout_width="26dp"
                             android:layout_height="26dp"
-                            android:background="@drawable/bg_white_disc"
+                            android:background="@drawable/bg_circle_icon_button"
                             android:padding="5dp"
                             android:src="@drawable/ic_add"
-                            app:tint="#000000" />
+                            app:tint="#FFFFFF" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -680,10 +680,10 @@
                         <ImageView
                             android:layout_width="26dp"
                             android:layout_height="26dp"
-                            android:background="@drawable/bg_white_disc"
+                            android:background="@drawable/bg_circle_icon_button"
                             android:padding="5dp"
                             android:src="@drawable/ic_split_deck"
-                            app:tint="#000000" />
+                            app:tint="#FFFFFF" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -711,10 +711,10 @@
                         <ImageView
                             android:layout_width="26dp"
                             android:layout_height="26dp"
-                            android:background="@drawable/bg_white_disc"
+                            android:background="@drawable/bg_circle_icon_button"
                             android:padding="5dp"
                             android:src="@drawable/ic_image"
-                            app:tint="#000000" />
+                            app:tint="#FFFFFF" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -750,10 +750,10 @@
                         <ImageView
                             android:layout_width="26dp"
                             android:layout_height="26dp"
-                            android:background="@drawable/bg_white_disc"
+                            android:background="@drawable/bg_circle_icon_button"
                             android:padding="5dp"
                             android:src="@drawable/ic_sparkle"
-                            app:tint="#000000" />
+                            app:tint="#FFFFFF" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -782,10 +782,10 @@
                             android:id="@+id/imgAiBlockerIcon"
                             android:layout_width="26dp"
                             android:layout_height="26dp"
-                            android:background="@drawable/bg_white_disc"
+                            android:background="@drawable/bg_circle_icon_button"
                             android:padding="5dp"
                             android:src="@drawable/ic_shield_check"
-                            app:tint="#000000" />
+                            app:tint="#34D399" />
 
                         <TextView
                             android:layout_width="0dp"
@@ -833,10 +833,10 @@
                         <ImageView
                             android:layout_width="26dp"
                             android:layout_height="26dp"
-                            android:background="@drawable/bg_white_disc"
+                            android:background="@drawable/bg_circle_icon_button"
                             android:padding="5dp"
                             android:src="@drawable/ic_code"
-                            app:tint="#000000" />
+                            app:tint="#FFFFFF" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -864,10 +864,10 @@
                         <ImageView
                             android:layout_width="26dp"
                             android:layout_height="26dp"
-                            android:background="@drawable/bg_white_disc"
+                            android:background="@drawable/bg_circle_icon_button"
                             android:padding="5dp"
                             android:src="@drawable/ic_lock"
-                            app:tint="#000000" />
+                            app:tint="#FFFFFF" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -974,7 +974,7 @@
                         android:layout_height="26dp"
                         android:background="@drawable/bg_circle_icon_button"
                         android:padding="5dp"
-                        android:src="@drawable/ic_sparkle"
+                        android:src="@drawable/ic_crown"
                         app:tint="#F59E0B" />
 
                     <LinearLayout

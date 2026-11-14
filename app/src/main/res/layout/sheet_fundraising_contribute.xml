@@ -139,10 +139,10 @@
                     <ImageView
                         android:layout_width="28dp"
                         android:layout_height="28dp"
-                        android:background="@drawable/bg_white_disc"
+                        android:background="@drawable/bg_circle_icon_button"
                         android:padding="5dp"
                         android:src="@drawable/ic_github"
-                        app:tint="#000000" />
+                        app:tint="#FFFFFF" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -196,7 +196,7 @@
                     <ImageView
                         android:layout_width="28dp"
                         android:layout_height="28dp"
-                        android:background="@drawable/bg_white_disc"
+                        android:background="@drawable/bg_circle_icon_button"
                         android:padding="5dp"
                         android:src="@drawable/ic_lock"
                         app:tint="#00E5FF" />
@@ -301,7 +301,7 @@
                     <TextView
                         android:layout_width="32dp"
                         android:layout_height="32dp"
-                        android:background="@drawable/bg_white_disc"
+                        android:background="@drawable/bg_circle_icon_button"
                         android:gravity="center"
                         android:text="₿"
                         android:textColor="#F59E0B"
@@ -369,7 +369,7 @@
                     <TextView
                         android:layout_width="32dp"
                         android:layout_height="32dp"
-                        android:background="@drawable/bg_white_disc"
+                        android:background="@drawable/bg_circle_icon_button"
                         android:gravity="center"
                         android:text="Ξ"
                         android:textColor="#627EEA"
@@ -437,7 +437,7 @@
                     <TextView
                         android:layout_width="32dp"
                         android:layout_height="32dp"
-                        android:background="@drawable/bg_white_disc"
+                        android:background="@drawable/bg_circle_icon_button"
                         android:gravity="center"
                         android:text="BNB"
                         android:textColor="#F3BA2F"
@@ -505,7 +505,7 @@
                     <TextView
                         android:layout_width="32dp"
                         android:layout_height="32dp"
-                        android:background="@drawable/bg_white_disc"
+                        android:background="@drawable/bg_circle_icon_button"
                         android:gravity="center"
                         android:text="SOL"
                         android:textColor="#14F195"
@@ -578,7 +578,7 @@
                 <ImageView
                     android:layout_width="26dp"
                     android:layout_height="26dp"
-                    android:background="@drawable/bg_white_disc"
+                    android:background="@drawable/bg_circle_icon_button"
                     android:padding="5dp"
                     android:src="@drawable/ic_code"
                     app:tint="#10B981" />
