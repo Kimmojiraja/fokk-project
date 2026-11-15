@@ -18,6 +18,8 @@ data class SavedSummary(
     val executiveSummary: String,
     val bullets: List<String>,
     val metrics: List<String>,
+    val leadImage: String = "",
+    val questions: List<String> = emptyList(),
     val timestamp: Long = System.currentTimeMillis()
 ) {
     fun toJson(): JSONObject {
@@ -34,6 +36,8 @@ data class SavedSummary(
             put("summary", executiveSummary)
             put("bullets", JSONArray(bullets))
             put("metrics", JSONArray(metrics))
+            put("leadImage", leadImage)
+            put("questions", JSONArray(questions))
             put("timestamp", timestamp)
         }
     }
@@ -54,6 +58,13 @@ data class SavedSummary(
                     metricsList.add(metricsArr.optString(i))
                 }
             }
+            val questionsList = mutableListOf<String>()
+            val questionsArr = json.optJSONArray("questions") ?: json.optJSONArray("followUpQuestions")
+            if (questionsArr != null) {
+                for (i in 0 until questionsArr.length()) {
+                    questionsList.add(questionsArr.optString(i))
+                }
+            }
             return SavedSummary(
                 id = json.optString("id", UUID.randomUUID().toString()),
                 url = json.optString("url", ""),
@@ -66,6 +77,8 @@ data class SavedSummary(
                 executiveSummary = json.optString("executiveSummary", json.optString("summary", "")),
                 bullets = bulletsList,
                 metrics = metricsList,
+                leadImage = json.optString("leadImage", ""),
+                questions = questionsList,
                 timestamp = json.optLong("timestamp", System.currentTimeMillis())
             )
         }

@@ -124,12 +124,16 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnConfigureVpn.setOnClickListener {
             val modes = arrayOf(
                 "Direct Connection (Browser proxy off)",
+                "Tor Onion Network (Orbot / SOCKS5)",
+                "Fokk Secure Privacy Relay",
                 "Custom SOCKS / HTTP(S) Browser Proxy"
             )
             val currentMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
             val checkedIndex = when (currentMode) {
                 com.adshield.app.engine.VpnEngine.VpnMode.OFF -> 0
-                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> 1
+                com.adshield.app.engine.VpnEngine.VpnMode.TOR -> 1
+                com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> 2
+                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> 3
             }
 
             AlertDialog.Builder(this)
@@ -138,7 +142,9 @@ class SettingsActivity : AppCompatActivity() {
                     dialog.dismiss()
                     when (which) {
                         0 -> applyVpn(com.adshield.app.engine.VpnEngine.VpnMode.OFF)
-                        1 -> promptCustomProxy()
+                        1 -> applyVpn(com.adshield.app.engine.VpnEngine.VpnMode.TOR)
+                        2 -> applyVpn(com.adshield.app.engine.VpnEngine.VpnMode.RELAY)
+                        3 -> promptCustomProxy()
                     }
                 }
                 .setNegativeButton("Cancel", null)
@@ -150,6 +156,8 @@ class SettingsActivity : AppCompatActivity() {
         val mode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
         val text = when (mode) {
             com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "Active: Direct Connection (Off)"
+            com.adshield.app.engine.VpnEngine.VpnMode.TOR -> "Active: Tor Onion Network (${com.adshield.app.engine.VpnEngine.getTorEndpoint()})"
+            com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> "Active: Fokk Secure Privacy Relay"
             com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> "Active: Custom (${com.adshield.app.engine.VpnEngine.getCustomProxy(this)})"
         }
         binding.textVpnStatus.text = text

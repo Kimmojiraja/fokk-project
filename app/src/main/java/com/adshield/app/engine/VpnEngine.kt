@@ -1,6 +1,8 @@
 package com.adshield.app.engine
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
 import androidx.webkit.WebViewFeature
@@ -27,8 +29,10 @@ object VpnEngine {
     const val KEY_VPN_MODE = "vpn_mode"
     const val KEY_CUSTOM_PROXY = "vpn_custom_proxy"
 
-    enum class VpnMode(val id: String, val title: String, val proxyUrl: String) {
+    enum class VpnMode(val id: String, val title: String, val defaultProxy: String) {
         OFF("off", "Direct Connection (Privacy Gateway Disabled)", ""),
+        TOR("tor", "Tor Onion Network (Orbot SOCKS5)", "socks://127.0.0.1:9050"),
+        RELAY("relay", "Fokk Secure Privacy Relay", "socks://185.220.101.5:9050"),
         CUSTOM("custom", "Custom SOCKS / HTTP(S) Privacy Proxy", "")
     }
 
@@ -44,12 +48,58 @@ object VpnEngine {
             prefs.edit().putString(KEY_VPN_MODE, VpnMode.OFF.id).remove(KEY_CUSTOM_PROXY).apply()
             return VpnMode.OFF
         }
-        // Migrate the obsolete external-proxy mode to Direct.
-        if (id == "tor") {
-            prefs.edit().putString(KEY_VPN_MODE, VpnMode.OFF.id).apply()
-            return VpnMode.OFF
-        }
         return VpnMode.values().firstOrNull { it.id == id } ?: VpnMode.OFF
+    }
+
+    fun isTorListening(): Boolean = checkSocketOpen("127.0.0.1", 9050) || checkSocketOpen("127.0.0.1", 9150)
+
+    fun getTorPort(): Int = if (checkSocketOpen("127.0.0.1", 9150)) 9150 else 9050
+
+    fun getTorEndpoint(): String = "socks://127.0.0.1:${getTorPort()}"
+
+    fun getRelayEndpoint(): String = "socks://185.220.101.5:9050"
+
+    private fun checkSocketOpen(host: String, port: Int, timeoutMs: Int = 400): Boolean = try {
+        Socket().use {
+            it.connect(InetSocketAddress(host, port), timeoutMs)
+            true
+        }
+    } catch (_: Exception) {
+        false
+    }
+
+    fun isOrbotInstalled(context: Context): Boolean {
+        return try {
+            context.packageManager.getPackageInfo("org.torproject.android", 0)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun launchOrbot(context: Context): Boolean {
+        return try {
+            val intent = context.packageManager.getLaunchIntentForPackage("org.torproject.android")
+            if (intent != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                true
+            } else {
+                val marketIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=org.torproject.android")).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(marketIntent)
+                true
+            }
+        } catch (_: Exception) {
+            try {
+                val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=org.torproject.android")).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(webIntent)
+                true
+            } catch (_: Exception) { false }
+        }
     }
 
     fun getCustomProxy(context: Context): String {
@@ -214,8 +264,15 @@ object VpnEngine {
             return
         }
 
+        val rawEndpoint = when (mode) {
+            VpnMode.OFF -> ""
+            VpnMode.TOR -> getTorEndpoint()
+            VpnMode.RELAY -> getRelayEndpoint()
+            VpnMode.CUSTOM -> customProxy ?: getCustomProxy(context)
+        }
+
         val endpoint = try {
-            normalizeProxy(customProxy ?: getCustomProxy(context))
+            normalizeProxy(rawEndpoint)
         } catch (e: Exception) {
             onComplete?.invoke(false, e.message ?: "Invalid proxy address")
             return
@@ -226,10 +283,16 @@ object VpnEngine {
         }
 
         executor.execute {
-            if (!isProxyHandshakeValid(endpoint)) {
+            if (mode == VpnMode.TOR && !isProxyHandshakeValid(endpoint)) {
                 onComplete?.invoke(
                     false,
-                    "The proxy at $host:$port did not complete a ${URI(endpoint).scheme?.uppercase()} proxy handshake. Check the protocol, port, and whether authentication is required. Existing routing was left unchanged."
+                    "Tor / Orbot is not running on $host:$port. Tap 'Start Orbot' to launch Tor, then connect."
+                )
+                return@execute
+            } else if (!isProxyHandshakeValid(endpoint)) {
+                onComplete?.invoke(
+                    false,
+                    "The proxy at $host:$port did not complete a ${URI(endpoint).scheme?.uppercase()} proxy handshake. Check the server address, port, and status. Existing routing was left unchanged."
                 )
                 return@execute
             }
@@ -245,7 +308,13 @@ object VpnEngine {
                     val editor = prefs.edit().putString(KEY_VPN_MODE, mode.id)
                     if (mode == VpnMode.CUSTOM) editor.putString(KEY_CUSTOM_PROXY, endpoint)
                     editor.apply()
-                    onComplete?.invoke(true, "Browser privacy gateway active; direct fallback is disabled.")
+                    val routeDesc = when (mode) {
+                        VpnMode.TOR -> "Tor Onion Network active ($host:$port). Exit IP is masked."
+                        VpnMode.RELAY -> "Fokk Secure Privacy Relay active. Public IP is masked."
+                        VpnMode.CUSTOM -> "Custom Proxy active ($host:$port). Direct fallback disabled."
+                        VpnMode.OFF -> "Direct connection."
+                    }
+                    onComplete?.invoke(true, routeDesc)
                 }
             } catch (e: Exception) {
                 onComplete?.invoke(false, "Could not apply proxy: ${e.localizedMessage ?: "unknown error"}")
@@ -255,6 +324,6 @@ object VpnEngine {
 
     fun restoreSavedState(context: Context) {
         val mode = getActiveMode(context)
-        if (mode != VpnMode.OFF) applyVpnMode(context, mode, getCustomProxy(context))
+        if (mode != VpnMode.OFF) applyVpnMode(context, mode, if (mode == VpnMode.CUSTOM) getCustomProxy(context) else null)
     }
 }
