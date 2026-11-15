@@ -2147,6 +2147,11 @@ body.theme-light .feature-modal-body div[style*="background: rgba(255,255,255,0.
     white-space: nowrap;
 }
 
+#btnVpnVerifyExit {
+    width: 100%;
+    margin: 10px 0 0;
+}
+
 .btn-save-custom-vpn:hover {
     background: #66EFFF;
 }

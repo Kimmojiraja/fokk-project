@@ -418,7 +418,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Fokk Stealth VPN &amp; Proxy"
+                        android:text="Browser Privacy Proxy"
                         android:textColor="@color/text_primary"
                         android:textSize="16sp"
                         android:textStyle="bold" />
@@ -428,7 +428,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
                         android:lineSpacingExtra="3dp"
-                        android:text="Route in-browser traffic through Cloudflare WARP, Tor / Orbot Onion network, or a custom SOCKS5 proxy."
+                        android:text="Route browser pages through a custom SOCKS or HTTP proxy. This does not change traffic from other apps."
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp" />
 
@@ -448,7 +448,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="44dp"
                         android:layout_marginTop="12dp"
-                        android:text="Select VPN Mode"
+                        android:text="Select Browser Proxy"
                         android:textSize="13sp"
                         app:cornerRadius="8dp" />
                 </LinearLayout>

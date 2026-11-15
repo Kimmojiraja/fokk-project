@@ -2,64 +2,37 @@ const EventEmitter = require('events');
 const path = require('path');
 const fs = require('fs');
 const net = require('net');
-const http = require('http');
 const https = require('https');
 const { spawn } = require('child_process');
 
 /**
- * Fokk Shield Tunnel — Open-Source Privacy VPN & Encrypted Relay Engine
- * Zero Server Cost: Leverages built-in high-speed stealth relay, embedded/local Tor SOCKS5 daemon,
- * Cloudflare WARP, and user custom SOCKS5/WireGuard configurations.
- * 100% Cross-Platform: Works out-of-the-box on Windows, Linux, and macOS without requiring any terminal or sudo setup!
+ * Browser-session privacy routing. Tor requires a compatible bundled runtime;
+ * custom mode requires a reachable SOCKS5 or HTTP proxy endpoint.
  */
 
 const PRESET_LOCATIONS = {
     'tor': {
         id: 'tor',
-        name: 'Stealth Onion Relay',
-        badge: 'Decentralized',
-        protocol: '3-Hop Onion Routing',
-        description: 'Multi-hop decentralized routing with zero logs and random exit IP.',
+        name: 'Tor Network',
+        badge: 'Onion route',
+        protocol: 'Tor SOCKS5',
+        description: 'Route browser requests through Tor. The exit location varies and is not guaranteed.',
         defaultPort: 9050,
-        region: 'Global Tor Exit Nodes',
+        region: 'Tor exit network',
         color: '#7C3AED',
         iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="6" r="6"/><circle cx="12" cy="2" r="2"/></svg>',
-        setupTip: 'Built-in standalone privacy relay. 100% zero-configuration.'
-    },
-    'auto': {
-        id: 'auto',
-        name: 'Auto Anycast Relay',
-        badge: 'High Speed',
-        protocol: 'Auto-detected WireGuard / Tor',
-        description: 'Auto-routes through fastest local stealth tunnel with auto-recovery.',
-        defaultPort: 9050,
-        region: 'Anycast Distributed Edge',
-        color: '#00E5FF',
-        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.4"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
-        setupTip: 'Auto-starts built-in high-speed stealth relay.'
-    },
-    'warp': {
-        id: 'warp',
-        name: 'Cloudflare WARP',
-        badge: 'WireGuard',
-        protocol: 'WireGuard Anycast (WARP)',
-        description: 'Direct high-speed tunnel via Cloudflare 1.1.1.1 WireGuard edge.',
-        defaultPort: 40001,
-        region: 'Cloudflare Edge Anycast',
-        color: '#F59E0B',
-        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><polygon points="12 11 9 16 13 16 11 21 16 14 12 14 13 11"/></svg>',
-        setupTip: 'Routes through local Cloudflare WARP client or built-in Anycast relay.'
+        setupTip: 'Uses the bundled Tor runtime where the current desktop build supports it.'
     },
     'custom': {
         id: 'custom',
         name: 'Custom Endpoint',
         badge: 'User Defined',
-        protocol: 'SOCKS5 / WireGuard .conf',
-        description: 'Paste any SOCKS5 proxy URL or WireGuard .conf profile.',
+        protocol: 'SOCKS5 / HTTP proxy',
+        description: 'Route this browser through a reachable proxy endpoint.',
         region: 'Custom Endpoint',
         color: '#10B981',
         iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><circle cx="12" cy="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
-        setupTip: 'Paste any SOCKS5 proxy (e.g. 127.0.0.1:1080) or WireGuard .conf.'
+        setupTip: 'Enter a SOCKS5 or HTTP proxy server and port.'
     }
 };
 
@@ -86,14 +59,26 @@ function checkSocketListening(port, host = '127.0.0.1', timeout = 350) {
     });
 }
 
-function findOpenPort(startPort = 9055) {
-    return new Promise((resolve) => {
-        const server = net.createServer();
-        server.listen(0, '127.0.0.1', () => {
-            const port = server.address().port;
-            server.close(() => resolve(port));
+function checkSocks5Listener(port, host = '127.0.0.1', timeout = 800) {
+    return new Promise(resolve => {
+        const socket = new net.Socket();
+        let response = Buffer.alloc(0);
+        let settled = false;
+        const finish = result => {
+            if (settled) return;
+            settled = true;
+            socket.destroy();
+            resolve(result);
+        };
+        socket.setTimeout(timeout);
+        socket.once('connect', () => socket.write(Buffer.from([5, 1, 0])));
+        socket.on('data', chunk => {
+            response = Buffer.concat([response, chunk]);
+            if (response.length >= 2) finish(response[0] === 5 && response[1] === 0);
         });
-        server.on('error', () => resolve(startPort));
+        socket.once('timeout', () => finish(false));
+        socket.once('error', () => finish(false));
+        try { socket.connect(port, host); } catch (_) { finish(false); }
     });
 }
 
@@ -104,72 +89,23 @@ class VpnEngine extends EventEmitter {
         this.configFile = path.join(this.userDataPath, 'fokk_vpn_config.json');
 
         this.state = 'disconnected'; // 'disconnected' | 'connecting' | 'connected' | 'error'
-        this.activeMode = 'auto';
+        this.activeMode = 'tor';
         this.killSwitch = true;
         this.customConfig = '';
         this.connectedAt = null;
-        this.realDirectIp = null;
         this.currentProxyRules = '';
         this.virtualIp = 'Direct (Real IP Exposed)';
         this.virtualCountry = 'Local Direct';
         this.ping = 0;
-        this.bytesTransferred = 0;
         this.errorMessage = null;
         this.activeSessions = new Set();
-        this.statsTimer = null;
         this.torProcess = null;
-        this.relayServer = null;
-        this.relayPort = null;
-        this.relaySockets = new Set();
+        this.routeHealthTimer = null;
 
         this.loadConfig();
-        this.detectRealDirectIp();
-
-        // Clean up embedded processes and relay servers on exit
+        // Stop the embedded route process when the browser exits.
         process.on('exit', () => {
             this.stopEmbeddedTor();
-            this.stopBuiltinRelay();
-        });
-    }
-
-    detectRealDirectIp() {
-        https.get('https://api.ipify.org?format=json', { timeout: 3500 }, (res) => {
-            let data = '';
-            res.on('data', chunk => { data += chunk; });
-            res.on('end', () => {
-                try {
-                    const parsed = JSON.parse(data);
-                    if (parsed && parsed.ip) {
-                        this.realDirectIp = parsed.ip.trim();
-                        if (this.state === 'disconnected') {
-                            this.virtualIp = `Direct (${this.realDirectIp} Exposed)`;
-                            this.emitStatus();
-                        }
-                    }
-                } catch (_) {}
-            });
-        }).on('error', () => {
-            // Fallback via curl if https.get fails
-            try {
-                const child = spawn('curl', ['-s', '--max-time', '4', 'https://api.ipify.org?format=json']);
-                let data = '';
-                child.stdout.on('data', chunk => { data += chunk; });
-                child.on('close', code => {
-                    if (code === 0 && data) {
-                        try {
-                            const parsed = JSON.parse(data);
-                            if (parsed && parsed.ip) {
-                                this.realDirectIp = parsed.ip.trim();
-                                if (this.state === 'disconnected') {
-                                    this.virtualIp = `Direct (${this.realDirectIp} Exposed)`;
-                                    this.emitStatus();
-                                }
-                            }
-                        } catch (_) {}
-                    }
-                });
-                child.on('error', () => {});
-            } catch (_) {}
         });
     }
 
@@ -177,9 +113,8 @@ class VpnEngine extends EventEmitter {
         try {
             if (fs.existsSync(this.configFile)) {
                 const data = JSON.parse(fs.readFileSync(this.configFile, 'utf8'));
-                if (data.activeMode && PRESET_LOCATIONS[data.activeMode]) {
-                    this.activeMode = data.activeMode;
-                }
+                if (data.activeMode === 'auto' || data.activeMode === 'warp') this.activeMode = 'tor';
+                else if (data.activeMode && PRESET_LOCATIONS[data.activeMode]) this.activeMode = data.activeMode;
                 if (typeof data.killSwitch === 'boolean') {
                     this.killSwitch = data.killSwitch;
                 }
@@ -232,7 +167,7 @@ class VpnEngine extends EventEmitter {
         return {
             state: this.state,
             activeMode: this.activeMode,
-            location: PRESET_LOCATIONS[this.activeMode] || PRESET_LOCATIONS.auto,
+            location: PRESET_LOCATIONS[this.activeMode] || PRESET_LOCATIONS.tor,
             virtualIp: this.virtualIp,
             virtualCountry: this.virtualCountry,
             ping: this.ping,
@@ -240,139 +175,35 @@ class VpnEngine extends EventEmitter {
             customConfig: this.customConfig,
             connectedAt: this.connectedAt,
             uptimeSeconds: this.connectedAt ? Math.floor((Date.now() - this.connectedAt) / 1000) : 0,
-            bytesTransferred: this.bytesTransferred,
             errorMessage: this.errorMessage
         };
     }
 
-    /**
-     * Built-in Zero-Log Stealth Relay Server (Pure Node.js)
-     * Provides 100% zero-configuration privacy, strips identifying headers,
-     * supports high-speed HTTP/HTTPS CONNECT tunnels, and works flawlessly across Windows, Linux & Mac!
-     */
-    async startBuiltinRelay() {
-        if (this.relayServer && this.relayPort) {
-            return this.relayPort;
-        }
-
-        const port = await findOpenPort(9055);
-        return new Promise((resolve) => {
-            const server = http.createServer((req, res) => {
-                // Strips client identifying leak headers on HTTP traffic
-                delete req.headers['x-forwarded-for'];
-                delete req.headers['x-real-ip'];
-                delete req.headers['client-ip'];
-                delete req.headers['via'];
-
-                let targetUrl = req.url;
-                if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
-                    targetUrl = 'http://' + (req.headers.host || '127.0.0.1') + targetUrl;
-                }
-
-                try {
-                    const parsedUrl = new URL(targetUrl);
-                    const options = {
-                        hostname: parsedUrl.hostname,
-                        port: parsedUrl.port || 80,
-                        path: parsedUrl.pathname + parsedUrl.search,
-                        method: req.method,
-                        headers: req.headers
-                    };
-
-                    const proxyReq = http.request(options, (proxyRes) => {
-                        res.writeHead(proxyRes.statusCode, proxyRes.headers);
-                        proxyRes.on('data', chunk => {
-                            this.bytesTransferred += chunk.length;
-                        });
-                        proxyRes.pipe(res);
-                    });
-
-                    proxyReq.on('error', () => {
-                        try { res.writeHead(502); res.end('Proxy Error'); } catch (_) {}
-                    });
-
-                    req.on('data', chunk => {
-                        this.bytesTransferred += chunk.length;
-                    });
-                    req.pipe(proxyReq);
-                } catch (_) {
-                    try { res.writeHead(400); res.end('Invalid URL'); } catch (_) {}
-                }
-            });
-
-            // HTTPS CONNECT Tunnel Handling (Secure Zero-Log Forwarding)
-            server.on('connect', (req, clientSocket, head) => {
-                const parts = req.url.split(':');
-                const targetHost = parts[0];
-                const targetPort = parseInt(parts[1], 10) || 443;
-
-                this.relaySockets.add(clientSocket);
-                clientSocket.on('close', () => this.relaySockets.delete(clientSocket));
-
-                const serverSocket = net.connect(targetPort, targetHost, () => {
-                    this.relaySockets.add(serverSocket);
-                    serverSocket.on('close', () => this.relaySockets.delete(serverSocket));
-
-                    clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
-                    if (head && head.length > 0) {
-                        serverSocket.write(head);
+    checkDirectPublicIp() {
+        return new Promise(resolve => {
+            const request = https.get('https://api4.ipify.org?format=json', { timeout: 5_000 }, response => {
+                let body = '';
+                response.on('data', chunk => { body += chunk; });
+                response.on('end', () => {
+                    try {
+                        if (response.statusCode !== 200) return resolve({ ip: null, error: `HTTP ${response.statusCode}` });
+                        const ip = JSON.parse(body).ip;
+                        resolve({ ip: typeof ip === 'string' ? ip : null, error: null });
+                    } catch (_) {
+                        resolve({ ip: null, error: 'Invalid response from the public IP check.' });
                     }
-
-                    clientSocket.on('data', chunk => {
-                        this.bytesTransferred += chunk.length;
-                    });
-                    serverSocket.on('data', chunk => {
-                        this.bytesTransferred += chunk.length;
-                    });
-
-                    serverSocket.pipe(clientSocket);
-                    clientSocket.pipe(serverSocket);
-                });
-
-                serverSocket.on('error', () => {
-                    try { clientSocket.end('HTTP/1.1 502 Bad Gateway\r\n\r\n'); } catch (_) {}
-                });
-
-                clientSocket.on('error', () => {
-                    try { serverSocket.destroy(); } catch (_) {}
                 });
             });
-
-            server.listen(port, '127.0.0.1', () => {
-                this.relayServer = server;
-                this.relayPort = port;
-                console.log(`[Fokk Relay] Built-in Stealth Relay listening on 127.0.0.1:${port}`);
-                resolve(port);
-            });
-
-            server.on('error', (err) => {
-                console.error('[Fokk Relay Error]', err);
-                resolve(null);
-            });
+            request.on('timeout', () => request.destroy(new Error('Public IP check timed out.')));
+            request.on('error', error => resolve({ ip: null, error: error.message || 'Public IP check failed.' }));
         });
-    }
-
-    stopBuiltinRelay() {
-        if (this.relaySockets) {
-            this.relaySockets.forEach(s => {
-                try { s.destroy(); } catch (_) {}
-            });
-            this.relaySockets.clear();
-        }
-        if (this.relayServer) {
-            try { this.relayServer.close(); } catch (_) {}
-            this.relayServer = null;
-            this.relayPort = null;
-        }
     }
 
     getEmbeddedTorPath() {
         // Do not attempt to run Linux Tor ELF binaries on Windows!
         if (process.platform === 'win32') {
             const winCandidates = [
-                path.resolve(__dirname, '..', 'bin', 'tor', 'tor.exe'),
-                'C:\\Program Files\\Tor Browser\\Browser\\TorBrowser\\Tor\\tor.exe',
-                'C:\\Program Files (x86)\\Tor Browser\\Browser\\TorBrowser\\Tor\\tor.exe'
+                path.resolve(__dirname, '..', 'bin', 'tor', 'tor.exe')
             ];
             for (const p of winCandidates) {
                 if (fs.existsSync(p)) return p;
@@ -413,12 +244,12 @@ class VpnEngine extends EventEmitter {
 
     async ensureTorRunning() {
         // 1. Check if port 9050 is already listening (system tor daemon)
-        if (await checkSocketListening(9050, '127.0.0.1', 400)) {
+        if (await checkSocks5Listener(9050, '127.0.0.1', 800)) {
             console.log('[Tor Engine] Reusing active Tor listener on port 9050');
             return 9050;
         }
         // 2. Check Tor Browser port 9150
-        if (await checkSocketListening(9150, '127.0.0.1', 400)) {
+        if (await checkSocks5Listener(9150, '127.0.0.1', 800)) {
             console.log('[Tor Engine] Reusing Tor Browser listener on port 9150');
             return 9150;
         }
@@ -480,7 +311,7 @@ class VpnEngine extends EventEmitter {
             for (let i = 0; i < 20; i++) {
                 if (spawnFailed) break;
                 await new Promise(r => setTimeout(r, 200));
-                if (await checkSocketListening(chosenPort, '127.0.0.1', 250)) {
+                if (await checkSocks5Listener(chosenPort, '127.0.0.1', 800)) {
                     return chosenPort;
                 }
             }
@@ -536,11 +367,17 @@ class VpnEngine extends EventEmitter {
     }
 
     async connect() {
+        this.stopRouteHealthMonitor();
         this.state = 'connecting';
         this.errorMessage = null;
+        this.connectedAt = null;
         this.emitStatus();
 
         try {
+            if (this.killSwitch) {
+                await this.applyProxyRules('127.0.0.1:9');
+            }
+            if (this.activeMode !== 'tor') await this.stopEmbeddedTor();
             let proxyRules = '';
             let locationName = '';
 
@@ -548,36 +385,19 @@ class VpnEngine extends EventEmitter {
                 const torPort = await this.ensureTorRunning();
                 if (torPort) {
                     proxyRules = `socks5://127.0.0.1:${torPort}`;
-                    locationName = 'Decentralized Tor Network';
+                    locationName = 'Tor network (exit varies)';
                 } else {
-                    throw new Error('The embedded Tor runtime is unavailable. Fokk did not enable a direct fallback.');
-                }
-            } else if (this.activeMode === 'auto') {
-                const torPort = await this.ensureTorRunning();
-                if (!torPort) throw new Error('No verified Fokk endpoint is provisioned. Direct traffic remains disabled.');
-                proxyRules = `socks5://127.0.0.1:${torPort}`;
-                locationName = 'Tor Decentralized Relay';
-            } else if (this.activeMode === 'warp') {
-                const hasWarp = await checkSocketListening(40001);
-                if (hasWarp) {
-                    proxyRules = 'socks5://127.0.0.1:40001';
-                    locationName = 'Cloudflare Edge Anycast';
-                } else {
-                    throw new Error('No WARP-compatible local endpoint is available. Fokk did not enable a direct fallback.');
+                    throw new Error('The bundled Tor runtime is unavailable on this desktop build. Routing was not enabled.');
                 }
             } else if (this.activeMode === 'custom') {
                 proxyRules = this.resolveCustomProxyRules();
                 if (!proxyRules) {
-                    throw new Error('Enter a reachable SOCKS5 or HTTP proxy. WireGuard profiles require the bundled desktop tunnel runtime.');
+                    throw new Error('Enter a SOCKS5 or HTTP proxy URL. WireGuard profiles are not supported in browser-proxy mode.');
                 }
 
-                const portMatch = proxyRules.match(/:(\d+)/);
-                if (portMatch) {
-                    const customPort = parseInt(portMatch[1], 10);
-                    const isListening = await checkSocketListening(customPort);
-                    if (!isListening) {
-                        throw new Error(`No proxy is listening on port ${customPort}. Routing was not enabled.`);
-                    }
+                const endpoint = this.getProxyEndpoint(proxyRules);
+                if (!endpoint || !await checkSocketListening(endpoint.port, endpoint.host, 1_500)) {
+                    throw new Error('The configured proxy endpoint is unreachable. Browser routing was not enabled.');
                 }
                 locationName = 'Custom Endpoint';
             }
@@ -592,88 +412,43 @@ class VpnEngine extends EventEmitter {
             this.state = 'connected';
             this.connectedAt = Date.now();
             this.virtualCountry = locationName;
-            this.virtualIp = 'Browser route connected — verify exit IP';
-            this.ping = Math.floor(18 + Math.random() * 16);
+            this.virtualIp = 'Route configured — verify exit IP';
+            this.ping = 0;
             this.errorMessage = null;
 
-            this.startStatsTimer();
+            this.startRouteHealthMonitor();
             this.emitStatus();
-
-            // This socket ping is informational only. Do not use Node's direct
-            // networking stack to claim a browser-proxy exit IP.
-            this.measureRealPing();
 
             return { success: true, status: this.getStatus() };
         } catch (err) {
             this.state = 'error';
             this.errorMessage = err.message || 'Connection failed';
+            this.connectedAt = null;
+            this.stopRouteHealthMonitor();
+            await this.stopEmbeddedTor();
+            if (this.killSwitch) {
+                try { await this.applyProxyRules('127.0.0.1:9'); } catch (_) {}
+            } else {
+                try { await this.applyProxyRules(''); } catch (_) {}
+            }
             this.emitStatus();
             return { success: false, status: this.getStatus(), error: this.errorMessage };
         }
-    }
-
-    measureRealPing() {
-        const start = Date.now();
-        const socket = new net.Socket();
-        socket.setTimeout(2000);
-        socket.once('connect', () => {
-            this.ping = Math.max(12, Date.now() - start);
-            socket.destroy();
-            this.emitStatus();
-        });
-        socket.once('timeout', () => {
-            socket.destroy();
-        });
-        socket.once('error', () => {});
-        try {
-            socket.connect(443, '1.1.1.1');
-        } catch (_) {}
-    }
-
-    refreshExitIp(proxyRules) {
-        if (!proxyRules) return;
-
-        // Fetch exit IP via public IP API
-        https.get('https://api.ipify.org?format=json', { timeout: 4000 }, (res) => {
-            let data = '';
-            res.on('data', chunk => { data += chunk; });
-            res.on('end', () => {
-                if (this.state === 'connected' && data) {
-                    try {
-                        const parsed = JSON.parse(data);
-                        if (parsed && parsed.ip) {
-                            const resolvedIp = parsed.ip.trim();
-                            if (this.realDirectIp && resolvedIp === this.realDirectIp) {
-                                this.virtualIp = '100% Encrypted Relay Active';
-                            } else {
-                                this.virtualIp = `${resolvedIp}`;
-                            }
-                            this.emitStatus();
-                        }
-                    } catch (_) {}
-                }
-            });
-        }).on('error', () => {
-            if (this.state === 'connected') {
-                this.virtualIp = '100% Masked (Zero-Log Relay)';
-                this.emitStatus();
-            }
-        });
     }
 
     async disconnect() {
         this.state = 'disconnected';
         this.connectedAt = null;
         this.errorMessage = null;
+        this.stopRouteHealthMonitor();
         this.currentProxyRules = '';
-        this.virtualIp = this.realDirectIp ? `Direct (${this.realDirectIp} Exposed)` : 'Direct (Real IP Exposed)';
+        this.virtualIp = 'Direct connection (IP not masked)';
         this.virtualCountry = 'Local Direct';
         this.ping = 0;
-        this.stopStatsTimer();
-        this.stopBuiltinRelay();
 
         // Restore direct connection on all tracked sessions
         await this.applyProxyRules('');
+        await this.stopEmbeddedTor();
 
         this.emitStatus();
         return { success: true, status: this.getStatus() };
@@ -684,87 +459,115 @@ class VpnEngine extends EventEmitter {
         // A WireGuard Endpoint is UDP, not a SOCKS server. Treating it as SOCKS
         // would leak/fail; a bundled native WireGuard runtime must own it.
         if (this.customConfig.includes('[Interface]') || this.customConfig.includes('[Peer]')) return '';
-        if (this.customConfig.startsWith('socks5://') || this.customConfig.startsWith('http://') || this.customConfig.startsWith('https://')) {
-            return this.customConfig;
+        if (/^socks5?:\/\//i.test(this.customConfig)) {
+            return this.customConfig.replace(/^socks:\/\//i, 'socks5://');
+        }
+        if (/^https:\/\//i.test(this.customConfig)) return '';
+        if (/^http:\/\//i.test(this.customConfig)) {
+            const proxy = new URL(this.customConfig);
+            if (!proxy.hostname || !proxy.port) return '';
+            return `http=${proxy.host};https=${proxy.host}`;
         }
         if (!this.customConfig.includes('=')) {
-            return `socks5=${this.customConfig}`;
+            return `socks5://${this.customConfig}`;
         }
         return this.customConfig;
     }
 
+    getProxyEndpoint(rules) {
+        try {
+            const firstRule = rules.split(';')[0];
+            const rawEndpoint = firstRule.includes('=') ? firstRule.slice(firstRule.indexOf('=') + 1) : firstRule;
+            const endpoint = rawEndpoint.includes('://') ? new URL(rawEndpoint) : new URL(`http://${rawEndpoint}`);
+            const port = Number(endpoint.port);
+            if (!endpoint.hostname || !Number.isInteger(port) || port < 1 || port > 65535) return null;
+            return { host: endpoint.hostname, port };
+        } catch (_) {
+            return null;
+        }
+    }
+
     formatProxyString(rules) {
         if (!rules || rules === 'direct://') return 'direct://';
+        if (/^socks5?:\/\//i.test(rules)) return rules;
         if (rules.includes('=')) return rules;
-        return `http=${rules};https=${rules};socks=${rules}`;
+        return `http=${rules};https=${rules}`;
     }
 
     async applyProxyRules(rules) {
-        this.currentProxyRules = rules || '';
         const proxyStr = this.formatProxyString(rules);
         const config = rules ? {
             proxyRules: proxyStr,
-            proxyBypassRules: '<local>;localhost;127.0.0.1;::1'
+            proxyBypassRules: '<local>,localhost,127.0.0.1,::1'
         } : {
             proxyRules: 'direct://',
             proxyBypassRules: ''
         };
 
-        const promises = [];
-        this.activeSessions.forEach(sess => {
-            try {
-                if (sess && typeof sess.setProxy === 'function') {
-                    promises.push(
-                        sess.setProxy(config)
-                            .then(() => {
-                                if (typeof sess.closeAllConnections === 'function') {
-                                    return sess.closeAllConnections();
-                                }
-                            })
-                            .catch(() => {})
-                    );
+        const sessions = [...this.activeSessions].filter(sess => sess && typeof sess.setProxy === 'function');
+        if (rules && sessions.length === 0) throw new Error('No browser network session is ready to accept the route.');
+        await Promise.all(sessions.map(async sess => {
+            await sess.setProxy(config);
+            if (typeof sess.closeAllConnections === 'function') await sess.closeAllConnections();
+        }));
+        this.currentProxyRules = rules || '';
+    }
+
+    startRouteHealthMonitor() {
+        this.stopRouteHealthMonitor();
+        this.routeHealthTimer = setInterval(async () => {
+            const routeGeneration = this.connectedAt;
+            if (this.state !== 'connected' || !routeGeneration) return;
+
+            let reachable = false;
+            if (this.activeMode === 'tor') {
+                const endpoint = this.getProxyEndpoint(this.currentProxyRules);
+                reachable = !!endpoint && await checkSocks5Listener(endpoint.port, endpoint.host, 1_000);
+            } else {
+                const endpoint = this.getProxyEndpoint(this.currentProxyRules);
+                reachable = !!endpoint && await checkSocketListening(endpoint.port, endpoint.host, 1_000);
+            }
+
+            if (!reachable && this.state === 'connected' && this.connectedAt === routeGeneration) {
+                this.state = 'error';
+                this.connectedAt = null;
+                this.errorMessage = 'The selected proxy stopped responding. Browser routing is still fail-closed.';
+                this.stopRouteHealthMonitor();
+                if (this.killSwitch) {
+                    try { await this.applyProxyRules('127.0.0.1:9'); } catch (_) {}
                 }
-            } catch (_) {}
-        });
-        await Promise.all(promises);
+                this.emitStatus();
+            }
+        }, 5_000);
+        if (this.routeHealthTimer.unref) this.routeHealthTimer.unref();
+    }
+
+    stopRouteHealthMonitor() {
+        if (this.routeHealthTimer) {
+            clearInterval(this.routeHealthTimer);
+            this.routeHealthTimer = null;
+        }
     }
 
     applyProxyToSession(sess) {
         if (!sess || typeof sess.setProxy !== 'function') return;
-        const isConnected = this.state === 'connected';
+        const routeRequired = ['connected', 'connecting', 'error'].includes(this.state);
         // A session added during a connected state must never silently become
         // direct if a route is missing. Port 9 is intentionally closed and
         // produces a visible failure until the selected tunnel is restored.
-        const rawRules = isConnected
-            ? (this.currentProxyRules || (this.killSwitch ? 'http=127.0.0.1:9;https=127.0.0.1:9;socks=127.0.0.1:9' : 'direct://'))
+        const rawRules = routeRequired
+            ? (this.currentProxyRules || (this.killSwitch ? '127.0.0.1:9' : 'direct://'))
             : 'direct://';
         const proxyStr = this.formatProxyString(rawRules);
 
         sess.setProxy({
             proxyRules: proxyStr,
-            proxyBypassRules: isConnected ? '<local>;localhost;127.0.0.1;::1' : ''
+            proxyBypassRules: routeRequired ? '<local>,localhost,127.0.0.1,::1' : ''
         }).then(() => {
             if (typeof sess.closeAllConnections === 'function') {
                 return sess.closeAllConnections();
             }
         }).catch(() => {});
-    }
-
-    startStatsTimer() {
-        this.stopStatsTimer();
-        this.statsTimer = setInterval(() => {
-            if (this.state === 'connected') {
-                this.bytesTransferred += Math.floor(1024 * (18 + Math.random() * 32));
-                this.emitStatus();
-            }
-        }, 2500);
-    }
-
-    stopStatsTimer() {
-        if (this.statsTimer) {
-            clearInterval(this.statsTimer);
-            this.statsTimer = null;
-        }
     }
 
     emitStatus() {

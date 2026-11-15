@@ -983,56 +983,47 @@
                     }, true);
                 });
 
-                // Intercept HTMLMediaElement.prototype.pause
-                const origMediaPause = HTMLMediaElement.prototype.pause;
-                HTMLMediaElement.prototype.pause = function() {
-                    // When app is in foreground, NEVER drop pause calls — user or site pause must take effect!
-                    // Only disarm pause when the app is actively running in the background and user did not explicitly pause.
-                    if (window.__fokk_is_background && !userExplicitPaused) {
-                        return;
-                    }
-                    return origMediaPause.apply(this, arguments);
-                };
             } catch (e) {}
-
-            window.__fokk_prepareBackgroundPlayback = function() {
-                if (userExplicitPaused) return;
-                document.querySelectorAll('audio, video').forEach(function(media) {
-                    if (!media.ended && media.paused) {
-                        try { media.play().catch(function() {}); } catch (e) {}
-                    }
-                });
-            };
         }
 
-        // Universal background-media guard.  This covers ordinary HTML5 players
-        // (news sites, podcasts and social video) in addition to the YouTube
-        // player-specific work above. It is active only after Android has told us
-        // the browser is backgrounded, so ordinary in-page pause controls remain
-        // untouched in the foreground.
-        let fokkExplicitMediaPause = false;
-        document.addEventListener('pointerdown', function(e) {
-            const target = e.target;
-            if (!target || !target.closest) return;
-            if (target.closest('video, audio, [aria-label*="pause" i], [title*="pause" i], .vjs-play-control, .plyr__control')) {
-                fokkExplicitMediaPause = /pause/i.test(target.getAttribute('aria-label') || '') || /pause/i.test(target.getAttribute('title') || '');
-            }
-        }, true);
+    // Preserve only media that was already playing when Android backgrounds the
+    // browser. Restarting every paused media element can start ads, previews, or
+    // another tab's player, and overriding pause globally breaks native controls.
+    const fokkBackgroundMedia = new Set();
+    window.__fokk_beginBackgroundPlayback = function() {
+        fokkBackgroundMedia.clear();
+        document.querySelectorAll('audio, video').forEach(function(media) {
+            if (!media.paused && !media.ended) fokkBackgroundMedia.add(media);
+        });
+        window.__fokk_is_background = fokkBackgroundMedia.size > 0;
+        return fokkBackgroundMedia.size > 0;
+    };
         try {
-            const pauseForBackgroundGuard = HTMLMediaElement.prototype.pause;
-            HTMLMediaElement.prototype.pause = function() {
-                if (window.__fokk_is_background && !fokkExplicitMediaPause && !this.ended) return;
-                return pauseForBackgroundGuard.apply(this, arguments);
-            };
+        const originalPause = HTMLMediaElement.prototype.pause;
+        HTMLMediaElement.prototype.pause = function() {
+            if (window.__fokk_is_background && fokkBackgroundMedia.has(this) && !this.ended) return;
+            return originalPause.apply(this, arguments);
+        };
         } catch (e) {}
         window.__fokk_prepareBackgroundPlayback = function() {
-            if (fokkExplicitMediaPause) return;
-            document.querySelectorAll('audio, video').forEach(function(media) {
-                if (!media.ended && media.paused) {
-                    try { media.play().catch(function() {}); } catch (e) {}
-                }
+        let hasLiveMedia = false;
+        Array.from(fokkBackgroundMedia).forEach(function(media) {
+            if (!media.isConnected || media.ended) {
+                fokkBackgroundMedia.delete(media);
+                return;
+            }
+            hasLiveMedia = true;
+            if (media.paused) {
+                try { media.play().catch(function() {}); } catch (e) {}
+            }
             });
+        if (!hasLiveMedia) window.__fokk_is_background = false;
+        return hasLiveMedia;
         };
+    window.__fokk_endBackgroundPlayback = function() {
+        fokkBackgroundMedia.clear();
+        window.__fokk_is_background = false;
+    };
 
         // 2. Network Hook: XHR response text interceptor (Response.prototype.json handles fetch in memory)
         if (window.XMLHttpRequest) {
@@ -1436,6 +1427,16 @@
             background: #000 !important;
             z-index: 2147483647 !important;
             transform: none !important;
+        }
+        html.fokk-pip-active [data-fokk-pip-ancestor="true"] {
+            width: 100vw !important;
+            height: 100vh !important;
+            min-width: 100vw !important;
+            min-height: 100vh !important;
+            overflow: visible !important;
+            transform: none !important;
+            contain: none !important;
+            clip-path: none !important;
         }
         html.fokk-pip-active [data-fokk-pip-hidden="true"] {
             display: none !important;
@@ -2121,18 +2122,33 @@
 
     window.__fokk_enter_pip_view = function() {
         const video = findActiveVideoForPip();
-        if (!video || !document.body) return;
+        if (!video || video.paused || video.ended || !document.body) return false;
         document.documentElement.classList.add('fokk-pip-active');
         video.setAttribute('data-fokk-pip-video', 'true');
-        // Hide only sibling roots that cannot contain the selected player. Moving a
-        // video node breaks React/YouTube players; this preserves its media pipeline.
-        Array.from(document.body.children).forEach(function(node) {
-            if (node !== video && !node.contains(video) && !/^(SCRIPT|STYLE|LINK)$/i.test(node.tagName)) {
-                node.setAttribute('data-fokk-pip-hidden', 'true');
-            }
-        });
-        try { video.play().catch(function() {}); } catch (e) {}
+        // Keep the video in place so React players continue to own it, and hide
+        // siblings at each level of its ancestor chain. Hiding only body children
+        // leaves menus and captions visible on sites that render everything under
+        // one root node.
+        let branch = video;
+        while (branch && branch.parentElement && branch.parentElement !== document.body) {
+            const parent = branch.parentElement;
+            Array.from(parent.children).forEach(function(node) {
+                if (node !== branch && !/^(SCRIPT|STYLE|LINK)$/i.test(node.tagName)) {
+                    node.setAttribute('data-fokk-pip-hidden', 'true');
+                }
+            });
+            parent.setAttribute('data-fokk-pip-ancestor', 'true');
+            branch = parent;
+        }
+        if (branch && branch.parentElement === document.body) {
+            Array.from(document.body.children).forEach(function(node) {
+                if (node !== branch && !/^(SCRIPT|STYLE|LINK)$/i.test(node.tagName)) {
+                    node.setAttribute('data-fokk-pip-hidden', 'true');
+                }
+            });
+        }
         window.dispatchEvent(new Event('resize'));
+        return true;
     };
 
     window.__fokk_exit_pip_view = function() {
@@ -2142,6 +2158,9 @@
         });
         document.querySelectorAll('[data-fokk-pip-hidden]').forEach(function(node) {
             node.removeAttribute('data-fokk-pip-hidden');
+        });
+        document.querySelectorAll('[data-fokk-pip-ancestor]').forEach(function(node) {
+            node.removeAttribute('data-fokk-pip-ancestor');
         });
         window.dispatchEvent(new Event('resize'));
     };
@@ -2245,9 +2264,12 @@
             pendingState = true;
             requestAnimationFrame(function() {
                 pendingState = false;
-                const isPlaying = !media.paused && !media.ended;
-                const isVideo = media.tagName === 'VIDEO';
-                const hasActiveVideo = isVideo && media.currentTime > 0 && !media.ended;
+                const playingMedia = Array.from(document.querySelectorAll('audio, video'))
+                    .filter(function(item) { return !item.paused && !item.ended; });
+                const isPlaying = playingMedia.length > 0;
+                const hasActiveVideo = playingMedia.some(function(item) {
+                    return item.tagName === 'VIDEO' && item.currentTime > 0;
+                });
                 notifyNativePlayback(isPlaying, hasActiveVideo);
             });
         };
@@ -2257,9 +2279,10 @@
         media.addEventListener('pause', updateState);
         media.addEventListener('ended', updateState);
         media.addEventListener('emptied', updateState);
+        if (media.tagName === 'VIDEO') media.addEventListener('timeupdate', updateState);
 
         if (!media.paused && !media.ended) {
-            notifyNativePlayback(true, media.tagName === 'VIDEO');
+            updateState();
         }
     }
     const hookVideoPlayback = hookMediaPlayback;

@@ -783,6 +783,11 @@ ipcMain.on('fokk-vpn-get-locations', (event) => {
     event.returnValue = vpnEngine ? vpnEngine.getLocations() : [];
 });
 
+ipcMain.handle('fokk-vpn-check-direct-ip', async () => {
+    if (!vpnEngine) return { ip: null, error: 'Browser route service is unavailable.' };
+    return await vpnEngine.checkDirectPublicIp();
+});
+
 ipcMain.handle('fokk-vpn-toggle', async () => {
     if (!vpnEngine) return { success: false, error: 'VPN Engine not initialized' };
     return await vpnEngine.toggle();

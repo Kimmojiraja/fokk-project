@@ -721,7 +721,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:text="Unlock VPN protection, advanced shield rules, and priority updates. Supports independent development."
+                    android:text="Unlock browser proxy routing, advanced shield rules, and priority updates. Supports independent development."
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
                     android:lineSpacingExtra="2dp" />
