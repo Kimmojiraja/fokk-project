@@ -102,6 +102,28 @@ object VpnEngine {
         }
     }
 
+    fun startEmbeddedTor(context: Context) {
+        try {
+            val intent = Intent("org.torproject.android.intent.action.START").apply {
+                setPackage(context.packageName)
+            }
+            context.startService(intent)
+        } catch (e: Exception) {
+            android.util.Log.e("VpnEngine", "Failed to start embedded TorService", e)
+        }
+    }
+
+    fun stopEmbeddedTor(context: Context) {
+        try {
+            val intent = Intent("org.torproject.android.intent.action.STOP").apply {
+                setPackage(context.packageName)
+            }
+            context.startService(intent)
+        } catch (e: Exception) {
+            android.util.Log.e("VpnEngine", "Failed to stop embedded TorService", e)
+        }
+    }
+
     fun getCustomProxy(context: Context): String {
         val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
         val saved = prefs.getString(KEY_CUSTOM_PROXY, "").orEmpty().trim()
@@ -257,6 +279,7 @@ object VpnEngine {
             return
         }
         if (mode == VpnMode.OFF) {
+            stopEmbeddedTor(context)
             ProxyController.getInstance().clearProxyOverride(executor) {
                 prefs.edit().putString(KEY_VPN_MODE, mode.id).apply()
                 onComplete?.invoke(true, "Privacy gateway disabled. Browser traffic is direct.")
@@ -284,15 +307,14 @@ object VpnEngine {
 
         executor.execute {
             if (mode == VpnMode.TOR && !isProxyHandshakeValid(endpoint)) {
-                onComplete?.invoke(
-                    false,
-                    "Tor / Orbot is not running on $host:$port. Tap 'Start Orbot' to launch Tor, then connect."
-                )
-                return@execute
+                startEmbeddedTor(context)
+                if (isOrbotInstalled(context)) {
+                    launchOrbot(context)
+                }
             } else if (!isProxyHandshakeValid(endpoint)) {
                 onComplete?.invoke(
                     false,
-                    "The proxy at $host:$port did not complete a ${URI(endpoint).scheme?.uppercase()} proxy handshake. Check the server address, port, and status. Existing routing was left unchanged."
+                    "The proxy at $host:$port is unreachable. Check the server address, port, and status."
                 )
                 return@execute
             }
@@ -309,8 +331,8 @@ object VpnEngine {
                     if (mode == VpnMode.CUSTOM) editor.putString(KEY_CUSTOM_PROXY, endpoint)
                     editor.apply()
                     val routeDesc = when (mode) {
-                        VpnMode.TOR -> "Tor Onion Network active ($host:$port). Exit IP is masked."
-                        VpnMode.RELAY -> "Fokk Secure Privacy Relay active. Public IP is masked."
+                        VpnMode.TOR -> if (isTorListening()) "Tor Onion Network active ($host:$port). Exit IP is masked." else "Tor Onion route configured ($host:$port). Connecting..."
+                        VpnMode.RELAY -> "Tor route configured ($host:$port)."
                         VpnMode.CUSTOM -> "Custom Proxy active ($host:$port). Direct fallback disabled."
                         VpnMode.OFF -> "Direct connection."
                     }

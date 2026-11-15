@@ -11,8 +11,8 @@ android {
         applicationId = "com.adshield.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 250
-        versionName = "2.5.0"
+        versionCode = 251
+        versionName = "2.5.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -72,6 +72,9 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
     // Brave adblock-rust Native JNI Content Blocker
     implementation("io.github.mlm-games:adblock:0.1.3")
+    // Embedded Native Tor Onion Engine & Control Client
+    implementation("info.guardianproject:tor-android:0.4.8.18")
+    implementation("info.guardianproject:jtorctl:0.4.5.7")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
