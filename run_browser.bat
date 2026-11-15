@@ -15,6 +15,7 @@ echo ========================================================
 echo.
 
 REM 1. Verify desktop directory exists
+set "DESKTOP_DIR=%~dp0desktop"
 if not exist "%DESKTOP_DIR%" (
     echo [ERROR] Could not locate desktop directory at:
     echo         "%DESKTOP_DIR%"

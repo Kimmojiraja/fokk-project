@@ -496,15 +496,10 @@
         <div id="vpnCustomConfigWrap" class="vpn-custom-wrap hidden">
             <div class="vpn-custom-header">
                 <label class="vpn-section-label" for="vpnCustomInput">Custom SOCKS5 / HTTP proxy</label>
-                <div class="vpn-custom-chips">
-                    <button class="vpn-chip-btn" type="button" data-val="127.0.0.1:1080">SOCKS 1080</button>
-                    <button class="vpn-chip-btn" type="button" data-val="127.0.0.1:9050">Tor 9050</button>
-                    <button class="vpn-chip-btn" type="button" data-val="127.0.0.1:8080">HTTP 8080</button>
-                </div>
             </div>
-            <textarea id="vpnCustomInput" class="vpn-custom-textarea" placeholder="Proxy URL, e.g. socks5://host:1080 or http://host:8080"></textarea>
+            <textarea id="vpnCustomInput" class="vpn-custom-textarea" placeholder="Enter a running proxy, e.g. socks5://proxy.example:1080"></textarea>
             <div class="vpn-custom-footer">
-                <span class="vpn-custom-tip">Use a reachable proxy server. Local addresses work only when a proxy is running on this computer.</span>
+                <span class="vpn-custom-tip">Custom mode connects to a proxy you provide. Choose Tor Network to start Fokk’s bundled Tor route.</span>
                 <button id="btnSaveCustomVpn" class="btn-save-custom-vpn">Save & Apply</button>
             </div>
         </div>

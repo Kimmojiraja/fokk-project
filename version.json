@@ -1,6 +1,6 @@
 {
-  "versionCode": 247,
-  "versionName": "2.4.7",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.7/app-debug.apk",
-  "changelog": "- Browser Privacy Routing: Clean custom SOCKS and HTTP proxy routing with fail-closed safeguards.\n- Resilient Background Media: Precision media tracking and keep-alive service preventing paused media or ads from resuming.\n- Enhanced Video PiP: Full ancestor hierarchy isolation ensuring clean video playback in Picture-in-Picture.\n- Public IP Comparison: Verify browser exit IP versus direct device IP.\n- Desktop Privacy Routing: Live health monitor, session proxy synchronization, and fail-closed leak prevention."
+  "versionCode": 248,
+  "versionName": "2.4.8",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.8/app-debug.apk",
+  "changelog": "- Media Background Playback: Scoped pause guard with playlist/queue transition auto-tracking and graceful detached element handling.\n- Privacy Gateway: Added support for HTTP(S) proxy verification with SSL tunneling and legacy proxy migration.\n- Disposed Frame Race Fix: Handled Electron navigation frame disposal during cosmetic filter injection without crashing.\n- Bundled Windows Tor Runtime: Integrated dedicated Tor daemon with geoip files and custom torrc on Windows x64.\n- Launch Script Polish: Fixed directory resolution in run_browser.bat."
 }

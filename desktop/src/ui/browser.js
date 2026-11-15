@@ -2746,29 +2746,13 @@ function initVpnUI() {
         btnSaveCustomVpn.addEventListener('click', async () => {
             const cfg = vpnCustomInput.value.trim();
             if (!cfg) {
-                showToast('Please enter a SOCKS5 or HTTP proxy URL');
+                showToast('Enter the address of a running SOCKS5 or HTTP proxy');
                 return;
             }
             try {
                 await ipcRenderer.invoke('fokk-vpn-set-custom', cfg);
-                showToast('Custom Relay Config Saved: ' + cfg);
+                showToast('Custom proxy saved');
             } catch (_) {}
-        });
-    }
-
-    // Custom Preset Chips
-    if (vpnCustomConfigWrap && vpnCustomInput) {
-        vpnCustomConfigWrap.querySelectorAll('.vpn-chip-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const val = btn.getAttribute('data-val');
-                if (val) {
-                    vpnCustomInput.value = val;
-                    ipcRenderer.invoke('fokk-vpn-set-custom', val).catch(() => {});
-                    showToast('Preset loaded: ' + val);
-                }
-            });
         });
     }
 

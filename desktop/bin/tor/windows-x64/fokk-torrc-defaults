@@ -1,0 +1,4 @@
+# Fokk Tor client defaults.
+# Runtime paths and the local SOCKS listener are supplied explicitly by Fokk.
+AvoidDiskWrites 1
+ClientOnly 1
