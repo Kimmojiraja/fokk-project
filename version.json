@@ -1,6 +1,6 @@
 {
-  "versionCode": 245,
-  "versionName": "2.4.5",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.5/app-debug.apk",
-  "changelog": "- YouTube Shorts: Smooth single-tap play/pause without description drawer popping or looping stutter.\n- Smart Minimizing: PiP mode strictly restricted to active playing videos, never minimizing on home or idle pages.\n- Background Media Playback: Audio and video continue playing in background, with dedicated settings toggle.\n- Login & 2FA Fix: Resolved blank screen on x.com and OAuth by implementing onCloseWindow and allowing auth cookies.\n- Command Bar Polish: Removed 0.3s white flash on scrolling to top with instant dark docking.\n- Fokk AI Summary: Pristine editorial article extraction filtering nav junk, source logo, accurate reading time, background notification, and Saved Summaries archive."
+  "versionCode": 246,
+  "versionName": "2.4.6",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.6/app-debug.apk",
+  "changelog": "- WireGuard Tunnel Engine: Integrated userspace WireGuard VPN tunnel with Android VpnService permission flow.\n- Enhanced Privacy Gateway: Fail-closed proxy architecture preventing direct network leaks and in-browser exit-IP verification.\n- Video PiP Quick Button: Dedicated minimize control for active playing videos.\n- Reliable Background Audio: Pre-pause hooks and screen-lock handlers for uninterrupted media playback.\n- Fokk AI Summary & Fact-Check: Article provenance extraction and multi-source independent evidence audit."
 }

@@ -123,9 +123,9 @@ class SettingsActivity : AppCompatActivity() {
         updateVpnStatusText()
         binding.btnConfigureVpn.setOnClickListener {
             val modes = arrayOf(
-                "Direct Connection (No VPN)",
+                "Direct Connection (Browser proxy off)",
                 "Tor Onion Routing (Orbot 127.0.0.1:9050)",
-                "Custom SOCKS5 / HTTP Proxy"
+                "Custom SOCKS / HTTP Browser Proxy"
             )
             val currentMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
             val checkedIndex = when (currentMode) {
@@ -135,7 +135,7 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             AlertDialog.Builder(this)
-                .setTitle("Select VPN & Proxy Mode")
+                .setTitle("Select Browser Privacy Gateway")
                 .setSingleChoiceItems(modes, checkedIndex) { dialog, which ->
                     dialog.dismiss()
                     when (which) {

@@ -1216,7 +1216,7 @@
     // 0. Match Result / Scoreline / Exhibition Status
     const scoreMatch = cleanClaim.match(/\b\d+\s*-\s*\d+\b/);
     const hasMatchDescriptor = /friendly|match|game|fixture|score|ht|ft|fulltime|halftime/i.test(cleanClaim);
-    if (scoreMatch || (domain === "SPORTS_FOOTBALL" && hasMatchDescriptor && cleanClaim.length < 60)) {
+    if (false && (scoreMatch || (domain === "SPORTS_FOOTBALL" && hasMatchDescriptor && cleanClaim.length < 60))) {
       const scoreStr = scoreMatch ? scoreMatch[0] : "";
       return {
         id: "match_" + Date.now(),
@@ -1353,7 +1353,7 @@
 
     // 3.5 Familial / Relative Claim (e.g. sister Declan Fox)
     const isFamilyClaim = /\b(sister|brother|father|mother|daughter|son|cousin|wife|husband)\b/i.test(cleanClaim);
-    if (isFamilyClaim && wireArticles.length === 0) {
+    if (false && isFamilyClaim && wireArticles.length === 0) {
       const relMatch = cleanClaim.match(/\b(sister|brother|father|mother|daughter|son|cousin)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)/i);
       const relativeDesc = relMatch ? relMatch[0] : "an alleged relative";
       return {
@@ -1381,7 +1381,7 @@
 
     // 3.6 Managerial Appointment / International Head Coach Role Claim (e.g. "Klopp's Germany", "Klopp era", "manager of Germany")
     const isManagerialClaim = /\b(klopp('s)?\s+germany|klopp\s+era|head\s+coach|manager\s+of|managing\s+germany|klopp\s+appointed)\b/i.test(cleanClaim);
-    if (isManagerialClaim && /klopp/i.test(cleanClaim) && /germany/i.test(cleanClaim)) {
+    if (false && isManagerialClaim && /klopp/i.test(cleanClaim) && /germany/i.test(cleanClaim)) {
       return {
         id: "manager_" + Date.now(),
         claim: cleanClaim,
@@ -1525,6 +1525,25 @@
     };
   }
 
+  // A headline match is not verification. Require independent domains and a
+  // meaningful claim-token overlap before the verdict engine can call a live
+  // claim VERIFIED. This makes the default outcome honest uncertainty instead
+  // of turning a single search result into a fact label.
+  function assessIndependentEvidence(claim, receipts) {
+    const tokens = Array.from(new Set((claim.toLowerCase().match(/[a-z0-9]{4,}/g) || [])
+      .filter(word => !STOP_WORDS.has(word) && !GENERIC_DICTIONARY_CONCEPTS.has(word))));
+    const qualified = (receipts || []).filter(receipt => {
+      const headline = String(receipt.headline || '').toLowerCase();
+      return tokens.filter(token => headline.includes(token)).length >= Math.min(2, Math.max(1, tokens.length));
+    });
+    const domains = new Set(qualified.map(item => String(item.domain || '').replace(/^www\./, '').toLowerCase()).filter(Boolean));
+    return {
+      canVerify: qualified.length >= 2 && domains.size >= 2,
+      qualified,
+      sourceCount: domains.size
+    };
+  }
+
   async function runInBrowserRealityAudit(claimText, postUrl, platformMeta) {
     const cleanClaim = (claimText || "").replace(/[\r\n]+/g, " ").replace(/\b(\w+)\s+\1\b/gi, "$1").trim();
     if (!cleanClaim) return;
@@ -1569,7 +1588,25 @@
       return matches.length >= 1;
     });
 
-    const verdictData = generateDynamicAIVerdict(cleanClaim, entities, wireArticles, encyclopedicRecord, domain, postUrl);
+    const evidence = assessIndependentEvidence(cleanClaim, wireArticles);
+    const verdictData = generateDynamicAIVerdict(
+      cleanClaim,
+      entities,
+      evidence.canVerify ? evidence.qualified : [],
+      encyclopedicRecord,
+      domain,
+      postUrl
+    );
+    // Keep real receipts visible for review even when they are insufficient for
+    // verification; the verdict remains CONTEXT NEEDED in that case.
+    if (!evidence.canVerify) {
+      verdictData.verdict = "CONTESTED";
+      verdictData.verdictTitle = "INSUFFICIENT INDEPENDENT EVIDENCE";
+      verdictData.statusBadge = "CONTEXT NEEDED";
+      verdictData.confidence = Math.min(Number(verdictData.confidence) || 50, 55);
+      verdictData.forensicSummary = `Fokk found ${evidence.qualified.length} relevant receipt${evidence.qualified.length === 1 ? "" : "s"} across ${evidence.sourceCount} independent source domain${evidence.sourceCount === 1 ? "" : "s"}. That is not enough to verify or debunk this claim. Review the linked sources and look for primary documentation.`;
+      verdictData.receipts = evidence.qualified.slice(0, 4);
+    }
 
     if (platformMeta && platformMeta.outboundLink && !verdictData.receipts.some(r => r.url === platformMeta.outboundLink)) {
       try {

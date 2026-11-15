@@ -253,6 +253,20 @@ open class MediaHubActivity : AppCompatActivity() {
     private var lastMediaPlayingTime = 0L
     private var isFullscreenCustomView = false
     private var stopPlaybackRunnable: Runnable? = null
+    private var pendingWireGuardConfig: String? = null
+    private val wireGuardEngine by lazy { com.adshield.app.engine.FokkWireGuardEngine(applicationContext) }
+
+    private val vpnConsentLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val config = pendingWireGuardConfig
+        pendingWireGuardConfig = null
+        if (result.resultCode == Activity.RESULT_OK && !config.isNullOrBlank()) {
+            startWireGuardTunnel(config)
+        } else if (config != null) {
+            Toast.makeText(this, "VPN permission is required to start Fokk Pro VPN", Toast.LENGTH_LONG).show()
+        }
+    }
 
     private var fileUploadCallback: ValueCallback<Array<Uri>>? = null
     private var pendingWebPermission: PendingWebPermission? = null
@@ -4399,6 +4413,15 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
 
+        binding.btnPictureInPicture.setOnClickListener {
+            // Never turn an audio page or a normal browser page into a tiny window.
+            if (isMediaPlaying && hasActiveVideo) {
+                enterPipMode()
+            } else {
+                Toast.makeText(this, "Play a video before minimizing it", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         binding.chipMediaDetected.setOnClickListener {
             val stream = currentDetectedVideoStream
             if (stream != null) {
@@ -6285,9 +6308,9 @@ open class MediaHubActivity : AppCompatActivity() {
     private fun showVpnModeSelector() {
         val current = com.adshield.app.engine.VpnEngine.getActiveMode(this)
         val modes = arrayOf(
-            "Direct Connection (No VPN / Direct ISP)",
+            "Direct Connection (Browser proxy off)",
             "Tor Onion Routing (Orbot 127.0.0.1:9050)",
-            "Custom SOCKS5 / HTTP Proxy",
+            "Custom SOCKS / HTTP Browser Proxy",
             "🔍 Verify My Current Public IP"
         )
         val checked = when (current) {
@@ -6298,12 +6321,15 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         AlertDialog.Builder(this)
-            .setTitle("Stealth VPN & Proxy")
+            .setTitle("Browser Privacy Gateway")
             .setSingleChoiceItems(modes, checked) { dialog, which ->
                 dialog.dismiss()
                 when (which) {
-                    0 -> com.adshield.app.engine.VpnEngine.applyVpnMode(this, com.adshield.app.engine.VpnEngine.VpnMode.OFF) { _, msg ->
-                        runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                    0 -> {
+                        lifecycleScope.launch(Dispatchers.IO) { wireGuardEngine.disconnect() }
+                        com.adshield.app.engine.VpnEngine.applyVpnMode(this, com.adshield.app.engine.VpnEngine.VpnMode.OFF) { _, msg ->
+                            runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                        }
                     }
                     1 -> {
                         kotlin.concurrent.thread {
@@ -6320,7 +6346,7 @@ open class MediaHubActivity : AppCompatActivity() {
                         }
                     }
                     2 -> showCustomProxyDialog()
-                    3 -> showVerifyIpDialog()
+                    3 -> showVerifyBrowserExitDialog()
                 }
             }
             .setNegativeButton("Cancel", null)
@@ -6352,6 +6378,56 @@ open class MediaHubActivity : AppCompatActivity() {
             .show()
     }
 
+    /** Verifies from the active WebView, so this request actually uses ProxyController. */
+    private fun showVerifyBrowserExitDialog() {
+        val webView = activeWebView
+        if (webView == null) {
+            Toast.makeText(this, "Open a page before checking the browser exit", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val progress = android.app.ProgressDialog(this).apply {
+            setMessage("Checking browser exit through the active route...")
+            setCancelable(true)
+            show()
+        }
+        webView.evaluateJavascript(
+            """fetch('https://api64.ipify.org?format=json', {cache:'no-store'})
+                .then(function(response) { if (!response.ok) throw new Error('HTTP ' + response.status); return response.text(); })
+                .then(function(body) { return JSON.stringify({ok:true, body:body}); })
+                .catch(function(error) { return JSON.stringify({ok:false, error:String(error)}); });""".trimIndent()
+        ) { raw ->
+            try { progress.dismiss() } catch (_: Exception) {}
+            val envelope = runCatching {
+                val decoded = org.json.JSONTokener(raw ?: "").nextValue() as? String ?: raw.orEmpty()
+                JSONObject(decoded)
+            }.getOrNull()
+            val ip = envelope?.takeIf { it.optBoolean("ok") }?.optString("body")
+                ?.let { body -> runCatching { JSONObject(body).optString("ip") }.getOrDefault("") }
+                ?.takeIf { it.isNotBlank() }
+            val mode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
+            if (ip != null) {
+                val route = if (mode == com.adshield.app.engine.VpnEngine.VpnMode.OFF) {
+                    "Direct browser connection"
+                } else {
+                    "Browser privacy gateway route verified"
+                }
+                AlertDialog.Builder(this)
+                    .setTitle("Browser Exit Verification")
+                    .setMessage("Exit IP: $ip\nMode: ${mode.title}\n\n$route")
+                    .setPositiveButton("OK", null)
+                    .show()
+            } else {
+                AlertDialog.Builder(this)
+                    .setTitle("Browser Exit Could Not Be Verified")
+                    .setMessage(envelope?.optString("error")?.ifBlank { "No IP address was returned by the active browser route." }
+                        ?: "No response from the active browser route.")
+                    .setPositiveButton("OK", null)
+                    .show()
+            }
+        }
+    }
+
+    @Suppress("unused")
     private fun showVerifyIpDialog() {
         val progress = android.app.ProgressDialog(this).apply {
             setMessage("Checking current public IP...")
@@ -6387,27 +6463,57 @@ open class MediaHubActivity : AppCompatActivity() {
 
     private fun showCustomProxyDialog() {
         val input = EditText(this).apply {
-            hint = "socks5://127.0.0.1:1080"
+            hint = "SOCKS proxy, or paste a complete [Interface] / [Peer] WireGuard profile"
             setText(com.adshield.app.engine.VpnEngine.getCustomProxy(this@MediaHubActivity))
-            setSingleLine()
+            minLines = 4
+            maxLines = 12
+            setSingleLine(false)
         }
         AlertDialog.Builder(this)
-            .setTitle("Custom Proxy Address")
+            .setTitle("Fokk Pro VPN / Browser Proxy")
             .setView(input)
             .setPositiveButton("Apply") { _, _ ->
                 val proxyUrl = input.text.toString().trim()
                 if (proxyUrl.isNotEmpty()) {
-                    com.adshield.app.engine.VpnEngine.applyVpnMode(
-                        this,
-                        com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM,
-                        proxyUrl
-                    ) { _, msg ->
-                        runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                    if (proxyUrl.contains("[Interface]", ignoreCase = true) && proxyUrl.contains("[Peer]", ignoreCase = true)) {
+                        requestWireGuardTunnel(proxyUrl)
+                    } else {
+                        com.adshield.app.engine.VpnEngine.applyVpnMode(
+                            this,
+                            com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM,
+                            proxyUrl
+                        ) { _, msg ->
+                            runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                        }
                     }
                 }
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun requestWireGuardTunnel(config: String) {
+        val consent = android.net.VpnService.prepare(this)
+        if (consent != null) {
+            pendingWireGuardConfig = config
+            vpnConsentLauncher.launch(consent)
+        } else {
+            startWireGuardTunnel(config)
+        }
+    }
+
+    private fun startWireGuardTunnel(config: String) {
+        Toast.makeText(this, "Starting Fokk Pro VPN tunnel...", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = wireGuardEngine.connect(config)
+            withContext(Dispatchers.Main) {
+                if (result.isSuccess) {
+                    Toast.makeText(this@MediaHubActivity, "Fokk Pro VPN connected. Full-device tunnel active.", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this@MediaHubActivity, result.exceptionOrNull()?.message ?: "VPN tunnel could not start", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 
     private fun clearBrowsingData() {
@@ -7360,6 +7466,28 @@ open class MediaHubActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Tell the page it is leaving before WebView loses focus.  Doing this only in
+     * onStop is too late on a lock-screen transition: sites have already sent a
+     * pause command to their media element by then.
+     */
+    private fun armWebMediaForBackground() {
+        if (!isMediaPlaying || !prefs.getBoolean("fokk_background_audio", true)) return
+        activeWebView?.let { webView ->
+            webView.onResume()
+            webView.resumeTimers()
+            webView.evaluateJavascript(
+                """(function() {
+                    window.__fokk_is_background = true;
+                    if (typeof window.__fokk_prepareBackgroundPlayback === 'function') {
+                        window.__fokk_prepareBackgroundPlayback();
+                    }
+                })();""".trimIndent(),
+                null
+            )
+        }
+    }
+
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
@@ -7369,6 +7497,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
+        armWebMediaForBackground()
         val currentUrl = activeTab?.url.orEmpty()
         val isStartPage = currentUrl.contains("fokk_start.html")
         val autoPipEnabled = prefs.getBoolean("fokk_auto_pip", true)
@@ -7379,7 +7508,7 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     private fun enterPipMode() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isMediaPlaying && hasActiveVideo) {
             try {
                 val currentUrl = activeTab?.url.orEmpty()
                 val isShorts = currentUrl.contains("/shorts/") || currentUrl.contains("tiktok.com") || currentUrl.contains("instagram.com/reels")
@@ -7407,6 +7536,9 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+        // Run before the framework pauses the Activity/WebView on a lock-screen
+        // transition. onStop alone is too late for many web players.
+        armWebMediaForBackground()
         super.onPause()
         isActivityResumed = false
         persistSession()
@@ -7417,11 +7549,7 @@ open class MediaHubActivity : AppCompatActivity() {
             return
         }
         if (isMediaPlaying && bgAudio) {
-            tabs.forEach { tab ->
-                tab.webView?.onResume()
-                tab.webView?.resumeTimers()
-                tab.webView?.evaluateJavascript("window.__fokk_is_background = true;", null)
-            }
+            armWebMediaForBackground()
             if (mediaWakeLock?.isHeld == false) {
                 try { mediaWakeLock?.acquire(3 * 60 * 60 * 1000L) } catch (e: Exception) {}
             }
@@ -7439,11 +7567,7 @@ open class MediaHubActivity : AppCompatActivity() {
         updateGhostModeNotification()
         val bgAudio = prefs.getBoolean("fokk_background_audio", true)
         if (isMediaPlaying && bgAudio) {
-            tabs.forEach { tab ->
-                tab.webView?.onResume()
-                tab.webView?.resumeTimers()
-                tab.webView?.evaluateJavascript("window.__fokk_is_background = true;", null)
-            }
+            armWebMediaForBackground()
             if (mediaWakeLock?.isHeld == false) {
                 try { mediaWakeLock?.acquire(3 * 60 * 60 * 1000L) } catch (e: Exception) {}
             }
@@ -7458,6 +7582,7 @@ open class MediaHubActivity : AppCompatActivity() {
             binding.bottomNav.visibility = View.GONE
             binding.progressBar.visibility = View.GONE
             binding.cardSuggestions.visibility = View.GONE
+            binding.btnPictureInPicture.visibility = View.GONE
             activeWebView?.onResume()
             activeWebView?.resumeTimers()
             if (!isThirdPartyMediaService(activeWebView?.url)) {
@@ -7472,6 +7597,7 @@ open class MediaHubActivity : AppCompatActivity() {
             }
             binding.layoutCollapsedBar.visibility = View.GONE
             binding.bottomNav.visibility = View.VISIBLE
+            binding.btnPictureInPicture.visibility = if (isMediaPlaying && hasActiveVideo) View.VISIBLE else View.GONE
             if (!isThirdPartyMediaService(activeWebView?.url)) {
                 activeWebView?.evaluateJavascript("if (typeof window.__fokk_exit_pip_view === 'function') window.__fokk_exit_pip_view();", null)
             }
@@ -7905,6 +8031,10 @@ open class MediaHubActivity : AppCompatActivity() {
     fun onMediaPlaybackUpdated(isPlaying: Boolean, hasActiveVideo: Boolean, title: String? = null) {
         isMediaPlaying = isPlaying
         this.hasActiveVideo = hasActiveVideo
+        binding.btnPictureInPicture.visibility = if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isPlaying && hasActiveVideo &&
+                !(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode)
+        ) View.VISIBLE else View.GONE
         if (!title.isNullOrBlank()) {
             currentMediaTitle = title
         }

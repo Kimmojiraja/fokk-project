@@ -80,6 +80,20 @@
         return { source: sourceName, sourceHost: host, favicon: favicon };
     }
 
+    // Preserve provenance alongside the extractive summary. This is deliberately
+    // metadata, not a guessed fact: readers can tell how much source material was
+    // available and whether the publisher exposed an author/date.
+    function extractProvenance() {
+        const publishedRaw = document.querySelector('meta[property="article:published_time"]')?.content ||
+            document.querySelector('meta[name="date"]')?.content ||
+            document.querySelector('time[datetime]')?.getAttribute('datetime') || '';
+        const author = document.querySelector('meta[name="author"]')?.content ||
+            document.querySelector('[rel="author"]')?.textContent || '';
+        const canonical = document.querySelector('link[rel="canonical"]')?.href || window.location.href;
+        const published = publishedRaw ? publishedRaw.slice(0, 10) : '';
+        return { published: published, author: author.trim().replace(/\s+/g, ' ').slice(0, 90), canonical: canonical };
+    }
+
     // Lead Image Extractor
     function extractLeadImage() {
         const metaImg = document.querySelector('meta[property="og:image"]')?.content ||
@@ -188,6 +202,7 @@
     window.generatePageSummary = function() {
         const title = extractArticleTitle();
         const sourceMeta = extractSourceMeta();
+        const provenance = extractProvenance();
         const cleanParagraphs = extractCleanEditorialParagraphs();
         const fullArticleText = cleanParagraphs.join('\n\n');
 
@@ -317,7 +332,12 @@
         // Extract Key Figures & Metrics
         const metricRegex = /(?:\$\d+(?:\.\d+)?\s*(?:billion|million|trillion|k|m|b)?|\d+(?:\.\d+)?%|\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b|\b20\d{2}\b)/gi;
         const matches = fullArticleText.match(metricRegex) || [];
-        const uniqueMetrics = Array.from(new Set(matches)).slice(0, 6);
+        const uniqueMetrics = Array.from(new Set(matches)).slice(0, 5);
+        const evidenceMetrics = [
+            `${cleanParagraphs.length} editorial passages`,
+            provenance.published ? `Published ${provenance.published}` : '',
+            provenance.author ? 'Byline detected' : ''
+        ].filter(Boolean);
 
         const followUpQuestions = generateCuriosityQuestions(title, fullArticleText, topEntities);
 
@@ -329,11 +349,12 @@
             executiveSummary: executiveSummary,
             summary: executiveSummary, // backward compatibility
             bullets: bullets,
-            metrics: uniqueMetrics,
+            metrics: Array.from(new Set([...uniqueMetrics, ...evidenceMetrics])),
             followUpQuestions: followUpQuestions,
             leadImage: leadImage,
             readingTime: readingTime,
-            wordCount: totalWords
+            wordCount: totalWords,
+            provenance: provenance
         };
     };
 
