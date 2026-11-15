@@ -142,7 +142,7 @@ object VpnEngine {
         val host = uri.host ?: return false
         val port = uri.port
         return when (uri.scheme?.lowercase()) {
-            "socks" -> checkSocks5Proxy(host, port)
+            "socks", "socks5", "socks4" -> checkSocks5Proxy(host, port)
             "http" -> checkHttpConnectProxy(host, port, tlsToProxy = false)
             "https" -> checkHttpConnectProxy(host, port, tlsToProxy = true)
             else -> false
@@ -174,14 +174,17 @@ object VpnEngine {
                         continue
                     }
                     val body = conn.inputStream.bufferedReader().use { it.readText() }.trim()
-                    val ip = runCatching { org.json.JSONObject(body).optString("ip") }
-                        .getOrDefault(body)
-                        .trim()
-                    if (ip.isNotBlank()) {
-                        onResult(ip, null)
+                    val jsonIp = runCatching { org.json.JSONObject(body).optString("ip") }.getOrDefault("").trim()
+                    val traceIp = Regex("(?m)^ip=([^\\s]+)").find(body)?.groupValues?.getOrNull(1).orEmpty().trim()
+                    val plainIp = body.trim().takeIf { android.util.Patterns.IP_ADDRESS.matcher(it).matches() }.orEmpty()
+                    val candidate = listOf(jsonIp, traceIp, plainIp).firstOrNull {
+                        android.util.Patterns.IP_ADDRESS.matcher(it).matches()
+                    }
+                    if (candidate != null) {
+                        onResult(candidate, null)
                         return@execute
                     }
-                    lastError = "The direct IP check returned an empty response."
+                    lastError = "The direct IP check returned an invalid address."
                 } catch (e: Exception) {
                     lastError = e.localizedMessage ?: "Timeout"
                 } finally {

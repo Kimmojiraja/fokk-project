@@ -184,12 +184,30 @@ function setupAdblockingForSession(sess) {
 
     // Relax CSP for in-page forensic audits & on-device neural model loading
     sess.webRequest.onHeadersReceived((details, callback) => {
+        let host = '';
+        try {
+            host = new URL(details.url).hostname.toLowerCase();
+        } catch (_) {}
+
+        // Never modify CSP headers for Twitter/X, Twimg, Arkose, or OAuth hosts (preserves strict nonces and avoids hydration failures)
+        const isStrictCspHost = host === 'x.com' || host.endsWith('.x.com') ||
+            host === 'twitter.com' || host.endsWith('.twitter.com') ||
+            host === 'twimg.com' || host.endsWith('.twimg.com') ||
+            host === 't.co' || host.endsWith('.t.co') ||
+            host === 'arkoselabs.com' || host.endsWith('.arkoselabs.com') ||
+            host === 'accounts.google.com';
+
+        if (isStrictCspHost) {
+            callback({ responseHeaders: details.responseHeaders });
+            return;
+        }
+
         const responseHeaders = Object.assign({}, details.responseHeaders);
         for (const k of Object.keys(responseHeaders)) {
             if (k.toLowerCase() === 'content-security-policy') {
                 let csp = (responseHeaders[k] || []).join('; ');
                 if (csp.includes('connect-src')) {
-                    csp = csp.replace(/connect-src\s+([^;]+)/i, "connect-src $1 https://*.wikipedia.org https://wikidata.org https://api.gdeltproject.org https://html.duckduckgo.com https://api.duckduckgo.com https://upload.wikimedia.org https://news.google.com https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://hf.co https://*.hf.space blob: data:");
+                    csp = csp.replace(/connect-src\s+([^;]+)/i, "connect-src $1 https://*.wikipedia.org https://wikidata.org https://*.wikidata.org https://api.gdeltproject.org https://html.duckduckgo.com https://api.duckduckgo.com https://upload.wikimedia.org https://news.google.com https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://hf.co https://*.hf.space blob: data:");
                 }
                 if (csp.includes('script-src')) {
                     csp = csp.replace(/script-src\s+([^;]+)/i, "script-src $1 https://cdn.jsdelivr.net 'unsafe-eval' blob:");
@@ -862,7 +880,7 @@ function isPublicAuditPageUrl(value) {
     try {
         const target = new URL(String(value || ''));
         const host = target.hostname.toLowerCase().replace(/\.$/, '');
-        if (target.protocol !== 'https:' || target.username || target.password || target.port || target.hash ||
+        if (target.protocol !== 'https:' || target.username || target.password || target.port ||
             !host.includes('.') || host.includes(':') || /^\d+(?:\.\d+){3}$/.test(host)) return false;
         if (['localhost', 'metadata.google.internal'].includes(host) ||
             ['.localhost', '.local', '.internal', '.test', '.invalid'].some(suffix => host.endsWith(suffix))) return false;
@@ -876,6 +894,7 @@ function rememberAuditPageUrl(senderId, value) {
     if (!isPublicAuditPageUrl(value)) return;
     try {
         const url = new URL(String(value));
+        url.hash = '';
         if (url.hostname === 'news.google.com') return;
         const now = Date.now();
         const granted = fokkAuditPageGrants.get(senderId) || new Map();
@@ -908,12 +927,13 @@ function rememberAuditPageUrlsFromIndex(senderId, indexUrl, body) {
 ipcMain.handle('fokk-audit-fetch', async (event, url) => {
     try {
         const target = new URL(String(url || ''));
+        target.hash = '';
         const allowedTarget = target.protocol === 'https:' && !target.username && !target.password &&
-            !target.port && !target.hash && (
+            !target.port && (
                 (target.hostname === 'news.google.com' && target.pathname === '/rss/search') ||
                 (target.hostname === 'html.duckduckgo.com' && target.pathname === '/html/') ||
                 (target.hostname === 'en.wikipedia.org' && target.pathname === '/w/api.php') ||
-                (target.hostname === 'wikidata.org' && target.pathname === '/w/api.php') ||
+                ((target.hostname === 'wikidata.org' || target.hostname === 'www.wikidata.org') && target.pathname === '/w/api.php') ||
                 (target.hostname === 'api.gdeltproject.org' && target.pathname === '/api/v2/doc/doc')
             );
         const ses = event.sender?.session;
@@ -929,7 +949,7 @@ ipcMain.handle('fokk-audit-fetch', async (event, url) => {
                 headers: { Accept: 'application/json, application/xml, text/xml' },
                 credentials: 'omit',
                 cache: 'no-store',
-                redirect: 'error',
+                redirect: 'follow',
                 signal: controller.signal
             });
             if (!response.ok) return null;
@@ -953,7 +973,8 @@ ipcMain.handle('fokk-audit-fetch', async (event, url) => {
 ipcMain.handle('fokk-audit-fetch-page', async (event, url) => {
     try {
         const target = new URL(String(url || ''));
-        if (target.protocol !== 'https:' || target.username || target.password || target.port || target.hash ||
+        target.hash = '';
+        if (target.protocol !== 'https:' || target.username || target.password || target.port ||
             target.href.length > 4_096 || !isPublicAuditPageUrl(target.href)) return null;
         const granted = fokkAuditPageGrants.get(event.sender.id);
         const expiresAt = granted?.get(target.href) || 0;
@@ -961,25 +982,46 @@ ipcMain.handle('fokk-audit-fetch-page', async (event, url) => {
         granted.delete(target.href);
         const ses = event.sender?.session;
         if (!ses || typeof ses.fetch !== 'function') return null;
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 8_000);
-        try {
-            const response = await ses.fetch(target.toString(), {
-                headers: { Accept: 'text/html, application/xhtml+xml, text/plain;q=0.8' },
-                credentials: 'omit',
-                cache: 'no-store',
-                redirect: 'error',
-                signal: controller.signal
-            });
+
+        let currentTarget = target;
+        let redirects = 0;
+        while (redirects <= 2) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 8_000);
+            let response = null;
+            try {
+                response = await ses.fetch(currentTarget.toString(), {
+                    headers: { Accept: 'text/html, application/xhtml+xml, text/plain;q=0.8' },
+                    credentials: 'omit',
+                    cache: 'no-store',
+                    redirect: 'manual',
+                    signal: controller.signal
+                });
+            } finally {
+                clearTimeout(timer);
+            }
+            if (!response) return null;
+            if (response.status >= 300 && response.status < 400) {
+                const location = response.headers.get('location');
+                if (!location) return null;
+                const nextUrl = new URL(location, currentTarget);
+                nextUrl.hash = '';
+                const origHost = target.hostname.toLowerCase();
+                const nextHost = nextUrl.hostname.toLowerCase();
+                const isSameDomain = nextHost === origHost || nextHost.endsWith(`.${origHost}`) || origHost.endsWith(`.${nextHost}`);
+                if (!isPublicAuditPageUrl(nextUrl.href) || !isSameDomain) return null;
+                currentTarget = nextUrl;
+                redirects++;
+                continue;
+            }
             const contentType = (response.headers.get('content-type') || '').toLowerCase();
             if (!response.ok || !(contentType.includes('text/html') || contentType.includes('application/xhtml+xml') || contentType.includes('text/plain'))) return null;
             const contentLength = Number(response.headers.get('content-length') || 0);
             if (contentLength > 1_000_000) return null;
             const body = await response.text();
             return body.length <= 1_000_000 ? body : null;
-        } finally {
-            clearTimeout(timer);
         }
+        return null;
     } catch (_) {
         return null;
     }
@@ -1076,6 +1118,7 @@ ipcMain.handle('fokk-clear-downloads', () => {
     downloadItems.length = 0;
     return { success: true };
 });
+
 
 // 8. Custom Wallpaper & Avatar Pickers
 let customWallpaperBase64 = '';

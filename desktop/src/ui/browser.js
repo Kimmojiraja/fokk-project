@@ -1089,6 +1089,11 @@ if (btnBookmarkOmni) {
     if (adfReload) adfReload.onclick = stealthReload;
 })();
 
+// =========================================================================
+// Media Vault Pro — Universal 1-Click Video / Audio Stream Downloader
+// =========================================================================
+
+
 // 4. Desktop Browser Menu & Daily Essentials
 if (btnMenu && desktopBrowserMenu) {
     btnMenu.addEventListener('click', (e) => {
@@ -1308,7 +1313,7 @@ function openSummaryModal(summary) {
     featureModalBody.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
             <span style="background: rgba(0,229,255,0.15); color: var(--fokk-cyan); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
+                <svg width="12" height="12" viewBox="0 0 100 100" fill="currentColor"><path d="M25.6,78.0L13.2,78.0L14.4,75.8L27.6,50.6L39.9,30.6L52.0,14.1L55.7,10.0L55.8,41.5L55.0,43.3L53.4,44.2L41.6,44.3L37.9,51.5L55.2,51.6L55.3,57.7L54.0,60.9L51.9,62.5L50.3,62.9L33.3,62.9L25.8,77.7Z"/><path d="M89.0,74.8L58.8,74.8L58.3,10.0Z"/><path d="M49.9,90.0L20.9,90.0L19.0,89.7L16.2,88.6L14.4,87.4L11.1,83.9L8.0,80.2L38.9,80.2L41.7,79.7L46.3,77.9L48.9,77.4L92.0,77.4L86.4,83.2L82.0,86.9L77.3,89.4L74.8,89.9L50.0,89.9Z"/></svg>
                 <span>100% In-Browser Engine · Zero Cloud</span>
             </span>
             <span style="font-size: 11.5px; color: var(--text-secondary);">${summary.readingTime || '1 min'} read · ${summary.wordCount || 0} words</span>

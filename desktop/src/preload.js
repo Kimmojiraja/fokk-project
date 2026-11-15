@@ -257,13 +257,42 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
     } catch (_) {}
 });
 } else {
+    // Expose audit bridges to web pages via contextBridge (or direct window if contextIsolation is off)
+    try {
+        if (process.contextIsolated) {
+            contextBridge.exposeInMainWorld('__fokk_audit_fetch', (url) => ipcRenderer.invoke('fokk-audit-fetch', url));
+            contextBridge.exposeInMainWorld('__fokk_audit_fetch_page', (url) => ipcRenderer.invoke('fokk-audit-fetch-page', url));
+            contextBridge.exposeInMainWorld('__fokk_native_audit', {
+                fetchJson: (url) => ipcRenderer.invoke('fokk-audit-fetch', url),
+                fetchPage: (url) => ipcRenderer.invoke('fokk-audit-fetch-page', url)
+            });
+        } else {
+            window.__fokk_audit_fetch = (url) => ipcRenderer.invoke('fokk-audit-fetch', url);
+            window.__fokk_audit_fetch_page = (url) => ipcRenderer.invoke('fokk-audit-fetch-page', url);
+            window.__fokk_native_audit = {
+                fetchJson: (url) => ipcRenderer.invoke('fokk-audit-fetch', url),
+                fetchPage: (url) => ipcRenderer.invoke('fokk-audit-fetch-page', url)
+            };
+        }
+    } catch (_) {}
+
     // Universal Standard Chromium Runtime Environment for all external websites
     try {
         webFrame.executeJavaScriptInIsolatedWorld(0, [
             {
                 code: `
-                    // Guarantee standard initial canvas background for websites with transparent root (e.g. BBC News, Wikipedia)
-                    (function ensureStandardCanvas() {
+                    (function() {
+                        const host = window.location.hostname.toLowerCase();
+                        // Never tamper with World 0 environment on Twitter/X, Twimg, or Arkose (allows flawless React hydration)
+                        const isStrictAuthHost = host.includes('twitter.com') ||
+                            host.includes('x.com') ||
+                            host.includes('twimg.com') ||
+                            host.includes('t.co') ||
+                            host.includes('arkoselabs.com');
+                        if (isStrictAuthHost) return;
+
+                        // Guarantee standard initial canvas background for websites with transparent root (e.g. BBC News, Wikipedia)
+                        (function ensureStandardCanvas() {
                         try {
                             const applyCanvas = function() {
                                 try {
@@ -454,8 +483,6 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                     try {
                         window.__fokk_is_pro = true;
                         window.__fokk_desktop = true;
-                        window.__fokk_audit_fetch = (url) => ipcRenderer.invoke('fokk-audit-fetch', url);
-                        window.__fokk_audit_fetch_page = (url) => ipcRenderer.invoke('fokk-audit-fetch-page', url);
                     } catch (_) {}
                     if (!window.chrome.app) {
                         window.chrome.app = {
@@ -521,16 +548,19 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                             { brand: 'Google Chrome', version: '124.0.6367.243' },
                             { brand: 'Not-A.Brand', version: '99.0.0.0' }
                         ];
+                        const isWin = (navigator.platform || '').toLowerCase().includes('win');
+                        const isMac = (navigator.platform || '').toLowerCase().includes('mac');
+                        const detectedPlatform = isWin ? 'Windows' : (isMac ? 'macOS' : 'Linux');
                         const fakeUAD = {
                             brands: fakeBrands,
                             mobile: false,
-                            platform: 'Windows',
+                            platform: detectedPlatform,
                             getHighEntropyValues: function(hints) {
                                 return Promise.resolve({
                                     brands: fakeBrands,
                                     mobile: false,
-                                    platform: 'Windows',
-                                    platformVersion: '15.0.0',
+                                    platform: detectedPlatform,
+                                    platformVersion: detectedPlatform === 'Windows' ? '15.0.0' : '6.5.0',
                                     architecture: 'x86',
                                     bitness: '64',
                                     model: '',
@@ -541,7 +571,7 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                                 return {
                                     brands: fakeBrands,
                                     mobile: false,
-                                    platform: 'Windows'
+                                    platform: detectedPlatform
                                 };
                             }
                         };
@@ -733,11 +763,171 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                             setTimeout(detectAndInjectDefuserBar, 1500);
                         } catch (_) {}
                     })();
+                })();
                 `
             }
         ]);
     } catch (_) {}
 }
+
+// =========================================================================
+// Fokk Identity Cloak Pro (Disposable Burner Email & In-Page OTP Extraction)
+// =========================================================================
+try {
+    (function initIdentityCloakPro() {
+        if (isInternalPage || window.__fokk_cloak_initialized) return;
+        window.__fokk_cloak_initialized = true;
+
+        let activeBurnerEmail = null;
+        let activeMailbox = null;
+        let activeDomain = null;
+        let pollTimer = null;
+        const knownMsgIds = new Set();
+
+        const showCloakToast = (msg, actionText, onAction, duration = 8000) => {
+            let el = document.getElementById('fokk-cloak-toast');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'fokk-cloak-toast';
+                el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#0d1527;border:1px solid #00E5FF;color:#fff;padding:12px 18px;border-radius:10px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;font-size:12.5px;box-shadow:0 8px 30px rgba(0,0,0,0.6);z-index:2147483647;display:flex;align-items:center;gap:12px;';
+                document.body.appendChild(el);
+            }
+            el.innerHTML = `
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <span>${msg}</span>
+                </div>
+                ${actionText ? `<button id="fokk-cloak-act" style="background:#00E5FF;color:#0d1527;border:none;padding:5px 10px;border-radius:6px;font-weight:700;font-size:11.5px;cursor:pointer;">${actionText}</button>` : ''}
+                <button id="fokk-cloak-close" style="background:transparent;border:none;color:#64748b;font-size:14px;cursor:pointer;padding:0 4px;">&times;</button>
+            `;
+            if (actionText && onAction) {
+                const actBtn = document.getElementById('fokk-cloak-act');
+                if (actBtn) actBtn.onclick = onAction;
+            }
+            const closeBtn = document.getElementById('fokk-cloak-close');
+            if (closeBtn) closeBtn.onclick = () => el.remove();
+            setTimeout(() => { if (el && el.parentNode) el.remove(); }, duration);
+        };
+
+        const generateBurnerEmail = async () => {
+            try {
+                const res = await fetch('https://www.1secmail.com/api/v1/?action=genRandomMailbox&count=1');
+                const list = await res.json();
+                if (list && list[0]) {
+                    activeBurnerEmail = list[0];
+                    const parts = activeBurnerEmail.split('@');
+                    activeMailbox = parts[0];
+                    activeDomain = parts[1];
+                    return activeBurnerEmail;
+                }
+            } catch (_) {}
+            const rand = Math.random().toString(36).substring(2, 9);
+            activeMailbox = 'fokk_' + rand;
+            activeDomain = '1secmail.com';
+            activeBurnerEmail = `${activeMailbox}@${activeDomain}`;
+            return activeBurnerEmail;
+        };
+
+        const pollForOtp = () => {
+            if (pollTimer) clearInterval(pollTimer);
+            let attempts = 0;
+            pollTimer = setInterval(async () => {
+                attempts++;
+                if (attempts > 60 || !activeMailbox || !activeDomain) {
+                    clearInterval(pollTimer);
+                    return;
+                }
+                try {
+                    const res = await fetch(`https://www.1secmail.com/api/v1/?action=getMessages&login=${encodeURIComponent(activeMailbox)}&domain=${encodeURIComponent(activeDomain)}`);
+                    const msgs = await res.json();
+                    if (Array.isArray(msgs) && msgs.length > 0) {
+                        for (const msg of msgs) {
+                            if (!knownMsgIds.has(msg.id)) {
+                                knownMsgIds.add(msg.id);
+                                const fullRes = await fetch(`https://www.1secmail.com/api/v1/?action=readMessage&login=${encodeURIComponent(activeMailbox)}&domain=${encodeURIComponent(activeDomain)}&id=${msg.id}`);
+                                const fullMsg = await fullRes.json();
+                                const body = `${fullMsg.body || ''} ${fullMsg.textBody || ''} ${msg.subject || ''}`;
+                                const otpMatch = body.match(/\b(?:\d{4,8})\b/);
+                                const otp = otpMatch ? otpMatch[0] : null;
+
+                                if (otp) {
+                                    showCloakToast(`✦ OTP Code: <b>${otp}</b> (${msg.from || 'Service'})`, 'Copy OTP', () => {
+                                        try { navigator.clipboard.writeText(otp); } catch (_) {}
+                                        showCloakToast(`Copied OTP: ${otp}!`, null, null, 2500);
+                                    }, 25000);
+                                } else {
+                                    showCloakToast(`✦ New message from: ${msg.from || 'Service'}`, 'View', () => {
+                                        window.open(`https://www.1secmail.com/mailbox/${activeMailbox}@${activeDomain}`, '_blank');
+                                    }, 10000);
+                                }
+                            }
+                        }
+                    }
+                } catch (_) {}
+            }, 4000);
+        };
+
+        const attachCloakButton = (input) => {
+            if (input.__fokk_cloak_attached) return;
+            input.__fokk_cloak_attached = true;
+
+            const btn = document.createElement('div');
+            btn.className = 'fokk-cloak-pill';
+            btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.4" style="vertical-align:middle;margin-right:4px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Fokk Burner Email`;
+            btn.style.cssText = 'position:absolute;background:#0d1527;border:1px solid #00E5FF;color:#00E5FF;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;z-index:2147483646;box-shadow:0 4px 12px rgba(0,0,0,0.4);display:none;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;letter-spacing:0.2px;';
+
+            document.body.appendChild(btn);
+
+            const positionBtn = () => {
+                const rect = input.getBoundingClientRect();
+                if (rect.width === 0 || rect.height === 0) return;
+                btn.style.left = `${window.scrollX + Math.max(0, rect.right - 140)}px`;
+                btn.style.top = `${window.scrollY + Math.max(0, rect.top - 28)}px`;
+                btn.style.display = 'block';
+            };
+
+            input.addEventListener('focus', positionBtn);
+            input.addEventListener('blur', () => {
+                setTimeout(() => { btn.style.display = 'none'; }, 350);
+            });
+
+            btn.onmousedown = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            };
+
+            btn.onclick = async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                btn.textContent = 'Generating...';
+                const email = await generateBurnerEmail();
+                input.value = email;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                btn.style.display = 'none';
+                btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.4" style="vertical-align:middle;margin-right:4px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Fokk Burner Email`;
+
+                try { navigator.clipboard.writeText(email); } catch (_) {}
+                showCloakToast(`✦ Burner email created: <b>${email}</b>. Listening for OTP...`, null, null, 7000);
+                pollForOtp();
+            };
+        };
+
+        const scanInputs = () => {
+            const inputs = document.querySelectorAll('input[type="email"], input[name*="email" i], input[id*="email" i], input[autocomplete="email"]');
+            inputs.forEach(attachCloakButton);
+        };
+
+        window.addEventListener('load', scanInputs);
+        setTimeout(scanInputs, 1000);
+        setTimeout(scanInputs, 3000);
+        if (window.MutationObserver && document.documentElement) {
+            new MutationObserver(scanInputs).observe(document.documentElement, { childList: true, subtree: true });
+        }
+    })();
+} catch (_) {}
+
+
 
 // Global pane interaction listener to notify host window which pane is actively being interacted with
 try {
@@ -748,5 +938,6 @@ try {
         try { ipcRenderer.send('fokk-pane-focus'); } catch (_) {}
     }, true);
 } catch (_) {}
+
 
 

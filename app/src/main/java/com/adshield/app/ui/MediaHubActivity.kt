@@ -1509,7 +1509,7 @@ open class MediaHubActivity : AppCompatActivity() {
             val blockedSuffixes = listOf(".localhost", ".local", ".internal", ".test", ".invalid")
             val ipv4 = Regex("^\\d{1,3}(?:\\.\\d{1,3}){3}$")
             return target.scheme.equals("https", ignoreCase = true) &&
-                target.port in listOf(-1, 443) && target.rawUserInfo == null && target.rawFragment == null &&
+                target.port in listOf(-1, 443) && target.rawUserInfo == null &&
                 host.contains(".") && !host.contains(":") && !ipv4.matches(host) &&
                 host != "localhost" && host != "metadata.google.internal" &&
                 blockedSuffixes.none { host.endsWith(it) } && host.split(".").all { label ->
@@ -1519,7 +1519,8 @@ open class MediaHubActivity : AppCompatActivity() {
 
         private fun rememberAuditPageUrl(value: String?) {
             try {
-                val target = java.net.URI(value ?: "")
+                val clean = value?.substringBefore('#')?.trim().orEmpty()
+                val target = java.net.URI(clean)
                 if (!isSafePublicAuditPage(target) || target.host.equals("news.google.com", ignoreCase = true)) return
                 val key = target.normalize().toASCIIString()
                 synchronized(auditPageUrlGrants) {
@@ -1978,15 +1979,16 @@ open class MediaHubActivity : AppCompatActivity() {
         fun auditFetch(url: String): String {
             var connection: java.net.HttpURLConnection? = null
             return try {
-                val target = java.net.URI(url)
+                val clean = url.substringBefore('#').trim()
+                val target = java.net.URI(clean)
                 val host = target.host?.lowercase(Locale.ROOT).orEmpty()
                 val allowedTarget = target.scheme.equals("https", ignoreCase = true) &&
                     target.port in listOf(-1, 443) &&
-                    target.rawUserInfo == null && target.rawFragment == null && url.length <= 4_096 &&
+                    target.rawUserInfo == null && clean.length <= 4_096 &&
                     ((host == "news.google.com" && target.path == "/rss/search") ||
                         (host == "html.duckduckgo.com" && target.path == "/html/") ||
                         (host == "en.wikipedia.org" && target.path == "/w/api.php") ||
-                        (host == "wikidata.org" && target.path == "/w/api.php") ||
+                        ((host == "wikidata.org" || host == "www.wikidata.org") && target.path == "/w/api.php") ||
                         (host == "api.gdeltproject.org" && target.path == "/api/v2/doc/doc"))
                 if (!allowedTarget) return ""
 
@@ -1994,7 +1996,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 val routeProxy = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM) {
                     val savedProxy = java.net.URI(com.adshield.app.engine.VpnEngine.getCustomProxy(activity))
                     val proxyType = when (savedProxy.scheme?.lowercase(Locale.ROOT)) {
-                        "socks" -> java.net.Proxy.Type.SOCKS
+                        "socks", "socks5", "socks4" -> java.net.Proxy.Type.SOCKS
                         "http" -> java.net.Proxy.Type.HTTP
                         // Java URLConnection does not provide TLS-to-HTTPS-proxy support.
                         // Do not silently send this lookup outside the configured route.
@@ -2012,7 +2014,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 connection = conn
                 conn.connectTimeout = 6_000
                 conn.readTimeout = 7_000
-                conn.instanceFollowRedirects = false
+                conn.instanceFollowRedirects = true
                 conn.useCaches = false
                 conn.requestMethod = "GET"
                 conn.setRequestProperty("Accept", "application/json, application/xml, text/xml")
@@ -2045,7 +2047,8 @@ open class MediaHubActivity : AppCompatActivity() {
             var connection: java.net.HttpURLConnection? = null
             return try {
                 if (url.length > 4_096) return ""
-                var target = java.net.URI(url)
+                val clean = url.substringBefore('#').trim()
+                var target = java.net.URI(clean)
                 if (!isSafePublicAuditPage(target)) return ""
                 val originalHost = target.host.orEmpty()
                 val grantKey = target.normalize().toASCIIString()
@@ -2091,7 +2094,10 @@ open class MediaHubActivity : AppCompatActivity() {
                     if (status in 300..399) {
                         val location = conn.getHeaderField("Location") ?: return ""
                         val redirectedTarget = target.resolve(location)
-                        if (!isSafePublicAuditPage(redirectedTarget) || !redirectedTarget.host.equals(originalHost, ignoreCase = true)) return ""
+                        val origHost = originalHost.lowercase(Locale.ROOT)
+                        val nextHost = redirectedTarget.host?.lowercase(Locale.ROOT).orEmpty()
+                        val isSameDomain = nextHost == origHost || nextHost.endsWith(".$origHost") || origHost.endsWith(".$nextHost")
+                        if (!isSafePublicAuditPage(redirectedTarget) || !isSameDomain) return ""
                         target = redirectedTarget
                         conn.disconnect()
                         connection = null
