@@ -153,7 +153,14 @@ object VpnEngine {
     fun checkDirectPublicIp(onResult: (ip: String?, error: String?) -> Unit) {
         executor.execute {
             var lastError = "The direct IP check did not return an address."
-            for (url in listOf("https://api4.ipify.org?format=json", "https://api.ipify.org")) {
+            val endpoints = listOf(
+                "https://api4.ipify.org?format=json",
+                "https://api.ipify.org?format=json",
+                "https://ipinfo.io/json",
+                "https://ifconfig.me/ip",
+                "https://icanhazip.com/"
+            )
+            for (url in endpoints) {
                 var connection: java.net.HttpURLConnection? = null
                 try {
                     val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection

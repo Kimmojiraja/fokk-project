@@ -189,7 +189,7 @@ function setupAdblockingForSession(sess) {
             if (k.toLowerCase() === 'content-security-policy') {
                 let csp = (responseHeaders[k] || []).join('; ');
                 if (csp.includes('connect-src')) {
-                    csp = csp.replace(/connect-src\s+([^;]+)/i, "connect-src $1 https://*.wikipedia.org https://api.duckduckgo.com https://upload.wikimedia.org https://news.google.com https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://hf.co https://*.hf.space blob: data:");
+                    csp = csp.replace(/connect-src\s+([^;]+)/i, "connect-src $1 https://*.wikipedia.org https://wikidata.org https://api.gdeltproject.org https://html.duckduckgo.com https://api.duckduckgo.com https://upload.wikimedia.org https://news.google.com https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://hf.co https://*.hf.space blob: data:");
                 }
                 if (csp.includes('script-src')) {
                     csp = csp.replace(/script-src\s+([^;]+)/i, "script-src $1 https://cdn.jsdelivr.net 'unsafe-eval' blob:");
@@ -856,20 +856,130 @@ ipcMain.handle('fokk-get-summarizer-script', () => {
     return adblock.summarizerJs || '';
 });
 
+const fokkAuditPageGrants = new Map();
+
+function isPublicAuditPageUrl(value) {
+    try {
+        const target = new URL(String(value || ''));
+        const host = target.hostname.toLowerCase().replace(/\.$/, '');
+        if (target.protocol !== 'https:' || target.username || target.password || target.port || target.hash ||
+            !host.includes('.') || host.includes(':') || /^\d+(?:\.\d+){3}$/.test(host)) return false;
+        if (['localhost', 'metadata.google.internal'].includes(host) ||
+            ['.localhost', '.local', '.internal', '.test', '.invalid'].some(suffix => host.endsWith(suffix))) return false;
+        return host.split('.').every(label => label.length > 0 && label.length <= 63 && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label));
+    } catch (_) {
+        return false;
+    }
+}
+
+function rememberAuditPageUrl(senderId, value) {
+    if (!isPublicAuditPageUrl(value)) return;
+    try {
+        const url = new URL(String(value));
+        if (url.hostname === 'news.google.com') return;
+        const now = Date.now();
+        const granted = fokkAuditPageGrants.get(senderId) || new Map();
+        for (const [key, expiresAt] of granted) if (expiresAt <= now) granted.delete(key);
+        granted.set(url.href, now + 10 * 60 * 1000);
+        while (granted.size > 100) granted.delete(granted.keys().next().value);
+        fokkAuditPageGrants.set(senderId, granted);
+    } catch (_) {}
+}
+
+function rememberAuditPageUrlsFromIndex(senderId, indexUrl, body) {
+    try {
+        const source = new URL(indexUrl);
+        if (source.hostname === 'api.gdeltproject.org') {
+            const articles = JSON.parse(body).articles || [];
+            for (const article of articles) rememberAuditPageUrl(senderId, article.url);
+        } else if (source.hostname === 'html.duckduckgo.com') {
+            const anchors = String(body || '').match(/<a\b[^>]*>/gi) || [];
+            for (const anchor of anchors) {
+                if (!/class\s*=\s*(["'])[^"']*\bresult__a\b[^"']*\1/i.test(anchor)) continue;
+                const href = anchor.match(/href\s*=\s*(["'])(.*?)\1/i)?.[2];
+                if (!href) continue;
+                const link = new URL(href.replace(/&amp;/g, '&'), 'https://html.duckduckgo.com');
+                rememberAuditPageUrl(senderId, link.searchParams.get('uddg') || link.href);
+            }
+        }
+    } catch (_) {}
+}
+
 ipcMain.handle('fokk-audit-fetch', async (event, url) => {
     try {
-        const https = require('https');
-        const http = require('http');
-        return await new Promise((resolve) => {
-            const client = (url || '').startsWith('https:') ? https : http;
-            client.get(url, { headers: { 'User-Agent': 'FokkBrowser/2.4.0 (Windows; ForensicRealityAudit)' } }, (res) => {
-                let body = '';
-                res.on('data', chunk => body += chunk);
-                res.on('end', () => {
-                    try { resolve(JSON.parse(body)); } catch (_) { resolve(null); }
-                });
-            }).on('error', () => resolve(null));
-        });
+        const target = new URL(String(url || ''));
+        const allowedTarget = target.protocol === 'https:' && !target.username && !target.password &&
+            !target.port && !target.hash && (
+                (target.hostname === 'news.google.com' && target.pathname === '/rss/search') ||
+                (target.hostname === 'html.duckduckgo.com' && target.pathname === '/html/') ||
+                (target.hostname === 'en.wikipedia.org' && target.pathname === '/w/api.php') ||
+                (target.hostname === 'wikidata.org' && target.pathname === '/w/api.php') ||
+                (target.hostname === 'api.gdeltproject.org' && target.pathname === '/api/v2/doc/doc')
+            );
+        const ses = event.sender?.session;
+        if (!allowedTarget || !ses || typeof ses.fetch !== 'function') return null;
+
+        // Use the calling browser page's session so evidence queries follow the
+        // same proxy/killswitch state as the tab and never fall back to Node's
+        // direct HTTP stack.
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10_000);
+        try {
+            const response = await ses.fetch(target.toString(), {
+                headers: { Accept: 'application/json, application/xml, text/xml' },
+                credentials: 'omit',
+                cache: 'no-store',
+                redirect: 'error',
+                signal: controller.signal
+            });
+            if (!response.ok) return null;
+            const contentLength = Number(response.headers.get('content-length') || 0);
+            if (contentLength > 1_000_000) return null;
+            const body = await response.text();
+            if (body.length > 1_000_000) return null;
+            rememberAuditPageUrlsFromIndex(event.sender.id, target.toString(), body);
+            if ((response.headers.get('content-type') || '').toLowerCase().includes('json')) {
+                try { return JSON.parse(body); } catch (_) { return null; }
+            }
+            return body;
+        } finally {
+            clearTimeout(timer);
+        }
+    } catch (_) {
+        return null;
+    }
+});
+
+ipcMain.handle('fokk-audit-fetch-page', async (event, url) => {
+    try {
+        const target = new URL(String(url || ''));
+        if (target.protocol !== 'https:' || target.username || target.password || target.port || target.hash ||
+            target.href.length > 4_096 || !isPublicAuditPageUrl(target.href)) return null;
+        const granted = fokkAuditPageGrants.get(event.sender.id);
+        const expiresAt = granted?.get(target.href) || 0;
+        if (!expiresAt || expiresAt <= Date.now()) return null;
+        granted.delete(target.href);
+        const ses = event.sender?.session;
+        if (!ses || typeof ses.fetch !== 'function') return null;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8_000);
+        try {
+            const response = await ses.fetch(target.toString(), {
+                headers: { Accept: 'text/html, application/xhtml+xml, text/plain;q=0.8' },
+                credentials: 'omit',
+                cache: 'no-store',
+                redirect: 'error',
+                signal: controller.signal
+            });
+            const contentType = (response.headers.get('content-type') || '').toLowerCase();
+            if (!response.ok || !(contentType.includes('text/html') || contentType.includes('application/xhtml+xml') || contentType.includes('text/plain'))) return null;
+            const contentLength = Number(response.headers.get('content-length') || 0);
+            if (contentLength > 1_000_000) return null;
+            const body = await response.text();
+            return body.length <= 1_000_000 ? body : null;
+        } finally {
+            clearTimeout(timer);
+        }
     } catch (_) {
         return null;
     }
