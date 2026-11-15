@@ -103,6 +103,25 @@
                 android:contentDescription="Close" />
         </LinearLayout>
 
+        <!-- Lead Image Container (Desktop Parity) -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/layoutLeadImageCard"
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:layout_marginTop="12dp"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="#0D121D"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/imgAiSummaryLead"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:contentDescription="Article Lead Image" />
+        </androidx.cardview.widget.CardView>
+
         <!-- Prominent Article Title -->
         <TextView
             android:id="@+id/textSummaryTitle"
@@ -229,6 +248,27 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:visibility="gone" />
+
+        <!-- Deep-Dive Curiosity Questions (Desktop Parity) -->
+        <TextView
+            android:id="@+id/textQuestionsLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="DEEP-DIVE QUESTIONS"
+            android:textColor="@color/fokk_cyan"
+            android:textSize="10.5sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/layoutFollowUpQuestions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical"
             android:visibility="gone" />
 
         <!-- Action Buttons -->

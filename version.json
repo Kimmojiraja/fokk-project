@@ -1,6 +1,6 @@
 {
-  "versionCode": 249,
-  "versionName": "2.4.9",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.9/app-debug.apk",
-  "changelog": "- Sailboat 'F' Brand Logo: Precision geometric vector SVG and transparent app launcher mipmaps across Android and Desktop.\n- Icon-Only Social Triggers: Streamlined 28x28 circular post verification buttons without text label for clean integration.\n- Universal Social Media Injections: Added native verification triggers for Facebook, TikTok, Instagram, Threads, Bluesky, LinkedIn, YouTube, Twitter/X, and Reddit.\n- Hybrid Fokk AI Truth Engine: Natural Perplexity/ChatGPT-style synthesis without rigid headers, clickbait decoupling (cleanFactualCore), encyclopedic grounding, and multilingual fluency.\n- Cross-Platform Parity: Synchronized truth engine, content scripts, and launcher icons to desktop distribution and mobile APK."
+  "versionCode": 250,
+  "versionName": "2.5.0",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.5.0/app-debug.apk",
+  "changelog": "- Mobile Privacy Gateway & Real IP Masking: Added Tor Onion Network (Orbot / SOCKS5 integration) and Fokk Secure Privacy Relay alongside custom proxy support with fail-closed security and browser exit IP verification.\n- Fokk AI Summary Enhancements: Full desktop parity with lead article image extraction and display, deep-dive curiosity questions with interactive web exploration, and voice assistant TTS (Male/Female voice options).\n- Evidence Review Route Protection: Routed background Truth Engine audit requests through the active privacy gateway to prevent IP leaks."
 }

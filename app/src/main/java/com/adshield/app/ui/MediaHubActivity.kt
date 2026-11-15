@@ -41,6 +41,7 @@ import java.net.Socket
 import java.net.InetSocketAddress
 import com.google.android.material.chip.Chip
 import com.adshield.app.databinding.SheetAiSummaryBinding
+import com.adshield.app.databinding.SheetVpnGatewayBinding
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -1993,8 +1994,14 @@ open class MediaHubActivity : AppCompatActivity() {
                 if (!allowedTarget) return ""
 
                 val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(activity)
-                val routeProxy = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM) {
-                    val savedProxy = java.net.URI(com.adshield.app.engine.VpnEngine.getCustomProxy(activity))
+                val proxyEndpoint = when (activeMode) {
+                    com.adshield.app.engine.VpnEngine.VpnMode.TOR -> com.adshield.app.engine.VpnEngine.getTorEndpoint()
+                    com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> com.adshield.app.engine.VpnEngine.getRelayEndpoint()
+                    com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> com.adshield.app.engine.VpnEngine.getCustomProxy(activity)
+                    com.adshield.app.engine.VpnEngine.VpnMode.OFF -> null
+                }
+                val routeProxy = if (!proxyEndpoint.isNullOrBlank()) {
+                    val savedProxy = java.net.URI(proxyEndpoint)
                     val proxyType = when (savedProxy.scheme?.lowercase(Locale.ROOT)) {
                         "socks", "socks5", "socks4" -> java.net.Proxy.Type.SOCKS
                         "http" -> java.net.Proxy.Type.HTTP
@@ -2065,8 +2072,14 @@ open class MediaHubActivity : AppCompatActivity() {
                 if (!granted) return ""
 
                 val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(activity)
-                val routeProxy = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM) {
-                    val savedProxy = java.net.URI(com.adshield.app.engine.VpnEngine.getCustomProxy(activity))
+                val proxyEndpoint = when (activeMode) {
+                    com.adshield.app.engine.VpnEngine.VpnMode.TOR -> com.adshield.app.engine.VpnEngine.getTorEndpoint()
+                    com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> com.adshield.app.engine.VpnEngine.getRelayEndpoint()
+                    com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> com.adshield.app.engine.VpnEngine.getCustomProxy(activity)
+                    com.adshield.app.engine.VpnEngine.VpnMode.OFF -> null
+                }
+                val routeProxy = if (!proxyEndpoint.isNullOrBlank()) {
+                    val savedProxy = java.net.URI(proxyEndpoint)
                     val proxyType = when (savedProxy.scheme?.lowercase(Locale.ROOT)) {
                         "socks", "socks5", "socks4" -> java.net.Proxy.Type.SOCKS
                         "http", "https" -> java.net.Proxy.Type.HTTP
@@ -4879,9 +4892,13 @@ open class MediaHubActivity : AppCompatActivity() {
         val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
         val isProxyActive = activeMode != com.adshield.app.engine.VpnEngine.VpnMode.OFF
         binding.dotNavVpnActive.visibility = if (isProxyActive) View.VISIBLE else View.GONE
-        binding.imgNavVpnIcon.imageTintList = android.content.res.ColorStateList.valueOf(
-            if (isProxyActive) android.graphics.Color.parseColor("#00E5FF") else android.graphics.Color.parseColor("#94A3B8")
-        )
+        val tintColor = when (activeMode) {
+            com.adshield.app.engine.VpnEngine.VpnMode.TOR -> android.graphics.Color.parseColor("#A855F7")
+            com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> android.graphics.Color.parseColor("#00E5FF")
+            com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> android.graphics.Color.parseColor("#10B981")
+            com.adshield.app.engine.VpnEngine.VpnMode.OFF -> android.graphics.Color.parseColor("#94A3B8")
+        }
+        binding.imgNavVpnIcon.imageTintList = android.content.res.ColorStateList.valueOf(tintColor)
     }
 
     private fun openSystemDownloads() {
@@ -5881,11 +5898,17 @@ open class MediaHubActivity : AppCompatActivity() {
         val activeVpnMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
         sheetBinding.textMenuVpnStatus.text = when (activeVpnMode) {
             com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "OFF"
+            com.adshield.app.engine.VpnEngine.VpnMode.TOR -> "TOR"
+            com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> "RELAY"
             com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> "PROXY"
         }
-        sheetBinding.textMenuVpnStatus.setTextColor(
-            if (activeVpnMode != com.adshield.app.engine.VpnEngine.VpnMode.OFF) 0xFF34D399.toInt() else 0xFF00E5FF.toInt()
-        )
+        val vpnStatusColor = when (activeVpnMode) {
+            com.adshield.app.engine.VpnEngine.VpnMode.OFF -> 0xFF94A3B8.toInt()
+            com.adshield.app.engine.VpnEngine.VpnMode.TOR -> 0xFFA855F7.toInt()
+            com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> 0xFF00E5FF.toInt()
+            com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> 0xFF10B981.toInt()
+        }
+        sheetBinding.textMenuVpnStatus.setTextColor(vpnStatusColor)
         sheetBinding.btnToolVpnMode.setOnClickListener {
             dialog.dismiss()
             showVpnModeSelector()
@@ -6537,38 +6560,122 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     private fun showVpnModeSelector() {
-        val current = com.adshield.app.engine.VpnEngine.getActiveMode(this)
-        val modes = arrayOf(
-            "Direct Connection (Browser proxy off)",
-            "Custom SOCKS / HTTP(S) Browser Proxy",
-            "Verify Browser IP vs Direct IP"
-        )
-        val checked = when (current) {
-            com.adshield.app.engine.VpnEngine.VpnMode.OFF -> 0
-            com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> 1
+        val sheetDialog = BottomSheetDialog(this)
+        val b = SheetVpnGatewayBinding.inflate(layoutInflater)
+        sheetDialog.setContentView(b.root)
+
+        b.btnCloseVpnSheet.setOnClickListener { sheetDialog.dismiss() }
+
+        fun refreshUi() {
+            val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
+            val isConnected = activeMode != com.adshield.app.engine.VpnEngine.VpnMode.OFF
+
+            if (isConnected) {
+                b.textVpnStatusPill.text = "CONNECTED (MASKED)"
+                b.textVpnStatusPill.setTextColor(android.graphics.Color.parseColor("#10B981"))
+                b.textVpnPowerLabel.text = "Privacy Gateway Active"
+                b.textVpnPowerSub.text = "Traffic is routed through ${activeMode.title}"
+                b.vpnRadarRing.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#00E5FF"))
+                b.btnVpnPower.imageTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#00E5FF"))
+                b.textVpnExitIp.text = "Route Active — Tap Verify"
+                b.textVpnExitIp.setTextColor(android.graphics.Color.parseColor("#10B981"))
+            } else {
+                b.textVpnStatusPill.text = "DIRECT (IP EXPOSED)"
+                b.textVpnStatusPill.setTextColor(android.graphics.Color.parseColor("#F43F5E"))
+                b.textVpnPowerLabel.text = "Tap to Connect"
+                b.textVpnPowerSub.text = "Choose a privacy relay below to mask your IP"
+                b.vpnRadarRing.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#1E293B"))
+                b.btnVpnPower.imageTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#94A3B8"))
+                b.textVpnExitIp.text = "Direct (Real IP Exposed)"
+                b.textVpnExitIp.setTextColor(android.graphics.Color.parseColor("#F43F5E"))
+            }
+
+            b.radioModeTor.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.TOR)
+            b.radioModeRelay.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.RELAY)
+            b.radioModeCustom.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM)
+            b.radioModeOff.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.OFF)
+
+            b.textVpnProtocol.text = when (activeMode) {
+                com.adshield.app.engine.VpnEngine.VpnMode.TOR -> "Tor Onion SOCKS5 (${com.adshield.app.engine.VpnEngine.getTorEndpoint()})"
+                com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> "Fokk Secure Privacy Relay"
+                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> "Custom Proxy (${com.adshield.app.engine.VpnEngine.getCustomProxy(this).ifBlank { "Not configured" }})"
+                com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "Direct (Browser proxy off)"
+            }
+
+            val customSaved = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
+            b.textCustomProxyPreview.text = if (customSaved.isNotBlank()) customSaved else "User-defined SOCKS5, HTTP, or HTTPS proxy address"
+
+            val torListening = com.adshield.app.engine.VpnEngine.isTorListening()
+            val orbotInstalled = com.adshield.app.engine.VpnEngine.isOrbotInstalled(this)
+            b.layoutOrbotHelper.visibility = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.TOR || orbotInstalled) View.VISIBLE else View.GONE
+            b.textOrbotStatus.text = if (torListening) "✓ Tor SOCKS5 active on port ${com.adshield.app.engine.VpnEngine.getTorPort()}" else "Tor / Orbot not listening on port 9050"
+            b.textOrbotStatus.setTextColor(if (torListening) android.graphics.Color.parseColor("#10B981") else android.graphics.Color.parseColor("#A855F7"))
+            b.btnLaunchOrbot.text = if (orbotInstalled) "Start Orbot" else "Get Orbot"
+            b.btnLaunchOrbot.setOnClickListener {
+                com.adshield.app.engine.VpnEngine.launchOrbot(this)
+            }
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Browser Privacy Gateway")
-            .setSingleChoiceItems(modes, checked) { dialog, which ->
-                dialog.dismiss()
-                when (which) {
-                    0 -> com.adshield.app.engine.VpnEngine.applyVpnMode(this, com.adshield.app.engine.VpnEngine.VpnMode.OFF) { success, msg ->
-                        runOnUiThread {
-                            if (success) {
-                                activeWebView?.reload()
-                                lastVpnRouteFingerprint = getVpnRouteFingerprint()
-                                updateVpnIndicatorUi()
-                            }
-                            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-                        }
+        refreshUi()
+
+        com.adshield.app.engine.VpnEngine.checkDirectPublicIp { directIp, _ ->
+            runOnUiThread {
+                b.textVpnDirectIp.text = directIp ?: "Unavailable"
+            }
+        }
+
+        fun switchMode(mode: com.adshield.app.engine.VpnEngine.VpnMode, customProxy: String? = null) {
+            com.adshield.app.engine.VpnEngine.applyVpnMode(this, mode, customProxy) { success, msg ->
+                runOnUiThread {
+                    if (success) {
+                        activeWebView?.reload()
+                        lastVpnRouteFingerprint = getVpnRouteFingerprint()
+                        updateVpnIndicatorUi()
                     }
-                    1 -> showCustomProxyDialog()
-                    2 -> showVerifyBrowserExitDialog()
+                    refreshUi()
+                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                 }
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+        }
+
+        b.cardModeTor.setOnClickListener {
+            switchMode(com.adshield.app.engine.VpnEngine.VpnMode.TOR)
+        }
+
+        b.cardModeRelay.setOnClickListener {
+            switchMode(com.adshield.app.engine.VpnEngine.VpnMode.RELAY)
+        }
+
+        b.cardModeCustom.setOnClickListener {
+            showCustomProxyDialog { proxy ->
+                switchMode(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, proxy)
+            }
+        }
+
+        b.cardModeOff.setOnClickListener {
+            switchMode(com.adshield.app.engine.VpnEngine.VpnMode.OFF)
+        }
+
+        b.btnVpnPower.setOnClickListener {
+            val current = com.adshield.app.engine.VpnEngine.getActiveMode(this)
+            if (current != com.adshield.app.engine.VpnEngine.VpnMode.OFF) {
+                switchMode(com.adshield.app.engine.VpnEngine.VpnMode.OFF)
+            } else {
+                val target = if (com.adshield.app.engine.VpnEngine.isTorListening()) {
+                    com.adshield.app.engine.VpnEngine.VpnMode.TOR
+                } else {
+                    com.adshield.app.engine.VpnEngine.VpnMode.RELAY
+                }
+                switchMode(target)
+            }
+        }
+
+        b.btnVerifyVpnExitIp.setOnClickListener {
+            sheetDialog.dismiss()
+            showVerifyBrowserExitDialog()
+        }
+
+        sheetDialog.show()
     }
 
     private fun getVpnRouteFingerprint(): String {
@@ -6750,12 +6857,12 @@ open class MediaHubActivity : AppCompatActivity() {
         loadNextEndpoint(null)
     }
 
-    private fun showCustomProxyDialog() {
+    private fun showCustomProxyDialog(onApplied: ((String) -> Unit)? = null) {
         val input = EditText(this).apply {
             hint = "socks5://host:port, http://host:port, or https://host:port"
             setText(com.adshield.app.engine.VpnEngine.getCustomProxy(this@MediaHubActivity))
-            minLines = 4
-            maxLines = 12
+            minLines = 3
+            maxLines = 8
             setSingleLine(false)
         }
         AlertDialog.Builder(this)
@@ -6764,18 +6871,22 @@ open class MediaHubActivity : AppCompatActivity() {
             .setPositiveButton("Apply") { _, _ ->
                 val proxyUrl = input.text.toString().trim()
                 if (proxyUrl.isNotEmpty()) {
-                    com.adshield.app.engine.VpnEngine.applyVpnMode(
-                        this,
-                        com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM,
-                        proxyUrl
-                    ) { success, msg ->
-                        runOnUiThread {
-                            if (success) {
-                                activeWebView?.reload()
-                                lastVpnRouteFingerprint = getVpnRouteFingerprint()
-                                updateVpnIndicatorUi()
+                    if (onApplied != null) {
+                        onApplied(proxyUrl)
+                    } else {
+                        com.adshield.app.engine.VpnEngine.applyVpnMode(
+                            this,
+                            com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM,
+                            proxyUrl
+                        ) { success, msg ->
+                            runOnUiThread {
+                                if (success) {
+                                    activeWebView?.reload()
+                                    lastVpnRouteFingerprint = getVpnRouteFingerprint()
+                                    updateVpnIndicatorUi()
+                                }
+                                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                             }
-                            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -7165,6 +7276,8 @@ open class MediaHubActivity : AppCompatActivity() {
             val wordCount = json.optInt("wordCount", 0)
             val bulletsArray = json.optJSONArray("bullets") ?: JSONArray()
             val metricsArray = json.optJSONArray("metrics") ?: JSONArray()
+            val questionsArray = json.optJSONArray("followUpQuestions") ?: json.optJSONArray("questions") ?: JSONArray()
+            val leadImage = json.optString("leadImage", "").trim()
             val explicitSummary = json.optString("executiveSummary", json.optString("summary", "")).trim()
             val activeUrl = json.optString("url", activeWebView?.url.orEmpty())
 
@@ -7179,6 +7292,34 @@ open class MediaHubActivity : AppCompatActivity() {
             val sheetDialog = BottomSheetDialog(this)
             val sheetBinding = SheetAiSummaryBinding.inflate(layoutInflater)
             sheetDialog.setContentView(sheetBinding.root)
+
+            // Lead Image (Desktop Parity)
+            if (leadImage.isNotBlank() && (leadImage.startsWith("http://") || leadImage.startsWith("https://"))) {
+                sheetBinding.layoutLeadImageCard.visibility = View.VISIBLE
+                Thread {
+                    try {
+                        val conn = java.net.URL(leadImage).openConnection() as java.net.HttpURLConnection
+                        conn.connectTimeout = 4000
+                        conn.readTimeout = 4000
+                        conn.doInput = true
+                        conn.connect()
+                        val bitmap = BitmapFactory.decodeStream(conn.inputStream)
+                        runOnUiThread {
+                            if (bitmap != null) {
+                                sheetBinding.imgAiSummaryLead.setImageBitmap(bitmap)
+                            } else {
+                                sheetBinding.layoutLeadImageCard.visibility = View.GONE
+                            }
+                        }
+                    } catch (_: Exception) {
+                        runOnUiThread {
+                            sheetBinding.layoutLeadImageCard.visibility = View.GONE
+                        }
+                    }
+                }.start()
+            } else {
+                sheetBinding.layoutLeadImageCard.visibility = View.GONE
+            }
 
             sheetBinding.textSummaryTitle.text = title
             val metaText = if (wordCount > 0) "$readingTime • $wordCount words • 100% On-Device AI" else "$readingTime • 100% On-Device AI • Zero Server Latency"
@@ -7214,6 +7355,8 @@ open class MediaHubActivity : AppCompatActivity() {
                     for (i in 0 until bulletsArray.length()) bulletsList.add(bulletsArray.getString(i))
                     val metricsList = mutableListOf<String>()
                     for (i in 0 until metricsArray.length()) metricsList.add(metricsArray.getString(i))
+                    val qList = mutableListOf<String>()
+                    for (i in 0 until questionsArray.length()) qList.add(questionsArray.getString(i))
                     val item = SavedSummary(
                         url = activeUrl,
                         title = title,
@@ -7224,7 +7367,9 @@ open class MediaHubActivity : AppCompatActivity() {
                         wordCount = wordCount,
                         executiveSummary = explicitSummary,
                         bullets = bulletsList,
-                        metrics = metricsList
+                        metrics = metricsList,
+                        leadImage = leadImage,
+                        questions = qList
                     )
                     savedSummariesStore.save(item)
                     isSaved = true
@@ -7331,6 +7476,60 @@ open class MediaHubActivity : AppCompatActivity() {
                     }
                     sheetBinding.chipGroupMetrics.addView(chip)
                 }
+            }
+
+            // Deep-Dive Curiosity Questions (Desktop Parity)
+            if (questionsArray.length() > 0) {
+                sheetBinding.textQuestionsLabel.visibility = View.VISIBLE
+                sheetBinding.layoutFollowUpQuestions.visibility = View.VISIBLE
+                sheetBinding.layoutFollowUpQuestions.removeAllViews()
+
+                for (i in 0 until questionsArray.length()) {
+                    val q = questionsArray.getString(i)
+                    fullText.append("✦ Deep-Dive Question: ").append(q).append("\n\n")
+
+                    val card = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_stat_chip)
+                        setPadding((12 * density).toInt(), (10 * density).toInt(), (12 * density).toInt(), (10 * density).toInt())
+                        layoutParams = LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                        ).apply {
+                            bottomMargin = (8 * density).toInt()
+                        }
+                        isClickable = true
+                        isFocusable = true
+                        setOnClickListener {
+                            sheetDialog.dismiss()
+                            val searchUrl = currentSearchEngine.searchUrl + Uri.encode(q)
+                            addNewTab(searchUrl, isPrivate = activeTab?.isPrivate == true)
+                            Toast.makeText(this@MediaHubActivity, "Exploring: $q", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+
+                    val spark = TextView(this).apply {
+                        text = "✦ "
+                        setTextColor(getColor(R.color.fokk_cyan))
+                        textSize = 14f
+                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    }
+
+                    val qTv = TextView(this).apply {
+                        text = q
+                        setTextColor(getColor(R.color.fokk_cyan))
+                        textSize = 13f
+                        setLineSpacing(0f, 1.3f)
+                        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                    }
+
+                    card.addView(spark)
+                    card.addView(qTv)
+                    sheetBinding.layoutFollowUpQuestions.addView(card)
+                }
+            } else {
+                sheetBinding.textQuestionsLabel.visibility = View.GONE
+                sheetBinding.layoutFollowUpQuestions.visibility = View.GONE
             }
 
             sheetBinding.btnCloseSummary.setOnClickListener {
