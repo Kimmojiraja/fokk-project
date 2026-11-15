@@ -185,21 +185,54 @@ class VpnEngine extends EventEmitter {
 
     checkDirectPublicIp() {
         return new Promise(resolve => {
-            const request = https.get('https://api4.ipify.org?format=json', { timeout: 5_000 }, response => {
-                let body = '';
-                response.on('data', chunk => { body += chunk; });
-                response.on('end', () => {
-                    try {
-                        if (response.statusCode !== 200) return resolve({ ip: null, error: `HTTP ${response.statusCode}` });
-                        const ip = JSON.parse(body).ip;
-                        resolve({ ip: typeof ip === 'string' ? ip : null, error: null });
-                    } catch (_) {
-                        resolve({ ip: null, error: 'Invalid response from the public IP check.' });
-                    }
+            const endpoints = [
+                'https://api.ipify.org?format=json',
+                'https://ipinfo.io/json',
+                'https://ifconfig.me/ip',
+                'https://icanhazip.com/',
+                'https://cloudflare.com/cdn-cgi/trace'
+            ];
+            let index = 0;
+            let lastError = 'No direct public IP service returned an address.';
+            const next = () => {
+                if (index >= endpoints.length) {
+                    resolve({ ip: null, error: lastError });
+                    return;
+                }
+                const url = endpoints[index++];
+                let settled = false;
+                const fail = error => {
+                    if (settled) return;
+                    settled = true;
+                    lastError = error?.message || 'The direct public IP service failed.';
+                    next();
+                };
+                const request = https.get(url, { timeout: 4_000, headers: { 'User-Agent': 'FokkBrowser-RouteCheck/1.0' } }, response => {
+                    let body = '';
+                    response.on('data', chunk => { body += chunk; });
+                    response.on('end', () => {
+                        if (settled) return;
+                        settled = true;
+                        if (response.statusCode !== 200) {
+                            lastError = `IP service returned HTTP ${response.statusCode}`;
+                            next();
+                            return;
+                        }
+                        let candidate = '';
+                        try { candidate = JSON.parse(body)?.ip || ''; } catch (_) {}
+                        if (!candidate) candidate = body.match(/(?:^|\n)ip=([^\s]+)/)?.[1] || body.trim();
+                        candidate = String(candidate).trim();
+                        if (net.isIP(candidate)) resolve({ ip: candidate, error: null });
+                        else {
+                            lastError = 'The IP service returned an invalid address.';
+                            next();
+                        }
+                    });
                 });
-            });
-            request.on('timeout', () => request.destroy(new Error('Public IP check timed out.')));
-            request.on('error', error => resolve({ ip: null, error: error.message || 'Public IP check failed.' }));
+                request.on('timeout', () => request.destroy(new Error('Direct public IP check timed out.')));
+                request.on('error', fail);
+            };
+            next();
         });
     }
 

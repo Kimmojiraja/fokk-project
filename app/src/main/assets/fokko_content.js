@@ -7,7 +7,7 @@
   if (window.__fokk_content_injected) return;
   window.__fokk_content_injected = true;
 
-  const CACHE_VERSION = "v244";
+  const CACHE_VERSION = "v249";
 
   // Auto-purge any stale quota lockout entries and legacy cached audits from earlier versions
   try {
@@ -393,7 +393,10 @@
       .trim();
 
     const verdictTitle = data.verdictTitle || (isDebunked ? "FABRICATION CONFIRMED" : isVerified ? "PRIMARY RECORD CONFIRMED" : "CONTESTED CLAIM");
-    const confidence = data.confidence || 94;
+    const confidence = Number.isFinite(Number(data.confidence)) ? Number(data.confidence) : 0;
+    const confidenceLabel = data.evidenceReport
+      ? `${escapeHtml(data.coverageLabel || "LIMITED")} HEADLINE COVERAGE`
+      : `${confidence}% FORENSIC CONFIDENCE`;
 
     const docketId = String(data.id || "LIVE").replace(/^check_|^tmb_|^live_|^offline_/, "").slice(-6).toUpperCase();
     const docketElem = document.getElementById("tmb-header-docket");
@@ -403,7 +406,9 @@
 
     const appUrl = `${APP_URL}/?claim=${encodeURIComponent(safeClaim)}`;
     const deepUrl = data.deepLink || appUrl;
-    const shareText = `Fokkoo Forensic Audit: "${safeClaim.slice(0, 80)}..." is ${statusBadge} (${confidence}% Confidence). Receipts: ${deepUrl}`;
+    const shareText = data.evidenceReport
+      ? `Fokk evidence review: "${safeClaim.slice(0, 80)}..." — ${statusBadge}; ${data.coverageLabel || "LIMITED"} headline coverage. This review does not determine truth. Sources: ${deepUrl}`
+      : `Fokkoo Forensic Audit: "${safeClaim.slice(0, 80)}..." is ${statusBadge} (${confidence}% Confidence). Receipts: ${deepUrl}`;
     const xReplyUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
 
     const dateStr = new Date().toLocaleDateString("en-US", {
@@ -441,7 +446,7 @@
         cleanSourceName = raw;
       }
     }
-    if (!cleanSourceName) cleanSourceName = "Primary Source";
+    if (!cleanSourceName && !data.evidenceReport) cleanSourceName = "Primary Source";
 
     const hasNavUrl = sourceUrl && sourceUrl !== "#";
     const faviconUrl = sourceDomain
@@ -456,7 +461,7 @@
         <div class="tmb-verdict-status ${badgeClass}">
           <span>${escapeHtml(statusBadge)} · ${escapeHtml(verdictTitle)}</span>
         </div>
-        <span class="tmb-confidence-badge">${confidence}% FORENSIC CONFIDENCE</span>
+        <span class="tmb-confidence-badge">${confidenceLabel}</span>
       </div>
 
       <!-- 2. Target Claim -->
@@ -472,6 +477,21 @@
           <div id="tmb-neural-status" style="font-size: 10.5px; color: #00E5FF; margin-top: 6px; font-weight: 700; letter-spacing: 0.4px; display: none;"></div>
         </div>
       </div>
+
+      ${data.evidenceReport && Array.isArray(data.evidenceLayers) ? `
+        <div style="margin-top:10px;padding:10px 12px;border:1px solid rgba(0,229,255,.18);border-radius:8px;background:rgba(0,229,255,.035);">
+          <div style="font-size:10px;font-weight:700;color:#8892b0;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Evidence review layers</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:7px;word-break:break-word;">
+            ${data.evidenceLayers.map(layer => `
+              <div style="padding:7px 8px;border-radius:6px;background:rgba(255,255,255,.035);">
+                <div style="font-size:9px;color:#8892b0;text-transform:uppercase;letter-spacing:.06em;">${escapeHtml(layer.label || "Review")}</div>
+                <div style="font-size:11px;color:#E2E8F0;margin-top:3px;line-height:1.4;">${escapeHtml(layer.value || "Not assessed")}</div>
+              </div>
+            `).join("")}
+          </div>
+          <div style="font-size:10px;line-height:1.45;color:#94A3B8;margin-top:8px;">${escapeHtml(data.assessmentLimitation || "Headlines are discovery leads; open the sources to inspect the full reporting.")}</div>
+        </div>
+      ` : ""}
 
       <!-- 4. Wire Receipt Quote (if present) -->
       <div id="tmb-receipt-quote-container" style="display: none;">
@@ -495,15 +515,18 @@
           <div class="tmb-sources-section" style="margin-top: 14px;">
             <div style="font-size: 10px; font-weight: 700; color: #8892b0; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 5px;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-              <span>VERIFIED MULTI-SOURCE RECEIPTS (${data.receipts.length})</span>
+              <span>${data.evidenceReport ? "SOURCE LINKS FOR REVIEW" : "VERIFIED MULTI-SOURCE RECEIPTS"} (${data.receipts.length})</span>
             </div>
             <div style="display: flex; flex-direction: column; gap: 6px;">
-              ${data.receipts.slice(0, 5).map(s => `
+              ${data.receipts.slice(0, 8).map(s => `
                 <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer" class="tmb-source-link" style="padding: 7px 10px; display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; text-decoration: none; color: #E2E8F0; font-size: 11.5px; transition: all 0.15s ease;" onmouseover="this.style.background='rgba(0,229,255,0.06)';this.style.borderColor='rgba(0,229,255,0.3)';" onmouseout="this.style.background='rgba(255,255,255,0.03)';this.style.borderColor='rgba(255,255,255,0.08)';">
-                  <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                  <div style="display: flex; align-items: center; gap: 8px; overflow: hidden; flex: 1; min-width: 0;">
                     <img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(s.domain || 'google.com')}&sz=32" alt="" style="width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;" onerror="this.style.display='none'" />
-                    <span style="font-weight: 700; color: #00E5FF; flex-shrink: 0;">${escapeHtml(s.sourceName || s.domain)}</span>
-                    <span style="color: #94A3B8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(s.headline || s.snippet || '')}</span>
+                    <span style="font-weight: 700; color: #00E5FF; flex-shrink: 0;">${escapeHtml(s.sourceName || s.domain)}${s.evidenceRole ? `<small style="display:block;font-size:9px;color:#94A3B8;font-weight:500;margin-top:2px;">${escapeHtml(s.evidenceRole)}</small>` : ""}</span>
+                    <span style="color: #E2E8F0; display: block; min-width: 0; overflow: hidden;">
+                      <span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.headline || s.snippet || '')}</span>
+                      ${s.snippet ? `<small style="display:block;color:#94A3B8;font-size:10px;line-height:1.35;white-space:normal;margin-top:2px;">${escapeHtml(String(s.snippet).slice(0, 260))}</small>` : ""}
+                    </span>
                   </div>
                   <span style="color: #00E5FF; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-left: 8px;">Open ↗</span>
                 </a>
@@ -578,7 +601,7 @@
 
       <!-- 6. Footer (Docket watermark & Twitter action buttons) -->
       <div class="tmb-footer-watermark">
-        <span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>Fokk AI · Dual-Engine Verified</span>
+        <span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/></svg>${data.evidenceReport ? "Fokk AI · Evidence review" : "Fokk AI · Dual-Engine Verified"}</span>
         <span>${dateStr}</span>
       </div>
 
@@ -703,7 +726,7 @@
     streamStep();
 
     // Pro Turbo: Stream natural on-device neural synthesis in background
-    if (data.isPro || data.auditTier === "PRO_TURBO") {
+    if ((data.isPro || data.auditTier === "PRO_TURBO") && !data.evidenceReport) {
       setTimeout(() => {
         streamNeuralSynthesis(safeClaim, data, data.receipts || []);
       }, 400);
@@ -785,31 +808,70 @@
   // AUDIT ENGINE CALL WITH INSTANT TIMEOUT & PARALLEL FALLBACK
     // ═══════════════════════════════════════════════════════════════
   // IN-BROWSER DISTRIBUTED REALITY AUDIT ENGINE (Zero Cloud Limits)
-  // Direct client queries to open public registries (Wikipedia REST, DuckDuckGo)
-  // Zero API keys required · Unmetered scaling for thousands of users
+  // Live queries to public news indexes and entity registries
+  // Queries public indexes without API keys; providers can impose rate limits.
   // ═══════════════════════════════════════════════════════════════
-  // IN-BROWSER DISTRIBUTED REALITY AUDIT ENGINE (Zero Cloud Limits)
-  // Direct client queries to open public registries (Wikipedia Action API, DuckDuckGo)
-  // Bypasses CSP via native browser bridge · Zero API keys · Infinite scale
+  // ROUTE-AWARE EVIDENCE COLLECTION
+  // Public feed and encyclopedia lookups use the browser session/proxy bridge.
+  // Headlines and background context are leads; they do not decide truth.
   // ═══════════════════════════════════════════════════════════════
+
+  function normalizeAuditResponse(value) {
+    if (typeof value !== "string") return value;
+    try { return JSON.parse(value); } catch (_) { return value; }
+  }
+
+  function nativeAuditFetchAsync(url, fetchPage = false) {
+    const bridge = window.FokkShieldBridge;
+    if (!bridge || typeof bridge.auditFetchAsync !== "function") return Promise.resolve(null);
+    if (!window.__fokkAuditPending) window.__fokkAuditPending = Object.create(null);
+    if (typeof window.__fokkAuditResolve !== "function") {
+      window.__fokkAuditResolve = (id, value) => {
+        const resolve = window.__fokkAuditPending?.[id];
+        if (resolve) resolve(value);
+      };
+    }
+    const id = `audit_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    return new Promise(resolve => {
+      let settled = false;
+      const finish = value => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        delete window.__fokkAuditPending[id];
+        resolve(value);
+      };
+      const timer = setTimeout(() => finish(null), 15_000);
+      window.__fokkAuditPending[id] = finish;
+      try {
+        bridge.auditFetchAsync(url, id, Boolean(fetchPage));
+      } catch (_) {
+        finish(null);
+      }
+    });
+  }
 
   async function safeAuditFetch(url) {
     if (typeof window.__fokk_audit_fetch === "function") {
       try {
         const res = await window.__fokk_audit_fetch(url);
-        if (res) return typeof res === "string" ? JSON.parse(res) : res;
+        if (res) return normalizeAuditResponse(res);
       } catch (_) {}
     }
     if (window.__fokk_native_audit && typeof window.__fokk_native_audit.fetchJson === "function") {
       try {
         const res = await window.__fokk_native_audit.fetchJson(url);
-        if (res) return res;
+        if (res) return normalizeAuditResponse(res);
       } catch (_) {}
+    }
+    if (window.FokkShieldBridge && typeof window.FokkShieldBridge.auditFetchAsync === "function") {
+      const asyncNativeResponse = await nativeAuditFetchAsync(url, false);
+      return asyncNativeResponse ? normalizeAuditResponse(asyncNativeResponse) : null;
     }
     if (window.FokkShieldBridge && typeof window.FokkShieldBridge.auditFetch === "function") {
       try {
         const raw = window.FokkShieldBridge.auditFetch(url);
-        if (raw) return JSON.parse(raw);
+        if (raw) return normalizeAuditResponse(raw);
       } catch (_) {}
     }
     try {
@@ -823,14 +885,41 @@
     }
   }
 
+  async function safeAuditFetchPage(url) {
+    if (typeof window.__fokk_audit_fetch_page === "function") {
+      try {
+        const html = await window.__fokk_audit_fetch_page(url);
+        if (typeof html === "string" && html) return html;
+      } catch (_) {}
+    }
+    if (window.FokkShieldBridge && typeof window.FokkShieldBridge.auditFetchAsync === "function") {
+      const asyncNativeResponse = await nativeAuditFetchAsync(url, true);
+      return asyncNativeResponse || null;
+    }
+    if (window.FokkShieldBridge && typeof window.FokkShieldBridge.auditFetchPage === "function") {
+      try {
+        const html = window.FokkShieldBridge.auditFetchPage(url);
+        if (typeof html === "string" && html) return html;
+      } catch (_) {}
+    }
+    try {
+      const response = await fetch(url, { credentials: "omit", redirect: "error", headers: { Accept: "text/html, application/xhtml+xml, text/plain" } });
+      if (!response.ok || !/text\/html|application\/xhtml\+xml|text\/plain/i.test(response.headers.get("content-type") || "")) return null;
+      const html = await response.text();
+      return html.length <= 1_000_000 ? html : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════
-  // MULTI-LAYER CONTEXTUAL REALITY ENGINE (v2.4.1)
-  // Layer 1: Context & Semantic Domain Classifier (Sports, Science, Geopolitics, History, Finance)
-  // Layer 2: Compound Multi-Word Entity & Particle Parsing (Dutch/Spanish/German Particles)
-  // Layer 3: Context-Enriched Dual Knowledge Harvesting (Live Wire RSS + Action API Registries)
-  // Layer 4: Semantic Predicate Corroboration (Eliminating Homonym Hijacks, e.g. Merino Sheep vs Mikel Merino)
-  // Layer 5: Forensic Verdict Classification (Transfer Speculation, Primary Wire, Historical Record, Pseudoscience)
-  // Layer 6: Executive Synthesis & Narrative Formatter (2-3 Concise Sentences, Multi-Source Receipts, Follow-ups)
+  // MULTI-LAYER EVIDENCE REVIEW
+  // 1. Claim framing and universal entity/topic queries
+  // 2. Live news-index discovery and dynamic official-site lookup
+  // 3. Headline overlap, publisher-host spread, and publication recency
+  // 4. Original-post links and encyclopedia context kept separate from evidence
+  // 5. Primary-document and syndication limits shown explicitly
+  // 6. Review dossier with source links; no truth verdict from headlines alone
   // ═══════════════════════════════════════════════════════════════
 
   const DOMAIN_VOCABULARY = {
@@ -963,7 +1052,8 @@
     }
 
     // 2. Unicode Latin multi-word & single-word capitalized names
-    const entityRegex = /\b[\p{Lu}][\p{Ll}\p{M}]+(?:\s+(?:de|van|der|da|di|von|del|la|le|el|al)\s+[\p{Lu}][\p{Ll}\p{M}]+|\s+[\p{Lu}][\p{Ll}\p{M}]+)*\b/gu;
+    const entityWord = "(?:[\\p{Lu}][\\p{Ll}\\p{M}]+|[\\p{Lu}]{2,})";
+    const entityRegex = new RegExp(`\\b${entityWord}(?:\\s+(?:(?:de|van|der|da|di|von|del|la|le|el|al)\\s+)?${entityWord})*\\b`, "gu");
     const rawMatches = normalized.match(entityRegex) || [];
 
     for (const match of rawMatches) {
@@ -1032,7 +1122,7 @@
       const year = yearMatch ? yearMatch[0] : "";
       if (/population.*infinity|infinity.*population/i.test(lowerClaim)) {
         queries.unshift(`population infinity ${year || '1960'}`.trim());
-        queries.push(`Doomsday Friday 13 November 2026`);
+        queries.push(`Doomsday population hypothesis ${year}`.trim());
       } else if (year) {
         queries.push(`science paper ${year}`);
       }
@@ -1054,57 +1144,317 @@
     return queries;
   }
 
+  function buildEvidenceSearchQueries(claimText, entities) {
+    const queries = [];
+    const entityValues = (entities || []).filter(Boolean).slice(0, 4);
+    const entityWords = new Set(entityValues.flatMap(entity => String(entity).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)));
+    const claimTerms = Array.from(new Set((claimText.toLowerCase().match(/[a-z0-9]{4,}/g) || [])
+      .filter(word => !STOP_WORDS.has(word) && !GENERIC_DICTIONARY_CONCEPTS.has(word) && !entityWords.has(word))))
+      .slice(0, 8);
+    if (entityValues.length >= 2) {
+      queries.push(`"${entityValues[0]}" "${entityValues[1]}" ${claimTerms.slice(0, 1).join(" ")}`.trim());
+    }
+    for (const entity of entityValues.slice(0, 2)) {
+      queries.push(`"${entity}" ${claimTerms.slice(0, 2).join(" ")}`.trim());
+    }
+    if (!entityValues.length) queries.push(claimTerms.slice(0, 7).join(" "));
+    const seen = new Set();
+    return queries.map(query => String(query || "").replace(/\s+/g, " ").trim())
+      .filter(query => {
+        const key = query.toLowerCase();
+        if (!query || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 4);
+  }
+
+  function getClaimPrimarySubject(entities) {
+    return (entities || []).find(entity => /\s/.test(entity)) || (entities || [])[0] || "";
+  }
+
+  function normalizeEntityLabel(value) {
+    return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  }
+
+  async function fetchWikidataOfficialSites(entityName) {
+    const query = String(entityName || "").trim();
+    if (query.length < 3) return { available: false, targets: [] };
+    try {
+      const searchUrl = `https://wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(query)}&language=en&format=json&limit=5&origin=*`;
+      const search = await safeAuditFetch(searchUrl);
+      if (!search || !Array.isArray(search.search)) return { available: false, targets: [] };
+      const candidates = Array.isArray(search?.search) ? search.search : [];
+      const normalizedQuery = normalizeEntityLabel(query);
+      const best = candidates.find(candidate => normalizeEntityLabel(candidate.label) === normalizedQuery) ||
+        candidates.find(candidate => normalizeEntityLabel(candidate.match?.text) === normalizedQuery);
+      if (!best?.id) return { available: true, targets: [] };
+
+      const detailUrl = `https://wikidata.org/w/api.php?action=wbgetentities&ids=${encodeURIComponent(best.id)}&props=claims&format=json&origin=*`;
+      const detail = await safeAuditFetch(detailUrl);
+      if (!detail?.entities) return { available: false, targets: [] };
+      const entity = detail?.entities?.[best.id];
+      const claims = entity?.claims?.P856 || [];
+      const blockedHosts = new Set(["facebook.com", "instagram.com", "linkedin.com", "tiktok.com", "twitter.com", "x.com", "youtube.com"]);
+      const targets = claims.map(claim => claim?.mainsnak?.datavalue?.value)
+        .filter(value => typeof value === "string")
+        .map(value => {
+          try {
+            const parsed = new URL(value);
+            if (!/^https?:$/.test(parsed.protocol)) return null;
+            const host = parsed.hostname.replace(/^www\./i, "").toLowerCase();
+            if (!host.includes(".") || blockedHosts.has(host) || Array.from(blockedHosts).some(blocked => host.endsWith(`.${blocked}`))) return null;
+            return { entityName: best.label || query, host, url: parsed.href };
+          } catch (_) { return null; }
+        }).filter(Boolean).slice(0, 1);
+      return { available: true, targets };
+    } catch (_) {
+      return { available: false, targets: [] };
+    }
+  }
+
+  async function buildOfficialSiteTargets(entities) {
+    const names = Array.from(new Set((entities || []).filter(Boolean).slice(0, 3)));
+    const lookups = await Promise.all(names.map(fetchWikidataOfficialSites));
+    const candidates = lookups.flatMap(result => result.targets || []);
+    const seen = new Set();
+    const targets = candidates.filter(target => {
+      if (seen.has(target.host)) return false;
+      seen.add(target.host);
+      return true;
+    }).slice(0, 3);
+    return { available: lookups.some(result => result.available), targets };
+  }
+
   // Pipeline A: Real-Time Wire Feed Ingestion (Google News RSS)
+  function decodeFeedText(value) {
+    return String(value || "")
+      .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+      .replace(/&#x([\da-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
+      .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(parseInt(code, 10)))
+      .replace(/&quot;/g, '"').replace(/&apos;|&#39;/g, "'")
+      .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+      .replace(/&amp;/g, "&");
+  }
+
+  const SOCIAL_SOURCE_HOSTS = ["reddit.com", "x.com", "twitter.com", "instagram.com", "threads.net", "facebook.com", "tiktok.com", "youtube.com", "bsky.app", "linkedin.com"];
+
+  async function fetchDuckDuckGoReceipts(query, options = {}) {
+    if (!query) return { available: false, items: [] };
+    const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+    try {
+      const html = await safeAuditFetch(url);
+      if (typeof html !== "string" || html.length < 200) return { available: false, items: [] };
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const items = Array.from(doc.querySelectorAll("a.result__a")).map(anchor => {
+        let articleUrl;
+        try {
+          const link = new URL(anchor.getAttribute("href") || "", "https://html.duckduckgo.com");
+          const redirected = link.searchParams.get("uddg");
+          articleUrl = new URL(redirected || link.href);
+        } catch (_) { return null; }
+        if (!["http:", "https:"].includes(articleUrl.protocol) || /(^|\.)duckduckgo\.com$/i.test(articleUrl.hostname)) return null;
+        const domain = articleUrl.hostname.replace(/^www\./i, "").toLowerCase();
+        if (options.expectedDomain && domain !== options.expectedDomain && !domain.endsWith(`.${options.expectedDomain}`)) return null;
+        const container = anchor.closest(".result") || anchor.parentElement?.parentElement;
+        const snippet = String(container?.querySelector(".result__snippet")?.textContent || "").replace(/\s+/g, " ").trim().slice(0, 500);
+        const social = SOCIAL_SOURCE_HOSTS.some(host => domain === host || domain.endsWith(`.${host}`));
+        return {
+          headline: String(anchor.textContent || "").replace(/\s+/g, " ").trim(),
+          snippet,
+          url: articleUrl.href,
+          publisherUrl: `${articleUrl.protocol}//${articleUrl.host}/`,
+          pubDate: "",
+          sourceName: domain,
+          domain,
+          provider: options.social ? "DuckDuckGo social index" : "DuckDuckGo web index",
+          evidenceRole: social ? "Public social page indexed; account and post not authenticated" : "Open-web search result; page not reviewed"
+        };
+      }).filter(item => item && item.headline && item.url).slice(0, 10);
+      return { available: true, items };
+    } catch (_) {
+      return { available: false, items: [] };
+    }
+  }
+
+  function extractPublicPageEvidence(html) {
+    if (!html || typeof DOMParser === "undefined") return { text: "", status: "Page text unavailable" };
+    try {
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const description = doc.querySelector('meta[property="og:description"]')?.content ||
+        doc.querySelector('meta[name="description"]')?.content || "";
+      const title = doc.querySelector('meta[property="og:title"]')?.content || doc.title || "";
+      const author = doc.querySelector('meta[name="author"]')?.content ||
+        doc.querySelector('meta[property="article:author"]')?.content || "";
+      const published = doc.querySelector('meta[property="article:published_time"]')?.content ||
+        doc.querySelector('time[datetime]')?.getAttribute("datetime") || "";
+
+      // Strip boilerplate, navigational, and promotional elements
+      const clutterSelectors = [
+        "script", "style", "noscript", "svg", "nav", "footer", "aside", "form", "button",
+        "iframe", "canvas", "dialog", "header", '[role="banner"]', '[role="navigation"]',
+        '[role="complementary"]', '[class*="cookie" i]', '[class*="consent" i]',
+        '[class*="banner" i]', '[class*="share" i]', '[class*="social" i]',
+        '[class*="ad-" i]', '[id*="ad-" i]', '[class*="newsletter" i]', '[class*="subscribe" i]'
+      ].join(",");
+      doc.querySelectorAll(clutterSelectors).forEach(node => node.remove());
+
+      const root = doc.querySelector("[itemprop='articleBody']") ||
+        doc.querySelector("article") ||
+        doc.querySelector("main") ||
+        doc.querySelector('[role="main"]') ||
+        doc.querySelector(".article-body, .article-content, .post-content, .entry-content") ||
+        doc.body;
+
+      const contentNodes = Array.from(root?.querySelectorAll("p, blockquote, h1, h2, h3, li") || []);
+      const seen = new Set();
+      const meaningfulSnippets = [];
+      for (const node of contentNodes) {
+        const snippet = String(node.textContent || "").replace(/\s+/g, " ").trim();
+        if (snippet.length < 35 || seen.has(snippet)) continue;
+        seen.add(snippet);
+        meaningfulSnippets.push(snippet);
+        if (meaningfulSnippets.length >= 24) break;
+      }
+
+      let text = meaningfulSnippets.join(" ");
+      if (text.length < 160) text = String(root?.textContent || "").replace(/\s+/g, " ").trim();
+      if (text.length < 160 && description) text = description;
+
+      const metaCues = [author ? `Author: ${author}` : "", published ? `Published: ${published.slice(0, 10)}` : ""].filter(Boolean).join(" · ");
+      const status = text.length >= 160
+        ? `Readable page text retrieved${metaCues ? ` (${metaCues})` : ""}`
+        : description
+          ? "Metadata snippet only; article text unavailable"
+          : "Page text unavailable or access restricted";
+
+      return {
+        title: String(title).replace(/\s+/g, " ").trim().slice(0, 180),
+        text: text.slice(0, 6_000),
+        status
+      };
+    } catch (_) {
+      return { text: "", status: "Page could not be parsed" };
+    }
+  }
+
+  async function reviewPublicSourcePage(receipt) {
+    try {
+      const target = new URL(receipt.url);
+      if (target.protocol !== "https:" || /(^|\.)news\.google\.com$/i.test(target.hostname)) {
+        return { receipt, text: "", status: "Publisher page URL unavailable" };
+      }
+      const html = await safeAuditFetchPage(target.href);
+      const extracted = extractPublicPageEvidence(html);
+      if (extracted.text) {
+        receipt.pageTitle = extracted.title;
+        receipt.articleText = extracted.text;
+        receipt.snippet = [receipt.snippet, extracted.text.slice(0, 650)].filter(Boolean).join(" · ").slice(0, 1_200);
+        receipt.evidenceRole = `${receipt.evidenceRole || "Source"}; ${extracted.status}`;
+      }
+      return { receipt, text: extracted.text, status: extracted.status };
+    } catch (_) {
+      return { receipt, text: "", status: "Publisher page URL unavailable" };
+    }
+  }
+
+  function pageTextMatchesClaim(claim, entities, receipt) {
+    const text = String(receipt?.articleText || "").toLowerCase();
+    if (text.length < 160) return false;
+    const entityMatches = (entities || []).filter(entity => {
+      const normalized = String(entity || "").toLowerCase();
+      const words = normalized.split(/[^a-z0-9]+/).filter(Boolean);
+      const alias = words.length > 1 ? words[words.length - 1] : "";
+      return text.includes(normalized) || (alias.length >= 4 && text.split(/[^a-z0-9]+/).includes(alias));
+    });
+    const entityWords = new Set((entities || []).flatMap(entity => String(entity || "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)));
+    const topicMatches = Array.from(new Set((String(claim || "").toLowerCase().match(/[a-z0-9]{4,}/g) || [])
+      .filter(word => !STOP_WORDS.has(word) && !GENERIC_DICTIONARY_CONCEPTS.has(word) && !entityWords.has(word) && text.includes(word))));
+    return entityMatches.length >= 2 || (entityMatches.length >= 1 && topicMatches.length >= 1) || (!entities?.length && topicMatches.length >= 3);
+  }
+
   async function fetchRealTimeWireReceipts(query) {
-    if (!query) return [];
+    if (!query) return { available: false, items: [] };
     const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
     try {
       const xml = await safeAuditFetch(url);
-      if (!xml || typeof xml !== "string") return [];
+      if (!xml || typeof xml !== "string") return { available: false, items: [] };
       const items = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
-      return items.slice(0, 6).map(item => {
-        const title = (item.match(/<title>(.*?)<\/title>/)?.[1] || "").replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#39;/g, "'");
-        const link = item.match(/<link>(.*?)<\/link>/)?.[1] || "";
-        const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || "";
-        const source = (item.match(/<source[^>]*>(.*?)<\/source>/)?.[1] || "").replace(/&amp;/g, '&');
-        let domain = (source || "").toLowerCase().replace(/[^a-z0-9]/g, "") + ".com";
-        const sLower = source.toLowerCase();
-        if (sLower.includes("bbc")) domain = "bbc.com";
-        else if (sLower.includes("times") || sLower.includes("new york times")) domain = "nytimes.com";
-        else if (sLower.includes("espn")) domain = "espn.com";
-        else if (sLower.includes("sky")) domain = "skysports.com";
-        else if (sLower.includes("reuters")) domain = "reuters.com";
-        else if (sLower.includes("athletic")) domain = "theathletic.com";
-        else if (sLower.includes("guardian")) domain = "theguardian.com";
-        else if (sLower.includes("associated press") || sLower === "ap") domain = "apnews.com";
-        else if (sLower.includes("cnn")) domain = "cnn.com";
-        else if (sLower.includes("nbc")) domain = "nbcnews.com";
-        else if (sLower.includes("cbs")) domain = "cbsnews.com";
-        else if (sLower.includes("washington post")) domain = "washingtonpost.com";
-        else if (sLower.includes("wall street journal") || sLower.includes("wsj")) domain = "wsj.com";
-        else if (sLower.includes("bloomberg")) domain = "bloomberg.com";
-        else if (sLower.includes("forbes")) domain = "forbes.com";
-        else if (sLower.includes("sports illustrated") || sLower.includes("si.com")) domain = "si.com";
-        else if (sLower.includes("livescore")) domain = "livescore.com";
-        else if (sLower.includes("football london")) domain = "football.london";
-        else if (sLower.includes("telegraph")) domain = "telegraph.co.uk";
-        else if (sLower.includes("daily mail")) domain = "dailymail.co.uk";
-        else if (sLower.includes("marca")) domain = "marca.com";
-        else if (sLower.includes("goal")) domain = "goal.com";
-        else if (sLower.includes("yahoo")) domain = "yahoo.com";
-        else if (sLower.includes("phys")) domain = "phys.org";
-        else if (sLower.includes("hopkins")) domain = "jhu.edu";
+      const receipts = items.slice(0, 12).map(item => {
+        const readTag = tag => decodeFeedText(item.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"))?.[1] || "").trim();
+        const title = readTag("title");
+        const link = readTag("link");
+        const pubDate = readTag("pubDate");
+        const snippet = readTag("description").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 700);
+        const sourceMatch = item.match(/<source\b([^>]*)>([\s\S]*?)<\/source>/i);
+        const source = decodeFeedText(sourceMatch?.[2] || "").trim();
+        const publisherUrl = sourceMatch?.[1]?.match(/\burl\s*=\s*(["'])(.*?)\1/i)?.[2] || "";
+        let domain = "";
+        try {
+          const publisher = new URL(decodeFeedText(publisherUrl));
+          if (publisher.protocol === "http:" || publisher.protocol === "https:") {
+            domain = publisher.hostname.replace(/^www\./i, "").toLowerCase();
+          }
+        } catch (_) {}
+
+        let articleUrl = "";
+        try {
+          const parsedArticle = new URL(link);
+          if (parsedArticle.protocol === "http:" || parsedArticle.protocol === "https:") articleUrl = parsedArticle.href;
+        } catch (_) {}
 
         return {
           headline: title,
-          url: link,
+          snippet,
+          url: articleUrl,
+          publisherUrl: domain ? decodeFeedText(publisherUrl) : "",
           pubDate,
-          sourceName: source || "Accredited Wire",
-          domain
+          sourceName: source || domain || "Unknown publisher",
+          domain,
+          provider: "Google News RSS",
+          evidenceRole: snippet ? "News headline and feed snippet" : "News headline"
         };
-      });
+      }).filter(item => item.headline && item.url);
+      return { available: /<rss\b|<feed\b/i.test(xml), items: receipts };
     } catch (_) {
-      return [];
+      return { available: false, items: [] };
+    }
+  }
+
+  async function fetchGdeltReceipts(query, options = {}) {
+    if (!query) return { available: false, items: [] };
+    const timespan = options.timespan || "3m";
+    const maxRecords = options.maxRecords || 25;
+    const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=ArtList&format=json&maxrecords=${maxRecords}&timespan=${timespan}&sort=DateDesc`;
+    try {
+      const response = await safeAuditFetch(url);
+      const articles = Array.isArray(response?.articles) ? response.articles : null;
+      if (!articles) return { available: false, items: [] };
+      const items = articles.map(article => {
+        const headline = String(article.title || "").trim();
+        let parsedUrl;
+        try { parsedUrl = new URL(String(article.url || "")); } catch (_) { return null; }
+        if (!headline || !["http:", "https:"].includes(parsedUrl.protocol)) return null;
+        const domain = parsedUrl.hostname.replace(/^www\./i, "").toLowerCase();
+        if (options.expectedDomain && domain !== options.expectedDomain && !domain.endsWith(`.${options.expectedDomain}`)) return null;
+        const date = String(article.seendate || "").match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/);
+        const pubDate = date
+          ? `${date[1]}-${date[2]}-${date[3]}T${date[4]}:${date[5]}:${date[6]}Z`
+          : "";
+        return {
+          headline,
+          url: parsedUrl.href,
+          publisherUrl: `${parsedUrl.protocol}//${parsedUrl.host}/`,
+          pubDate,
+          sourceName: domain,
+          domain,
+          provider: options.provider || "GDELT DOC",
+          evidenceRole: options.evidenceRole || "News index headline"
+        };
+      }).filter(Boolean);
+      return { available: true, items };
+    } catch (_) {
+      return { available: false, items: [] };
     }
   }
 
@@ -1187,361 +1537,102 @@
   // ═══════════════════════════════════════════════════════════════
   // NATURAL AI FORENSIC SYNTHESIS (Zero Mock Templates, Free-Flow Real AI)
   // ═══════════════════════════════════════════════════════════════
-  function generateDynamicAIVerdict(cleanClaim, entities, wireArticles, encyclopedicRecord, domain, postUrl) {
-    const isPseudoscienceTheology = /proved god|proof of god|gods existence|ghost particle/i.test(cleanClaim);
-    const isObviousScam = /guarantee|giveaway|send crypto|airdrop|doubler|100x return|urgent alert|banned video|shocking cure|miracle secret|free bitcoin|alien base|moon hoax/i.test(cleanClaim);
-    const isHistorical = (cleanClaim.match(/\b(1[789]\d\d)\b/) && cleanClaim.match(/\b(1[789]\d\d)\b/).length > 0) || domain === "HISTORY_ARCHIVAL";
-    const isTransferSpeculation = domain === "SPORTS_FOOTBALL" && /transfer|sign|sales|target|bid|clause|summer|monitoring|determined|convince|contract|join/i.test(cleanClaim);
-
-    // Identify dynamic subject and secondary club/org
-    const clubRegex = /fc|madrid|munich|arsenal|chelsea|liverpool|barcelona|city|united|bayern|juventus|milan|dortmund|psg|bernabéu|bernabeu|como/i;
-    const nationalTeams = /germany|france|england|spain|brazil|argentina|italy|portugal|netherlands|serbia|uruguay|belgium/i;
-
-    // Bind possessive club/team if present (e.g. "Klopp's Germany" -> mainOrg = "Germany")
-    let mainOrg = "";
-    const possessiveTeamMatch = cleanClaim.match(/\b([A-Za-z]+)'s\s+(Germany|France|England|Spain|Brazil|Argentina|Arsenal|Chelsea|Liverpool|Real Madrid|Barcelona|Bayern Munich|Manchester United|Man City|Como)\b/i);
-    if (possessiveTeamMatch) {
-      mainOrg = possessiveTeamMatch[2];
-    } else {
-      mainOrg = entities.find(e => (clubRegex.test(e) || nationalTeams.test(e)) && !COMMON_LOCATIONS.has(e.toLowerCase())) ||
-                entities.find(e => clubRegex.test(e) || nationalTeams.test(e)) ||
-                (entities.length > 1 ? entities[1] : "");
-    }
-
-    const mainSubject = entities.find(e => !clubRegex.test(e) && !nationalTeams.test(e) && !COMMON_LOCATIONS.has(e.toLowerCase())) ||
-                        entities.find(e => !clubRegex.test(e) && !nationalTeams.test(e)) ||
-                        entities[0] ||
-                        "the principal subject";
-
-    // 0. Match Result / Scoreline / Exhibition Status
-    const scoreMatch = cleanClaim.match(/\b\d+\s*-\s*\d+\b/);
-    const hasMatchDescriptor = /friendly|match|game|fixture|score|ht|ft|fulltime|halftime/i.test(cleanClaim);
-    if (false && (scoreMatch || (domain === "SPORTS_FOOTBALL" && hasMatchDescriptor && cleanClaim.length < 60))) {
-      const scoreStr = scoreMatch ? scoreMatch[0] : "";
-      return {
-        id: "match_" + Date.now(),
-        claim: cleanClaim,
-        verdict: "VERIFIED",
-        verdictTitle: "INFORMAL MATCH STATUS",
-        statusBadge: "MATCH RESULT",
-        confidence: 92,
-        forensicSummary: `This post documents an informal friendly match scoreline${scoreStr ? ` (${scoreStr})` : ""} referencing ${mainSubject}. Sporting registries track this update as exhibition match commentary and training ground status rather than an official competitive tournament result.`,
-        receiptQuote: cleanClaim,
-        primarySource: { name: "Sporting Match Records", domain: "fokk.browser", url: postUrl || window.location.href },
-        receipts: wireArticles.length > 0 ? wireArticles : [],
-        leadImage: null,
-        followUpQuestions: [
-          `What official match or training fixture was played involving ${mainSubject}?`,
-          `What were the confirmed lineup details and match circumstances?`,
-          `What subsequent reporting followed this fixture?`
-        ],
-        deepLink: postUrl || window.location.href,
-        isPro: true,
-        auditTier: "PRO"
-      };
-    }
-
-    // 1. Obvious Scam / Hoax Debunk
-    if (isObviousScam) {
-      return {
-        id: "scam_" + Date.now(),
-        claim: cleanClaim,
-        verdict: "DEBUNKED",
-        verdictTitle: "FABRICATION SUSPECTED",
-        statusBadge: "CERTIFIED CAP",
-        confidence: 96,
-        forensicSummary: "No primary records, accredited wire filings, or institutional announcements corroborate this viral assertion. Forensic linguistic heuristics indicate characteristic indicators of misinformation or unverified sensationalism designed for social reach.",
-        receiptQuote: "Zero corroborating records found in global open wire registries or accredited newsrooms.",
-        primarySource: { name: "Open Multi-Source Forensic Triangulation", domain: "fokk.browser", url: postUrl || window.location.href },
-        receipts: wireArticles.slice(0, 2),
-        leadImage: null,
-        followUpQuestions: [
-          "What primary authority would be responsible for announcing this if authentic?",
-          "How do deceptive viral narratives manufacture synthetic social proof?",
-          "What warning flags indicate a deceptive social post?"
-        ],
-        deepLink: postUrl || window.location.href,
-        isPro: true,
-        auditTier: "PRO"
-      };
-    }
-
-    // 2. Sensationalized Metaphysical / Pseudoscience
-    if (isPseudoscienceTheology) {
-      return {
-        id: "sensational_" + Date.now(),
-        claim: cleanClaim,
-        verdict: "CONTESTED",
-        verdictTitle: "SENSATIONALIZED EXTRAPOLATION",
-        statusBadge: "SENSATIONALIZED EXTRAPOLATION",
-        confidence: 91,
-        forensicSummary: "A comprehensive review of peer-reviewed biochemical registries and accredited science wire desks reveals zero corroborating research claiming DNA 'proves God\'s existence' or identified a 'ghost particle'. While legitimate molecular biology (published by institutions such as Johns Hopkins and UC Davis) documents microscopic enzymes performing emergency cellular DNA repair, framing these empirical biological mechanisms as theological proof represents sensationalized social media extrapolation.",
-        receiptQuote: "Zero accredited scientific papers substantiate theological proof using DNA.",
-        primarySource: { name: "Accredited Biochemistry Registries", domain: "ucdavis.edu", url: "https://biology.ucdavis.edu" },
-        receipts: [
-          { sourceName: "UC Davis College of Biological Sciences", domain: "ucdavis.edu", url: "https://biology.ucdavis.edu", headline: "Cellular Biology: How molecular machines mend broken and damaged DNA" },
-          { sourceName: "Johns Hopkins University", domain: "jhu.edu", url: "https://hub.jhu.edu", headline: "Biochemical Research: Scientists reveal how human cells conduct emergency DNA repairs" }
-        ],
-        leadImage: null,
-        followUpQuestions: [
-          "What peer-reviewed biological mechanisms actually conduct cellular DNA repair?",
-          "How do viral accounts extrapolate molecular biology discoveries into metaphysical assertions?",
-          "Has any accredited scientific academy or journal corroborated these theological claims?"
-        ],
-        deepLink: postUrl || window.location.href,
-        isPro: true,
-        auditTier: "PRO"
-      };
-    }
-
-    // 3. Sports Transfer Speculation (Real Wire Citations, Zero Mock Hardcoding)
-    if (isTransferSpeculation) {
-      if (wireArticles.length > 0) {
-        const topSources = wireArticles.slice(0, 3).map(w => w.sourceName).filter((v, i, a) => a.indexOf(v) === i);
-        const sourcesList = topSources.join(", ");
-        const leadTitle = wireArticles[0].headline.replace(/\s*-\s*[^-]+$/, "").trim();
-
-        return {
-          id: "transfer_" + Date.now(),
-          claim: cleanClaim,
-          verdict: "CONTESTED",
-          verdictTitle: "ACTIVE MARKET REPORT",
-          statusBadge: "TRANSFER SPECULATION",
-          confidence: 84,
-          forensicSummary: `Reporting across accredited sports desks (${sourcesList}) tracks active market interest regarding ${mainSubject}${mainOrg ? ` and ${mainOrg}` : ""}, with coverage highlighting "${leadTitle}". While wire archives confirm preliminary exploratory interest and recruitment tracking, neither club nor accredited transfer authorities (e.g., David Ornstein, Fabrizio Romano) have announced a signed agreement or completed bid. This claim represents ongoing transfer market speculation rather than a finalized transaction.`,
-          receiptQuote: wireArticles[0].headline,
-          primarySource: {
-            name: wireArticles[0].sourceName,
-            domain: wireArticles[0].domain,
-            url: wireArticles[0].url
-          },
-          receipts: wireArticles,
-          leadImage: null,
-          followUpQuestions: [
-            `Have official club representatives confirmed a formal written offer for ${mainSubject}?`,
-            `What have accredited transfer journalists (e.g. Fabrizio Romano, David Ornstein) reported regarding ${mainSubject}?`,
-            `What is ${mainSubject}'s existing contractual standing and release clause structure?`
-          ],
-          deepLink: wireArticles[0].url || postUrl || window.location.href,
-          isPro: true,
-          auditTier: "PRO"
-        };
-      } else {
-        return {
-          id: "transfer_" + Date.now(),
-          claim: cleanClaim,
-          verdict: "CONTESTED",
-          verdictTitle: "UNCONFIRMED MARKET RUMOR",
-          statusBadge: "TRANSFER SPECULATION",
-          confidence: 82,
-          forensicSummary: `Sports newsrooms and primary club press offices currently record no documentation of an agreed transfer or formal bid for ${mainSubject}${mainOrg ? ` involving ${mainOrg}` : ""}. While social media accounts frequently circulate prospective squad rumors, zero accredited transfer authorities corroborate this assertion as a concluded transaction.`,
-          receiptQuote: "Zero documented confirmation from primary club press offices or accredited transfer reporters.",
-          primarySource: { name: "Open Multi-Source Sports Desk Triangulation", domain: "fokk.browser", url: postUrl || window.location.href },
-          receipts: [],
-          leadImage: null,
-          followUpQuestions: [
-            `Has any accredited sports outlet corroborated interest in ${mainSubject}?`,
-            `What official statements have been released regarding these contract negotiations?`,
-            `What primary sources are cited to substantiate this transfer claim?`
-          ],
-          deepLink: postUrl || window.location.href,
-          isPro: true,
-          auditTier: "PRO"
-        };
+  // A headline match is a discovery signal, not verification. Count publisher
+  // hosts and article-title coverage while keeping source independence unknown.
+  function assessHeadlineCoverage(claim, receipts, entities, domain) {
+    const tokens = Array.from(new Set((claim.toLowerCase().match(/[a-z0-9]{4,}/g) || [])
+      .filter(word => !STOP_WORDS.has(word) && !GENERIC_DICTIONARY_CONCEPTS.has(word))));
+    const entityValues = (entities || []).map(value => String(value).toLowerCase()).filter(Boolean);
+    const entityWords = new Set(entityValues.flatMap(value => value.split(/[^a-z0-9]+/).filter(Boolean)));
+    const topicTokens = tokens.filter(token => !entityWords.has(token));
+    const qualified = (receipts || []).filter(receipt => {
+      if (!receipt.domain || !/^https?:\/\//i.test(receipt.url || "")) return false;
+      const headline = `${receipt.headline || ""} ${receipt.snippet || ""}`.toLowerCase();
+      const matchingEntities = entityValues.filter(entity => {
+        const words = entity.split(/\s+/).filter(Boolean);
+        const alias = words.length > 1 ? words[words.length - 1] : "";
+        return headline.includes(entity) || (alias.length >= 4 && headline.split(/[^a-z0-9]+/).includes(alias));
+      });
+      const matchingTopics = topicTokens.filter(token => headline.includes(token));
+      if (matchingEntities.length >= 2) {
+        receipt.matchReason = "Two named entities in headline or snippet";
+        return true;
       }
-    }
-
-    // 3.5 Familial / Relative Claim (e.g. sister Declan Fox)
-    const isFamilyClaim = /\b(sister|brother|father|mother|daughter|son|cousin|wife|husband)\b/i.test(cleanClaim);
-    if (false && isFamilyClaim && wireArticles.length === 0) {
-      const relMatch = cleanClaim.match(/\b(sister|brother|father|mother|daughter|son|cousin)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)/i);
-      const relativeDesc = relMatch ? relMatch[0] : "an alleged relative";
-      return {
-        id: "family_" + Date.now(),
-        claim: cleanClaim,
-        verdict: "DEBUNKED",
-        verdictTitle: "UNVERIFIED VIRAL CLAIM",
-        statusBadge: "FABRICATION SUSPECTED",
-        confidence: 91,
-        forensicSummary: `Official sporting registries and verified biographical archives confirm that ${mainSubject} has no documented record of ${relativeDesc}${mainOrg ? ` affiliated with or playing for ${mainOrg}` : ""}. Public squad registries and biographical records track verified immediate family members, confirming this post represents an unverified viral social media fabrication rather than genuine biographical fact.`,
-        receiptQuote: `Zero documented record in official club squad rosters or verified biographical archives for ${relativeDesc}.`,
-        primarySource: { name: "Official Club & Biographical Registries", domain: "fokk.browser", url: postUrl || window.location.href },
-        receipts: [],
-        leadImage: null,
-        followUpQuestions: [
-          `What is the documented biographical record of ${mainSubject}'s immediate family?`,
-          `What are the official current squad rosters for ${mainOrg || 'the club'}?`,
-          `How do viral social accounts manufacture fabricated relative claims?`
-        ],
-        deepLink: postUrl || window.location.href,
-        isPro: true,
-        auditTier: "PRO"
-      };
-    }
-
-    // 3.6 Managerial Appointment / International Head Coach Role Claim (e.g. "Klopp's Germany", "Klopp era", "manager of Germany")
-    const isManagerialClaim = /\b(klopp('s)?\s+germany|klopp\s+era|head\s+coach|manager\s+of|managing\s+germany|klopp\s+appointed)\b/i.test(cleanClaim);
-    if (false && isManagerialClaim && /klopp/i.test(cleanClaim) && /germany/i.test(cleanClaim)) {
-      return {
-        id: "manager_" + Date.now(),
-        claim: cleanClaim,
-        verdict: "DEBUNKED",
-        verdictTitle: "FABRICATED FIXTURE & APPOINTMENT",
-        statusBadge: "FABRICATION SUSPECTED",
-        confidence: 94,
-        forensicSummary: `Official records from the German Football Association (DFB) and accredited sports wire registries confirm that Julian Nagelsmann serves as the head coach of the Germany national football team, not Jürgen Klopp. Following his departure from Liverpool in 2024, Klopp was appointed Global Head of Soccer at Red Bull beginning in 2025. No official UEFA fixtures or international match records document a German national team match against Serbia managed by Klopp, confirming this post represents a simulated, speculative, or fabricated scenario rather than actual sporting reality.`,
-        receiptQuote: "DFB official records confirm Julian Nagelsmann is Germany head coach; zero documented record of Jürgen Klopp managing the German national team.",
-        primarySource: { name: "German Football Association (DFB) & UEFA Registries", domain: "dfb.de", url: postUrl || window.location.href },
-        receipts: [],
-        leadImage: null,
-        followUpQuestions: [
-          "Who is the current official head coach of the Germany national football team?",
-          "What is Jürgen Klopp's confirmed professional role following his Liverpool departure?",
-          "Did Germany play Serbia in any official UEFA or FIFA international competition under Klopp?"
-        ],
-        deepLink: postUrl || window.location.href,
-        isPro: true,
-        auditTier: "PRO"
-      };
-    }
-
-    // 4. Primary Verified Records (Breaking News & Historical Archives)
-    if (wireArticles.length > 0) {
-      const topSources = wireArticles.slice(0, 3).map(w => w.sourceName).filter((v, i, a) => a.indexOf(v) === i);
-      const sourcesList = topSources.join(", ");
-      const leadTitle = wireArticles[0].headline.replace(/\s*-\s*[^-]+$/, "").trim();
-
-      return {
-        id: "wire_" + Date.now(),
-        claim: cleanClaim,
-        verdict: "VERIFIED",
-        verdictTitle: "MULTIPLE ACCREDITED SOURCES VERIFIED",
-        statusBadge: "PRIMARY WIRE CONFIRMED",
-        confidence: Math.min(99, 94 + wireArticles.length),
-        forensicSummary: `Accredited wire reporting across multiple newsrooms (${sourcesList}) corroborates the primary details of this event, led by coverage: "${leadTitle}". Cross-referencing against verified wire records confirms the timeline, institutional statements, and reported outcome.`,
-        receiptQuote: wireArticles[0].headline,
-        primarySource: {
-          name: wireArticles[0].sourceName,
-          domain: wireArticles[0].domain,
-          url: wireArticles[0].url
-        },
-        receipts: wireArticles,
-        leadImage: encyclopedicRecord?.thumbnail || null,
-        followUpQuestions: [
-          `What subsequent official statements have institutional bodies released?`,
-          `What primary documentation preserves the verified record of ${mainSubject}?`,
-          `How have community and institutional stakeholders responded?`
-        ],
-        deepLink: wireArticles[0].url || postUrl || window.location.href,
-        isPro: true,
-        auditTier: "PRO"
-      };
-    }
-
-    // 5. Historical Record
-    if (isHistorical && encyclopedicRecord) {
-      const firstTwoSentences = encyclopedicRecord.extract.split(/(?<=[.?!])\s+/).slice(0, 2).join(" ").replace(/\[\d+\]/g, "");
-      return {
-        id: "hist_" + Date.now(),
-        claim: cleanClaim,
-        verdict: "VERIFIED",
-        verdictTitle: "HISTORICAL RECORD VERIFIED",
-        statusBadge: "VERIFIED HISTORICAL RECORD",
-        confidence: 94,
-        forensicSummary: `Accredited archival and encyclopedic registries corroborate this record. ${firstTwoSentences}`,
-        receiptQuote: encyclopedicRecord.extract.slice(0, 140) + "...",
-        primarySource: {
-          name: encyclopedicRecord.sourceName,
-          domain: encyclopedicRecord.domain,
-          url: encyclopedicRecord.url
-        },
-        receipts: [{
-          sourceName: encyclopedicRecord.sourceName,
-          headline: encyclopedicRecord.extract.slice(0, 140) + "...",
-          url: encyclopedicRecord.url,
-          domain: encyclopedicRecord.domain
-        }],
-        leadImage: encyclopedicRecord.thumbnail || null,
-        followUpQuestions: [
-          `What primary documentation preserves the verified historical record of ${mainSubject}?`,
-          `How has historical and academic scholarship documented this milestone?`,
-          `What primary artifacts or institutional collections preserve this record?`
-        ],
-        deepLink: encyclopedicRecord.url || postUrl || window.location.href,
-        isPro: true,
-        auditTier: "PRO"
-      };
-    }
-
-    // 6. Developing / Context Needed (Domain-Specific, Bespoke Synthesis)
-    let domainSummary = "";
-    let domainReceiptQuote = "";
-
-    if (domain === "SPORTS_FOOTBALL") {
-      const isCoachingSpeculation = /\b(manager|coach|head coach|appointed|sacked|era|taking charge)\b/i.test(cleanClaim);
-      if (isCoachingSpeculation) {
-        domainSummary = `Official sporting wire desks and club registries reveal zero documented confirmation that ${mainSubject} has taken charge of or been appointed by ${mainOrg || 'the reported team'}. While social media discussion is circulating, accredited newsrooms and governing bodies confirm zero official announcements corroborating this managerial appointment or fixture.`;
-        domainReceiptQuote = `Zero official club or federation announcements confirming ${mainSubject} in connection with ${mainOrg || 'the reported position'}.`;
-      } else {
-        domainSummary = `A comprehensive scan across sporting wire registries, press briefings, and club communications reveals zero documented confirmation of these reported events regarding ${mainSubject}${mainOrg ? ` involving ${mainOrg}` : ""}. While social media discussion is circulating, accredited newsrooms have published no official reporting confirming this claim.`;
-        domainReceiptQuote = `Zero documented corroboration across official club announcements or sports wire desks regarding ${mainSubject}.`;
+      if (matchingEntities.length && matchingTopics.length) {
+        receipt.matchReason = "Named entity + claim-topic term in headline or snippet";
+        return true;
       }
-    } else if (domain === "GEOPOLITICS") {
-      domainSummary = `A forensic cross-examination of government press registries, legislative records, and diplomatic wire desks reveals zero documented filings corroborating these assertions regarding ${mainSubject}. In the absence of primary institutional documentation or accredited wire reports, this claim remains unverified viral speculation.`;
-      domainReceiptQuote = `Zero documented records in primary institutional filings or accredited wire archives for ${mainSubject}.`;
-    } else if (domain === "SCIENCE_HEALTH") {
-      domainSummary = `A review of peer-reviewed scientific journals, academic databases, and accredited medical registries reveals zero published research corroborating this claim regarding ${mainSubject}. Scientific consensus requires rigorous empirical documentation before treating viral assertions as substantiated fact.`;
-      domainReceiptQuote = `Zero peer-reviewed studies or accredited scientific records substantiate this assertion.`;
-    } else {
-      domainSummary = `Cross-referencing accredited wire desks, public encyclopedic registries, and institutional archives indicates no primary documentation confirming this claim regarding ${mainSubject}. While online discussion is active, accredited newsrooms have published zero corroborating reports to substantiate this assertion.`;
-      domainReceiptQuote = `Primary documentation currently lacking in accredited newsrooms and institutional archives for ${mainSubject}.`;
-    }
-
+      return !entityValues.length && tokens.length > 1 && tokens.filter(token => headline.includes(token)).length >= 2;
+    });
+    const visible = qualified.slice(0, 6);
+    const domains = new Set(qualified.map(item => String(item.domain || '').replace(/^www\./, '').toLowerCase()).filter(Boolean));
+    const storyKeys = new Set(qualified.map(item => String(item.headline || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()).filter(Boolean));
+    const dates = qualified.map(item => Date.parse(item.pubDate)).filter(value => Number.isFinite(value));
+    const newestDate = dates.length ? new Date(Math.max(...dates)).toISOString() : null;
+    const dayOld = dates.length ? (Date.now() - Math.max(...dates)) / 86400000 : null;
+    const coverageLabel = domains.size >= 3 && storyKeys.size >= 3 ? "BROADER" : domains.size >= 2 ? "EMERGING" : domains.size === 1 ? "LIMITED" : "NONE";
+    let freshness = "No dated matching headlines";
+    if (dayOld !== null) freshness = dayOld < 2 ? "Recent headlines found" : dayOld < 30 ? "Some recent coverage" : "Mostly older coverage";
     return {
-      id: "context_" + Date.now(),
-      claim: cleanClaim,
-      verdict: "CONTESTED",
-      verdictTitle: "CONTEXT NEEDED",
-      statusBadge: "CONTEXT NEEDED",
-      confidence: 84,
-      forensicSummary: domainSummary,
-      receiptQuote: domainReceiptQuote,
-      primarySource: { name: "Open Reality Triangulation", domain: "fokk.browser", url: postUrl || window.location.href },
-      receipts: encyclopedicRecord ? [{
-        sourceName: encyclopedicRecord.sourceName,
-        headline: encyclopedicRecord.extract.slice(0, 140) + "...",
-        url: encyclopedicRecord.url,
-        domain: encyclopedicRecord.domain
-      }] : [],
-      leadImage: null,
-      followUpQuestions: [
-        `Has any accredited wire service independently corroborated this claim?`,
-        `What official statements have institutional representatives issued?`,
-        `What primary documentation is required to verify this development?`
-      ],
-      deepLink: postUrl || window.location.href,
-      isPro: true,
-      auditTier: "PRO"
+      qualified: visible,
+      matchedCount: qualified.length,
+      sourceCount: domains.size,
+      storyCount: storyKeys.size,
+      coverageLabel,
+      newestDate,
+      freshness,
+      tokenCount: tokens.length
     };
   }
 
-  // A headline match is not verification. Require independent domains and a
-  // meaningful claim-token overlap before the verdict engine can call a live
-  // claim VERIFIED. This makes the default outcome honest uncertainty instead
-  // of turning a single search result into a fact label.
-  function assessIndependentEvidence(claim, receipts) {
-    const tokens = Array.from(new Set((claim.toLowerCase().match(/[a-z0-9]{4,}/g) || [])
-      .filter(word => !STOP_WORDS.has(word) && !GENERIC_DICTIONARY_CONCEPTS.has(word))));
-    const qualified = (receipts || []).filter(receipt => {
-      const headline = String(receipt.headline || '').toLowerCase();
-      return tokens.filter(token => headline.includes(token)).length >= Math.min(2, Math.max(1, tokens.length));
-    });
-    const domains = new Set(qualified.map(item => String(item.domain || '').replace(/^www\./, '').toLowerCase()).filter(Boolean));
-    return {
-      canVerify: qualified.length >= 2 && domains.size >= 2,
-      qualified,
-      sourceCount: domains.size
-    };
+  function describeUnverifiedClaimDetails(claim, receipts) {
+    const details = [];
+    const numberWordPattern = "zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty(?:[- ]one)?|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion";
+    const numericPattern = new RegExp(`\\b(?:\\d+(?:[.,]\\d+)*|${numberWordPattern})\\b`, "gi");
+    let match;
+    while ((match = numericPattern.exec(claim)) && details.length < 4) {
+      const start = Math.max(0, match.index - 22);
+      const end = Math.min(claim.length, match.index + match[0].length + 34);
+      const snippet = claim.slice(start, end).trim().replace(/^\W+|\W+$/g, "");
+      if (snippet && !details.some(value => value.toLowerCase() === snippet.toLowerCase())) details.push(`“${snippet}”`);
+    }
+    const incomplete = /\b(?:at|of|for|with|to|from|by|and|or|that|which|because|after|before)\s*$/i.test(claim.trim());
+    const resultText = (receipts || []).map(item => `${item.headline || ""} ${item.snippet || ""}`).join(" ").toLowerCase();
+    const numberLookup = { zero: "0", one: "1", two: "2", three: "3", four: "4", five: "5", six: "6", seven: "7", eight: "8", nine: "9", ten: "10", eleven: "11", twelve: "12", thirteen: "13", fourteen: "14", fifteen: "15", sixteen: "16", seventeen: "17", eighteen: "18", nineteen: "19", twenty: "20", twentyone: "21", thirty: "30", forty: "40", fifty: "50", sixty: "60", seventy: "70", eighty: "80", ninety: "90", hundred: "100", thousand: "1000", million: "1000000", billion: "1000000000" };
+    const resultNumbers = new Set(resultText.match(/\b\d+(?:[.,]\d+)*\b/g) || []);
+    const resultNumberWords = new Set(resultText.match(/\b[a-z]+\b/g) || []);
+    const mentionedNumbers = (claim.match(numericPattern) || []).filter(value => {
+      const normalized = value.toLowerCase().replace(/[- ]/g, "");
+      const digit = numberLookup[normalized] || normalized.replace(/[^\d.,]/g, "");
+      return resultNumberWords.has(normalized) || Boolean(digit && resultNumbers.has(digit));
+    }).length;
+    const figureStatus = details.length
+      ? `Numbers in claim details: ${mentionedNumbers}/${(claim.match(numericPattern) || []).length} appear in indexed titles/snippets or accessible page text; mention is not confirmation`
+      : "No number passage detected; specific dates, actions, and context remain unverified";
+    return `${figureStatus}; full article text and primary records were not checked${incomplete ? "; claim text appears incomplete" : ""}`;
+  }
+
+  function mergeNewsReceipts(receipts) {
+    const merged = new Map();
+    for (const item of receipts || []) {
+      const headlineKey = String(item.headline || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      const key = `${String(item.domain || "").toLowerCase()}|${headlineKey}`;
+      if (!headlineKey || key === "|") continue;
+      const current = merged.get(key);
+      if (!current) {
+        item.providers = Array.from(new Set([...(item.providers || []), item.provider].filter(Boolean)));
+        merged.set(key, item);
+        continue;
+      }
+      current.providers = Array.from(new Set([...(current.providers || []), ...(item.providers || []), item.provider].filter(Boolean)));
+      if (current.provider !== item.provider && item.provider === "GDELT DOC") {
+        current.url = item.url;
+        current.publisherUrl = item.publisherUrl || current.publisherUrl;
+        current.pubDate = item.pubDate || current.pubDate;
+      }
+      current.evidenceRole = Array.from(new Set([current.evidenceRole, item.evidenceRole].filter(Boolean))).join("; ");
+    }
+    return Array.from(merged.values());
   }
 
   async function runInBrowserRealityAudit(claimText, postUrl, platformMeta) {
@@ -1550,75 +1641,156 @@
 
     const domain = detectClaimDomain(cleanClaim);
     const entities = extractEntitiesDynamically(cleanClaim);
-    const queries = constructDynamicQueries(cleanClaim, entities);
-
-    const primaryQuery = queries[0] || (entities.length > 0 ? entities[0] : cleanClaim.slice(0, 40));
-    const secondaryQuery = queries[1] || "";
-
-    // Multi-Pipeline Knowledge Harvesting
-    const wikiTarget = (entities.length > 0 && !STOP_WORDS.has(entities[0].toLowerCase()) && !COMMON_LOCATIONS.has(entities[0].toLowerCase())) ? entities[0] : (queries[0] || "");
-    let [wireArticles1, encyclopedicRecord] = await Promise.all([
-      fetchRealTimeWireReceipts(primaryQuery),
-      fetchEncyclopedicReceipt(wikiTarget, domain, cleanClaim)
+    const queries = buildEvidenceSearchQueries(cleanClaim, entities);
+    const searchQueries = queries.length ? queries.slice(0, 2) : [cleanClaim.slice(0, 100)];
+    const primaryEntity = getClaimPrimarySubject(entities);
+    const officialTargetPromise = buildOfficialSiteTargets(entities);
+    const socialSearchDomains = ["reddit.com", "x.com", "instagram.com", "threads.net", "facebook.com", "tiktok.com", "youtube.com", "bsky.app"];
+    let [googleResults, gdeltResults, encyclopedicRecord, officialLookup, webSearchResult, socialResults] = await Promise.all([
+      Promise.all(searchQueries.map(fetchRealTimeWireReceipts)),
+      Promise.all(searchQueries.map(fetchGdeltReceipts)),
+      fetchEncyclopedicReceipt(primaryEntity || searchQueries[0], domain, cleanClaim),
+      officialTargetPromise,
+      fetchDuckDuckGoReceipts(searchQueries[0]),
+      Promise.all(socialSearchDomains.map(host => fetchDuckDuckGoReceipts(`site:${host} ${searchQueries[0]}`, { social: true, expectedDomain: host })))
     ]);
+    const officialTargets = officialLookup.targets;
+    const officialResults = await Promise.all(officialTargets.map(target => fetchGdeltReceipts(`\"${target.entityName}\" domainis:${target.host}`, {
+        timespan: "3m",
+        maxRecords: 10,
+        expectedDomain: target.host,
+        provider: "GDELT official-site index",
+        evidenceRole: `Wikidata-listed official site index result for ${target.entityName}; page not reviewed`
+      })));
 
-    // Fall back to semantic queries if initial lookup was empty
-    if (!encyclopedicRecord && queries.length > 0) {
-      for (const q of queries) {
-        if (q !== wikiTarget && q.length > 3) {
-          encyclopedicRecord = await fetchEncyclopedicReceipt(q, domain, cleanClaim);
-          if (encyclopedicRecord) break;
-        }
+    if (!encyclopedicRecord && entities.length > 1) {
+      for (const entity of entities.slice(1, 3)) {
+        encyclopedicRecord = await fetchEncyclopedicReceipt(entity, domain, cleanClaim);
+        if (encyclopedicRecord) break;
       }
     }
 
-    let rawWire = [...wireArticles1];
-    if (rawWire.length < 3 && secondaryQuery) {
-      const wireArticles2 = await fetchRealTimeWireReceipts(secondaryQuery);
-      for (const w of wireArticles2) {
-        if (!rawWire.some(existing => existing.headline === w.headline)) rawWire.push(w);
+    const googleAvailable = googleResults.some(result => result.available);
+    const gdeltAvailable = gdeltResults.some(result => result.available);
+    const officialAvailable = officialResults.some(result => result.available);
+    const webAvailable = Boolean(webSearchResult.available);
+    const socialAvailable = socialResults.some(result => result.available);
+    const googleHeadlines = googleResults.flatMap(result => result.items || []);
+    const gdeltHeadlines = gdeltResults.flatMap(result => result.items || []);
+    const officialSiteHits = officialResults.flatMap(result => result.items || []);
+    const webHeadlines = webSearchResult.items || [];
+    const socialHeadlines = socialResults.flatMap(result => result.items || []);
+    const allHeadlines = mergeNewsReceipts([...gdeltHeadlines, ...googleHeadlines, ...webHeadlines, ...socialHeadlines]);
+    const initialEvidence = assessHeadlineCoverage(cleanClaim, allHeadlines, entities, domain);
+    const pageTargets = [];
+    const pageHosts = new Set();
+    for (const receipt of [...officialSiteHits, ...initialEvidence.qualified]) {
+      let host = "";
+      try { host = new URL(receipt.url).hostname.toLowerCase(); } catch (_) {}
+      if (!host || host === "news.google.com" || host.endsWith(".news.google.com") || pageHosts.has(host)) continue;
+      pageHosts.add(host);
+      pageTargets.push(receipt);
+      if (pageTargets.length >= 4) break;
+    }
+    const pageReviews = await Promise.all(pageTargets.map(reviewPublicSourcePage));
+    const readablePageCount = pageReviews.filter(result => result.text.length >= 160).length;
+    const readableOfficialPageCount = pageReviews.filter(result => result.text.length >= 160 && result.receipt.provider === "GDELT official-site index").length;
+    const pageTextMatchCount = pageReviews.filter(result => pageTextMatchesClaim(cleanClaim, entities, result.receipt)).length;
+    const officialPageTextMatchCount = pageReviews.filter(result => result.receipt.provider === "GDELT official-site index" && pageTextMatchesClaim(cleanClaim, entities, result.receipt)).length;
+    for (const review of pageReviews) {
+      if (pageTextMatchesClaim(cleanClaim, entities, review.receipt)) {
+        review.receipt.evidenceRole = `${review.receipt.evidenceRole || "Source"}; entity/topic terms also found in extracted page text`;
       }
     }
-
-    // Filter wire articles against claim words
-    const claimWords = cleanClaim.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(w => w.length > 3 && !STOP_WORDS.has(w) && !GENERIC_DICTIONARY_CONCEPTS.has(w));
-    const wireArticles = rawWire.filter(w => {
-      const hLower = w.headline.toLowerCase();
-      const matches = claimWords.filter(cw => hLower.includes(cw));
-      return matches.length >= 1;
-    });
-
-    const evidence = assessIndependentEvidence(cleanClaim, wireArticles);
-    const verdictData = generateDynamicAIVerdict(
-      cleanClaim,
-      entities,
-      evidence.canVerify ? evidence.qualified : [],
-      encyclopedicRecord,
-      domain,
-      postUrl
-    );
-    // Keep real receipts visible for review even when they are insufficient for
-    // verification; the verdict remains CONTEXT NEEDED in that case.
-    if (!evidence.canVerify) {
-      verdictData.verdict = "CONTESTED";
-      verdictData.verdictTitle = "INSUFFICIENT INDEPENDENT EVIDENCE";
-      verdictData.statusBadge = "CONTEXT NEEDED";
-      verdictData.confidence = Math.min(Number(verdictData.confidence) || 50, 55);
-      verdictData.forensicSummary = `Fokk found ${evidence.qualified.length} relevant receipt${evidence.qualified.length === 1 ? "" : "s"} across ${evidence.sourceCount} independent source domain${evidence.sourceCount === 1 ? "" : "s"}. That is not enough to verify or debunk this claim. Review the linked sources and look for primary documentation.`;
-      verdictData.receipts = evidence.qualified.slice(0, 4);
-    }
-
-    if (platformMeta && platformMeta.outboundLink && !verdictData.receipts.some(r => r.url === platformMeta.outboundLink)) {
+    const evidence = assessHeadlineCoverage(cleanClaim, allHeadlines, entities, domain);
+    const matchedProviders = new Set(evidence.qualified.flatMap(item => item.providers || [item.provider]).filter(Boolean));
+    const providerStatus = [
+      `Google News RSS: ${googleAvailable ? "reachable" : "unavailable"} (${googleHeadlines.length} query results)`,
+      `GDELT DOC: ${gdeltAvailable ? "reachable" : "unavailable"} (${gdeltHeadlines.length} query results)`,
+      `DuckDuckGo web: ${webAvailable ? "reachable" : "unavailable"} (${webHeadlines.length} results)`,
+      `Social-site searches: ${socialAvailable ? "reachable" : "unavailable"} (${socialHeadlines.length} public indexed results)`
+    ].join("; ");
+    const hasOpinionCue = /\b(i think|i believe|in my opinion|my view is|probably|might|could|should|will happen|going to)\b/i.test(cleanClaim);
+    const claimKind = hasOpinionCue ? "Opinion or prediction cue" : "Factual assertion (heuristic)";
+    const reportCount = evidence.matchedCount;
+    const newestDateLabel = evidence.newestDate
+      ? new Date(evidence.newestDate).toLocaleDateString()
+      : "No publication date available";
+    const checkedAtLabel = new Date().toLocaleTimeString();
+    const articleSummary = reportCount
+      ? `Live search found ${reportCount} subject-and-topic title/snippet matches across ${evidence.sourceCount} source hosts. These are leads, not confirmations; title overlap and public social posts cannot establish that the claim is true.${readablePageCount ? ` Readable text was extracted from ${readablePageCount} of ${pageReviews.length} linked pages, with entity/topic alignment in ${pageTextMatchCount}.` : ""}`
+      : googleAvailable || gdeltAvailable || webAvailable || socialAvailable
+        ? officialPageTextMatchCount
+          ? `The broad search indexes returned no qualifying title/snippet match, but ${officialPageTextMatchCount} public official-site page${officialPageTextMatchCount === 1 ? "" : "s"} contained the extracted entity/topic terms. This is a primary-source lead, not a full claim verdict.`
+          : `Live search responded (${googleHeadlines.length + gdeltHeadlines.length + webHeadlines.length + socialHeadlines.length} indexed results), but none matched the extracted entities and topic closely enough to include. This does not show that the claim is false.${officialSiteHits.length ? ` The official-site search returned ${officialSiteHits.length} candidate links.` : ""}`
+        : officialAvailable
+          ? `The broad news indexes were unavailable. The official-site index responded with ${officialSiteHits.length} candidate link${officialSiteHits.length === 1 ? "" : "s"}; this does not determine whether the claim is true.`
+          : "The news indexes could not be reached through the current network route, so this pass has no news evidence to assess. Check the connection and try again.";
+    const contextReceipt = encyclopedicRecord ? {
+      sourceName: encyclopedicRecord.sourceName || "Wikipedia",
+      headline: String(encyclopedicRecord.extract || "Background context").slice(0, 180),
+      url: encyclopedicRecord.url,
+      domain: "en.wikipedia.org",
+      evidenceRole: "Background context; not proof of this claim"
+    } : null;
+    let attachedLinkReceipt = null;
+    if (platformMeta && /^https?:\/\//i.test(platformMeta.outboundLink || "")) {
       try {
-        const u = new URL(platformMeta.outboundLink);
-        verdictData.receipts.push({
-          sourceName: u.hostname.replace(/^www\./, ""),
-          headline: "Primary Attached Evidence Link",
-          url: platformMeta.outboundLink,
-          domain: u.hostname.replace(/^www\./, "")
-        });
+        const attachedUrl = new URL(platformMeta.outboundLink);
+        attachedLinkReceipt = {
+          sourceName: attachedUrl.hostname.replace(/^www\./i, ""),
+          headline: "Link attached to the original post",
+          url: attachedUrl.href,
+          domain: attachedUrl.hostname.replace(/^www\./i, "").toLowerCase(),
+          evidenceRole: "Original post context; not independently checked"
+        };
       } catch (_) {}
     }
+    const receipts = [...evidence.qualified.slice(0, 4), ...officialSiteHits.slice(0, 2)];
+    if (contextReceipt && /^https:\/\//i.test(contextReceipt.url || "")) receipts.push(contextReceipt);
+    if (attachedLinkReceipt) receipts.push(attachedLinkReceipt);
+
+    const verdictData = {
+      id: "evidence_" + Date.now(),
+      claim: cleanClaim,
+      verdict: "CONTESTED",
+      verdictTitle: "EVIDENCE REVIEW — NO TRUTH VERDICT",
+      statusBadge: (reportCount && officialPageTextMatchCount) ? "OFFICIAL & INDEX MATCHES" : reportCount ? "INDEX MATCHES FOUND" : officialPageTextMatchCount ? "OFFICIAL PAGE SIGNAL" : googleAvailable || gdeltAvailable || webAvailable || socialAvailable ? "NO MATCHING COVERAGE" : officialAvailable ? "OFFICIAL INDEX ONLY" : "SEARCH UNAVAILABLE",
+      confidence: 0,
+      evidenceReport: true,
+      coverageLabel: evidence.coverageLabel,
+      evidenceLayers: [
+        { label: "Claim framing", value: claimKind },
+        { label: "Live search providers", value: `${providerStatus}; ${matchedProviders.size} provider${matchedProviders.size === 1 ? "" : "s"} returned matching links` },
+        { label: "Title/snippet matches", value: `${reportCount} topic matches; up to ${Math.min(4, evidence.qualified.length)} source links shown` },
+        { label: "Source spread", value: `${evidence.sourceCount} distinct host${evidence.sourceCount === 1 ? "" : "s"}; syndication and independence not confirmed` },
+        { label: "Public page review", value: `${readablePageCount} of ${pageReviews.length} matched public pages yielded readable text; social account identity is not authenticated` },
+        { label: "Page-text alignment", value: `${pageTextMatchCount} readable page${pageTextMatchCount === 1 ? "" : "s"} ${pageTextMatchCount === 1 ? "contains" : "contain"} the extracted entity/topic terms; this is not validation of the full claim` },
+        { label: "Recency", value: `${evidence.freshness} · ${newestDateLabel}` },
+        { label: "Search window", value: "GDELT rolling 3 months; Google News results depend on its feed index" },
+        { label: "Official-site search", value: officialTargets.length ? `${officialAvailable ? `${officialSiteHits.length} indexed result${officialSiteHits.length === 1 ? "" : "s"}` : "GDELT index unavailable"} across ${officialTargets.length} Wikidata-resolved entity site${officialTargets.length === 1 ? "" : "s"}; ${officialLookup.available ? "Wikidata lookup reachable" : "Wikidata lookup unavailable"}; ${readableOfficialPageCount ? `${readableOfficialPageCount} page${readableOfficialPageCount === 1 ? "" : "s"} reviewed` : "pages not opened or restricted"}` : `${officialLookup.available ? "No official site found for the extracted entities" : "Wikidata entity lookup unavailable"}` },
+        { label: "Claim details", value: describeUnverifiedClaimDetails(cleanClaim, allHeadlines) },
+        { label: "Background context", value: encyclopedicRecord ? "Found; not treated as claim proof" : "No matching encyclopedia entry found" },
+        { label: "Original post link", value: attachedLinkReceipt ? "Attached link listed separately for review" : "No attached link found" },
+        { label: "Primary evidence", value: officialPageTextMatchCount ? `${officialPageTextMatchCount} official-site page${officialPageTextMatchCount === 1 ? "" : "s"} contain entity/topic terms; inspect the source before relying on the claim` : readableOfficialPageCount ? `Readable text extracted from ${readableOfficialPageCount} official-site page${readableOfficialPageCount === 1 ? "" : "s"}; claim still requires source review` : officialSiteHits.length ? "Official-site index candidates found; pages not accessible or reviewed" : "No primary records reviewed" },
+        { label: "Checked", value: checkedAtLabel }
+      ],
+      assessmentLimitation: "Google News RSS, GDELT, DuckDuckGo, and social-site results are discovery leads, not independent corroboration. Public pages are fetched without login and a small text excerpt is extracted when accessible; paywalls, app shells, and blocked pages may hide content. Social account identity is not authenticated. This pass does not establish truth; inspect full articles and primary records before relying on a claim.",
+      forensicSummary: articleSummary,
+      receipts,
+      primarySource: null,
+      leadImage: null,
+      followUpQuestions: [
+        "Do the linked articles cite a first-hand document or named source?",
+        "Are multiple publishers reporting independently, or repeating the same wire story?",
+        "What primary record would directly confirm or disprove this claim?"
+      ],
+      deepLink: postUrl || window.location.href,
+      attachedContextUrl: attachedLinkReceipt ? attachedLinkReceipt.url : "",
+      checkedAt: new Date().toISOString(),
+      isPro: true,
+      auditTier: "PRO_EVIDENCE"
+    };
 
     showVerdict(verdictData);
   }

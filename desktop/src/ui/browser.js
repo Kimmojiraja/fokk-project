@@ -2510,6 +2510,12 @@ const vpnKillSwitchCheck = document.getElementById('vpnKillSwitchCheck');
 const btnVpnVerifyExit = document.getElementById('btnVpnVerifyExit');
 let verifiedExitIp = null;
 let browserExitDiffersFromDirect = false;
+let verifiedExitRouteKey = null;
+
+function getVpnRouteKey(status) {
+    if (!status) return '';
+    return `${status.state || ''}|${status.activeMode || ''}|${status.customConfig || ''}|${status.connectedAt || ''}|${Boolean(status.killSwitch)}`;
+}
 
 function renderProtocolPicker(locations, activeMode) {
     if (!vpnProtocolPicker || !Array.isArray(locations)) return;
@@ -2570,9 +2576,10 @@ function updateVpnUI(status) {
     const isConn = state === 'connected';
     const isConnecting = state === 'connecting';
     const isErr = state === 'error';
-    if (!isConn) {
+    if (!isConn || (verifiedExitRouteKey && verifiedExitRouteKey !== getVpnRouteKey(status))) {
         verifiedExitIp = null;
         browserExitDiffersFromDirect = false;
+        verifiedExitRouteKey = null;
     }
 
     // 1. Toolbar Status Dot & Active State
@@ -2773,31 +2780,125 @@ function initVpnUI() {
 }
 initVpnUI();
 
+function parseIpCheckResponse(raw) {
+    const text = String(raw || '').trim();
+    let jsonIp = '';
+    try { jsonIp = JSON.parse(text)?.ip || ''; } catch (_) {}
+    const traceIp = text.match(/(?:^|\n)ip=([^\s]+)/)?.[1] || '';
+    const candidate = String(jsonIp || traceIp || text).trim();
+    const ipv4 = candidate.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (ipv4 && ipv4.slice(1).every(part => Number(part) >= 0 && Number(part) <= 255)) return candidate;
+    if (candidate.includes(':')) {
+        try {
+            const parsed = new URL(`http://[${candidate}]/`);
+            if (parsed.hostname) return candidate;
+        } catch (_) {}
+    }
+    return '';
+}
+
+function fetchIpThroughBrowserRoute(activeWebview) {
+    return new Promise((resolve, reject) => {
+        const endpoints = [
+            'https://api.ipify.org?format=json',
+            'https://api4.ipify.org?format=json',
+            'https://ipinfo.io/json',
+            'https://ifconfig.me/ip',
+            'https://icanhazip.com/',
+            'https://www.cloudflare.com/cdn-cgi/trace'
+        ];
+        const probe = document.createElement('webview');
+        const partition = activeWebview.getAttribute('partition') || 'persist:fokk_default_session';
+        probe.setAttribute('partition', partition);
+        probe.setAttribute('webpreferences', 'contextIsolation=yes, javascript=yes, backgroundThrottling=no');
+        probe.setAttribute('aria-hidden', 'true');
+        probe.tabIndex = -1;
+        probe.style.cssText = 'position:fixed!important;left:-20px!important;top:0!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;z-index:-1!important;';
+
+        let endpointIndex = 0;
+        let settled = false;
+        let endpointTimer = null;
+        let activeEndpointHost = '';
+        let endpointGeneration = 0;
+        const finish = (ip, error) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(endpointTimer);
+            clearTimeout(totalTimer);
+            try { probe.stop(); } catch (_) {}
+            probe.remove();
+            if (ip) resolve(ip);
+            else reject(new Error(error || 'No IP check service returned a valid address.'));
+        };
+        const totalTimer = setTimeout(() => finish('', 'Browser route IP checks timed out.'), 35_000);
+        const nextEndpoint = (lastError) => {
+            if (settled) return;
+            clearTimeout(endpointTimer);
+            if (endpointIndex >= endpoints.length) {
+                finish('', lastError || 'All browser route IP check services failed.');
+                return;
+            }
+            const url = endpoints[endpointIndex++];
+            activeEndpointHost = new URL(url).hostname;
+            endpointGeneration += 1;
+            endpointTimer = setTimeout(() => nextEndpoint('An IP check service timed out through the browser route.'), 5_000);
+            probe.src = url;
+        };
+
+        probe.addEventListener('did-finish-load', () => {
+            if (settled) return;
+            const pageHost = (() => { try { return new URL(probe.getURL()).hostname; } catch (_) { return ''; } })();
+            if (pageHost !== activeEndpointHost) return;
+            const generation = endpointGeneration;
+            probe.executeJavaScript('(document.body && document.body.innerText || "").trim()')
+                .then(raw => {
+                    if (settled || generation !== endpointGeneration) return;
+                    const ip = parseIpCheckResponse(raw);
+                    if (ip) finish(ip, '');
+                    else nextEndpoint('An IP check service returned no parseable address.');
+                })
+                .catch(() => {
+                    if (generation === endpointGeneration) nextEndpoint('An IP check service could not be read.');
+                });
+        });
+        probe.addEventListener('did-fail-load', event => {
+            if (event && event.errorCode === -3) return;
+            if (event && event.isMainFrame) nextEndpoint(event.errorDescription || 'An IP check service was unreachable.');
+        });
+        document.body.appendChild(probe);
+        nextEndpoint('No IP check service returned an address.');
+    });
+}
+
 if (btnVpnVerifyExit) {
     btnVpnVerifyExit.addEventListener('click', async () => {
         const active = tabs.find(tab => tab.id === activeTabId);
-        if (!active || !active.webview || typeof active.webview.executeJavaScript !== 'function') {
-            showToast('Open a website in the active browser tab before verifying its IP.');
+        if (!active || !active.webview) {
+            showToast('Open a browser tab before verifying its route.');
             return;
         }
         btnVpnVerifyExit.disabled = true;
-        btnVpnVerifyExit.textContent = 'Checking active browser route...';
+        btnVpnVerifyExit.textContent = 'Checking browser route...';
         try {
-            const ip = await active.webview.executeJavaScript(`(async function() {
-                const response = await fetch('https://api.ipify.org?format=json', { cache: 'no-store' });
-                if (!response.ok) throw new Error('IP check returned HTTP ' + response.status);
-                const result = await response.json();
-                if (!result || !result.ip) throw new Error('IP check returned no address');
-                return result.ip;
-            })()`);
-            if (typeof ip !== 'string' || !ip.trim()) throw new Error('The active tab returned no IP address.');
+            const routeAtStart = ipcRenderer.sendSync('fokk-vpn-get-status');
+            // A dedicated probe shares the active tab's session and proxy, but
+            // is not restricted by the open site's CSP or CORS policy.
+            const ip = await fetchIpThroughBrowserRoute(active.webview);
+            const routeAfterProbe = ipcRenderer.sendSync('fokk-vpn-get-status');
+            if (getVpnRouteKey(routeAtStart) !== getVpnRouteKey(routeAfterProbe)) {
+                throw new Error('The browser route changed while verification was running. Run the check again.');
+            }
             const direct = await ipcRenderer.invoke('fokk-vpn-check-direct-ip');
             if (!direct || !direct.ip) throw new Error(direct?.error || 'Could not read the direct public IP for comparison.');
+            const status = ipcRenderer.sendSync('fokk-vpn-get-status');
+            if (getVpnRouteKey(routeAtStart) !== getVpnRouteKey(status)) {
+                throw new Error('The browser route changed during the comparison. Run the check again.');
+            }
             browserExitDiffersFromDirect = ip.trim() !== direct.ip.trim();
             verifiedExitIp = browserExitDiffersFromDirect
                 ? `${ip.trim()} (differs from direct)`
                 : `${ip.trim()} (same as direct)`;
-            const status = ipcRenderer.sendSync('fokk-vpn-get-status');
+            verifiedExitRouteKey = getVpnRouteKey(status);
             if (status) updateVpnUI(status);
             showToast(browserExitDiffersFromDirect
                 ? `Browser IP ${ip.trim()} differs from direct IP ${direct.ip}.`

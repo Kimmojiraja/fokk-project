@@ -1501,7 +1501,59 @@ open class MediaHubActivity : AppCompatActivity() {
         if (hasMorePending) scheduleFilteredCountFlush()
     }
 
-    class WebAppInterface(private val activity: MediaHubActivity) {
+    class WebAppInterface(private val activity: MediaHubActivity, private val sourceWebView: WebView? = null) {
+        private val auditPageUrlGrants = LinkedHashMap<String, Long>()
+
+        private fun isSafePublicAuditPage(target: java.net.URI): Boolean {
+            val host = target.host?.lowercase(Locale.ROOT)?.removeSuffix(".").orEmpty()
+            val blockedSuffixes = listOf(".localhost", ".local", ".internal", ".test", ".invalid")
+            val ipv4 = Regex("^\\d{1,3}(?:\\.\\d{1,3}){3}$")
+            return target.scheme.equals("https", ignoreCase = true) &&
+                target.port in listOf(-1, 443) && target.rawUserInfo == null && target.rawFragment == null &&
+                host.contains(".") && !host.contains(":") && !ipv4.matches(host) &&
+                host != "localhost" && host != "metadata.google.internal" &&
+                blockedSuffixes.none { host.endsWith(it) } && host.split(".").all { label ->
+                    label.isNotEmpty() && label.length <= 63 && label.matches(Regex("^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"))
+                }
+        }
+
+        private fun rememberAuditPageUrl(value: String?) {
+            try {
+                val target = java.net.URI(value ?: "")
+                if (!isSafePublicAuditPage(target) || target.host.equals("news.google.com", ignoreCase = true)) return
+                val key = target.normalize().toASCIIString()
+                synchronized(auditPageUrlGrants) {
+                    val now = System.currentTimeMillis()
+                    auditPageUrlGrants.entries.removeAll { it.value <= now }
+                    auditPageUrlGrants[key] = now + 10 * 60 * 1000
+                    while (auditPageUrlGrants.size > 100) {
+                        auditPageUrlGrants.remove(auditPageUrlGrants.keys.first())
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+
+        private fun rememberAuditPageUrlsFromIndex(host: String, path: String, body: String) {
+            try {
+                if (host == "api.gdeltproject.org" && path == "/api/v2/doc/doc") {
+                    val articles = org.json.JSONObject(body).optJSONArray("articles") ?: return
+                    for (index in 0 until articles.length()) {
+                        rememberAuditPageUrl(articles.optJSONObject(index)?.optString("url"))
+                    }
+                } else if (host == "html.duckduckgo.com" && path == "/html/") {
+                    val anchorPattern = Regex("<a\\b[^>]*>", RegexOption.IGNORE_CASE)
+                    val hrefPattern = Regex("href\\s*=\\s*(['\"])(.*?)\\1", RegexOption.IGNORE_CASE)
+                    for (anchor in anchorPattern.findAll(body)) {
+                        if (!Regex("class\\s*=\\s*(['\"])[^'\"]*\\bresult__a\\b[^'\"]*\\1", RegexOption.IGNORE_CASE).containsMatchIn(anchor.value)) continue
+                        val href = hrefPattern.find(anchor.value)?.groupValues?.get(2)?.replace("&amp;", "&") ?: continue
+                        val link = java.net.URI("https://html.duckduckgo.com").resolve(href)
+                        val target = android.net.Uri.parse(link.toString()).getQueryParameter("uddg") ?: link.toString()
+                        rememberAuditPageUrl(target)
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+
         @JavascriptInterface
         fun getStats(): String {
             val total = if (activity.isIsolatedPrivateProfile) {
@@ -1922,6 +1974,169 @@ open class MediaHubActivity : AppCompatActivity() {
             return JSONArray(results).toString()
         }
 
+        @JavascriptInterface
+        fun auditFetch(url: String): String {
+            var connection: java.net.HttpURLConnection? = null
+            return try {
+                val target = java.net.URI(url)
+                val host = target.host?.lowercase(Locale.ROOT).orEmpty()
+                val allowedTarget = target.scheme.equals("https", ignoreCase = true) &&
+                    target.port in listOf(-1, 443) &&
+                    target.rawUserInfo == null && target.rawFragment == null && url.length <= 4_096 &&
+                    ((host == "news.google.com" && target.path == "/rss/search") ||
+                        (host == "html.duckduckgo.com" && target.path == "/html/") ||
+                        (host == "en.wikipedia.org" && target.path == "/w/api.php") ||
+                        (host == "wikidata.org" && target.path == "/w/api.php") ||
+                        (host == "api.gdeltproject.org" && target.path == "/api/v2/doc/doc"))
+                if (!allowedTarget) return ""
+
+                val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(activity)
+                val routeProxy = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM) {
+                    val savedProxy = java.net.URI(com.adshield.app.engine.VpnEngine.getCustomProxy(activity))
+                    val proxyType = when (savedProxy.scheme?.lowercase(Locale.ROOT)) {
+                        "socks" -> java.net.Proxy.Type.SOCKS
+                        "http" -> java.net.Proxy.Type.HTTP
+                        // Java URLConnection does not provide TLS-to-HTTPS-proxy support.
+                        // Do not silently send this lookup outside the configured route.
+                        else -> return ""
+                    }
+                    val proxyHost = savedProxy.host?.takeIf { it.isNotBlank() } ?: return ""
+                    val proxyPort = savedProxy.port.takeIf { it in 1..65535 } ?: return ""
+                    java.net.Proxy(proxyType, java.net.InetSocketAddress(proxyHost, proxyPort))
+                } else {
+                    null
+                }
+
+                val targetUrl = java.net.URL(target.toASCIIString())
+                val conn = (if (routeProxy == null) targetUrl.openConnection() else targetUrl.openConnection(routeProxy)) as java.net.HttpURLConnection
+                connection = conn
+                conn.connectTimeout = 6_000
+                conn.readTimeout = 7_000
+                conn.instanceFollowRedirects = false
+                conn.useCaches = false
+                conn.requestMethod = "GET"
+                conn.setRequestProperty("Accept", "application/json, application/xml, text/xml")
+                conn.setRequestProperty("User-Agent", "FokkBrowser/2.4.0 (Android; EvidenceReview)")
+                if (conn.responseCode != java.net.HttpURLConnection.HTTP_OK) return ""
+                if (conn.contentLengthLong > 1_000_000L) return ""
+
+                val output = StringBuilder()
+                conn.inputStream.bufferedReader().use { reader ->
+                    val buffer = CharArray(8_192)
+                    while (true) {
+                        val count = reader.read(buffer)
+                        if (count < 0) break
+                        if (output.length + count > 1_000_000) return ""
+                        output.append(buffer, 0, count)
+                    }
+                }
+                val body = output.toString()
+                rememberAuditPageUrlsFromIndex(host, target.path, body)
+                body
+            } catch (_: Exception) {
+                ""
+            } finally {
+                connection?.disconnect()
+            }
+        }
+
+        @JavascriptInterface
+        fun auditFetchPage(url: String): String {
+            var connection: java.net.HttpURLConnection? = null
+            return try {
+                if (url.length > 4_096) return ""
+                var target = java.net.URI(url)
+                if (!isSafePublicAuditPage(target)) return ""
+                val originalHost = target.host.orEmpty()
+                val grantKey = target.normalize().toASCIIString()
+                val granted = synchronized(auditPageUrlGrants) {
+                    val expiresAt = auditPageUrlGrants[grantKey] ?: 0L
+                    if (expiresAt > System.currentTimeMillis()) {
+                        auditPageUrlGrants.remove(grantKey)
+                        true
+                    } else {
+                        auditPageUrlGrants.remove(grantKey)
+                        false
+                    }
+                }
+                if (!granted) return ""
+
+                val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(activity)
+                val routeProxy = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM) {
+                    val savedProxy = java.net.URI(com.adshield.app.engine.VpnEngine.getCustomProxy(activity))
+                    val proxyType = when (savedProxy.scheme?.lowercase(Locale.ROOT)) {
+                        "socks", "socks5", "socks4" -> java.net.Proxy.Type.SOCKS
+                        "http", "https" -> java.net.Proxy.Type.HTTP
+                        else -> return ""
+                    }
+                    val proxyHost = savedProxy.host?.takeIf { it.isNotBlank() } ?: return ""
+                    val proxyPort = savedProxy.port.takeIf { it in 1..65535 } ?: return ""
+                    java.net.Proxy(proxyType, java.net.InetSocketAddress(proxyHost, proxyPort))
+                } else null
+
+                var redirects = 0
+                while (redirects <= 2) {
+                    if (!isSafePublicAuditPage(target)) return ""
+                    val targetUrl = java.net.URL(target.toASCIIString())
+                    val conn = (if (routeProxy == null) targetUrl.openConnection() else targetUrl.openConnection(routeProxy)) as java.net.HttpURLConnection
+                    connection = conn
+                    conn.connectTimeout = 6_000
+                    conn.readTimeout = 7_000
+                    conn.instanceFollowRedirects = false
+                    conn.useCaches = false
+                    conn.requestMethod = "GET"
+                    conn.setRequestProperty("Accept", "text/html, application/xhtml+xml, text/plain;q=0.8")
+                    conn.setRequestProperty("User-Agent", "FokkBrowser/2.4.0 (Android; EvidenceReview)")
+                    val status = conn.responseCode
+                    if (status in 300..399) {
+                        val location = conn.getHeaderField("Location") ?: return ""
+                        val redirectedTarget = target.resolve(location)
+                        if (!isSafePublicAuditPage(redirectedTarget) || !redirectedTarget.host.equals(originalHost, ignoreCase = true)) return ""
+                        target = redirectedTarget
+                        conn.disconnect()
+                        connection = null
+                        redirects++
+                        continue
+                    }
+                    if (status != java.net.HttpURLConnection.HTTP_OK) return ""
+                    val contentType = conn.contentType?.lowercase(Locale.ROOT).orEmpty()
+                    if (!(contentType.contains("text/html") || contentType.contains("application/xhtml+xml") || contentType.contains("text/plain"))) return ""
+                    if (conn.contentLengthLong > 1_000_000L) return ""
+                    val output = StringBuilder()
+                    conn.inputStream.bufferedReader().use { reader ->
+                        val buffer = CharArray(8_192)
+                        while (true) {
+                            val count = reader.read(buffer)
+                            if (count < 0) break
+                            if (output.length + count > 1_000_000) return ""
+                            output.append(buffer, 0, count)
+                        }
+                    }
+                    return output.toString()
+                }
+                ""
+            } catch (_: Exception) {
+                ""
+            } finally {
+                connection?.disconnect()
+            }
+        }
+
+        @JavascriptInterface
+        fun auditFetchAsync(url: String, requestId: String, fetchPage: Boolean) {
+            if (url.length > 4_096 || requestId.length > 120) return
+            activity.lifecycleScope.launch(Dispatchers.IO) {
+                val result = try {
+                    if (fetchPage) auditFetchPage(url) else auditFetch(url)
+                } catch (_: Exception) {
+                    ""
+                }
+                val callback = "window.__fokkAuditResolve(${org.json.JSONObject.quote(requestId)},${org.json.JSONObject.quote(result)});"
+                val callbackWebView = sourceWebView ?: activity.activeWebView ?: return@launch
+                callbackWebView.post { callbackWebView.evaluateJavascript(callback, null) }
+            }
+        }
+
 
         @JavascriptInterface
         fun onPaywallDetected(url: String) {
@@ -2025,18 +2240,6 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
 
-        @JavascriptInterface
-        fun auditFetch(url: String): String {
-            return try {
-                val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
-                conn.connectTimeout = 7000
-                conn.readTimeout = 7000
-                conn.setRequestProperty("User-Agent", "FokkBrowser/2.4.0 (Android; RealityAudit)")
-                conn.inputStream.bufferedReader().use { it.readText() }
-            } catch (e: Exception) {
-                ""
-            }
-        }
     }
 
     private fun canUseBiometric(): Boolean {
@@ -2860,7 +3063,7 @@ open class MediaHubActivity : AppCompatActivity() {
             userAgentString = cleanMobileUa
         }
 
-        webView.addJavascriptInterface(WebAppInterface(this), "FokkShieldBridge")
+        webView.addJavascriptInterface(WebAppInterface(this, webView), "FokkShieldBridge")
         webView.addJavascriptInterface(MediaPlaybackBridge(this), "FokkMediaBridge")
 
         // Intercept downloads cleanly
@@ -4101,7 +4304,7 @@ open class MediaHubActivity : AppCompatActivity() {
     private fun setBridgeEnabled(webView: WebView?, url: String?) {
         if (webView == null) return
         try {
-            webView.addJavascriptInterface(WebAppInterface(this), "FokkShieldBridge")
+            webView.addJavascriptInterface(WebAppInterface(this, webView), "FokkShieldBridge")
         } catch (_: Exception) {}
         if (url?.startsWith(OFFLINE_PAGE_BASE_URL) != true) {
             try {
@@ -6349,6 +6552,7 @@ open class MediaHubActivity : AppCompatActivity() {
             Toast.makeText(this, "Open a page before checking the browser exit", Toast.LENGTH_SHORT).show()
             return
         }
+        val routeFingerprintAtStart = getVpnRouteFingerprint()
         val progress = android.app.ProgressDialog(this).apply {
             setMessage("Checking browser exit through the active route...")
             setCancelable(false)
@@ -6364,18 +6568,24 @@ open class MediaHubActivity : AppCompatActivity() {
 
         val endpoints = listOf(
             "https://api4.ipify.org?format=json",
-            "https://api.ipify.org"
+            "https://api.ipify.org?format=json",
+            "https://ipinfo.io/json",
+            "https://ifconfig.me/ip",
+            "https://icanhazip.com/",
+            "https://cloudflare.com/cdn-cgi/trace"
         )
         var endpointIndex = 0
         var activeHost: String? = null
         var finished = false
         val timeoutHandler = Handler(Looper.getMainLooper())
+        var endpointTimeout: Runnable? = null
         var finishCheck: (String?, String?) -> Unit = { _, _ -> }
         var loadNextEndpoint: (String?) -> Unit = { _ -> }
         val timeout = Runnable { finishCheck(null, "The IP check timed out through the active browser route.") }
 
         fun cleanupProbe(dismissProgress: Boolean = true) {
             timeoutHandler.removeCallbacks(timeout)
+            endpointTimeout?.let(timeoutHandler::removeCallbacks)
             if (dismissProgress) try { progress.dismiss() } catch (_: Exception) {}
             runCatching { probe.stopLoading() }
             binding.tabContainer.removeView(probe)
@@ -6386,6 +6596,15 @@ open class MediaHubActivity : AppCompatActivity() {
             if (finished) return@finish
             finished = true
             cleanupProbe(dismissProgress = ip == null)
+            if (ip != null && routeFingerprintAtStart != getVpnRouteFingerprint()) {
+                try { progress.dismiss() } catch (_: Exception) {}
+                AlertDialog.Builder(this)
+                    .setTitle("Browser Route Changed")
+                    .setMessage("The selected proxy changed while the check was running. Run verification again to compare one stable route.")
+                    .setPositiveButton("OK", null)
+                    .show()
+                return@finish
+            }
             val mode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
             if (ip == null) {
                 AlertDialog.Builder(this)
@@ -6400,6 +6619,14 @@ open class MediaHubActivity : AppCompatActivity() {
             com.adshield.app.engine.VpnEngine.checkDirectPublicIp { directIp, directError ->
                 runOnUiThread {
                     try { progress.dismiss() } catch (_: Exception) {}
+                    if (routeFingerprintAtStart != getVpnRouteFingerprint()) {
+                        AlertDialog.Builder(this)
+                            .setTitle("Browser Route Changed")
+                            .setMessage("The selected proxy changed during comparison. Run verification again to compare one stable route.")
+                            .setPositiveButton("OK", null)
+                            .show()
+                        return@runOnUiThread
+                    }
                     val comparison = when {
                         mode == com.adshield.app.engine.VpnEngine.VpnMode.OFF ->
                             "The browser proxy is off, so this is the direct public IP."
@@ -6421,11 +6648,20 @@ open class MediaHubActivity : AppCompatActivity() {
 
         loadNextEndpoint = next@{ lastError ->
             if (finished) return@next
+            endpointTimeout?.let(timeoutHandler::removeCallbacks)
+            endpointTimeout = null
             if (endpointIndex >= endpoints.size) {
-                finishCheck(null, lastError ?: "No IP address was returned by either verification service.")
+                finishCheck(null, lastError ?: "No IP address was returned by the verification services.")
             } else {
                 val url = endpoints[endpointIndex++]
                 activeHost = Uri.parse(url).host
+                val hostForTimeout = activeHost
+                endpointTimeout = Runnable {
+                    if (!finished && activeHost == hostForTimeout) {
+                        loadNextEndpoint("${hostForTimeout ?: "IP service"} timed out through the active route.")
+                    }
+                }
+                timeoutHandler.postDelayed(endpointTimeout!!, 5_000)
                 probe.loadUrl(url)
             }
         }
@@ -6438,13 +6674,16 @@ open class MediaHubActivity : AppCompatActivity() {
                     val pageText = runCatching {
                         org.json.JSONTokener(raw ?: "").nextValue() as? String
                     }.getOrNull().orEmpty().trim()
-                    val candidate = runCatching { JSONObject(pageText).optString("ip") }
-                        .getOrDefault(pageText)
-                        .trim()
-                    if (android.util.Patterns.IP_ADDRESS.matcher(candidate).matches()) {
+                    val jsonIp = runCatching { JSONObject(pageText).optString("ip") }.getOrDefault("").trim()
+                    val traceIp = Regex("(?m)^ip=([^\\s]+)").find(pageText)?.groupValues?.getOrNull(1).orEmpty()
+                    val plainIp = pageText.trim().takeIf { android.util.Patterns.IP_ADDRESS.matcher(it).matches() }.orEmpty()
+                    val candidate = listOf(jsonIp, traceIp, plainIp).firstOrNull {
+                        android.util.Patterns.IP_ADDRESS.matcher(it).matches()
+                    }
+                    if (candidate != null) {
                         finishCheck(candidate, null)
                     } else {
-                        loadNextEndpoint("The verification service returned an invalid IP response.")
+                        loadNextEndpoint("The IP service returned no parseable public address.")
                     }
                 }
             }
@@ -6472,7 +6711,7 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
 
-        timeoutHandler.postDelayed(timeout, 15_000)
+        timeoutHandler.postDelayed(timeout, 35_000)
         loadNextEndpoint(null)
     }
 

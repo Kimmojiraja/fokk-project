@@ -455,6 +455,7 @@ ipcRenderer.on('fokk-search-engine-updated', (event, engineId) => {
                         window.__fokk_is_pro = true;
                         window.__fokk_desktop = true;
                         window.__fokk_audit_fetch = (url) => ipcRenderer.invoke('fokk-audit-fetch', url);
+                        window.__fokk_audit_fetch_page = (url) => ipcRenderer.invoke('fokk-audit-fetch-page', url);
                     } catch (_) {}
                     if (!window.chrome.app) {
                         window.chrome.app = {
