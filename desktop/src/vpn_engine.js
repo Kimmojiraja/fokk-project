@@ -532,7 +532,11 @@ class VpnEngine extends EventEmitter {
         if (/^socks5?:\/\//i.test(this.customConfig)) {
             return this.customConfig.replace(/^socks:\/\//i, 'socks5://');
         }
-        if (/^https:\/\//i.test(this.customConfig)) return '';
+        if (/^https:\/\//i.test(this.customConfig)) {
+            const proxy = new URL(this.customConfig);
+            if (!proxy.hostname || !proxy.port) return '';
+            return `http=https://${proxy.host};https=https://${proxy.host}`;
+        }
         if (/^http:\/\//i.test(this.customConfig)) {
             const proxy = new URL(this.customConfig);
             if (!proxy.hostname || !proxy.port) return '';
