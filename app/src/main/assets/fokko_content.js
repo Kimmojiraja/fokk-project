@@ -4,7 +4,12 @@
 (function () {
   "use strict";
 
-  if (window.__fokk_content_injected) return;
+  if (window.__fokk_content_injected) {
+    if (typeof window.fokkRunInjectors === 'function') {
+      window.fokkRunInjectors();
+    }
+    return;
+  }
   window.__fokk_content_injected = true;
 
   const CACHE_VERSION = "v249";
@@ -2613,6 +2618,13 @@
       host.includes("bsky.app") || host.includes("linkedin.com") ||
       host.includes("youtube.com") || host.includes("facebook.com") || host.includes("tiktok.com");
 
+  // Expose global runner for WebView onPageFinished and SPA navigation
+  window.fokkRunInjectors = function() {
+    if (typeof runActiveInjector === 'function') {
+      runActiveInjector();
+    }
+  };
+
   // Only run social post button injectors and their observer on supported platforms
   if (isSocialPlatform) {
     function runActiveInjector() {
@@ -2633,7 +2645,8 @@
     function scheduleScan() {
       if (scanScheduled) return;
       scanScheduled = true;
-      requestAnimationFrame(() => {
+      const defer = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : setTimeout;
+      defer(() => {
         runActiveInjector();
         scanScheduled = false;
       });
@@ -2643,9 +2656,32 @@
       scheduleScan();
     });
 
-    const targetNode = document.body || document.documentElement;
-    if (targetNode) {
-      observer.observe(targetNode, { childList: true, subtree: true });
+    function attachObserver() {
+      const targetNode = document.body || document.documentElement;
+      if (targetNode) {
+        observer.observe(targetNode, { childList: true, subtree: true });
+      }
     }
+
+    try {
+      if (document.readyState === 'loading') {
+        document.addEventListener?.('DOMContentLoaded', () => {
+          runActiveInjector();
+          attachObserver();
+        });
+      } else {
+        attachObserver();
+      }
+
+      window.addEventListener?.('load', runActiveInjector);
+      window.addEventListener?.('popstate', scheduleScan);
+      window.addEventListener?.('hashchange', scheduleScan);
+    } catch (_) {}
+
+    // Multi-stage scan on mobile SPAs that stream content in
+    setTimeout(scheduleScan, 400);
+    setTimeout(scheduleScan, 1200);
+    setTimeout(scheduleScan, 2400);
+    setTimeout(scheduleScan, 4000);
   }
 })();
