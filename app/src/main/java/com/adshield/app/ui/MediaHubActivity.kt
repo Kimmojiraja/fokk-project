@@ -2794,7 +2794,8 @@ open class MediaHubActivity : AppCompatActivity() {
 
     private fun loadUrlInActiveWebView(url: String) = loadUrlInWebView(activeWebView, url)
 
-    private fun isWebUrl(rawUrl: String): Boolean = runCatching {
+    private fun isWebUrl(rawUrl: String?): Boolean = runCatching {
+        if (rawUrl.isNullOrBlank()) return@runCatching false
         val uri = Uri.parse(rawUrl)
         val scheme = uri.scheme?.lowercase(Locale.ROOT)
         (scheme == "http" || scheme == "https") && !uri.host.isNullOrBlank()
@@ -3235,6 +3236,15 @@ open class MediaHubActivity : AppCompatActivity() {
                 if (loadedTab?.isOfflineReader != true) {
                     injectAdblockScript(view, pageUrl)
                     if (isDarkMode && !isThirdPartyMediaService(pageUrl)) injectDarkModeScript(view, true)
+                    view?.postDelayed({
+                        view.evaluateJavascript("if (typeof window.fokkRunInjectors === 'function') { window.fokkRunInjectors(); }", null)
+                    }, 400)
+                    view?.postDelayed({
+                        view.evaluateJavascript("if (typeof window.fokkRunInjectors === 'function') { window.fokkRunInjectors(); }", null)
+                    }, 1500)
+                    view?.postDelayed({
+                        view.evaluateJavascript("if (typeof window.fokkRunInjectors === 'function') { window.fokkRunInjectors(); }", null)
+                    }, 3000)
                 }
                 pageUrl?.let { loadedUrl ->
                     if (loadedTab?.isOfflineReader != true) {
@@ -4224,6 +4234,7 @@ open class MediaHubActivity : AppCompatActivity() {
             }
             webView.evaluateJavascript("window.__fokk_is_pro = true; window.__fokk_mobile_app = true;", null)
             webView.evaluateJavascript(fokkoScript, null)
+            webView.evaluateJavascript("if (typeof window.fokkRunInjectors === 'function') { window.fokkRunInjectors(); }", null)
         }
 
         // Custom User CSS
@@ -4511,6 +4522,10 @@ open class MediaHubActivity : AppCompatActivity() {
             } else {
                 showSavedPagesDialog()
             }
+        }
+
+        binding.btnNavVpn.setOnClickListener {
+            showVpnModeSelector()
         }
 
         binding.btnNavMenu.setOnClickListener {
@@ -4847,13 +4862,26 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
         val isHome = isHomePageUrl(url)
+        val isWeb = url != null && isWebUrl(url)
         binding.btnNavFavorite.visibility = if (isHome) View.GONE else View.VISIBLE
+        binding.btnAiSummary.visibility = if (!isHome && isWeb) View.VISIBLE else View.GONE
+        binding.btnReaderMode.visibility = if (!isHome && isWeb) View.VISIBLE else View.GONE
         if (!isHome) {
             val targetUrl = url ?: activeWebView?.url.orEmpty()
             val isSaved = if (isWebUrl(targetUrl)) offlinePageStore.list().any { it.url == targetUrl } else false
             binding.btnNavFavorite.setColorFilter(if (isSaved) android.graphics.Color.parseColor("#FBBF24") else android.graphics.Color.parseColor("#94A3B8"))
         }
+        updateVpnIndicatorUi()
         updateToolbarLayoutForUrl(url, animated = true)
+    }
+
+    private fun updateVpnIndicatorUi() {
+        val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
+        val isProxyActive = activeMode != com.adshield.app.engine.VpnEngine.VpnMode.OFF
+        binding.dotNavVpnActive.visibility = if (isProxyActive) View.VISIBLE else View.GONE
+        binding.imgNavVpnIcon.imageTintList = android.content.res.ColorStateList.valueOf(
+            if (isProxyActive) android.graphics.Color.parseColor("#00E5FF") else android.graphics.Color.parseColor("#94A3B8")
+        )
     }
 
     private fun openSystemDownloads() {
@@ -6530,6 +6558,7 @@ open class MediaHubActivity : AppCompatActivity() {
                             if (success) {
                                 activeWebView?.reload()
                                 lastVpnRouteFingerprint = getVpnRouteFingerprint()
+                                updateVpnIndicatorUi()
                             }
                             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                         }
@@ -6744,6 +6773,7 @@ open class MediaHubActivity : AppCompatActivity() {
                             if (success) {
                                 activeWebView?.reload()
                                 lastVpnRouteFingerprint = getVpnRouteFingerprint()
+                                updateVpnIndicatorUi()
                             }
                             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                         }

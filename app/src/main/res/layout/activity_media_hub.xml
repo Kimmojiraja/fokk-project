@@ -312,6 +312,36 @@
                     android:textStyle="bold" />
             </FrameLayout>
 
+            <FrameLayout
+                android:id="@+id/btnNavVpn"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:layout_marginStart="1dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="Privacy Gateway / VPN">
+
+                <ImageView
+                    android:id="@+id/imgNavVpnIcon"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_vpn_key"
+                    app:tint="@color/text_secondary" />
+
+                <View
+                    android:id="@+id/dotNavVpnActive"
+                    android:layout_width="7dp"
+                    android:layout_height="7dp"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="5dp"
+                    android:layout_marginEnd="5dp"
+                    android:background="@drawable/bg_tab_counter"
+                    android:backgroundTint="#34D399"
+                    android:visibility="gone" />
+            </FrameLayout>
+
             <ImageButton
                 android:id="@+id/btnNavFavorite"
                 android:layout_width="34dp"
