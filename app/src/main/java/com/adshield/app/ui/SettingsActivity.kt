@@ -124,7 +124,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnConfigureVpn.setOnClickListener {
             val modes = arrayOf(
                 "Direct Connection (Browser proxy off)",
-                "Custom SOCKS / HTTP Browser Proxy"
+                "Custom SOCKS / HTTP(S) Browser Proxy"
             )
             val currentMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
             val checkedIndex = when (currentMode) {
@@ -166,7 +166,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun promptCustomProxy() {
         val input = android.widget.EditText(this).apply {
-            hint = "e.g. socks5://127.0.0.1:1080"
+            hint = "socks5://host:port, http://host:port, or https://host:port"
             setText(com.adshield.app.engine.VpnEngine.getCustomProxy(this@SettingsActivity))
         }
         AlertDialog.Builder(this)

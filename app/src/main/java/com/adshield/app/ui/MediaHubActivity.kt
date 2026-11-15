@@ -235,6 +235,7 @@ open class MediaHubActivity : AppCompatActivity() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val filteredCountFlushRunnable = Runnable { flushFilteredRequestCounts() }
     private var activeTabIndex = 0
+    private var lastVpnRouteFingerprint: String? = null
     private var savedPagesSearchJob: Job? = null
     private var privateProfileReady = false
     private var privateProfileCloseCleanupStarted = false
@@ -3425,6 +3426,12 @@ open class MediaHubActivity : AppCompatActivity() {
                 val dy = scrollY - oldScrollY
                 binding.topBar.removeCallbacks(showChromeOnIdleRunnable)
 
+                // Keep the address bar and video minimize control available while a video plays.
+                if (isMediaPlaying && hasActiveVideo && binding.btnPictureInPicture.visibility == View.VISIBLE) {
+                    if (browserChromeHidden) setBrowserChromeVisible(true)
+                    return@setOnScrollChangeListener
+                }
+
                 if (dy > 18 && scrollY > 100) {
                     setBrowserChromeVisible(false)
                     binding.cardSuggestions.visibility = View.GONE
@@ -6296,7 +6303,7 @@ open class MediaHubActivity : AppCompatActivity() {
         val current = com.adshield.app.engine.VpnEngine.getActiveMode(this)
         val modes = arrayOf(
             "Direct Connection (Browser proxy off)",
-            "Custom SOCKS / HTTP Browser Proxy",
+            "Custom SOCKS / HTTP(S) Browser Proxy",
             "Verify Browser IP vs Direct IP"
         )
         val checked = when (current) {
@@ -6309,8 +6316,14 @@ open class MediaHubActivity : AppCompatActivity() {
             .setSingleChoiceItems(modes, checked) { dialog, which ->
                 dialog.dismiss()
                 when (which) {
-                    0 -> com.adshield.app.engine.VpnEngine.applyVpnMode(this, com.adshield.app.engine.VpnEngine.VpnMode.OFF) { _, msg ->
-                        runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                    0 -> com.adshield.app.engine.VpnEngine.applyVpnMode(this, com.adshield.app.engine.VpnEngine.VpnMode.OFF) { success, msg ->
+                        runOnUiThread {
+                            if (success) {
+                                activeWebView?.reload()
+                                lastVpnRouteFingerprint = getVpnRouteFingerprint()
+                            }
+                            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                        }
                     }
                     1 -> showCustomProxyDialog()
                     2 -> showVerifyBrowserExitDialog()
@@ -6320,67 +6333,152 @@ open class MediaHubActivity : AppCompatActivity() {
             .show()
     }
 
-    /** Verifies from the active WebView, so this request actually uses ProxyController. */
+    private fun getVpnRouteFingerprint(): String {
+        val mode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
+        val proxy = if (mode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM) {
+            com.adshield.app.engine.VpnEngine.getCustomProxy(this)
+        } else {
+            ""
+        }
+        return "${mode.id}:$proxy"
+    }
+
+    /** Uses a fresh WebView so IP verification does not reuse the active page's old connections or CSP. */
     private fun showVerifyBrowserExitDialog() {
-        val webView = activeWebView
-        if (webView == null) {
+        if (activeWebView == null) {
             Toast.makeText(this, "Open a page before checking the browser exit", Toast.LENGTH_SHORT).show()
             return
         }
         val progress = android.app.ProgressDialog(this).apply {
             setMessage("Checking browser exit through the active route...")
-            setCancelable(true)
+            setCancelable(false)
             show()
         }
-        webView.evaluateJavascript(
-            """fetch('https://api4.ipify.org?format=json', {cache:'no-store'})
-                .then(function(response) { if (!response.ok) throw new Error('HTTP ' + response.status); return response.text(); })
-                .then(function(body) { return JSON.stringify({ok:true, body:body}); })
-                .catch(function(error) { return JSON.stringify({ok:false, error:String(error)}); });""".trimIndent()
-        ) { raw ->
-            try { progress.dismiss() } catch (_: Exception) {}
-            val envelope = runCatching {
-                val decoded = org.json.JSONTokener(raw ?: "").nextValue() as? String ?: raw.orEmpty()
-                JSONObject(decoded)
-            }.getOrNull()
-            val ip = envelope?.takeIf { it.optBoolean("ok") }?.optString("body")
-                ?.let { body -> runCatching { JSONObject(body).optString("ip") }.getOrDefault("") }
-                ?.takeIf { it.isNotBlank() }
+
+        val probe = WebView(this).apply {
+            visibility = View.INVISIBLE
+            settings.javaScriptEnabled = true
+            settings.cacheMode = WebSettings.LOAD_NO_CACHE
+        }
+        binding.tabContainer.addView(probe, FrameLayout.LayoutParams(1, 1))
+
+        val endpoints = listOf(
+            "https://api4.ipify.org?format=json",
+            "https://api.ipify.org"
+        )
+        var endpointIndex = 0
+        var activeHost: String? = null
+        var finished = false
+        val timeoutHandler = Handler(Looper.getMainLooper())
+        var finishCheck: (String?, String?) -> Unit = { _, _ -> }
+        var loadNextEndpoint: (String?) -> Unit = { _ -> }
+        val timeout = Runnable { finishCheck(null, "The IP check timed out through the active browser route.") }
+
+        fun cleanupProbe(dismissProgress: Boolean = true) {
+            timeoutHandler.removeCallbacks(timeout)
+            if (dismissProgress) try { progress.dismiss() } catch (_: Exception) {}
+            runCatching { probe.stopLoading() }
+            binding.tabContainer.removeView(probe)
+            runCatching { probe.destroy() }
+        }
+
+        finishCheck = finish@{ ip, error ->
+            if (finished) return@finish
+            finished = true
+            cleanupProbe(dismissProgress = ip == null)
             val mode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
-            if (ip != null) {
-                com.adshield.app.engine.VpnEngine.checkDirectPublicIp { directIp, _ ->
-                    runOnUiThread {
-                        val comparison = when {
-                            mode == com.adshield.app.engine.VpnEngine.VpnMode.OFF ->
-                                "The browser proxy is off, so this is the direct public IP."
-                            directIp == null ->
-                                "The browser IP was read, but the direct connection could not be compared."
-                            ip == directIp ->
-                                "This matches the direct public IP. The selected route is not hiding your IP for this request."
-                            else ->
-                                "This differs from the direct public IP. The active browser request is exiting through a different address."
-                        }
-                        AlertDialog.Builder(this)
-                            .setTitle("Browser IP Verification")
-                            .setMessage("Browser IP: $ip\nDirect IP: ${directIp ?: "Unavailable"}\nMode: ${mode.title}\n\n$comparison")
-                            .setPositiveButton("OK", null)
-                            .show()
-                    }
-                }
-            } else {
+            if (ip == null) {
                 AlertDialog.Builder(this)
                     .setTitle("Browser Exit Could Not Be Verified")
-                    .setMessage(envelope?.optString("error")?.ifBlank { "No IP address was returned by the active browser route." }
-                        ?: "No response from the active browser route.")
+                    .setMessage(error ?: "The IP check did not return a valid address.")
                     .setPositiveButton("OK", null)
                     .show()
+                return@finish
+            }
+
+            progress.setMessage("Comparing with the direct network address...")
+            com.adshield.app.engine.VpnEngine.checkDirectPublicIp { directIp, directError ->
+                runOnUiThread {
+                    try { progress.dismiss() } catch (_: Exception) {}
+                    val comparison = when {
+                        mode == com.adshield.app.engine.VpnEngine.VpnMode.OFF ->
+                            "The browser proxy is off, so this is the direct public IP."
+                        directIp == null ->
+                            "The browser IP was read, but the direct connection could not be compared${directError?.let { ": $it" } ?: "."}"
+                        ip == directIp ->
+                            "This matches the direct public IP. The selected proxy is not changing the exit IP for this request."
+                        else ->
+                            "This differs from the direct public IP. The browser request is exiting through a different address."
+                    }
+                    AlertDialog.Builder(this)
+                        .setTitle("Browser IP Verification")
+                        .setMessage("Browser IP: $ip\nDirect IP: ${directIp ?: "Unavailable"}\nMode: ${mode.title}\n\n$comparison")
+                        .setPositiveButton("OK", null)
+                        .show()
+                }
             }
         }
+
+        loadNextEndpoint = next@{ lastError ->
+            if (finished) return@next
+            if (endpointIndex >= endpoints.size) {
+                finishCheck(null, lastError ?: "No IP address was returned by either verification service.")
+            } else {
+                val url = endpoints[endpointIndex++]
+                activeHost = Uri.parse(url).host
+                probe.loadUrl(url)
+            }
+        }
+
+        probe.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                if (Uri.parse(url.orEmpty()).host != activeHost || finished) return
+                view?.evaluateJavascript("(document.body && document.body.innerText || '').trim()") { raw ->
+                    val pageText = runCatching {
+                        org.json.JSONTokener(raw ?: "").nextValue() as? String
+                    }.getOrNull().orEmpty().trim()
+                    val candidate = runCatching { JSONObject(pageText).optString("ip") }
+                        .getOrDefault(pageText)
+                        .trim()
+                    if (android.util.Patterns.IP_ADDRESS.matcher(candidate).matches()) {
+                        finishCheck(candidate, null)
+                    } else {
+                        loadNextEndpoint("The verification service returned an invalid IP response.")
+                    }
+                }
+            }
+
+            override fun onReceivedError(
+                view: WebView?,
+                request: WebResourceRequest?,
+                error: WebResourceError?
+            ) {
+                super.onReceivedError(view, request, error)
+                if (request?.isForMainFrame == true && Uri.parse(request.url.toString()).host == activeHost) {
+                    loadNextEndpoint(error?.description?.toString() ?: "The IP verification service could not be reached.")
+                }
+            }
+
+            override fun onReceivedHttpError(
+                view: WebView?,
+                request: WebResourceRequest?,
+                errorResponse: WebResourceResponse?
+            ) {
+                super.onReceivedHttpError(view, request, errorResponse)
+                if (request?.isForMainFrame == true && Uri.parse(request.url.toString()).host == activeHost) {
+                    loadNextEndpoint("The IP verification service returned HTTP ${errorResponse?.statusCode ?: "error"}.")
+                }
+            }
+        }
+
+        timeoutHandler.postDelayed(timeout, 15_000)
+        loadNextEndpoint(null)
     }
 
     private fun showCustomProxyDialog() {
         val input = EditText(this).apply {
-            hint = "socks://host:port or http://host:port"
+            hint = "socks5://host:port, http://host:port, or https://host:port"
             setText(com.adshield.app.engine.VpnEngine.getCustomProxy(this@MediaHubActivity))
             minLines = 4
             maxLines = 12
@@ -6396,8 +6494,14 @@ open class MediaHubActivity : AppCompatActivity() {
                         this,
                         com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM,
                         proxyUrl
-                    ) { _, msg ->
-                        runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+                    ) { success, msg ->
+                        runOnUiThread {
+                            if (success) {
+                                activeWebView?.reload()
+                                lastVpnRouteFingerprint = getVpnRouteFingerprint()
+                            }
+                            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             }
@@ -7312,6 +7416,11 @@ open class MediaHubActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         isActivityResumed = true
+        val routeFingerprint = getVpnRouteFingerprint()
+        if (lastVpnRouteFingerprint != null && lastVpnRouteFingerprint != routeFingerprint) {
+            activeWebView?.reload()
+        }
+        lastVpnRouteFingerprint = routeFingerprint
         backgroundPlaybackArmed = false
         backgroundNoMediaTicks = 0
         backgroundMediaKeepAlive?.let(mainHandler::removeCallbacks)
@@ -7408,6 +7517,10 @@ open class MediaHubActivity : AppCompatActivity() {
                                 isMediaPlaying = false
                                 hasActiveVideo = false
                                 backgroundMediaKeepAlive = null
+                                activeWebView?.evaluateJavascript(
+                                    "if (typeof window.__fokk_endBackgroundPlayback === 'function') window.__fokk_endBackgroundPlayback();",
+                                    null
+                                )
                                 updateMediaSessionPlaybackState(isPlaying = false)
                                 com.adshield.app.service.FokkMediaPlaybackService.stop(this@MediaHubActivity)
                                 if (mediaWakeLock?.isHeld == true) runCatching { mediaWakeLock?.release() }
@@ -7426,7 +7539,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+        if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE && !(isMediaPlaying && hasActiveVideo)) {
             collapseCommandBar(animated = true)
         }
     }
@@ -7680,6 +7793,12 @@ open class MediaHubActivity : AppCompatActivity() {
     override fun onDestroy() {
         backgroundMediaKeepAlive?.let(mainHandler::removeCallbacks)
         backgroundMediaKeepAlive = null
+        stopPlaybackRunnable?.let(mainHandler::removeCallbacks)
+        stopPlaybackRunnable = null
+        if (isFinishing) {
+            backgroundPlaybackArmed = false
+            com.adshield.app.service.FokkMediaPlaybackService.stop(this)
+        }
         suggestionJob?.cancel()
         pendingWebPermission?.request?.deny()
         pendingWebPermission = null
@@ -8021,8 +8140,10 @@ open class MediaHubActivity : AppCompatActivity() {
             stopPlaybackRunnable?.let { mainHandler.removeCallbacks(it) }
             stopPlaybackRunnable = null
             lastMediaPlayingTime = System.currentTimeMillis()
-            if (hasActiveVideo) {
-                collapseCommandBar(animated = true)
+            if (hasActiveVideo && customView == null && !isFullscreenCustomView &&
+                !(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode)
+            ) {
+                setBrowserChromeVisible(true)
             }
             // Keep screen on during active video/audio playback
             if (customView == null && !isFullscreenCustomView) {
@@ -8159,8 +8280,14 @@ open class MediaHubActivity : AppCompatActivity() {
                 "if (typeof window.__fokk_mediaPlay === 'function') { window.__fokk_mediaPlay(); } else { var v = document.querySelector('video'); if (v) v.play(); }", null
             )
         } else {
+            // A deliberate pause from the media notification must remove the
+            // background resume guard before the page's pause event is delivered.
+            backgroundPlaybackArmed = false
+            backgroundNoMediaTicks = 0
+            backgroundMediaKeepAlive?.let(mainHandler::removeCallbacks)
+            backgroundMediaKeepAlive = null
             activeWebView?.evaluateJavascript(
-                "if (typeof window.__fokk_mediaPause === 'function') { window.__fokk_mediaPause(); } else { var v = document.querySelector('video'); if (v) v.pause(); }", null
+                "if (typeof window.__fokk_endBackgroundPlayback === 'function') window.__fokk_endBackgroundPlayback(); if (typeof window.__fokk_mediaPause === 'function') { window.__fokk_mediaPause(); } else { var v = document.querySelector('video'); if (v) v.pause(); }", null
             )
         }
     }

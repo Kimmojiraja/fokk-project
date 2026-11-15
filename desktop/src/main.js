@@ -38,6 +38,45 @@ const ICON_PATH = fs.existsSync(path.join(__dirname, 'ui', 'icon.png'))
 let mainWindow = null;
 let shieldEnabled = true;
 const adblock = new AdBlockEngine(ASSETS_DIR);
+
+function isDisposedFrameAccessError(error) {
+    const message = error && error.message ? String(error.message) : String(error || '');
+    return message.includes('Render frame was disposed before WebFrameMain could be accessed');
+}
+
+// Electron can deliver a final WebContents event after Chromium has already
+// disposed the frame during navigation or window teardown. That specific race
+// is recoverable; keep it from opening Electron's fatal main-process dialog.
+function handleMainProcessException(error) {
+    if (isDisposedFrameAccessError(error)) {
+        console.warn('[Fokk] Ignored an Electron frame-disposal race during teardown.');
+        return;
+    }
+
+    // Preserve Node/Electron's normal fatal handling for every other exception.
+    process.removeListener('uncaughtException', handleMainProcessException);
+    throw error;
+}
+process.prependListener('uncaughtException', handleMainProcessException);
+
+function executeInMainWindow(script) {
+    const target = mainWindow;
+    try {
+        if (!target || target.isDestroyed()) return;
+        const contents = target.webContents;
+        if (!contents || contents.isDestroyed()) return;
+        contents.executeJavaScript(script).catch((error) => {
+            if (!isDisposedFrameAccessError(error)) {
+                console.warn('[Fokk] Could not run a browser UI command:', error && error.message ? error.message : error);
+            }
+        });
+    } catch (error) {
+        if (!isDisposedFrameAccessError(error)) {
+            console.warn('[Fokk] Could not run a browser UI command:', error && error.message ? error.message : error);
+        }
+    }
+}
+
 let stealthPoisonerScript = '';
 try {
     stealthPoisonerScript = fs.readFileSync(path.join(__dirname, 'stealth_poisoner.js'), 'utf8');
@@ -278,7 +317,7 @@ function createWindow() {
     if (process.argv.includes('--open-vpn')) {
         mainWindow.webContents.once('did-finish-load', () => {
             setTimeout(() => {
-                mainWindow.webContents.executeJavaScript(`
+                executeInMainWindow(`
                     const b = document.getElementById('btnVpnToggle');
                     if (b) b.click();
                 `);
@@ -344,7 +383,7 @@ function createWindow() {
 
                 // Standard link navigations (target="_blank") open as a new tab
                 if (mainWindow && !mainWindow.isDestroyed()) {
-                    mainWindow.webContents.executeJavaScript(`if (typeof createTab === 'function') createTab(${JSON.stringify(details.url)});`);
+                    executeInMainWindow(`if (typeof createTab === 'function') createTab(${JSON.stringify(details.url)});`);
                 }
                 return { action: 'deny' };
             });
@@ -481,42 +520,42 @@ ipcMain.on('fokk-open-url', (event, url) => {
         } catch (_) {}
     }
     if (mainWindow) {
-        mainWindow.webContents.executeJavaScript(`
+        executeInMainWindow(`
             if (typeof loadUrlInActiveTab === 'function') {
                 loadUrlInActiveTab(${JSON.stringify(cleanUrl)});
             } else if (typeof createTab === 'function') {
                 createTab(${JSON.stringify(cleanUrl)});
             }
-        `).catch(() => {});
+        `);
     }
 });
 
 ipcMain.on('fokk-pane-focus', (event) => {
     if (mainWindow && event.sender && event.sender !== mainWindow.webContents && !event.sender.isDestroyed()) {
         const guestId = event.sender.id;
-        mainWindow.webContents.executeJavaScript(`
+        executeInMainWindow(`
             if (typeof handleGuestFocus === 'function') {
                 handleGuestFocus(${guestId});
             }
-        `).catch(() => {});
+        `);
     }
 });
 
 ipcMain.on('fokk-toggle-reader', () => {
     if (mainWindow) {
-        mainWindow.webContents.executeJavaScript(`if (typeof toggleReaderMode === 'function') toggleReaderMode();`);
+        executeInMainWindow(`if (typeof toggleReaderMode === 'function') toggleReaderMode();`);
     }
 });
 
 ipcMain.on('fokk-open-engine-dialog', () => {
     if (mainWindow) {
-        mainWindow.webContents.executeJavaScript(`if (typeof openFeatureHub === 'function') openFeatureHub('general');`);
+        executeInMainWindow(`if (typeof openFeatureHub === 'function') openFeatureHub('general');`);
     }
 });
 
 ipcMain.on('fokk-open-tabs', () => {
     if (mainWindow) {
-        mainWindow.webContents.executeJavaScript(`
+        executeInMainWindow(`
             if (typeof desktopBrowserMenu !== 'undefined' && desktopBrowserMenu) {
                 desktopBrowserMenu.classList.toggle('hidden');
             }
@@ -526,7 +565,7 @@ ipcMain.on('fokk-open-tabs', () => {
 
 ipcMain.on('fokk-save-offline-page', () => {
     if (mainWindow) {
-        mainWindow.webContents.executeJavaScript(`
+        executeInMainWindow(`
             if (typeof btnBookmarkOmni !== 'undefined' && btnBookmarkOmni) {
                 btnBookmarkOmni.click();
             }
@@ -612,25 +651,25 @@ ipcMain.on('fokk-get-search-suggestions', async (event, query) => {
 
 ipcMain.on('fokk-open-new-tab', () => {
     if (mainWindow) {
-        mainWindow.webContents.executeJavaScript(`if (typeof createTab === 'function') createTab(START_PAGE_URL);`);
+        executeInMainWindow(`if (typeof createTab === 'function') createTab(START_PAGE_URL);`);
     }
 });
 
 ipcMain.on('fokk-new-private-tab', () => {
     if (mainWindow) {
-        mainWindow.webContents.executeJavaScript(`if (typeof createTab === 'function') createTab(START_PAGE_URL, { isPrivate: true });`);
+        executeInMainWindow(`if (typeof createTab === 'function') createTab(START_PAGE_URL, { isPrivate: true });`);
     }
 });
 
 ipcMain.on('fokk-open-private-tabs', () => {
     if (mainWindow) {
-        mainWindow.webContents.executeJavaScript(`if (typeof createTab === 'function') createTab(START_PAGE_URL, { isPrivate: true });`);
+        executeInMainWindow(`if (typeof createTab === 'function') createTab(START_PAGE_URL, { isPrivate: true });`);
     }
 });
 
 ipcMain.on('fokk-open-menu', () => {
     if (mainWindow) {
-        mainWindow.webContents.executeJavaScript(`
+        executeInMainWindow(`
             if (desktopBrowserMenu) {
                 desktopBrowserMenu.classList.toggle('hidden');
             }
@@ -640,7 +679,7 @@ ipcMain.on('fokk-open-menu', () => {
 
 ipcMain.on('fokk-open-hub', (event, hubId) => {
     if (mainWindow) {
-        mainWindow.webContents.executeJavaScript(`if (typeof openFeatureHub === 'function') openFeatureHub(${JSON.stringify(hubId)});`);
+        executeInMainWindow(`if (typeof openFeatureHub === 'function') openFeatureHub(${JSON.stringify(hubId)});`);
     }
 });
 

@@ -21,7 +21,7 @@ const PRESET_LOCATIONS = {
         region: 'Tor exit network',
         color: '#7C3AED',
         iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="6" r="6"/><circle cx="12" cy="2" r="2"/></svg>',
-        setupTip: 'Uses the bundled Tor runtime where the current desktop build supports it.'
+        setupTip: 'Starts the bundled Tor client and routes this browser through its local SOCKS port.'
     },
     'custom': {
         id: 'custom',
@@ -100,6 +100,7 @@ class VpnEngine extends EventEmitter {
         this.errorMessage = null;
         this.activeSessions = new Set();
         this.torProcess = null;
+        this.torPort = null;
         this.routeHealthTimer = null;
 
         this.loadConfig();
@@ -118,14 +119,17 @@ class VpnEngine extends EventEmitter {
                 if (typeof data.killSwitch === 'boolean') {
                     this.killSwitch = data.killSwitch;
                 }
-                if (data.customConfig) {
-                    this.customConfig = data.customConfig;
+                if (typeof data.customConfig === 'string') {
+                    this.customConfig = data.customConfig.trim();
                 }
             }
         } catch (_) {}
 
-        if (!this.customConfig) {
-            this.customConfig = '127.0.0.1:1080';
+        // Older builds prefilled a local proxy address even though Fokk did not
+        // start a proxy there. Remove that placeholder so Custom mode is explicit.
+        if (this.customConfig.trim() === '127.0.0.1:1080') {
+            this.customConfig = '';
+            this.saveConfig();
         }
     }
 
@@ -202,9 +206,16 @@ class VpnEngine extends EventEmitter {
     getEmbeddedTorPath() {
         // Do not attempt to run Linux Tor ELF binaries on Windows!
         if (process.platform === 'win32') {
-            const winCandidates = [
-                path.resolve(__dirname, '..', 'bin', 'tor', 'tor.exe')
-            ];
+            const winCandidates = [];
+            if (process.resourcesPath) {
+                winCandidates.push(path.join(process.resourcesPath, 'app.asar.unpacked', 'bin', 'tor', 'windows-x64', 'tor', 'tor.exe'));
+                winCandidates.push(path.join(process.resourcesPath, 'bin', 'tor', 'windows-x64', 'tor', 'tor.exe'));
+            }
+            if (process.execPath) {
+                const execDir = path.dirname(process.execPath);
+                winCandidates.push(path.join(execDir, 'resources', 'app.asar.unpacked', 'bin', 'tor', 'windows-x64', 'tor', 'tor.exe'));
+            }
+            winCandidates.push(path.resolve(__dirname, '..', 'bin', 'tor', 'windows-x64', 'tor', 'tor.exe'));
             for (const p of winCandidates) {
                 if (fs.existsSync(p)) return p;
             }
@@ -243,25 +254,19 @@ class VpnEngine extends EventEmitter {
     }
 
     async ensureTorRunning() {
-        // 1. Check if port 9050 is already listening (system tor daemon)
-        if (await checkSocks5Listener(9050, '127.0.0.1', 800)) {
-            console.log('[Tor Engine] Reusing active Tor listener on port 9050');
-            return 9050;
-        }
-        // 2. Check Tor Browser port 9150
-        if (await checkSocks5Listener(9150, '127.0.0.1', 800)) {
-            console.log('[Tor Engine] Reusing Tor Browser listener on port 9150');
-            return 9150;
+        // Only report Tor when this engine owns the Tor process. A random local
+        // SOCKS listener is not proof that traffic is routed through Tor.
+        if (this.torProcess && this.torPort && await checkSocks5Listener(this.torPort, '127.0.0.1', 800)) {
+            return this.torPort;
         }
 
-        // 3. Launch embedded Tor if executable exists
         const torBin = this.getEmbeddedTorPath();
         if (!torBin) {
             return null;
         }
 
         try {
-            let chosenPort = 9050;
+            let chosenPort = null;
             for (const p of [9050, 9052, 9053, 9054]) {
                 const inUse = await checkSocketListening(p, '127.0.0.1', 200);
                 if (!inUse) {
@@ -269,6 +274,7 @@ class VpnEngine extends EventEmitter {
                     break;
                 }
             }
+            if (!chosenPort) throw new Error('All local Tor SOCKS ports are already in use.');
 
             const torDataDir = path.join(this.userDataPath, 'tor_embedded_data');
             try {
@@ -277,55 +283,86 @@ class VpnEngine extends EventEmitter {
                 if (process.platform !== 'win32') fs.chmodSync(torDataDir, 0o700);
             } catch (_) {}
 
-            const lockFile = path.join(torDataDir, 'lock');
-            if (fs.existsSync(lockFile) && !this.torProcess) {
-                try { fs.unlinkSync(lockFile); } catch (_) {}
-            }
-
             const torLibDir = path.dirname(torBin);
-            const env = { 
-                ...process.env, 
-                LD_LIBRARY_PATH: `${torLibDir}:${process.env.LD_LIBRARY_PATH || ''}`
-            };
+            const env = { ...process.env };
+            if (process.platform !== 'win32') {
+                env.LD_LIBRARY_PATH = `${torLibDir}:${process.env.LD_LIBRARY_PATH || ''}`;
+            }
 
             await this.stopEmbeddedTor();
 
             let spawnFailed = false;
-            this.torProcess = spawn(torBin, [
+            let spawnError = null;
+            let exitInfo = null;
+            let startupLog = '';
+            const torRoot = process.platform === 'win32' ? path.resolve(torLibDir, '..') : torLibDir;
+            const args = [];
+            if (process.platform === 'win32') {
+                args.push(
+                    '--defaults-torrc', path.join(torRoot, 'fokk-torrc-defaults'),
+                    '--GeoIPFile', path.join(torRoot, 'data', 'geoip'),
+                    '--GeoIPv6File', path.join(torRoot, 'data', 'geoip6')
+                );
+            }
+            args.push(
                 '--SocksPort', `127.0.0.1:${chosenPort}`,
                 '--DataDirectory', torDataDir,
                 '--ClientOnly', '1',
                 '--AvoidDiskWrites', '1',
                 '--Log', 'notice stdout'
-            ], { env, detached: false });
+            );
 
-            this.torProcess.on('error', () => {
+            this.torProcess = spawn(torBin, args, { env, cwd: torRoot, detached: false });
+            this.torPort = chosenPort;
+
+            const captureStartupLog = chunk => {
+                startupLog = `${startupLog}${chunk.toString('utf8')}`.slice(-2_000);
+            };
+            if (this.torProcess.stdout) this.torProcess.stdout.on('data', captureStartupLog);
+            if (this.torProcess.stderr) this.torProcess.stderr.on('data', captureStartupLog);
+
+            this.torProcess.on('error', error => {
                 spawnFailed = true;
+                spawnError = error;
                 this.torProcess = null;
+                this.torPort = null;
             });
 
-            this.torProcess.on('exit', () => {
+            this.torProcess.on('exit', (code, signal) => {
+                exitInfo = { code, signal };
                 this.torProcess = null;
+                this.torPort = null;
             });
 
-            for (let i = 0; i < 20; i++) {
+            for (let i = 0; i < 30; i++) {
                 if (spawnFailed) break;
                 await new Promise(r => setTimeout(r, 200));
                 if (await checkSocks5Listener(chosenPort, '127.0.0.1', 800)) {
                     return chosenPort;
                 }
+                if (exitInfo) break;
             }
-        } catch (_) {}
 
-        return null;
+            await this.stopEmbeddedTor();
+            if (spawnError) throw new Error(`Could not launch the bundled Tor runtime: ${spawnError.message}`);
+            const recentLog = startupLog.trim().split(/\r?\n/).slice(-3).join(' ').slice(-350);
+            if (recentLog) throw new Error(`Bundled Tor did not open its SOCKS port. ${recentLog}`);
+            if (exitInfo) throw new Error(`Bundled Tor exited before opening its SOCKS port (code ${exitInfo.code ?? 'unknown'}${exitInfo.signal ? `, ${exitInfo.signal}` : ''}).`);
+            throw new Error('Bundled Tor did not open its local SOCKS port within six seconds.');
+        } catch (error) {
+            await this.stopEmbeddedTor();
+            throw error;
+        }
     }
 
     async stopEmbeddedTor() {
-        if (this.torProcess) {
+        const processToStop = this.torProcess;
+        this.torProcess = null;
+        this.torPort = null;
+        if (processToStop) {
             try {
-                this.torProcess.kill('SIGKILL');
+                processToStop.kill('SIGKILL');
             } catch (_) {}
-            this.torProcess = null;
         }
     }
 
@@ -387,12 +424,12 @@ class VpnEngine extends EventEmitter {
                     proxyRules = `socks5://127.0.0.1:${torPort}`;
                     locationName = 'Tor network (exit varies)';
                 } else {
-                    throw new Error('The bundled Tor runtime is unavailable on this desktop build. Routing was not enabled.');
+                    throw new Error('The bundled Tor runtime is missing from this desktop build. Routing was not enabled.');
                 }
             } else if (this.activeMode === 'custom') {
                 proxyRules = this.resolveCustomProxyRules();
                 if (!proxyRules) {
-                    throw new Error('Enter a SOCKS5 or HTTP proxy URL. WireGuard profiles are not supported in browser-proxy mode.');
+                    throw new Error('Enter the address of a running SOCKS5 or HTTP proxy. Custom mode does not start a proxy server.');
                 }
 
                 const endpoint = this.getProxyEndpoint(proxyRules);

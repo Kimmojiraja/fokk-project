@@ -50,11 +50,8 @@ class FokkMediaPlaybackService : Service() {
         }
 
         fun stop(context: Context) {
-            val intent = Intent(context, FokkMediaPlaybackService::class.java).apply {
-                action = ACTION_STOP
-            }
             try {
-                context.startService(intent)
+                context.stopService(Intent(context, FokkMediaPlaybackService::class.java))
             } catch (e: Exception) {}
         }
     }
@@ -64,7 +61,9 @@ class FokkMediaPlaybackService : Service() {
         val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
         wakeLock = pm?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "FokkShield:ForegroundMediaWakeLock")
         try {
-            wakeLock?.acquire(4 * 60 * 60 * 1000L) // 4 hours maximum hold
+            // Hold CPU while WebView streams with the display off. The lock is
+            // released as soon as playback ends or the user removes the task.
+            wakeLock?.acquire()
         } catch (e: Exception) {}
     }
 
@@ -151,6 +150,13 @@ class FokkMediaPlaybackService : Service() {
             stopForeground(true)
         }
         stopSelf()
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // Removing Fokk from Recents is an explicit close: do not leave its
+        // playback notification or wake lock running after the task is gone.
+        releaseAndStop()
+        super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {

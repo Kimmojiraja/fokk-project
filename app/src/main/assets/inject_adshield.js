@@ -900,6 +900,9 @@
             };
             window.__fokk_mediaPause = function() {
                 userExplicitPaused = true;
+                if (typeof window.__fokk_endBackgroundPlayback === 'function') {
+                    window.__fokk_endBackgroundPlayback();
+                }
                 const v = document.querySelector('video');
                 if (v) try { v.pause(); } catch (e) {}
                 const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
@@ -986,10 +989,19 @@
             } catch (e) {}
         }
 
-    // Preserve only media that was already playing when Android backgrounds the
-    // browser. Restarting every paused media element can start ads, previews, or
-    // another tab's player, and overriding pause globally breaks native controls.
+    // Preserve only active media when Android backgrounds the browser. The pause
+    // guard is scoped to these tracked elements and is cleared before explicit
+    // native pause controls run, so unrelated media and user controls still work.
     const fokkBackgroundMedia = new Set();
+    // Track playlist/queue items that begin after the browser has already been
+    // backgrounded, so a normal next-track transition does not end the session.
+    document.addEventListener('play', function(event) {
+        const media = event.target;
+        if (window.__fokk_is_background && media instanceof HTMLMediaElement && !media.ended) {
+            fokkBackgroundMedia.add(media);
+        }
+    }, true);
+
     window.__fokk_beginBackgroundPlayback = function() {
         fokkBackgroundMedia.clear();
         document.querySelectorAll('audio, video').forEach(function(media) {
@@ -1008,16 +1020,19 @@
         window.__fokk_prepareBackgroundPlayback = function() {
         let hasLiveMedia = false;
         Array.from(fokkBackgroundMedia).forEach(function(media) {
-            if (!media.isConnected || media.ended) {
+            if (media.ended) {
                 fokkBackgroundMedia.delete(media);
                 return;
             }
             hasLiveMedia = true;
+            // Some players temporarily detach and reattach the same element
+            // during fullscreen/orientation transitions. Keep tracking it,
+            // but don't call play() until it is back in the active document.
+            if (!media.isConnected) return;
             if (media.paused) {
                 try { media.play().catch(function() {}); } catch (e) {}
             }
             });
-        if (!hasLiveMedia) window.__fokk_is_background = false;
         return hasLiveMedia;
         };
     window.__fokk_endBackgroundPlayback = function() {

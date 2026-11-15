@@ -759,8 +759,15 @@ class AdBlockEngine {
     }
 
     injectCosmeticFilters(webContents) {
-        if (!webContents || webContents.isDestroyed()) return;
-        const currentUrl = (webContents.getURL ? webContents.getURL() : '').toLowerCase();
+        let currentUrl = '';
+        try {
+            if (!webContents || webContents.isDestroyed()) return;
+            currentUrl = (webContents.getURL ? webContents.getURL() : '').toLowerCase();
+        } catch (_) {
+            // A navigation or window close may dispose the frame between the
+            // isDestroyed check and getURL(). There is no live page to inject.
+            return;
+        }
         // Never run adblock cosmetic filters or anti-adblock defusers on internal browser UI pages
         if (!currentUrl || currentUrl.startsWith('file:') || currentUrl.startsWith('fokk:') || currentUrl === 'about:blank') {
             return;
@@ -771,8 +778,17 @@ class AdBlockEngine {
         // 1. Instant Native Chromium CSS Injection (applies across initial load and dynamic elements)
         const cosmeticCss = this.getCosmeticCSS(hostname);
         if (cosmeticCss) {
-            webContents.insertCSS(cosmeticCss).catch(() => {});
+            try { webContents.insertCSS(cosmeticCss).catch(() => {}); } catch (_) {}
         }
+
+        const executePageScript = (script) => {
+            try {
+                if (webContents.isDestroyed()) return;
+                webContents.executeJavaScript(script).catch(() => {});
+            } catch (_) {
+                // Page navigated or its render frame was disposed during injection.
+            }
+        };
 
         const isYouTube = hostname.includes('youtube.com') || hostname.includes('youtu.be');
         const isTwitter = hostname.includes('twitter.com') || hostname.includes('x.com');
@@ -917,7 +933,7 @@ class AdBlockEngine {
                     }
                 } catch (e) {}
             `;
-            webContents.executeJavaScript(ytCleanScript).catch(() => {});
+            executePageScript(ytCleanScript);
             return;
         }
 
@@ -941,7 +957,7 @@ class AdBlockEngine {
                     }
                 } catch(e) {}
             `;
-            webContents.executeJavaScript(xCleanScript).catch(() => {});
+            executePageScript(xCleanScript);
             return;
         }
 
@@ -963,7 +979,7 @@ class AdBlockEngine {
                     }
                 } catch(e) {}
             `;
-            webContents.executeJavaScript(igCleanScript).catch(() => {});
+            executePageScript(igCleanScript);
             return;
         }
 
@@ -1014,7 +1030,7 @@ class AdBlockEngine {
                     }
                 } catch (e) {}
             `;
-            webContents.executeJavaScript(redditCleanScript).catch(() => {});
+            executePageScript(redditCleanScript);
             return;
         }
 
@@ -1100,7 +1116,7 @@ class AdBlockEngine {
                 }
             } catch(e) {}
         `;
-        webContents.executeJavaScript(universalObserverScript).catch(() => {});
+        executePageScript(universalObserverScript);
 
         // Inject deep AdShield engine scripts (with built-in domain safety guards)
         const combined = `
@@ -1112,7 +1128,7 @@ class AdBlockEngine {
                 }
             } catch(e) {}
         `;
-        webContents.executeJavaScript(combined).catch(() => {});
+        executePageScript(combined);
     }
 }
 
