@@ -1,6 +1,6 @@
 {
-  "versionCode": 248,
-  "versionName": "2.4.8",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.8/app-debug.apk",
-  "changelog": "- Media Background Playback: Scoped pause guard with playlist/queue transition auto-tracking and graceful detached element handling.\n- Privacy Gateway: Added support for HTTP(S) proxy verification with SSL tunneling and legacy proxy migration.\n- Disposed Frame Race Fix: Handled Electron navigation frame disposal during cosmetic filter injection without crashing.\n- Bundled Windows Tor Runtime: Integrated dedicated Tor daemon with geoip files and custom torrc on Windows x64.\n- Launch Script Polish: Fixed directory resolution in run_browser.bat."
+  "versionCode": 249,
+  "versionName": "2.4.9",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.9/app-debug.apk",
+  "changelog": "- Sailboat 'F' Brand Logo: Precision geometric vector SVG and transparent app launcher mipmaps across Android and Desktop.\n- Icon-Only Social Triggers: Streamlined 28x28 circular post verification buttons without text label for clean integration.\n- Universal Social Media Injections: Added native verification triggers for Facebook, TikTok, Instagram, Threads, Bluesky, LinkedIn, YouTube, Twitter/X, and Reddit.\n- Hybrid Fokk AI Truth Engine: Natural Perplexity/ChatGPT-style synthesis without rigid headers, clickbait decoupling (cleanFactualCore), encyclopedic grounding, and multilingual fluency.\n- Cross-Platform Parity: Synchronized truth engine, content scripts, and launcher icons to desktop distribution and mobile APK."
 }
