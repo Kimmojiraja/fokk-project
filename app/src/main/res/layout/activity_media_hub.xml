@@ -320,6 +320,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
                 android:focusable="true"
+                android:visibility="gone"
                 android:contentDescription="Privacy Gateway / VPN">
 
                 <ImageView

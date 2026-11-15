@@ -120,7 +120,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Choose a privacy relay below to mask your IP"
+                android:text="Choose a privacy route below to mask your IP"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp"
                 android:gravity="center" />
@@ -245,7 +245,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
             android:layout_marginBottom="8dp"
-            android:text="CHOOSE PRIVACY RELAY ROUTE"
+            android:text="CHOOSE PRIVACY ROUTE"
             android:textColor="@color/text_secondary"
             android:textSize="10.5sp"
             android:textStyle="bold"
@@ -270,53 +270,24 @@
                 android:orientation="horizontal">
 
                 <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🧅"
-                    android:textSize="20sp" />
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_circle_icon_button"
+                    android:text="O"
+                    android:textColor="#A855F7"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
 
-                <LinearLayout
+                <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
                     android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Tor Onion Network"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:background="@drawable/bg_engine_capsule"
-                            android:paddingHorizontal="6dp"
-                            android:paddingVertical="2dp"
-                            android:text="Onion SOCKS5"
-                            android:textColor="#A855F7"
-                            android:textSize="9.5sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Routes browser requests through Tor SOCKS5. Changes your public IP address to an onion exit node."
-                        android:textColor="@color/text_secondary"
-                        android:textSize="11.5sp" />
-                </LinearLayout>
+                    android:text="Tor Onion Network"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
                 <RadioButton
                     android:id="@+id/radioModeTor"
@@ -340,7 +311,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Tor / Orbot SOCKS port (9050)"
+                    android:text="Tor SOCKS5 port (127.0.0.1:9050)"
                     android:textColor="#A855F7"
                     android:textSize="11sp" />
 
@@ -350,7 +321,7 @@
                     android:layout_height="32dp"
                     android:paddingHorizontal="10dp"
                     android:paddingVertical="0dp"
-                    android:text="Start Orbot"
+                    android:text="Start Tor"
                     android:textColor="#FFFFFF"
                     android:textSize="10.5sp"
                     app:backgroundTint="#7C3AED"
@@ -358,82 +329,12 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Option 2: Fokk Secure Privacy Relay -->
-        <LinearLayout
-            android:id="@+id/cardModeRelay"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
-            android:background="@drawable/bg_stat_chip"
-            android:clickable="true"
-            android:focusable="true"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="14dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="🛡️"
-                android:textSize="20sp" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Fokk Secure Privacy Relay"
-                        android:textColor="@color/text_primary"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:background="@drawable/bg_engine_capsule"
-                        android:paddingHorizontal="6dp"
-                        android:paddingVertical="2dp"
-                        android:text="Instant Relay"
-                        android:textColor="@color/fokk_cyan"
-                        android:textSize="9.5sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="High-speed encrypted privacy relay that replaces your device IP with a remote server exit IP."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11.5sp" />
-            </LinearLayout>
-
-            <RadioButton
-                android:id="@+id/radioModeRelay"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:clickable="false"
-                android:focusable="false" />
-        </LinearLayout>
-
-        <!-- Option 3: Custom SOCKS5 / HTTP Proxy -->
+        <!-- Option 2: Custom Proxy Endpoint -->
         <LinearLayout
             android:id="@+id/cardModeCustom"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="14dp"
+            android:layout_marginBottom="10dp"
             android:background="@drawable/bg_stat_chip"
             android:clickable="true"
             android:focusable="true"
@@ -447,10 +348,14 @@
                 android:orientation="horizontal">
 
                 <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="⚙️"
-                    android:textSize="20sp" />
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_circle_icon_button"
+                    android:text="C"
+                    android:textColor="#10B981"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -472,9 +377,9 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="User-defined SOCKS5, HTTP, or HTTPS proxy address"
+                        android:text="Tap to configure (SOCKS5 / HTTP)"
                         android:textColor="@color/text_secondary"
-                        android:textSize="11.5sp" />
+                        android:textSize="11sp" />
                 </LinearLayout>
 
                 <RadioButton
@@ -486,7 +391,7 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Direct / Off Card -->
+        <!-- Option 3: Direct Connection -->
         <LinearLayout
             android:id="@+id/cardModeOff"
             android:layout_width="match_parent"
@@ -500,34 +405,24 @@
             android:padding="14dp">
 
             <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="🌐"
-                android:textSize="20sp" />
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:gravity="center"
+                android:background="@drawable/bg_circle_icon_button"
+                android:text="D"
+                android:textColor="#00E5FF"
+                android:textSize="15sp"
+                android:textStyle="bold" />
 
-            <LinearLayout
+            <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
                 android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Direct Connection"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Privacy Gateway disabled. Browser connects directly using your ISP IP."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11.5sp" />
-            </LinearLayout>
+                android:text="Direct Connection"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
             <RadioButton
                 android:id="@+id/radioModeOff"
@@ -535,6 +430,19 @@
                 android:layout_height="wrap_content"
                 android:clickable="false"
                 android:focusable="false" />
+        </LinearLayout>
+
+        <!-- Compatibility Anchor Views for Relay -->
+        <LinearLayout
+            android:id="@+id/cardModeRelay"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone">
+            <RadioButton
+                android:id="@+id/radioModeRelay"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone" />
         </LinearLayout>
 
         <!-- Fail-Closed Notice Footer -->
@@ -547,17 +455,9 @@
             android:orientation="horizontal">
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="🔒"
-                android:textSize="14sp" />
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:text="Fail-Closed Protection Active: Direct fallback is strictly disabled while a route is active to prevent IP leakage."
+                android:text="Fail-Closed Protection: Direct fallback is strictly disabled while a route is active to prevent IP leakage."
                 android:textColor="@color/text_secondary"
                 android:textSize="11sp" />
         </LinearLayout>

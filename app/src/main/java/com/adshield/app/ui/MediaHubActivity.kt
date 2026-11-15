@@ -4877,8 +4877,9 @@ open class MediaHubActivity : AppCompatActivity() {
         val isHome = isHomePageUrl(url)
         val isWeb = url != null && isWebUrl(url)
         binding.btnNavFavorite.visibility = if (isHome) View.GONE else View.VISIBLE
-        binding.btnAiSummary.visibility = if (!isHome && isWeb) View.VISIBLE else View.GONE
-        binding.btnReaderMode.visibility = if (!isHome && isWeb) View.VISIBLE else View.GONE
+        binding.btnAiSummary.visibility = View.GONE
+        binding.btnReaderMode.visibility = View.GONE
+        binding.btnNavVpn.visibility = View.GONE
         if (!isHome) {
             val targetUrl = url ?: activeWebView?.url.orEmpty()
             val isSaved = if (isWebUrl(targetUrl)) offlinePageStore.list().any { it.url == targetUrl } else false
@@ -6591,28 +6592,32 @@ open class MediaHubActivity : AppCompatActivity() {
             }
 
             b.radioModeTor.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.TOR)
-            b.radioModeRelay.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.RELAY)
+            b.radioModeRelay.isChecked = false
             b.radioModeCustom.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM)
             b.radioModeOff.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.OFF)
 
             b.textVpnProtocol.text = when (activeMode) {
                 com.adshield.app.engine.VpnEngine.VpnMode.TOR -> "Tor Onion SOCKS5 (${com.adshield.app.engine.VpnEngine.getTorEndpoint()})"
-                com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> "Fokk Secure Privacy Relay"
                 com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> "Custom Proxy (${com.adshield.app.engine.VpnEngine.getCustomProxy(this).ifBlank { "Not configured" }})"
                 com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "Direct (Browser proxy off)"
+                else -> "Direct (Browser proxy off)"
             }
 
             val customSaved = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
-            b.textCustomProxyPreview.text = if (customSaved.isNotBlank()) customSaved else "User-defined SOCKS5, HTTP, or HTTPS proxy address"
+            b.textCustomProxyPreview.text = if (customSaved.isNotBlank()) customSaved else "Tap to configure (SOCKS5 / HTTP)"
 
             val torListening = com.adshield.app.engine.VpnEngine.isTorListening()
-            val orbotInstalled = com.adshield.app.engine.VpnEngine.isOrbotInstalled(this)
-            b.layoutOrbotHelper.visibility = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.TOR || orbotInstalled) View.VISIBLE else View.GONE
-            b.textOrbotStatus.text = if (torListening) "✓ Tor SOCKS5 active on port ${com.adshield.app.engine.VpnEngine.getTorPort()}" else "Tor / Orbot not listening on port 9050"
+            b.layoutOrbotHelper.visibility = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.TOR && !torListening) View.VISIBLE else View.GONE
+            b.textOrbotStatus.text = if (torListening) "✓ Tor Onion Network active on port ${com.adshield.app.engine.VpnEngine.getTorPort()}" else "Tor Onion daemon starting (127.0.0.1:9050)..."
             b.textOrbotStatus.setTextColor(if (torListening) android.graphics.Color.parseColor("#10B981") else android.graphics.Color.parseColor("#A855F7"))
-            b.btnLaunchOrbot.text = if (orbotInstalled) "Start Orbot" else "Get Orbot"
+            b.btnLaunchOrbot.text = "Start Tor"
             b.btnLaunchOrbot.setOnClickListener {
-                com.adshield.app.engine.VpnEngine.launchOrbot(this)
+                com.adshield.app.engine.VpnEngine.startEmbeddedTor(this)
+                if (com.adshield.app.engine.VpnEngine.isOrbotInstalled(this)) {
+                    com.adshield.app.engine.VpnEngine.launchOrbot(this)
+                }
+                Toast.makeText(this, "Starting Tor...", Toast.LENGTH_SHORT).show()
+                refreshUi()
             }
         }
 
@@ -6639,11 +6644,17 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         b.cardModeTor.setOnClickListener {
-            switchMode(com.adshield.app.engine.VpnEngine.VpnMode.TOR)
-        }
-
-        b.cardModeRelay.setOnClickListener {
-            switchMode(com.adshield.app.engine.VpnEngine.VpnMode.RELAY)
+            val torListening = com.adshield.app.engine.VpnEngine.isTorListening()
+            if (torListening) {
+                switchMode(com.adshield.app.engine.VpnEngine.VpnMode.TOR)
+            } else {
+                com.adshield.app.engine.VpnEngine.startEmbeddedTor(this)
+                if (com.adshield.app.engine.VpnEngine.isOrbotInstalled(this)) {
+                    com.adshield.app.engine.VpnEngine.launchOrbot(this)
+                }
+                switchMode(com.adshield.app.engine.VpnEngine.VpnMode.TOR)
+                Toast.makeText(this, "Connecting to Tor Onion Network...", Toast.LENGTH_SHORT).show()
+            }
         }
 
         b.cardModeCustom.setOnClickListener {
@@ -6661,12 +6672,14 @@ open class MediaHubActivity : AppCompatActivity() {
             if (current != com.adshield.app.engine.VpnEngine.VpnMode.OFF) {
                 switchMode(com.adshield.app.engine.VpnEngine.VpnMode.OFF)
             } else {
-                val target = if (com.adshield.app.engine.VpnEngine.isTorListening()) {
-                    com.adshield.app.engine.VpnEngine.VpnMode.TOR
+                val custom = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
+                if (com.adshield.app.engine.VpnEngine.isTorListening()) {
+                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.TOR)
+                } else if (custom.isNotBlank()) {
+                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, custom)
                 } else {
-                    com.adshield.app.engine.VpnEngine.VpnMode.RELAY
+                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.TOR)
                 }
-                switchMode(target)
             }
         }
 
@@ -7502,9 +7515,11 @@ open class MediaHubActivity : AppCompatActivity() {
                         isFocusable = true
                         setOnClickListener {
                             sheetDialog.dismiss()
-                            val searchUrl = currentSearchEngine.searchUrl + Uri.encode(q)
+                            val cleanTitle = title.trim().replace(Regex("\\s+[-|•].*$"), "")
+                            val contextualQuery = if (cleanTitle.isNotBlank()) "$cleanTitle: $q" else q
+                            val searchUrl = currentSearchEngine.searchUrl + Uri.encode(contextualQuery)
                             addNewTab(searchUrl, isPrivate = activeTab?.isPrivate == true)
-                            Toast.makeText(this@MediaHubActivity, "Exploring: $q", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@MediaHubActivity, "Exploring: $contextualQuery", Toast.LENGTH_SHORT).show()
                         }
                     }
 

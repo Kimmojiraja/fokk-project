@@ -1001,11 +1001,11 @@
                     android:textAllCaps="true"
                     android:letterSpacing="0.06" />
 
-                <!-- 1. Fokk Pro (GitHub Sponsors, Coffee & Pro Features) -->
+                <!-- 1. Fokk Pro -->
                 <LinearLayout
                     android:id="@+id/rowNavFundraising"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="44dp"
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
@@ -1021,55 +1021,26 @@
                         android:src="@drawable/ic_crown"
                         app:tint="#F59E0B" />
 
-                    <LinearLayout
-                        android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:text="Fokk Pro"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
 
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Fokk Pro"
-                                android:textColor="@color/text_primary"
-                                android:textSize="14sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="6dp"
-                                android:background="@drawable/bg_badge_pill"
-                                android:paddingHorizontal="6dp"
-                                android:paddingVertical="1dp"
-                                android:text="PRO"
-                                android:textColor="#F59E0B"
-                                android:textSize="9sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Unlock Pro perks, GitHub Sponsors &amp; Coffee support"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="11.5sp"
-                            android:ellipsize="end"
-                            android:maxLines="1" />
-                    </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_arrow_forward"
-                        app:tint="@color/text_secondary" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/bg_badge_pill"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="1dp"
+                        android:text="PRO"
+                        android:textColor="#F59E0B"
+                        android:textSize="9sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
 
                 <View
@@ -1081,7 +1052,7 @@
                 <LinearLayout
                     android:id="@+id/rowNavGeneral"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="44dp"
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
@@ -1097,36 +1068,14 @@
                         android:src="@drawable/ic_settings"
                         app:tint="#38BDF8" />
 
-                    <LinearLayout
-                        android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="General &amp; Search Engines"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Default browser, search engines, toolbar position, HTTPS-only"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="11.5sp"
-                            android:ellipsize="end"
-                            android:maxLines="1" />
-                    </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_arrow_forward"
-                        app:tint="@color/text_secondary" />
+                        android:text="General &amp; Search Engines"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
 
                 <View
@@ -1138,7 +1087,7 @@
                 <LinearLayout
                     android:id="@+id/rowNavShield"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="44dp"
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
@@ -1154,36 +1103,14 @@
                         android:src="@drawable/ic_shield_check"
                         app:tint="#34D399" />
 
-                    <LinearLayout
-                        android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Shield &amp; Ghost Stealth"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Native rust engine, Canvas cloaking, DoH tunnel, Popunder defuser"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="11.5sp"
-                            android:ellipsize="end"
-                            android:maxLines="1" />
-                    </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_arrow_forward"
-                        app:tint="@color/text_secondary" />
+                        android:text="Shield &amp; Ghost Stealth"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
 
                 <View
@@ -1195,7 +1122,7 @@
                 <LinearLayout
                     android:id="@+id/rowNavMedia"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="44dp"
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
@@ -1211,36 +1138,14 @@
                         android:src="@drawable/ic_video"
                         app:tint="#A855F7" />
 
-                    <LinearLayout
-                        android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Media, Gestures &amp; PiP"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Video sniffer, MX-Player gestures, background audio playback"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="11.5sp"
-                            android:ellipsize="end"
-                            android:maxLines="1" />
-                    </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_arrow_forward"
-                        app:tint="@color/text_secondary" />
+                        android:text="Media, Gestures &amp; PiP"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
 
                 <View
@@ -1252,7 +1157,7 @@
                 <LinearLayout
                     android:id="@+id/rowNavVault"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="44dp"
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
@@ -1268,36 +1173,14 @@
                         android:src="@drawable/ic_lock"
                         app:tint="#F59E0B" />
 
-                    <LinearLayout
-                        android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Biometric Vault &amp; Stealth Decoy"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Fingerprint lock, Decoy Calculator mode, encrypted backup"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="11.5sp"
-                            android:ellipsize="end"
-                            android:maxLines="1" />
-                    </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_arrow_forward"
-                        app:tint="@color/text_secondary" />
+                        android:text="Biometric Vault &amp; Stealth Decoy"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
 
                 <View
@@ -1309,7 +1192,7 @@
                 <LinearLayout
                     android:id="@+id/rowNavExtensions"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="44dp"
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
@@ -1325,36 +1208,14 @@
                         android:src="@drawable/ic_extension"
                         app:tint="#818CF8" />
 
-                    <LinearLayout
-                        android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Extensions &amp; User Scripts"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Custom JS, Custom CSS, Fokko Fact Checker"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="11.5sp"
-                            android:ellipsize="end"
-                            android:maxLines="1" />
-                    </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_arrow_forward"
-                        app:tint="@color/text_secondary" />
+                        android:text="Extensions &amp; User Scripts"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
 
                 <View
@@ -1366,7 +1227,7 @@
                 <LinearLayout
                     android:id="@+id/rowNavAbout"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="44dp"
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
@@ -1382,36 +1243,14 @@
                         android:src="@drawable/ic_info"
                         app:tint="#38BDF8" />
 
-                    <LinearLayout
-                        android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="About, Privacy &amp; Community"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Manifesto, updates, community support, fundraising"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="11.5sp"
-                            android:ellipsize="end"
-                            android:maxLines="1" />
-                    </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_arrow_forward"
-                        app:tint="@color/text_secondary" />
+                        android:text="About, Privacy &amp; Community"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
