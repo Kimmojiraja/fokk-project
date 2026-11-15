@@ -2557,7 +2557,7 @@ function renderProtocolPicker(locations, activeMode) {
                 } else if (modeId === 'auto') {
                     showToast('Auto Anycast Relay: Auto-detects fastest path');
                 } else {
-                    showToast('Custom Relay: Enter your proxy or WireGuard config');
+                    showToast('Custom route: enter a SOCKS5 or HTTP proxy');
                 }
             } catch (_) {}
         });
@@ -2744,7 +2744,7 @@ function initVpnUI() {
         btnSaveCustomVpn.addEventListener('click', async () => {
             const cfg = vpnCustomInput.value.trim();
             if (!cfg) {
-                showToast('Please paste a WireGuard config or SOCKS5 URL');
+                showToast('Please enter a SOCKS5 or HTTP proxy URL');
                 return;
             }
             try {

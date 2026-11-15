@@ -270,6 +270,18 @@
                     app:tint="#34D399" />
             </FrameLayout>
 
+            <!-- This is deliberately video-only. Audio stays in the notification/player controls. -->
+            <ImageButton
+                android:id="@+id/btnPictureInPicture"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:layout_marginEnd="2dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Minimize active video"
+                android:src="@drawable/ic_pip"
+                android:visibility="gone"
+                app:tint="#00E5FF" />
+
             <View
                 android:id="@+id/commandBarDivider"
                 android:layout_width="1dp"

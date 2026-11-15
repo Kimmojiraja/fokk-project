@@ -550,55 +550,25 @@ class VpnEngine extends EventEmitter {
                     proxyRules = `socks5://127.0.0.1:${torPort}`;
                     locationName = 'Decentralized Tor Network';
                 } else {
-                    // Seamless built-in relay fallback for zero-configuration stealth protection
-                    const relayPort = await this.startBuiltinRelay();
-                    if (relayPort) {
-                        proxyRules = `http=127.0.0.1:${relayPort};https=127.0.0.1:${relayPort}`;
-                        locationName = 'Stealth Onion Relay (Built-in)';
-                    } else {
-                        throw new Error('Unable to start privacy relay. Please try again or select Custom Proxy.');
-                    }
+                    throw new Error('The embedded Tor runtime is unavailable. Fokk did not enable a direct fallback.');
                 }
             } else if (this.activeMode === 'auto') {
-                // Auto Anycast: First check local WARP client, then Tor, then built-in relay
-                const hasWarp = await checkSocketListening(40001);
-                if (hasWarp) {
-                    proxyRules = 'socks5://127.0.0.1:40001';
-                    locationName = 'Cloudflare Edge Anycast';
-                } else {
-                    const torPort = await this.ensureTorRunning();
-                    if (torPort) {
-                        proxyRules = `socks5://127.0.0.1:${torPort}`;
-                        locationName = 'Tor Decentralized Relay';
-                    } else {
-                        const relayPort = await this.startBuiltinRelay();
-                        if (relayPort) {
-                            proxyRules = `http=127.0.0.1:${relayPort};https=127.0.0.1:${relayPort}`;
-                            locationName = 'Auto Anycast Stealth Relay';
-                        } else {
-                            throw new Error('Could not initialize auto relay.');
-                        }
-                    }
-                }
+                const torPort = await this.ensureTorRunning();
+                if (!torPort) throw new Error('No verified Fokk endpoint is provisioned. Direct traffic remains disabled.');
+                proxyRules = `socks5://127.0.0.1:${torPort}`;
+                locationName = 'Tor Decentralized Relay';
             } else if (this.activeMode === 'warp') {
                 const hasWarp = await checkSocketListening(40001);
                 if (hasWarp) {
                     proxyRules = 'socks5://127.0.0.1:40001';
                     locationName = 'Cloudflare Edge Anycast';
                 } else {
-                    // Built-in Anycast relay
-                    const relayPort = await this.startBuiltinRelay();
-                    if (relayPort) {
-                        proxyRules = `http=127.0.0.1:${relayPort};https=127.0.0.1:${relayPort}`;
-                        locationName = 'Cloudflare Anycast Relay';
-                    } else {
-                        throw new Error('Could not start anycast relay.');
-                    }
+                    throw new Error('No WARP-compatible local endpoint is available. Fokk did not enable a direct fallback.');
                 }
             } else if (this.activeMode === 'custom') {
                 proxyRules = this.resolveCustomProxyRules();
                 if (!proxyRules) {
-                    throw new Error('Please enter a SOCKS5 proxy (e.g. 127.0.0.1:1080) or WireGuard config below.');
+                    throw new Error('Enter a reachable SOCKS5 or HTTP proxy. WireGuard profiles require the bundled desktop tunnel runtime.');
                 }
 
                 const portMatch = proxyRules.match(/:(\d+)/);
@@ -606,7 +576,7 @@ class VpnEngine extends EventEmitter {
                     const customPort = parseInt(portMatch[1], 10);
                     const isListening = await checkSocketListening(customPort);
                     if (!isListening) {
-                        throw new Error(`No proxy listening on port ${customPort}. Launch your proxy server, or switch to Built-in Stealth Relay.`);
+                        throw new Error(`No proxy is listening on port ${customPort}. Routing was not enabled.`);
                     }
                 }
                 locationName = 'Custom Endpoint';
@@ -622,16 +592,16 @@ class VpnEngine extends EventEmitter {
             this.state = 'connected';
             this.connectedAt = Date.now();
             this.virtualCountry = locationName;
-            this.virtualIp = '100% Masked (Encrypted Tunnel)';
+            this.virtualIp = 'Browser route connected — verify exit IP';
             this.ping = Math.floor(18 + Math.random() * 16);
             this.errorMessage = null;
 
             this.startStatsTimer();
             this.emitStatus();
 
-            // Asynchronously resolve external IP and ping
+            // This socket ping is informational only. Do not use Node's direct
+            // networking stack to claim a browser-proxy exit IP.
             this.measureRealPing();
-            this.refreshExitIp(proxyRules);
 
             return { success: true, status: this.getStatus() };
         } catch (err) {
@@ -711,13 +681,9 @@ class VpnEngine extends EventEmitter {
 
     resolveCustomProxyRules() {
         if (!this.customConfig) return '';
-        if (this.customConfig.includes('[Interface]') || this.customConfig.includes('[Peer]')) {
-            const endpointMatch = this.customConfig.match(/Endpoint\s*=\s*([^\s\r\n]+)/i);
-            if (endpointMatch && endpointMatch[1]) {
-                const ep = endpointMatch[1];
-                return `socks5=${ep}`;
-            }
-        }
+        // A WireGuard Endpoint is UDP, not a SOCKS server. Treating it as SOCKS
+        // would leak/fail; a bundled native WireGuard runtime must own it.
+        if (this.customConfig.includes('[Interface]') || this.customConfig.includes('[Peer]')) return '';
         if (this.customConfig.startsWith('socks5://') || this.customConfig.startsWith('http://') || this.customConfig.startsWith('https://')) {
             return this.customConfig;
         }
@@ -766,7 +732,12 @@ class VpnEngine extends EventEmitter {
     applyProxyToSession(sess) {
         if (!sess || typeof sess.setProxy !== 'function') return;
         const isConnected = this.state === 'connected';
-        const rawRules = isConnected ? (this.currentProxyRules || (this.relayPort ? `http=127.0.0.1:${this.relayPort};https=127.0.0.1:${this.relayPort}` : 'direct://')) : 'direct://';
+        // A session added during a connected state must never silently become
+        // direct if a route is missing. Port 9 is intentionally closed and
+        // produces a visible failure until the selected tunnel is restored.
+        const rawRules = isConnected
+            ? (this.currentProxyRules || (this.killSwitch ? 'http=127.0.0.1:9;https=127.0.0.1:9;socks=127.0.0.1:9' : 'direct://'))
+            : 'direct://';
         const proxyStr = this.formatProxyString(rawRules);
 
         sess.setProxy({

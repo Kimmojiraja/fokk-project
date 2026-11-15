@@ -539,7 +539,10 @@
             document.addEventListener('pause', function(e) {
                 if (!window.location.hostname.includes('youtube.com')) return;
                 if (e.target && e.target.tagName === 'VIDEO') {
-                    if (e.target.currentTime > 0.5 && !e.target.ended) {
+                    // A page-generated pause while Android is locking/minimizing is
+                    // not an explicit user pause. Keep that distinction so resume
+                    // can continue the same media item without fighting controls.
+                    if (!window.__fokk_is_background && e.target.currentTime > 0.5 && !e.target.ended) {
                         userExplicitPaused = true;
                     }
                 }
@@ -991,7 +994,45 @@
                     return origMediaPause.apply(this, arguments);
                 };
             } catch (e) {}
+
+            window.__fokk_prepareBackgroundPlayback = function() {
+                if (userExplicitPaused) return;
+                document.querySelectorAll('audio, video').forEach(function(media) {
+                    if (!media.ended && media.paused) {
+                        try { media.play().catch(function() {}); } catch (e) {}
+                    }
+                });
+            };
         }
+
+        // Universal background-media guard.  This covers ordinary HTML5 players
+        // (news sites, podcasts and social video) in addition to the YouTube
+        // player-specific work above. It is active only after Android has told us
+        // the browser is backgrounded, so ordinary in-page pause controls remain
+        // untouched in the foreground.
+        let fokkExplicitMediaPause = false;
+        document.addEventListener('pointerdown', function(e) {
+            const target = e.target;
+            if (!target || !target.closest) return;
+            if (target.closest('video, audio, [aria-label*="pause" i], [title*="pause" i], .vjs-play-control, .plyr__control')) {
+                fokkExplicitMediaPause = /pause/i.test(target.getAttribute('aria-label') || '') || /pause/i.test(target.getAttribute('title') || '');
+            }
+        }, true);
+        try {
+            const pauseForBackgroundGuard = HTMLMediaElement.prototype.pause;
+            HTMLMediaElement.prototype.pause = function() {
+                if (window.__fokk_is_background && !fokkExplicitMediaPause && !this.ended) return;
+                return pauseForBackgroundGuard.apply(this, arguments);
+            };
+        } catch (e) {}
+        window.__fokk_prepareBackgroundPlayback = function() {
+            if (fokkExplicitMediaPause) return;
+            document.querySelectorAll('audio, video').forEach(function(media) {
+                if (!media.ended && media.paused) {
+                    try { media.play().catch(function() {}); } catch (e) {}
+                }
+            });
+        };
 
         // 2. Network Hook: XHR response text interceptor (Response.prototype.json handles fetch in memory)
         if (window.XMLHttpRequest) {
@@ -1367,10 +1408,37 @@
             display: none !important;
         }
 
-        html.fokk-pip-active video {
+        /* Activity PiP captures the page, not a native video surface.  Promote only
+           the active video above the page so a browser toolbar/feed can never become
+           the PiP thumbnail. */
+        html.fokk-pip-active,
+        html.fokk-pip-active body {
             width: 100% !important;
             height: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            background: #000 !important;
+        }
+        html.fokk-pip-active video[data-fokk-pip-video="true"] {
+            position: fixed !important;
+            inset: 0 !important;
+            display: block !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            min-width: 100vw !important;
+            min-height: 100vh !important;
+            max-width: none !important;
+            max-height: none !important;
+            visibility: visible !important;
+            opacity: 1 !important;
             object-fit: contain !important;
+            background: #000 !important;
+            z-index: 2147483647 !important;
+            transform: none !important;
+        }
+        html.fokk-pip-active [data-fokk-pip-hidden="true"] {
+            display: none !important;
         }
     `;
 
@@ -2042,12 +2110,39 @@
     // =========================================================================
     // Media Playback State Reporter & native PiP coordination
     // =========================================================================
+    function findActiveVideoForPip() {
+        const videos = Array.from(document.querySelectorAll('video'));
+        return videos.sort(function(a, b) {
+            const aScore = (!a.paused && !a.ended ? 100000000 : 0) + (a.videoWidth * a.videoHeight);
+            const bScore = (!b.paused && !b.ended ? 100000000 : 0) + (b.videoWidth * b.videoHeight);
+            return bScore - aScore;
+        })[0] || null;
+    }
+
     window.__fokk_enter_pip_view = function() {
+        const video = findActiveVideoForPip();
+        if (!video || !document.body) return;
         document.documentElement.classList.add('fokk-pip-active');
+        video.setAttribute('data-fokk-pip-video', 'true');
+        // Hide only sibling roots that cannot contain the selected player. Moving a
+        // video node breaks React/YouTube players; this preserves its media pipeline.
+        Array.from(document.body.children).forEach(function(node) {
+            if (node !== video && !node.contains(video) && !/^(SCRIPT|STYLE|LINK)$/i.test(node.tagName)) {
+                node.setAttribute('data-fokk-pip-hidden', 'true');
+            }
+        });
+        try { video.play().catch(function() {}); } catch (e) {}
+        window.dispatchEvent(new Event('resize'));
     };
 
     window.__fokk_exit_pip_view = function() {
         document.documentElement.classList.remove('fokk-pip-active');
+        document.querySelectorAll('[data-fokk-pip-video]').forEach(function(video) {
+            video.removeAttribute('data-fokk-pip-video');
+        });
+        document.querySelectorAll('[data-fokk-pip-hidden]').forEach(function(node) {
+            node.removeAttribute('data-fokk-pip-hidden');
+        });
         window.dispatchEvent(new Event('resize'));
     };
 

@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "issuedAt": "2026-11-15T00:00:00Z",
+  "expiresAt": "2026-11-22T00:00:00Z",
+  "servers": [
+    {
+      "id": "in-mumbai-01",
+      "countryCode": "IN",
+      "city": "Mumbai",
+      "hostname": "wg-in-01.example.invalid",
+      "publicKey": "SERVER_PUBLIC_KEY_BASE64",
+      "port": 51820,
+      "dns": ["10.64.0.1"],
+      "ipv4Cidr": "10.64.0.0/24",
+      "ipv6Cidr": "fd64:1::/64",
+      "features": ["wireguard", "ipv6", "dns-leak-protection"]
+    }
+  ],
+  "signature": "ED25519_SIGNATURE_OVER_CANONICAL_JSON"
+}
