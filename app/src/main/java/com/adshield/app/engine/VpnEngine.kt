@@ -1,8 +1,6 @@
 package com.adshield.app.engine
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
 import androidx.webkit.WebViewFeature
@@ -26,7 +24,6 @@ object VpnEngine {
 
     enum class VpnMode(val id: String, val title: String, val proxyUrl: String) {
         OFF("off", "Direct Connection (Privacy Gateway Disabled)", ""),
-        TOR("tor", "Tor Onion Routing (Orbot 127.0.0.1:9050)", "socks://127.0.0.1:9050"),
         CUSTOM("custom", "Custom SOCKS / HTTP Privacy Proxy", "")
     }
 
@@ -35,8 +32,13 @@ object VpnEngine {
     fun isSupported(): Boolean = WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)
 
     fun getActiveMode(context: Context): VpnMode {
-        val id = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
-            .getString(KEY_VPN_MODE, VpnMode.OFF.id) ?: VpnMode.OFF.id
+        val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
+        val id = prefs.getString(KEY_VPN_MODE, VpnMode.OFF.id) ?: VpnMode.OFF.id
+        // Migrate the obsolete external-proxy mode to Direct.
+        if (id == "tor") {
+            prefs.edit().putString(KEY_VPN_MODE, VpnMode.OFF.id).apply()
+            return VpnMode.OFF
+        }
         return VpnMode.values().firstOrNull { it.id == id } ?: VpnMode.OFF
     }
 
@@ -65,43 +67,14 @@ object VpnEngine {
         return (uri.host ?: throw IllegalArgumentException("Proxy host is required")) to uri.port
     }
 
-    fun isOrbotRunning(): Boolean = listOf(9050, 9150).any { port ->
-        try {
-            Socket().use { it.connect(InetSocketAddress("127.0.0.1", port), 500) }
-            true
-        } catch (_: Exception) { false }
-    }
-
-    fun isOrbotInstalled(context: Context): Boolean = try {
-        context.packageManager.getPackageInfo("org.torproject.android", 0)
-        true
-    } catch (_: Exception) { false }
-
-    fun launchOrbot(context: Context) {
-        val launchIntent = context.packageManager.getLaunchIntentForPackage("org.torproject.android")
-        if (launchIntent != null) {
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(launchIntent)
-            return
-        }
-        val store = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=org.torproject.android"))
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        try { context.startActivity(store) } catch (_: Exception) {
-            context.startActivity(
-                Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=org.torproject.android"))
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
-        }
-    }
-
-    /** Direct-network probe only. Use a WebView probe to verify a browser proxy exit. */
-    fun checkPublicIp(onResult: (ip: String?, error: String?) -> Unit) {
+    /** Direct baseline used only after the user chooses the browser IP verification action. */
+    fun checkDirectPublicIp(onResult: (ip: String?, error: String?) -> Unit) {
         executor.execute {
             try {
-                val conn = java.net.URL("https://api.ipify.org?format=json").openConnection() as java.net.HttpURLConnection
+                val conn = java.net.URL("https://api4.ipify.org?format=json").openConnection() as java.net.HttpURLConnection
                 conn.connectTimeout = 5_000
                 conn.readTimeout = 5_000
-                conn.setRequestProperty("User-Agent", "Fokk-Shield-Privacy-Probe")
+                conn.setRequestProperty("User-Agent", "Fokk-Browser-IP-Check")
                 if (conn.responseCode != 200) return@execute onResult(null, "HTTP ${conn.responseCode}")
                 val ip = org.json.JSONObject(conn.inputStream.bufferedReader().use { it.readText() }).optString("ip", "")
                 onResult(ip.ifBlank { null }, null)
@@ -131,7 +104,7 @@ object VpnEngine {
         }
 
         val endpoint = try {
-            normalizeProxy(if (mode == VpnMode.TOR) VpnMode.TOR.proxyUrl else (customProxy ?: getCustomProxy(context)))
+            normalizeProxy(customProxy ?: getCustomProxy(context))
         } catch (e: Exception) {
             onComplete?.invoke(false, e.message ?: "Invalid proxy address")
             return

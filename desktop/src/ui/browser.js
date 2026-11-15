@@ -2488,7 +2488,7 @@ ipcRenderer.on('fokk-stats-updated', (event, stats) => {
 });
 
 // ==========================================================================
-// Fokk Shield Tunnel (Privacy VPN & Relay) UI Controller
+// Browser-session privacy routing UI controller
 // ==========================================================================
 const btnVpnToggle = document.getElementById('btnVpnToggle');
 const vpnStatusDot = document.getElementById('vpnStatusDot');
@@ -2507,6 +2507,9 @@ const vpnCustomConfigWrap = document.getElementById('vpnCustomConfigWrap');
 const vpnCustomInput = document.getElementById('vpnCustomInput');
 const btnSaveCustomVpn = document.getElementById('btnSaveCustomVpn');
 const vpnKillSwitchCheck = document.getElementById('vpnKillSwitchCheck');
+const btnVpnVerifyExit = document.getElementById('btnVpnVerifyExit');
+let verifiedExitIp = null;
+let browserExitDiffersFromDirect = false;
 
 function renderProtocolPicker(locations, activeMode) {
     if (!vpnProtocolPicker || !Array.isArray(locations)) return;
@@ -2551,13 +2554,9 @@ function renderProtocolPicker(locations, activeMode) {
             try {
                 await ipcRenderer.invoke('fokk-vpn-set-mode', modeId);
                 if (modeId === 'tor') {
-                    showToast('Stealth Onion Relay: 100% Zero-Config Built-In');
-                } else if (modeId === 'warp') {
-                    showToast('Cloudflare WARP: WireGuard on port 40001');
-                } else if (modeId === 'auto') {
-                    showToast('Auto Anycast Relay: Auto-detects fastest path');
+                    showToast('Tor browser route selected. Connect to apply it.');
                 } else {
-                    showToast('Custom route: enter a SOCKS5 or HTTP proxy');
+                    showToast('Custom browser proxy selected. Enter a reachable endpoint.');
                 }
             } catch (_) {}
         });
@@ -2571,6 +2570,10 @@ function updateVpnUI(status) {
     const isConn = state === 'connected';
     const isConnecting = state === 'connecting';
     const isErr = state === 'error';
+    if (!isConn) {
+        verifiedExitIp = null;
+        browserExitDiffersFromDirect = false;
+    }
 
     // 1. Toolbar Status Dot & Active State
     if (vpnStatusDot) {
@@ -2582,13 +2585,19 @@ function updateVpnUI(status) {
             ? `Fokk Shield Tunnel: Connected (${status.virtualCountry || 'Anycast'})`
             : isConnecting
             ? 'Fokk Shield Tunnel: Connecting...'
-            : 'Fokk Shield Tunnel — Zero-Log Privacy VPN';
+            : 'Fokk Browser privacy routing';
+    }
+
+    if (btnVpnToggle) {
+        btnVpnToggle.title = isConn
+            ? `Fokk browser route configured (${status.virtualCountry || 'selected endpoint'}); exit IP not verified`
+            : isConnecting ? 'Applying browser route...' : 'Fokk browser privacy routing';
     }
 
     // 2. Popover Status Pill
     if (vpnStatusPill) {
         vpnStatusPill.className = 'vpn-status-pill ' + state;
-        vpnStatusPill.textContent = isConn ? 'Protected' : isConnecting ? 'Connecting...' : isErr ? 'No Relay' : 'Disconnected';
+        vpnStatusPill.textContent = isConn ? 'Route set' : isConnecting ? 'Connecting...' : isErr ? 'Unavailable' : 'Disconnected';
     }
 
     // 3. Power Button & Radar Ring
@@ -2601,21 +2610,11 @@ function updateVpnUI(status) {
     if (vpnPowerLabel) {
         if (isErr && status.errorMessage) {
             let errorHtml = `<span style="color:#F87171;font-size:11px;display:block;text-align:center;line-height:1.4;margin-bottom:6px;">${status.errorMessage}</span>`;
-            if (status.activeMode === 'warp') {
-                errorHtml += `<button id="btnQuickSwitchOnion" style="background:#7C3AED;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:10.5px;font-weight:700;cursor:pointer;margin-top:2px;">Switch to Built-in Stealth Onion</button>`;
-            } else if (status.activeMode === 'custom' && (!status.customConfig || !status.customConfig.trim())) {
+            if (status.activeMode === 'custom' && (!status.customConfig || !status.customConfig.trim())) {
                 errorHtml += `<button id="btnFocusCustomInput" style="background:#10B981;color:#000;border:none;border-radius:6px;padding:4px 10px;font-size:10.5px;font-weight:700;cursor:pointer;margin-top:2px;">Paste Proxy Below</button>`;
             }
             vpnPowerLabel.innerHTML = errorHtml;
 
-            const btnSwitch = document.getElementById('btnQuickSwitchOnion');
-            if (btnSwitch) {
-                btnSwitch.addEventListener('click', async (e) => {
-                    e.stopPropagation();
-                    await ipcRenderer.invoke('fokk-vpn-set-mode', 'tor');
-                    await ipcRenderer.invoke('fokk-vpn-toggle');
-                });
-            }
             const btnFocus = document.getElementById('btnFocusCustomInput');
             if (btnFocus) {
                 btnFocus.addEventListener('click', (e) => {
@@ -2627,22 +2626,25 @@ function updateVpnUI(status) {
             vpnPowerLabel.textContent = isConn ? 'Connected — Tunnel Active' : isConnecting ? 'Detecting Relay...' : 'Tap to Connect';
         }
     }
+    if (vpnPowerLabel && !isErr) {
+        vpnPowerLabel.textContent = isConn ? 'Browser route set — verify exit IP' : isConnecting ? 'Applying route...' : 'Tap to connect';
+    }
     if (vpnPowerSub) {
         vpnPowerSub.textContent = isConn 
-            ? 'Encrypted Multi-Hop Relay Active'
+            ? 'Browser traffic only; exit IP is unverified'
             : isConnecting 
-            ? 'Establishing Onion Circuit...'
-            : 'Zero-Cost Stealth Privacy';
+            ? 'Checking and applying the selected route...'
+            : 'Select Tor or configure a proxy';
     }
 
     // 4. Metrics
     if (vpnMetricIp) {
-        vpnMetricIp.textContent = status.virtualIp || (isConn ? '100% Masked' : 'Direct (Real IP Exposed)');
-        vpnMetricIp.className = 'metric-val ' + (isConn ? 'masked' : isConnecting ? 'connecting' : 'unmasked');
+        vpnMetricIp.textContent = verifiedExitIp || status.virtualIp || (isConn ? 'Route configured — verify exit IP' : 'Direct connection (IP not masked)');
+        vpnMetricIp.className = 'metric-val ' + (verifiedExitIp && browserExitDiffersFromDirect ? 'masked' : isConn || isConnecting ? 'connecting' : 'unmasked');
     }
     if (vpnMetricLocation) vpnMetricLocation.textContent = status.virtualCountry || status.location?.region || 'Local Direct';
-    if (vpnMetricProtocol) vpnMetricProtocol.textContent = status.location?.protocol || 'Tor Onion Routing';
-    if (vpnMetricPing) vpnMetricPing.textContent = (status.ping || 0) + ' ms';
+    if (vpnMetricProtocol) vpnMetricProtocol.textContent = status.location?.protocol || 'Browser proxy';
+    if (vpnMetricPing) vpnMetricPing.textContent = status.ping ? status.ping + ' ms' : '—';
 
     // 5. Active Protocol Card Selection
     if (vpnProtocolPicker && status.activeMode) {
@@ -2722,11 +2724,11 @@ function initVpnUI() {
                 if (newStatus) {
                     updateVpnUI(newStatus);
                     if (newStatus.state === 'connected') {
-                        showToast(`Tunnel Connected: ${newStatus.virtualCountry || 'Encrypted'}`);
+                        showToast(`Browser route configured: ${newStatus.virtualCountry || 'selected endpoint'}. Verify its exit IP.`);
                     } else if (newStatus.state === 'error' && newStatus.errorMessage) {
                         showToast(newStatus.errorMessage);
                     } else {
-                        showToast('Tunnel Disconnected (Direct Traffic)');
+                        showToast('Browser route disconnected. Browser traffic is direct.');
                     }
                 }
             } catch (err) {
@@ -2734,7 +2736,7 @@ function initVpnUI() {
                     const cur = ipcRenderer.sendSync('fokk-vpn-get-status');
                     if (cur) updateVpnUI(cur);
                 } catch (_) {}
-                showToast('VPN Error: ' + err.message);
+                showToast('Browser route error: ' + err.message);
             }
         });
     }
@@ -2787,6 +2789,44 @@ function initVpnUI() {
 }
 initVpnUI();
 
+if (btnVpnVerifyExit) {
+    btnVpnVerifyExit.addEventListener('click', async () => {
+        const active = tabs.find(tab => tab.id === activeTabId);
+        if (!active || !active.webview || typeof active.webview.executeJavaScript !== 'function') {
+            showToast('Open a website in the active browser tab before verifying its IP.');
+            return;
+        }
+        btnVpnVerifyExit.disabled = true;
+        btnVpnVerifyExit.textContent = 'Checking active browser route...';
+        try {
+            const ip = await active.webview.executeJavaScript(`(async function() {
+                const response = await fetch('https://api.ipify.org?format=json', { cache: 'no-store' });
+                if (!response.ok) throw new Error('IP check returned HTTP ' + response.status);
+                const result = await response.json();
+                if (!result || !result.ip) throw new Error('IP check returned no address');
+                return result.ip;
+            })()`);
+            if (typeof ip !== 'string' || !ip.trim()) throw new Error('The active tab returned no IP address.');
+            const direct = await ipcRenderer.invoke('fokk-vpn-check-direct-ip');
+            if (!direct || !direct.ip) throw new Error(direct?.error || 'Could not read the direct public IP for comparison.');
+            browserExitDiffersFromDirect = ip.trim() !== direct.ip.trim();
+            verifiedExitIp = browserExitDiffersFromDirect
+                ? `${ip.trim()} (differs from direct)`
+                : `${ip.trim()} (same as direct)`;
+            const status = ipcRenderer.sendSync('fokk-vpn-get-status');
+            if (status) updateVpnUI(status);
+            showToast(browserExitDiffersFromDirect
+                ? `Browser IP ${ip.trim()} differs from direct IP ${direct.ip}.`
+                : `Browser IP ${ip.trim()} matches the direct IP; this route is not masking it.`);
+        } catch (error) {
+            showToast('Browser IP verification failed: ' + (error.message || 'request blocked'));
+        } finally {
+            btnVpnVerifyExit.disabled = false;
+            btnVpnVerifyExit.textContent = 'Verify IP from active browser tab';
+        }
+    });
+}
+
 // ==========================================================================
 // 7. Universal Command HUD (Ctrl+K Spotlight Launcher)
 // ==========================================================================
@@ -2802,8 +2842,8 @@ const COMMAND_HUD_REGISTRY = [
     {
         id: 'cmd-vpn',
         category: 'Privacy & Security',
-        title: 'Toggle Privacy Tunnel (VPN)',
-        sub: 'Connect or disconnect Tor & WARP stealth relay',
+        title: 'Toggle Browser Privacy Route',
+        sub: 'Connect or disconnect the selected browser route',
         shortcut: 'Shift+V',
         iconSvg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="12" r="3"/></svg>',
         action: () => { if (btnVpnToggle) btnVpnToggle.click(); }

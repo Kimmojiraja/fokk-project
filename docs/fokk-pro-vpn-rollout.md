@@ -1,26 +1,28 @@
-# Fokk Pro VPN rollout
+# Fokk Pro VPN deployment requirements
 
-Fokk Pro VPN uses a real WireGuard tunnel, not a local forwarding proxy. The Android app embeds the WireGuard userspace backend and requests Android VPN consent before bringing a profile up.
+## Current implementation status
 
-## Server control plane
+- Android applies a custom SOCKS or HTTP proxy to Fokk WebViews. It does not provide a system-wide VPN or a built-in remote exit server.
+- Desktop can route Electron browser sessions through a compatible Tor SOCKS endpoint or a reachable custom SOCKS/HTTP proxy. A country-specific exit is not guaranteed.
+- No Fokk-owned VPN server fleet, account provisioning API, or signed server catalogue is configured in this repository. The browser cannot change a user's public IP by itself; it needs a reachable remote exit.
 
-Operate Fokk-owned WireGuard exit servers per region. The provisioning API must authenticate the Pro user, create a per-device peer, and return a short-lived standard WireGuard configuration. Never ship a shared client private key in the app.
+The sample catalogue in `fokk-pro-vpn-server-manifest.example.json` is a format example only. Its example hostname and keys are not deployable credentials.
 
-The signed server catalogue format is illustrated in `fokk-pro-vpn-server-manifest.example.json`. The app should reject expired catalogues, unknown signing keys, endpoints outside the selected profile, and unsigned profile changes.
+## Requirements before selling a full VPN plan
 
-## Required production safeguards
+Operate Fokk-owned WireGuard exit servers per region. The provisioning API must authenticate each Pro account, create a per-device peer, and return a short-lived configuration. Never ship a shared client private key in the app.
 
-- One WireGuard keypair per device and server-side peer revocation.
-- IPv4 and IPv6 default routes plus Fokk-controlled DNS inside every profile.
-- Handshake watchdog; show an error and block browser traffic rather than presenting a false connected state.
-- Kill switch/always-on VPN exposed through Android system settings after the first successful connection.
-- Independent exit-IP, DNS, and IPv6 leak checks from inside the active tunnel.
-- Region selection should only list active, health-checked servers; never fabricate country locations.
+The signed catalogue must use pinned signing keys and be rejected when expired, unsigned, or inconsistent with the selected profile. Region choices must come from active, health-checked servers rather than static labels.
 
-## Desktop delivery
+Required safeguards:
 
-Desktop requires a signed, bundled WireGuard runtime/driver for Windows, macOS, and Linux, plus elevated installation where the operating system requires it. Electron's proxy layer is useful for browser-only Tor/SOCKS routing, but it is not a replacement for a full-device WireGuard tunnel. The desktop client must fail closed when its native runtime or selected server is unavailable.
+- One WireGuard keypair per device with server-side peer revocation.
+- IPv4 and IPv6 default routes plus Fokk-controlled DNS in each profile.
+- Handshake monitoring and fail-closed behavior when a route drops.
+- Android system VPN consent and always-on/lockdown support where available.
+- Desktop tunnel runtimes and required operating-system privileges for Windows, macOS, and Linux.
+- Exit-IP, DNS, and IPv6 leak checks performed inside the active tunnel.
 
 ## License compliance
 
-Keep third-party notices and license texts in the shipped application and release artefacts. Product UI can be branded Fokk Pro VPN; notices belong in an open-source/legal screen.
+Keep required third-party notices and license texts in shipped applications and release artifacts. Product screens may use Fokk branding, while required legal notices remain available in the legal/about area.

@@ -11,8 +11,8 @@ android {
         applicationId = "com.adshield.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 246
-        versionName = "2.4.6"
+        versionCode = 247
+        versionName = "2.4.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -45,7 +45,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -70,10 +69,6 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     implementation("androidx.webkit:webkit:1.10.0")
-    // Embedded WireGuard userspace tunnel. This is a real Android VpnService,
-    // not a browser-only proxy, and lets Fokk provision its own server profiles.
-    implementation("com.wireguard.android:tunnel:1.0.20260102")
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
     implementation("androidx.biometric:biometric:1.1.0")
     // Brave adblock-rust Native JNI Content Blocker
     implementation("io.github.mlm-games:adblock:0.1.3")

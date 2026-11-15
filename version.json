@@ -1,6 +1,6 @@
 {
-  "versionCode": 246,
-  "versionName": "2.4.6",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.6/app-debug.apk",
-  "changelog": "- WireGuard Tunnel Engine: Integrated userspace WireGuard VPN tunnel with Android VpnService permission flow.\n- Enhanced Privacy Gateway: Fail-closed proxy architecture preventing direct network leaks and in-browser exit-IP verification.\n- Video PiP Quick Button: Dedicated minimize control for active playing videos.\n- Reliable Background Audio: Pre-pause hooks and screen-lock handlers for uninterrupted media playback.\n- Fokk AI Summary & Fact-Check: Article provenance extraction and multi-source independent evidence audit."
+  "versionCode": 247,
+  "versionName": "2.4.7",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.4.7/app-debug.apk",
+  "changelog": "- Browser Privacy Routing: Clean custom SOCKS and HTTP proxy routing with fail-closed safeguards.\n- Resilient Background Media: Precision media tracking and keep-alive service preventing paused media or ads from resuming.\n- Enhanced Video PiP: Full ancestor hierarchy isolation ensuring clean video playback in Picture-in-Picture.\n- Public IP Comparison: Verify browser exit IP versus direct device IP.\n- Desktop Privacy Routing: Live health monitor, session proxy synchronization, and fail-closed leak prevention."
 }

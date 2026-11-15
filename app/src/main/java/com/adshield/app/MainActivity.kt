@@ -153,7 +153,7 @@ class MainActivity : AppCompatActivity() {
             .setTitle("Fokk Pro â€” \$4.99 / month")
             .setMessage(
                 "Fokk Pro includes:\n\n" +
-                "â€¢ VPN protection with Cloudflare WARP\n" +
+                "â€¢ Browser privacy proxy routing\n" +
                 "â€¢ Advanced shield rules (blocklist+)\n" +
                 "â€¢ Priority updates & early access\n" +
                 "â€¢ Supports independent development\n\n" +
