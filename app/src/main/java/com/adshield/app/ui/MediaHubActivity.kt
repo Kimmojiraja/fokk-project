@@ -6713,22 +6713,12 @@ open class MediaHubActivity : AppCompatActivity() {
                 b.textVpnExitIp.setTextColor(android.graphics.Color.parseColor("#F43F5E"))
             }
 
-            val locationLabel = when {
-                activeMode == com.adshield.app.engine.VpnEngine.VpnMode.FAST -> "Optimal location"
-                activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> when (customSaved) {
-                    "AM" -> "America"
-                    "EU" -> "Europe"
-                    "AS" -> "Asia"
-                    else -> if (customSaved.isNotBlank()) customSaved else "Optimal location"
-                }
-                else -> when (customSaved) {
-                    "AM" -> "America"
-                    "EU" -> "Europe"
-                    "AS" -> "Asia"
-                    else -> if (customSaved.isNotBlank()) customSaved else "Optimal location"
-                }
-            }
+            val activeRegionCode = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM) customSaved else "AUTO"
+            val locationLabel = com.adshield.app.engine.VpnEngine.getRegionDisplayName(activeRegionCode)
+            val flagRes = com.adshield.app.engine.VpnEngine.getRegionFlagRes(activeRegionCode)
+
             b.textSelectedLocation.text = locationLabel
+            b.imgSelectedLocationFlag.setImageResource(flagRes)
             b.textLocationSub.text = if (isConnected) "Virtual location • Connected" else "Virtual location"
 
             b.checkPrivateTabsOnly.isChecked = com.adshield.app.engine.VpnEngine.isPrivateOnlyEnabled(this)
@@ -6736,14 +6726,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
             b.textVpnProtocol.text = when (activeMode) {
                 com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "Direct (Unencrypted)"
-                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> {
-                    when (customSaved) {
-                        "EU" -> "Europe Dedicated Node"
-                        "AS" -> "Asia Dedicated Node"
-                        "AM" -> "America Dedicated Node"
-                        else -> "Dedicated Node (${customSaved.ifBlank { "Optimal" }})"
-                    }
-                }
+                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> "Dedicated Node ($locationLabel)"
                 else -> "Auto (High-Speed Edge)"
             }
 
@@ -6828,6 +6811,17 @@ open class MediaHubActivity : AppCompatActivity() {
             b.textProStatusSub.text = if (isChecked) "Ultra-stealth encryption is enabled" else "Basic proxy routing active"
             val msg = if (isChecked) "Fokk Pro Network Activated" else "Standard Network Activated"
             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        }
+
+        b.btnSelectProCountry.setOnClickListener {
+            sheetDialog.dismiss()
+            showDedicatedRegionOrCustomDialog { selection ->
+                if (selection == "AUTO") {
+                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.FAST)
+                } else {
+                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, selection)
+                }
+            }
         }
 
         b.btnCloseProSheet.setOnClickListener { sheetDialog.dismiss() }
@@ -7016,45 +7010,82 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     private fun showDedicatedRegionOrCustomDialog(onApplied: (String) -> Unit) {
+        val sheetDialog = BottomSheetDialog(this)
+        val b = com.adshield.app.databinding.SheetVpnLocationPickerBinding.inflate(layoutInflater)
+        sheetDialog.setContentView(b.root)
+
         val currentSaved = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
         val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
-        val options = arrayOf(
-            "Optimal location (Automatic)",
-            "America",
-            "Europe",
-            "Asia",
-            "Configure Private Server (host:port)"
+        val activeCode = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.FAST) "AUTO" else currentSaved
+
+        val checkMap = mapOf(
+            "AUTO" to b.checkLocationAuto,
+            "AM" to b.checkLocationAm,
+            "EU" to b.checkLocationEu,
+            "AS" to b.checkLocationAs,
+            "US" to b.checkLocationUs,
+            "GB" to b.checkLocationGb,
+            "DE" to b.checkLocationDe,
+            "NL" to b.checkLocationNl,
+            "CA" to b.checkLocationCa,
+            "JP" to b.checkLocationJp,
+            "KR" to b.checkLocationKr,
+            "SG" to b.checkLocationSg,
+            "HK" to b.checkLocationHk,
+            "IN" to b.checkLocationIn
         )
-        val checkedIndex = when {
-            activeMode == com.adshield.app.engine.VpnEngine.VpnMode.FAST -> 0
-            currentSaved == "AM" -> 1
-            currentSaved == "EU" -> 2
-            currentSaved == "AS" -> 3
-            currentSaved.isNotBlank() -> 4
-            else -> 0
+
+        checkMap.values.forEach { it.visibility = View.GONE }
+        b.checkLocationCustom.visibility = View.GONE
+
+        if (activeCode in checkMap) {
+            checkMap[activeCode]?.visibility = View.VISIBLE
+        } else if (activeCode.isNotBlank()) {
+            b.checkLocationCustom.visibility = View.VISIBLE
+            b.textCustomServerSub.text = "Active: $activeCode"
+        } else {
+            b.checkLocationAuto.visibility = View.VISIBLE
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Virtual location")
-            .setSingleChoiceItems(options, checkedIndex) { dialog, which ->
-                dialog.dismiss()
-                when (which) {
-                    0 -> onApplied("AUTO")
-                    1 -> onApplied("AM")
-                    2 -> onApplied("EU")
-                    3 -> onApplied("AS")
-                    4 -> showCustomProxyDialog(onApplied)
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        fun select(code: String) {
+            sheetDialog.dismiss()
+            onApplied(code)
+        }
+
+        b.btnCloseLocationSheet.setOnClickListener { sheetDialog.dismiss() }
+
+        // Standard regions
+        b.rowLocationAuto.setOnClickListener { select("AUTO") }
+        b.rowLocationAm.setOnClickListener { select("AM") }
+        b.rowLocationEu.setOnClickListener { select("EU") }
+        b.rowLocationAs.setOnClickListener { select("AS") }
+
+        // Pro dedicated countries
+        b.rowLocationUs.setOnClickListener { select("US") }
+        b.rowLocationGb.setOnClickListener { select("GB") }
+        b.rowLocationDe.setOnClickListener { select("DE") }
+        b.rowLocationNl.setOnClickListener { select("NL") }
+        b.rowLocationCa.setOnClickListener { select("CA") }
+        b.rowLocationJp.setOnClickListener { select("JP") }
+        b.rowLocationKr.setOnClickListener { select("KR") }
+        b.rowLocationSg.setOnClickListener { select("SG") }
+        b.rowLocationHk.setOnClickListener { select("HK") }
+        b.rowLocationIn.setOnClickListener { select("IN") }
+
+        // Custom Private Server
+        b.rowLocationCustom.setOnClickListener {
+            sheetDialog.dismiss()
+            showCustomProxyDialog(onApplied)
+        }
+
+        sheetDialog.show()
     }
 
     private fun showCustomProxyDialog(onApplied: ((String) -> Unit)? = null) {
         val input = EditText(this).apply {
             hint = "host:port (e.g. 1.2.3.4:1080)"
             val saved = com.adshield.app.engine.VpnEngine.getCustomProxy(this@MediaHubActivity)
-            if (saved !in setOf("AM", "EU", "AS")) {
+            if (saved !in com.adshield.app.engine.FokkTunnelEngine.REGION_NODES.keys) {
                 setText(saved)
             }
             setSingleLine(true)

@@ -26,33 +26,84 @@ object FokkTunnelEngine {
 
     data class PrivacyNode(val host: String, val port: Int, val isHttpConnect: Boolean = true)
 
-    // High-speed verified regional privacy clusters (HTTP CONNECT & SOCKS5)
-    val REGION_NODES = mapOf(
-        "AM" to listOf(
-            PrivacyNode("198.199.86.11", 3128, true),     // US (New York)
-            PrivacyNode("209.97.150.167", 3128, true),    // US (San Francisco)
-            PrivacyNode("159.203.61.169", 3128, true),    // Canada (Toronto)
-            PrivacyNode("184.75.221.82", 3118, true),     // Canada
-            PrivacyNode("34.43.46.91", 80, true),         // US (GCP)
-            PrivacyNode("167.99.3.26", 5511, true)        // US
-        ),
-        "EU" to listOf(
-            PrivacyNode("161.35.70.249", 80, true),       // Germany (Frankfurt)
-            PrivacyNode("187.33.150.169", 3128, true),    // Spain (Madrid)
-            PrivacyNode("134.209.29.120", 3128, true),    // UK (London)
-            PrivacyNode("194.182.187.78", 3128, true),    // Austria (Vienna)
-            PrivacyNode("103.237.102.191", 11111, true)   // Germany
-        ),
-        "AS" to listOf(
-            PrivacyNode("211.188.50.146", 80, true),      // South Korea
-            PrivacyNode("211.188.55.218", 80, true),      // South Korea
-            PrivacyNode("139.162.78.109", 8080, true),    // Japan (Tokyo)
-            PrivacyNode("101.36.112.205", 1081, true),    // Hong Kong
-            PrivacyNode("1.20.178.201", 80, true),        // Thailand
-            PrivacyNode("43.202.114.177", 10101, true)    // South Korea
-        )
+    // Verified live SOCKS5 & HTTP CONNECT nodes for Fokk Pro Dedicated Countries
+    val US_NODES = listOf(
+        PrivacyNode("142.54.239.1", 4145, false),     // US (Los Angeles, CA) - SOCKS5
+        PrivacyNode("199.102.107.145", 4145, false),  // US (Beverly Hills, CA) - SOCKS5
+        PrivacyNode("68.71.251.134", 4145, false),    // US (Los Angeles, CA) - SOCKS5
+        PrivacyNode("142.54.236.97", 4145, false),    // US (Los Angeles, CA) - SOCKS5
+        PrivacyNode("34.43.46.91", 80, true)          // US (Google Cloud Central) - HTTP CONNECT
     )
 
+    val CA_NODES = listOf(
+        PrivacyNode("184.75.221.82", 3118, true),     // Canada (Toronto) - HTTP CONNECT
+        PrivacyNode("142.54.237.34", 4145, false)     // Canada - SOCKS5
+    )
+
+    val GB_NODES = listOf(
+        PrivacyNode("141.147.109.224", 1080, false),  // UK (London Oracle Cloud Edge) - SOCKS5
+        PrivacyNode("192.252.210.233", 4145, false)   // UK (London) - SOCKS5
+    )
+
+    val DE_NODES = listOf(
+        PrivacyNode("89.144.53.75", 3128, true)       // Germany (Frankfurt am Main) - HTTP CONNECT
+    )
+
+    val NL_NODES = listOf(
+        PrivacyNode("45.61.129.165", 9050, false),    // Netherlands (Amsterdam) - SOCKS5
+        PrivacyNode("213.176.74.119", 1080, true)     // Netherlands (Amsterdam) - HTTP CONNECT
+    )
+
+    val JP_NODES = listOf(
+        PrivacyNode("101.36.104.239", 10808, false),  // Japan (Tokyo) - SOCKS5
+        PrivacyNode("101.36.104.46", 10808, false)    // Japan (Tokyo) - SOCKS5
+    )
+
+    val KR_NODES = listOf(
+        PrivacyNode("183.106.215.208", 1080, false),  // South Korea (Pohang) - SOCKS5
+        PrivacyNode("211.188.50.146", 80, true)       // South Korea (NAVER Cloud) - HTTP CONNECT
+    )
+
+    val SG_NODES = listOf(
+        PrivacyNode("188.166.178.163", 1088, false),  // Singapore (DigitalOcean) - SOCKS5
+        PrivacyNode("4.144.146.21", 80, true),        // Singapore (Microsoft Azure) - HTTP CONNECT
+        PrivacyNode("8.219.97.248", 80, true)         // Singapore (Alibaba Cloud) - HTTP CONNECT
+    )
+
+    val HK_NODES = listOf(
+        PrivacyNode("123.58.219.171", 10808, false),  // Hong Kong - SOCKS5
+        PrivacyNode("103.119.1.160", 5555, false)     // Hong Kong - SOCKS5
+    )
+
+    val IN_NODES = listOf(
+        PrivacyNode("82.180.146.251", 10800, false),  // India (Mumbai) - SOCKS5
+        PrivacyNode("45.114.142.178", 80, true)       // India (Hyderabad) - HTTP CONNECT
+    )
+
+    val AM_NODES = US_NODES + CA_NODES
+    val EU_NODES = GB_NODES + DE_NODES + NL_NODES
+    val AS_NODES = JP_NODES + KR_NODES + SG_NODES + HK_NODES + IN_NODES
+
+    // High-speed verified regional & country clusters
+    val REGION_NODES: Map<String, List<PrivacyNode>> = mapOf(
+        // Standard Continental Regions
+        "AM" to AM_NODES,
+        "EU" to EU_NODES,
+        "AS" to AS_NODES,
+        // Fokk Pro Dedicated Countries
+        "US" to US_NODES,
+        "GB" to GB_NODES,
+        "DE" to DE_NODES,
+        "NL" to NL_NODES,
+        "CA" to CA_NODES,
+        "JP" to JP_NODES,
+        "KR" to KR_NODES,
+        "SG" to SG_NODES,
+        "HK" to HK_NODES,
+        "IN" to IN_NODES
+    )
+
+    private val roundRobinCounter = java.util.concurrent.atomic.AtomicInteger(0)
     private val threadPool = Executors.newCachedThreadPool()
     private var serverSocket: ServerSocket? = null
     @Volatile
@@ -201,13 +252,13 @@ object FokkTunnelEngine {
 
     private fun connectToNode(targetHost: String, targetPort: Int): Socket? {
         val nodes: List<PrivacyNode> = if (currentRegion in REGION_NODES.keys) {
-            // Strict regional isolation: never leak across continents if user selected a region
+            // Strict regional/country isolation
             REGION_NODES[currentRegion].orEmpty()
         } else {
             // AUTO: round-robin evenly across AM, EU, and AS
-            val am = REGION_NODES["AM"].orEmpty()
-            val eu = REGION_NODES["EU"].orEmpty()
-            val asNodes = REGION_NODES["AS"].orEmpty()
+            val am = AM_NODES
+            val eu = EU_NODES
+            val asNodes = AS_NODES
             val maxLen = maxOf(am.size, maxOf(eu.size, asNodes.size))
             val interleaved = mutableListOf<PrivacyNode>()
             for (i in 0 until maxLen) {
@@ -218,11 +269,15 @@ object FokkTunnelEngine {
             interleaved
         }
 
-        for (node in nodes) {
+        if (nodes.isEmpty()) return null
+
+        val offset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % nodes.size
+        for (k in nodes.indices) {
+            val node = nodes[(offset + k) % nodes.size]
             try {
                 val proxySock = Socket()
-                proxySock.connect(InetSocketAddress(node.host, node.port), 1_800)
-                proxySock.soTimeout = 10_000
+                proxySock.connect(InetSocketAddress(node.host, node.port), 2_000)
+                proxySock.soTimeout = 12_000
 
                 if (node.isHttpConnect) {
                     val connectReq = "CONNECT $targetHost:$targetPort HTTP/1.1\r\nHost: $targetHost:$targetPort\r\nProxy-Connection: Keep-Alive\r\n\r\n"

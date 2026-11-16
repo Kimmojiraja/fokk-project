@@ -152,12 +152,12 @@
                 android:backgroundTint="#1E293B">
 
                 <ImageView
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
+                    android:id="@+id/imgSelectedLocationFlag"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
                     android:layout_gravity="center"
-                    android:src="@drawable/ic_globe"
-                    app:tint="#00E5FF"
-                    android:contentDescription="Location Globe" />
+                    android:src="@drawable/ic_flag_optimal"
+                    android:contentDescription="Location Flag" />
             </FrameLayout>
 
             <LinearLayout

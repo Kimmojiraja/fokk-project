@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="36dp"
+    android:height="36dp"
+    android:viewportWidth="36"
+    android:viewportHeight="36">
+    <group>
+        <clip-path android:pathData="M18,18m-17,0a17,17 0,1 0,34 0a17,17 0,1 0,-34 0" />
+        <!-- Red Field -->
+        <path android:fillColor="#DE2910" android:pathData="M0,0h36v36h-36z" />
+        <!-- Bauhinia Flower Emblem -->
+        <path android:fillColor="#FFFFFF" android:pathData="M18,11C19.5,13 18.5,15.5 18,18C17.5,15.5 16.5,13 18,11ZM24,14C24,16 22,17.5 18,18C22,18.5 24,20 24,22ZM21,24C19.5,25 17.5,23.5 18,18C16.5,21.5 14.5,24 13,24ZM12,14C12,16 14,17.5 18,18C14,18.5 12,20 12,22Z" />
+    </group>
+    <path
+        android:strokeColor="#334155"
+        android:strokeWidth="1.5"
+        android:pathData="M18,18m-17,0a17,17 0,1 0,34 0a17,17 0,1 0,-34 0" />
+</vector>
