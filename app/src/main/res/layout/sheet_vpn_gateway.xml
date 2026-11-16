@@ -270,9 +270,7 @@
             <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/switchBypassSearch"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:thumbTint="@color/switch_thumb_colors"
-                app:trackTint="@color/switch_track_colors" />
+                android:layout_height="wrap_content" />
         </LinearLayout>
 
         <!-- Protect Your Privacy: Pro Banner (Gradient Card with Shield) -->
