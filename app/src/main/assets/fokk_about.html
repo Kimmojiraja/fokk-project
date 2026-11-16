@@ -10,12 +10,13 @@
             --fokk-cyan: #00E5FF;
             --fokk-purple: #9D7BFC;
             --fokk-green: #10B981;
-            --fokk-red: #EF4444;
+            --fokk-gold: #F59E0B;
             --text-primary: #F3F4F6;
             --text-secondary: #9CA3AF;
-            --text-muted: #6B7280;
+            --text-muted: #64748B;
             --hairline: rgba(255, 255, 255, 0.08);
-            --pill-bg: rgba(255, 255, 255, 0.05);
+            --pill-bg: rgba(255, 255, 255, 0.04);
+            --item-hover: rgba(255, 255, 255, 0.06);
         }
 
         @media (prefers-color-scheme: light) {
@@ -24,12 +25,13 @@
                 --fokk-cyan: #0284C7;
                 --fokk-purple: #7C3AED;
                 --fokk-green: #059669;
-                --fokk-red: #DC2626;
+                --fokk-gold: #D97706;
                 --text-primary: #0F172A;
                 --text-secondary: #475569;
                 --text-muted: #64748B;
-                --hairline: rgba(0, 0, 0, 0.1);
-                --pill-bg: rgba(0, 0, 0, 0.05);
+                --hairline: rgba(0, 0, 0, 0.08);
+                --pill-bg: rgba(0, 0, 0, 0.03);
+                --item-hover: rgba(0, 0, 0, 0.06);
             }
         }
 
@@ -38,12 +40,13 @@
             --fokk-cyan: #0284C7;
             --fokk-purple: #7C3AED;
             --fokk-green: #059669;
-            --fokk-red: #DC2626;
+            --fokk-gold: #D97706;
             --text-primary: #0F172A;
             --text-secondary: #475569;
             --text-muted: #64748B;
-            --hairline: rgba(0, 0, 0, 0.1);
-            --pill-bg: rgba(0, 0, 0, 0.05);
+            --hairline: rgba(0, 0, 0, 0.08);
+            --pill-bg: rgba(0, 0, 0, 0.03);
+            --item-hover: rgba(0, 0, 0, 0.06);
         }
 
         * {
@@ -67,7 +70,7 @@
 
         .container {
             width: 100%;
-            max-width: 600px;
+            max-width: 640px;
             display: flex;
             flex-direction: column;
         }
@@ -78,7 +81,7 @@
             align-items: center;
             justify-content: space-between;
             width: 100%;
-            padding-bottom: 20px;
+            padding-bottom: 18px;
             margin-bottom: 24px;
             border-bottom: 1px solid var(--hairline);
         }
@@ -100,7 +103,7 @@
         }
 
         .btn-back:active {
-            background: rgba(255, 255, 255, 0.12);
+            background: var(--item-hover);
             color: var(--text-primary);
         }
 
@@ -115,9 +118,17 @@
             border-radius: 12px;
         }
 
-        /* Hero Identity - Unboxed */
+        @font-face {
+            font-family: 'Sora';
+            src: url('Sora-Bold.ttf') format('truetype');
+            font-weight: 700 800;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        /* Hero Identity - Clean & Unboxed */
         .hero-section {
-            padding-bottom: 28px;
+            padding-bottom: 26px;
             margin-bottom: 28px;
             border-bottom: 1px solid var(--hairline);
         }
@@ -135,14 +146,6 @@
             border-radius: 14px;
             object-fit: cover;
             background: #111;
-        }
-
-        @font-face {
-            font-family: 'Sora';
-            src: url('Sora-Bold.ttf') format('truetype');
-            font-weight: 700 800;
-            font-style: normal;
-            font-display: swap;
         }
 
         .hero-title {
@@ -170,20 +173,20 @@
             font-size: 14px;
             line-height: 1.6;
             color: var(--text-secondary);
-            margin-top: 6px;
+            margin-top: 8px;
         }
 
-        /* Editorial Section - Unboxed */
+        /* Editorial Sections */
         .editorial-section {
-            padding-bottom: 30px;
-            margin-bottom: 30px;
+            padding-bottom: 28px;
+            margin-bottom: 28px;
             border-bottom: 1px solid var(--hairline);
         }
 
         .section-header {
             display: flex;
-            align-items: center;
-            gap: 10px;
+            flex-direction: column;
+            gap: 4px;
             margin-bottom: 14px;
         }
 
@@ -191,12 +194,13 @@
             font-size: 10.5px;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.8px;
+            letter-spacing: 0.1em;
             color: var(--fokk-cyan);
         }
 
         .section-title {
-            font-size: 18px;
+            font-family: 'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 19px;
             font-weight: 700;
             color: var(--text-primary);
             letter-spacing: -0.3px;
@@ -213,29 +217,26 @@
             color: var(--text-primary);
         }
 
-        /* Power Features Grid */
-        .feature-grid {
+        /* Unboxed Item Rows */
+        .feature-list {
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            margin-top: 14px;
+            gap: 16px;
+            margin-top: 8px;
         }
 
-        .feature-card {
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .feature-indicator {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
             background: var(--pill-bg);
             border: 1px solid var(--hairline);
-            border-radius: 14px;
-            padding: 14px 16px;
-            display: flex;
-            gap: 14px;
-            align-items: flex-start;
-        }
-
-        .feature-icon-box {
-            width: 32px;
-            height: 32px;
-            border-radius: 10px;
-            background: rgba(0, 229, 255, 0.1);
             color: var(--fokk-cyan);
             display: flex;
             align-items: center;
@@ -244,107 +245,175 @@
             margin-top: 2px;
         }
 
-        .feature-title {
+        .feature-body {
+            flex: 1;
+        }
+
+        .feature-headline {
             font-size: 14px;
             font-weight: 700;
             color: var(--text-primary);
-            margin-bottom: 4px;
             letter-spacing: -0.2px;
+            margin-bottom: 3px;
         }
 
-        .feature-desc {
+        .feature-copy {
             font-size: 12.5px;
             line-height: 1.55;
             color: var(--text-secondary);
         }
 
-        /* 4-Layer Defense - Unboxed Rows */
-        .defense-steps {
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
+        /* Platform Matrix Grid */
+        .platform-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
             margin-top: 10px;
         }
 
-        .defense-step-row {
-            display: flex;
-            gap: 14px;
+        @media (max-width: 480px) {
+            .platform-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
-        .step-num {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: rgba(0, 229, 255, 0.1);
-            color: var(--fokk-cyan);
-            font-size: 12px;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            margin-top: 2px;
+        .platform-box {
+            padding: 12px 14px;
+            border-left: 2px solid var(--fokk-cyan);
+            background: var(--pill-bg);
+            border-radius: 0 10px 10px 0;
         }
 
-        .step-body {
-            flex: 1;
-        }
-
-        .step-title {
+        .platform-name {
             font-size: 13.5px;
             font-weight: 700;
             color: var(--text-primary);
             margin-bottom: 3px;
         }
 
-        .step-desc {
-            font-size: 12.5px;
-            line-height: 1.55;
+        .platform-detail {
+            font-size: 11.5px;
+            line-height: 1.5;
             color: var(--text-secondary);
         }
 
-        /* Crypto Support - Unboxed Minimal Pills */
-        .crypto-grid {
-            display: flex;
-            flex-direction: column;
+        /* Dedicated Countries Grid */
+        .country-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
             gap: 10px;
             margin-top: 12px;
         }
 
-        .crypto-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: var(--pill-bg);
-            border: 1px solid var(--hairline);
-            border-radius: 12px;
-            padding: 10px 14px;
-        }
-
-        .crypto-left {
+        .country-row {
             display: flex;
             align-items: center;
             gap: 10px;
+            padding: 8px 12px;
+            background: var(--pill-bg);
+            border-radius: 10px;
+            border: 1px solid var(--hairline);
+        }
+
+        .country-code-pill {
+            font-size: 10px;
+            font-weight: 800;
+            padding: 3px 6px;
+            border-radius: 6px;
+            background: rgba(0, 229, 255, 0.12);
+            color: var(--fokk-cyan);
+            letter-spacing: 0.5px;
+        }
+
+        .country-name {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Community & Links */
+        .links-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 12px 0 20px 0;
+        }
+
+        .link-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: var(--pill-bg);
+            border: 1px solid var(--hairline);
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.15s ease;
+        }
+
+        .link-row:active {
+            background: var(--item-hover);
+        }
+
+        .link-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .link-title {
+            font-size: 13.5px;
+            font-weight: 700;
+        }
+
+        .link-sub {
+            font-size: 11.5px;
+            color: var(--text-secondary);
+            margin-top: 1px;
+        }
+
+        /* Crypto Tip Jar */
+        .crypto-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .crypto-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 9px 12px;
+            border-radius: 10px;
+            background: var(--pill-bg);
+            border: 1px solid var(--hairline);
+        }
+
+        .crypto-token {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             overflow: hidden;
         }
 
-        .crypto-badge {
-            font-size: 11px;
+        .token-badge {
+            font-size: 10.5px;
             font-weight: 800;
-            padding: 2px 7px;
+            padding: 2px 6px;
             border-radius: 6px;
-            background: rgba(255, 255, 255, 0.08);
-            color: #FFF;
+            color: #000;
         }
 
-        .crypto-addr {
+        .token-addr {
             font-family: monospace;
             font-size: 11px;
             color: var(--text-secondary);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            max-width: 220px;
+            max-width: 200px;
         }
 
         .btn-copy {
@@ -353,8 +422,8 @@
             color: var(--fokk-cyan);
             font-size: 11px;
             font-weight: 700;
-            padding: 5px 11px;
-            border-radius: 8px;
+            padding: 4px 10px;
+            border-radius: 7px;
             cursor: pointer;
             transition: all 0.15s ease;
             flex-shrink: 0;
@@ -365,61 +434,7 @@
             color: #000;
         }
 
-        /* Community & Fundraising Cards */
-        .sponsor-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin: 14px 0 20px 0;
-        }
-
-        .sponsor-card {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: var(--pill-bg);
-            border: 1px solid var(--hairline);
-            border-radius: 12px;
-            padding: 12px 14px;
-            text-decoration: none;
-            color: var(--text-primary);
-            transition: all 0.15s ease;
-        }
-
-        .sponsor-card:active {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .sponsor-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .sponsor-icon-disc {
-            width: 32px;
-            height: 32px;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.08);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .sponsor-title {
-            font-size: 13.5px;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .sponsor-sub {
-            font-size: 11.5px;
-            color: var(--text-secondary);
-            margin-top: 2px;
-        }
-
-        /* Disclaimer & Open Source Accordions */
+        /* Collapsible details */
         .details-block {
             margin-top: 8px;
             cursor: pointer;
@@ -453,7 +468,6 @@
             padding-top: 6px;
         }
 
-        /* Footer */
         .footer-note {
             text-align: center;
             font-size: 12px;
@@ -470,7 +484,7 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 <span>Start Page</span>
             </a>
-            <span class="brand-badge">Mission &amp; Transparency</span>
+            <span class="brand-badge">Mission &amp; Architecture</span>
         </div>
 
         <!-- 1. Hero Identity -->
@@ -479,221 +493,268 @@
                 <img src="fokk_logo.png" alt="Fokk Logo" class="hero-logo-img" onerror="this.src='ic_fokk_logo.png'">
                 <div>
                     <h1 class="hero-title">Fokk</h1>
-                    <div class="version-tag">Version 2.1.0</div>
+                    <div class="version-tag">Version 2.6.2 &bull; Multi-Platform</div>
                 </div>
             </div>
             <p class="hero-tagline">
-                A fast, privacy-focused Android web browser built for on-device content filtering, background-free media playback, and torrent streaming.
+                An independent, privacy-first web browser engineered for client-side content filtering, background media streaming, oblivious relay routing, and real-time truth verification across Android, Linux, Windows, and macOS.
             </p>
         </div>
 
-        <!-- 2. Core Capabilities -->
+        <!-- 2. Multi-Platform Architecture -->
         <div class="editorial-section">
             <div class="section-header">
-                <span class="section-tag">Core Features</span>
-                <h2 class="section-title">Built for Performance &amp; Privacy</h2>
+                <span class="section-tag">Multi-Platform Ecosystem</span>
+                <h2 class="section-title">Engineered Across Four Operating Systems</h2>
             </div>
             <p class="paragraph">
-                Engineered for maximum browsing speed, low RAM overhead, and zero user profiling. All filtering and sanitization logic executes 100% on your device.
+                Fokk maintains identical privacy guarantees, zero telemetry, and tracker immunity across mobile and desktop environments:
             </p>
-            <div class="defense-steps">
-                <div class="defense-step-row">
-                    <div class="step-num">1</div>
-                    <div class="step-body">
-                        <div class="step-title">Document-Start Video &amp; Social Filtering</div>
-                        <div class="step-desc">Intercepts YouTube and social network connections at document start, sanitizing ad payloads before the player initializes. Videos load instantly with seamless background audio.</div>
-                    </div>
+            <div class="platform-grid">
+                <div class="platform-box">
+                    <div class="platform-name">Android</div>
+                    <div class="platform-detail">Document-start request interception, dual-deck split viewport, native WebTorrent streaming, isolated private profiles (fokk_private), and true AMOLED pure-black dark theme.</div>
                 </div>
-                <div class="defense-step-row">
-                    <div class="step-num">2</div>
-                    <div class="step-body">
-                        <div class="step-title">In-Browser WebTorrent &amp; Magnet Streaming</div>
-                        <div class="step-desc">Streams video and audio directly in your browser tabs from magnet links and .torrent files via WebRTC and BitTorrent without third-party apps.</div>
-                    </div>
+                <div class="platform-box">
+                    <div class="platform-name">Linux</div>
+                    <div class="platform-detail">Native Debian (.deb) and Universal (.AppImage) packages with high-efficiency ad neutralization, system dark mode synchronization, and local history management.</div>
                 </div>
-                <div class="defense-step-row">
-                    <div class="step-num">3</div>
-                    <div class="step-body">
-                        <div class="step-title">Dual-Deck Split Viewport</div>
-                        <div class="step-desc">Run two independent live web tabs simultaneously in a stacked vertical split view for multitasking and video watching while reading.</div>
-                    </div>
+                <div class="platform-box">
+                    <div class="platform-name">Windows</div>
+                    <div class="platform-detail">Portable 64-bit release for Windows 10/11 with zero installer overhead, instant startup, unified tab sessions, and integrated downloads tracking.</div>
                 </div>
-                <div class="defense-step-row">
-                    <div class="step-num">4</div>
-                    <div class="step-body">
-                        <div class="step-title">1-Tap Paywall Mirror &amp; Reader Mode</div>
-                        <div class="step-desc">Access clean archived versions of paywalled articles or switch to a distraction-free high-contrast reader mode with on-device text summarization.</div>
-                    </div>
-                </div>
-                <div class="defense-step-row">
-                    <div class="step-num">5</div>
-                    <div class="step-body">
-                        <div class="step-title">Isolated Private Profile (fokk_private)</div>
-                        <div class="step-desc">Private tabs operate in a physically segregated OS directory and process. Storage, cookies, and cache are strictly isolated and purged on exit.</div>
-                    </div>
-                </div>
-                <div class="defense-step-row">
-                    <div class="step-num">6</div>
-                    <div class="step-body">
-                        <div class="step-title">AMOLED Pure-Black Dark Theme</div>
-                        <div class="step-desc">Hardware-accelerated dark engine that formats web backgrounds to true #000000 black, optimizing visual contrast and extending battery life on OLED displays.</div>
-                    </div>
+                <div class="platform-box">
+                    <div class="platform-name">macOS</div>
+                    <div class="platform-detail">Universal application supporting Apple Silicon and Intel Macs with native keyboard shortcuts, high-DPI retina rendering, and isolated local storage sandboxing.</div>
                 </div>
             </div>
         </div>
 
-        <!-- 3. Local Privacy Architecture -->
+        <!-- 3. Core Capabilities -->
         <div class="editorial-section">
             <div class="section-header">
-                <span class="section-tag">Privacy Architecture</span>
-                <h2 class="section-title">On-Device Security by Design</h2>
+                <span class="section-tag">Core Capabilities</span>
+                <h2 class="section-title">Client-Side Engineering by Design</h2>
             </div>
             <p class="paragraph">
-                <strong>100% Local Execution:</strong> All ad neutralization, script scrubbing, and content filters run locally on your device. Your web requests and browsing history are never routed through third-party proxy servers or analytical intermediaries.
+                Every component operates with low latency, minimal memory overhead, and zero analytical profiling. All filtering and routing execution happens locally on your hardware.
             </p>
-            <p class="paragraph">
-                <strong>Encrypted DNS:</strong> Integrates with encrypted DNS-over-HTTPS (DoH) and Android Private DNS providers (including AdGuard DNS, Mullvad, Cloudflare, and Control D) to shield domain queries from network-level inspection at full line speed.
-            </p>
-            <p class="paragraph" style="margin-bottom: 0;">
-                <strong>Zero Telemetry:</strong> Fokk contains zero analytics SDKs, collects no tracking metrics, and performs no background user profiling.
-            </p>
+            <div class="feature-list">
+                <div class="feature-item">
+                    <div class="feature-indicator">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </div>
+                    <div class="feature-body">
+                        <div class="feature-headline">AdShield Filtering Engine</div>
+                        <div class="feature-copy">Intercepts network connections and player payloads at document start, excising ad sequences and tracking beacons before web players initialize—without artificial playback fast-forwarding or broken layouts.</div>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-indicator">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>
+                    </div>
+                    <div class="feature-body">
+                        <div class="feature-headline">Fokk Relay (Oblivious Split-Trust)</div>
+                        <div class="feature-copy">Decouples source user identity from destination traffic via cryptographic multi-hop nodes. Injects packet timing micro-jitter into active sessions to actively defeat deep packet inspection and traffic fingerprinting.</div>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-indicator">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
+                    <div class="feature-body">
+                        <div class="feature-headline">Fokk AI Truth Engine</div>
+                        <div class="feature-copy">Real-time forensic verification, bias auditing, and community fact-checking directly over social media feeds (X, Reddit, Threads, YouTube). Operates with privacy-preserving local heuristics.</div>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-indicator">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                    </div>
+                    <div class="feature-body">
+                        <div class="feature-headline">Native Media Hub &amp; WebTorrent</div>
+                        <div class="feature-copy">Streams audio and video directly in your browser tabs from magnet links and .torrent files over native WebRTC without external apps, with continuous background playback.</div>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-indicator">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    </div>
+                    <div class="feature-body">
+                        <div class="feature-headline">Isolated Private Sandboxing</div>
+                        <div class="feature-copy">Private sessions run in a segregated operating system process and directory (fokk_private). Cookies, storage caches, and history are completely purged upon closing the session.</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- 4. Default Search Engine -->
+        <!-- 4. Dedicated Relay Nodes (Fokk Pro) -->
         <div class="editorial-section">
             <div class="section-header">
-                <span class="section-tag">Search Engine</span>
-                <h2 class="section-title">Microsoft Bing Default</h2>
+                <span class="section-tag">Fokk Relay Pro</span>
+                <h2 class="section-title">Dedicated Global Exit Locations</h2>
             </div>
             <p class="paragraph">
-                Fokk configures <strong>Microsoft Bing</strong> as the default search engine, delivering rapid global web indexing, deep multimedia results, and intelligent discovery without invasive user tracking or cross-site profiling.
+                Fokk Pro subscribers receive access to dedicated high-speed exit locations across 10 global regions, providing encrypted oblivious transit with zero network logging:
             </p>
-            <p class="paragraph" style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 0;">
-                You retain complete control: easily switch between Bing, Brave Search, DuckDuckGo, Google, Ecosia, and Startpage at any time via the quick search switcher or Browser Menu &rarr; Search Engine.
+            <div class="country-grid">
+                <div class="country-row">
+                    <span class="country-code-pill">US</span>
+                    <span class="country-name">United States</span>
+                </div>
+                <div class="country-row">
+                    <span class="country-code-pill">UK</span>
+                    <span class="country-name">United Kingdom</span>
+                </div>
+                <div class="country-row">
+                    <span class="country-code-pill">DE</span>
+                    <span class="country-name">Germany</span>
+                </div>
+                <div class="country-row">
+                    <span class="country-code-pill">NL</span>
+                    <span class="country-name">Netherlands</span>
+                </div>
+                <div class="country-row">
+                    <span class="country-code-pill">CA</span>
+                    <span class="country-name">Canada</span>
+                </div>
+                <div class="country-row">
+                    <span class="country-code-pill">JP</span>
+                    <span class="country-name">Japan</span>
+                </div>
+                <div class="country-row">
+                    <span class="country-code-pill">KR</span>
+                    <span class="country-name">South Korea</span>
+                </div>
+                <div class="country-row">
+                    <span class="country-code-pill">SG</span>
+                    <span class="country-name">Singapore</span>
+                </div>
+                <div class="country-row">
+                    <span class="country-code-pill">HK</span>
+                    <span class="country-name">Hong Kong</span>
+                </div>
+                <div class="country-row">
+                    <span class="country-code-pill">IN</span>
+                    <span class="country-name">India</span>
+                </div>
+            </div>
+            <p class="paragraph" style="font-size: 12px; color: var(--text-muted); margin-top: 14px; margin-bottom: 0;">
+                All core browser features and optimal auto-relay routing remain 100% free and open.
             </p>
         </div>
 
-        <!-- 5. Community Backing & Crypto Tip Jar -->
+        <!-- 5. Community & Sponsoring -->
         <div class="editorial-section" id="fundraising">
             <div class="section-header">
-                <span class="section-tag">Fundraising &amp; Community</span>
-                <h2 class="section-title">Support Fokk Development</h2>
+                <span class="section-tag">Sponsorship</span>
+                <h2 class="section-title">Support Independent Development</h2>
             </div>
             <p class="paragraph">
-                We are seamlessly working on fixing bugs, improving product quality, implementing new advanced features, and actively developing <strong>Fokk AI</strong> and <strong>Fokk Extensions</strong>. As an independent, tracker-free browser, your support keeps development rapid, open, and free from corporate surveillance.
+                Fokk is developed independently without corporate investment or user monetization. Your direct backing powers ongoing bug fixes, security audits, and continuous performance improvements.
             </p>
 
-            <!-- Direct Support & Contribution Cards -->
-            <div class="sponsor-grid">
-                <a href="https://github.com/sponsors/Kimmojiraja" class="sponsor-card">
-                    <div class="sponsor-info">
-                        <div class="sponsor-icon-disc" style="background:#FFF;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="#000"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
-                        </div>
+            <div class="links-list">
+                <a href="https://github.com/sponsors/Kimmojiraja" class="link-row">
+                    <div class="link-meta">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--fokk-gold)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                         <div>
-                            <div class="sponsor-title">Fokk Pro &amp; Sponsorship</div>
-                            <div class="sponsor-sub">github.com/sponsors/Kimmojiraja &bull; $4.99/mo direct backing</div>
+                            <div class="link-title">Fokk Pro &amp; GitHub Sponsors</div>
+                            <div class="link-sub">github.com/sponsors/Kimmojiraja &bull; $4.99/mo direct backing</div>
                         </div>
                     </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-secondary)"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-secondary)"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </a>
 
-                <a href="fokk_contributing.html" class="sponsor-card">
-                    <div class="sponsor-info">
-                        <div class="sponsor-icon-disc" style="background:rgba(0, 229, 255, 0.15); color:var(--fokk-cyan);">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        </div>
+                <a href="fokk_contributing.html" class="link-row">
+                    <div class="link-meta">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--fokk-cyan)"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         <div>
-                            <div class="sponsor-title">Sustainable Business Model &amp; Key</div>
-                            <div class="sponsor-sub">View Pro licensing &amp; activate offline key</div>
+                            <div class="link-title">Contributing Guidelines</div>
+                            <div class="link-sub">Architecture standards &amp; code contributions</div>
                         </div>
                     </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-secondary)"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-secondary)"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </a>
 
-                <a href="https://github.com/Kimmojiraja/fokk-project" class="sponsor-card">
-                    <div class="sponsor-info">
-                        <div class="sponsor-icon-disc" style="background:rgba(16, 185, 129, 0.15); color:var(--fokk-green);">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg>
-                        </div>
+                <a href="https://github.com/Kimmojiraja/fokk-project" class="link-row">
+                    <div class="link-meta">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--fokk-green)"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg>
                         <div>
-                            <div class="sponsor-title">Open to Code Contributors</div>
-                            <div class="sponsor-sub">Report issues, build extensions &amp; submit PRs on GitHub</div>
+                            <div class="link-title">GitHub Repository</div>
+                            <div class="link-sub">Report issues, inspect source, and submit pull requests</div>
                         </div>
                     </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-secondary)"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-secondary)"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </a>
             </div>
 
             <!-- Cryptocurrency Tip Jar -->
             <p class="paragraph" style="font-size:12.5px; color:var(--text-secondary); margin-bottom:10px;">
-                Direct decentralized crypto support (tap Copy to copy receiving address):
+                Direct cryptocurrency support (tap Copy to copy receiving address):
             </p>
-            <div class="crypto-grid">
-                <div class="crypto-item">
-                    <div class="crypto-left">
-                        <span class="crypto-badge" style="background:#F7931A; color:#000;">BTC</span>
-                        <span class="crypto-addr" id="btcAddr">bc1qwxnv6uphj0ke8q50gdx6ew8j3lgvwhk6k2kaet</span>
+            <div class="crypto-list">
+                <div class="crypto-row">
+                    <div class="crypto-token">
+                        <span class="token-badge" style="background:#F7931A;">BTC</span>
+                        <span class="token-addr" id="btcAddr">bc1qwxnv6uphj0ke8q50gdx6ew8j3lgvwhk6k2kaet</span>
                     </div>
                     <button class="btn-copy" onclick="copyAddress('btcAddr', this)">Copy</button>
                 </div>
-                <div class="crypto-item">
-                    <div class="crypto-left">
-                        <span class="crypto-badge" style="background:#627EEA;">ETH</span>
-                        <span class="crypto-addr" id="ethAddr">0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525</span>
+                <div class="crypto-row">
+                    <div class="crypto-token">
+                        <span class="token-badge" style="background:#627EEA; color:#FFF;">ETH</span>
+                        <span class="token-addr" id="ethAddr">0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525</span>
                     </div>
                     <button class="btn-copy" onclick="copyAddress('ethAddr', this)">Copy</button>
                 </div>
-                <div class="crypto-item">
-                    <div class="crypto-left">
-                        <span class="crypto-badge" style="background:#F0B90B; color:#000;">BNB</span>
-                        <span class="crypto-addr" id="bnbAddr">0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525</span>
+                <div class="crypto-row">
+                    <div class="crypto-token">
+                        <span class="token-badge" style="background:#F0B90B;">BNB</span>
+                        <span class="token-addr" id="bnbAddr">0x54BB111a33Cae41F63Bad6E9D1Eb65341f561525</span>
                     </div>
                     <button class="btn-copy" onclick="copyAddress('bnbAddr', this)">Copy</button>
                 </div>
-                <div class="crypto-item">
-                    <div class="crypto-left">
-                        <span class="crypto-badge" style="background:#14F195; color:#000;">SOL</span>
-                        <span class="crypto-addr" id="solAddr">DqgAgDj4PjvR4K1wtYfpaZuYNeNZgj2fQoKnXApWKuTj</span>
+                <div class="crypto-row">
+                    <div class="crypto-token">
+                        <span class="token-badge" style="background:#14F195;">SOL</span>
+                        <span class="token-addr" id="solAddr">DqgAgDj4PjvR4K1wtYfpaZuYNeNZgj2fQoKnXApWKuTj</span>
                     </div>
                     <button class="btn-copy" onclick="copyAddress('solAddr', this)">Copy</button>
                 </div>
             </div>
         </div>
 
-        <!-- 6. Privacy & Sandboxing Guarantee -->
-        <div class="editorial-section">
+        <!-- 6. Privacy & Licensing -->
+        <div class="editorial-section" style="border-bottom: none; padding-bottom: 0;">
             <div class="section-header">
-                <span class="section-tag">Privacy Policy</span>
+                <span class="section-tag">Privacy Policy &amp; License</span>
                 <h2 class="section-title">Zero Data Retention</h2>
             </div>
             <p class="paragraph">
-                All bookmarks, history, and shortcut settings are stored exclusively in your local device sandbox:
+                All bookmarks, history, and configuration files are stored exclusively in your local device sandbox:
                 <br><code style="color:var(--fokk-cyan); font-size:11.5px;">/data/data/com.adshield.app/</code>
             </p>
-            <p class="paragraph" style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 0;">
-                No telemetry server exists. No analytical cookies are collected. No IP addresses are logged.
+            <p class="paragraph" style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px;">
+                No analytical telemetry servers exist. No usage cookies are gathered. No IP addresses are logged.
             </p>
-        </div>
 
-        <!-- 7. Disclaimers & Licenses (Collapsible) -->
-        <div class="editorial-section" style="border-bottom: none; padding-bottom: 0;">
             <details class="details-block">
                 <summary class="details-summary">Legal &amp; Fair-Use Notice</summary>
                 <div class="details-content">
-                    Fokk operates strictly on the client side. Web filtering, cookie suppression, and ad neutralization are applied locally on content delivered to your device under standard user autonomy principles. All third-party trademarks and logos belong to their respective owners.
+                    Fokk operates strictly on the client side. Web filtering, cookie suppression, and ad neutralization are applied locally on content delivered to your device under standard user autonomy principles. All product names and registered trademarks remain the property of their respective owners.
                 </div>
             </details>
             <details class="details-block">
-                <summary class="details-summary">Open Source License (Apache 2.0)</summary>
+                <summary class="details-summary">Open Source License (Apache 2.0 &amp; MIT)</summary>
                 <div class="details-content">
-                    Fokk Browser Project is open-source software licensed under the <strong>Apache License, Version 2.0</strong>. You may obtain a copy of the License at <code style="color:var(--fokk-cyan)">http://www.apache.org/licenses/LICENSE-2.0</code>.
+                    Fokk Browser Project is open-source software licensed under the <strong>Apache License, Version 2.0</strong> (Android components) and <strong>MIT License</strong> (Desktop components).
                 </div>
             </details>
         </div>
 
         <div class="footer-note">
-            &copy; 2026 Fokk Project &bull; Built for user privacy
+            &copy; 2026 Fokk Browser Project &bull; Built for user privacy
         </div>
     </div>
 

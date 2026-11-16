@@ -65,7 +65,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Fokk Relay Pro"
+                            android:text="Fokk Pro"
                             android:textColor="#F8FAFC"
                             android:textSize="18sp"
                             android:textStyle="bold" />
@@ -77,9 +77,9 @@
                             android:background="@drawable/bg_stat_chip"
                             android:paddingHorizontal="6dp"
                             android:paddingVertical="1dp"
-                            android:text="PRIVATE NETWORK"
-                            android:textColor="#A78BFA"
-                            android:textSize="9.5sp"
+                            android:text="$4.99 / MO"
+                            android:textColor="#F59E0B"
+                            android:textSize="10sp"
                             android:textStyle="bold" />
                     </LinearLayout>
 
@@ -87,7 +87,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Military-Grade Stealth &amp; Zero-Log Protection"
+                        android:text="Dedicated Global Relay &amp; AI Truth Engine"
                         android:textColor="#94A3B8"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -111,7 +111,7 @@
             android:layout_height="wrap_content"
             android:background="@drawable/bg_vpn_pro_card"
             android:orientation="vertical"
-            android:padding="18dp">
+            android:padding="16dp">
 
             <RelativeLayout
                 android:layout_width="match_parent"
@@ -138,7 +138,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Ultra-stealth encryption is enabled"
+                        android:text="Dedicated routing and AI verification enabled"
                         android:textColor="#E0E7FF"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -153,19 +153,19 @@
             </RelativeLayout>
         </LinearLayout>
 
-        <!-- Unboxed Features List -->
+        <!-- Section Label -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:layout_marginBottom="12dp"
-            android:text="PRO PRIVACY SUITE"
+            android:text="PRO PRIVACY PILLARS"
             android:textColor="#64748B"
             android:textSize="11.5sp"
             android:textStyle="bold"
             android:letterSpacing="0.08" />
 
-        <!-- Feature 1: Oblivious Split-Trust Dual-Hop -->
+        <!-- Pillar 1: Fokk Relay Pro -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -176,9 +176,9 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_shield_check"
+                android:src="@drawable/ic_fokk_relay"
                 app:tint="#38BDF8"
-                android:contentDescription="Split-Trust" />
+                android:contentDescription="Fokk Relay Pro" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -190,7 +190,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Oblivious Dual-Hop Split-Trust"
+                    android:text="Fokk Relay Pro — 10 Global Exit Locations"
                     android:textColor="#F8FAFC"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -199,7 +199,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Separates IP identity from destination traffic via Relay + Gateway (OHTTP/MASQUE)"
+                    android:text="Select dedicated exit nodes across US, UK, DE, NL, CA, JP, KR, SG, HK, and IN with Oblivious Split-Trust and packet micro-jitter."
                     android:textColor="#94A3B8"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -210,97 +210,7 @@
             android:layout_height="1dp"
             android:background="#1E293B" />
 
-        <!-- Feature 2: Decentralized Mixnet Jitter -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="12dp">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_lock"
-                app:tint="#A78BFA"
-                android:contentDescription="Mixnet" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Decentralized Mixnet Timing Jitter"
-                    android:textColor="#F8FAFC"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Injects packet micro-jitter to defeat ISP traffic analysis and DPI surveillance"
-                    android:textColor="#94A3B8"
-                    android:textSize="12sp" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#1E293B" />
-
-        <!-- Feature 3: High-Speed 4K Edge Streaming -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="12dp">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_video"
-                app:tint="#F59E0B"
-                android:contentDescription="Streaming" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="4K High-Throughput Edge"
-                    android:textColor="#F8FAFC"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Unrestricted bandwidth for high-definition video streaming"
-                    android:textColor="#94A3B8"
-                    android:textSize="12sp" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#1E293B" />
-
-        <!-- Feature 4: Network Tracker Firewall -->
+        <!-- Pillar 2: Fokk AI Truth Engine -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -312,8 +222,8 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_shield_check"
-                app:tint="#10B981"
-                android:contentDescription="Tracker Firewall" />
+                app:tint="#A78BFA"
+                android:contentDescription="Fokk AI Truth Engine" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -325,7 +235,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="In-Tunnel Tracker Firewall"
+                    android:text="Fokk AI Truth Engine — Social Media Audits"
                     android:textColor="#F8FAFC"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -334,18 +244,29 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Drops surveillance payloads before they touch the browser"
+                    android:text="Real-time forensic verification, bias auditing, and community fact-checking across X, Reddit, Threads, and YouTube feeds."
                     android:textColor="#94A3B8"
                     android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Select Pro Country Node -->
+        <!-- Freemium Guarantee Note -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"
+            android:text="All core features (AdShield ad blocking, native media streaming, WebTorrent, dual split screen, and optimal auto-relay) remain 100% free forever."
+            android:textColor="#64748B"
+            android:textSize="11.5sp"
+            android:lineSpacingExtra="2dp" />
+
+        <!-- Select Pro Country Location Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSelectProCountry"
             android:layout_width="match_parent"
             android:layout_height="44dp"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="16dp"
             android:text="Choose Pro Country Location"
             android:textColor="#FFFFFF"
             android:textSize="14sp"
@@ -357,7 +278,7 @@
             app:strokeWidth="1dp"
             app:cornerRadius="12dp" />
 
-        <!-- Close Button -->
+        <!-- Done / Dismiss Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnDoneProSheet"
             android:layout_width="match_parent"
