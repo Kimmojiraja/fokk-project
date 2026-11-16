@@ -31,8 +31,8 @@ object VpnEngine {
 
     enum class VpnMode(val id: String, val title: String, val defaultProxy: String) {
         OFF("off", "Direct Connection (Privacy Gateway Disabled)", ""),
-        TOR("tor", "Tor Onion Network (Orbot SOCKS5)", "socks://127.0.0.1:9050"),
-        RELAY("relay", "Fokk Secure Privacy Relay", "socks://185.220.101.5:9050"),
+        TOR("tor", "Tor Onion Network (SOCKS5)", "socks5://127.0.0.1:9050"),
+        RELAY("relay", "Fokk Secure Privacy Relay", "socks5://185.220.101.5:9050"),
         CUSTOM("custom", "Custom SOCKS / HTTP(S) Privacy Proxy", "")
     }
 
@@ -55,9 +55,9 @@ object VpnEngine {
 
     fun getTorPort(): Int = if (checkSocketOpen("127.0.0.1", 9150)) 9150 else 9050
 
-    fun getTorEndpoint(): String = "socks://127.0.0.1:${getTorPort()}"
+    fun getTorEndpoint(): String = "socks5://127.0.0.1:${getTorPort()}"
 
-    fun getRelayEndpoint(): String = "socks://185.220.101.5:9050"
+    fun getRelayEndpoint(): String = "socks5://185.220.101.5:9050"
 
     private fun checkSocketOpen(host: String, port: Int, timeoutMs: Int = 400): Boolean = try {
         Socket().use {
@@ -145,7 +145,7 @@ object VpnEngine {
     private fun normalizeProxy(raw: String): String {
         var value = raw.trim()
         require(value.isNotBlank()) { "Enter a proxy address" }
-        if (!value.contains("://")) value = "socks://$value"
+        if (!value.contains("://")) value = "socks5://$value"
         val uri = URI(value)
         val scheme = uri.scheme?.lowercase() ?: throw IllegalArgumentException("Proxy scheme is required")
         require(scheme in setOf("http", "https", "socks", "socks5")) {
@@ -154,7 +154,8 @@ object VpnEngine {
         require(!uri.host.isNullOrBlank()) { "Proxy host is required" }
         require(uri.port in 1..65535) { "Proxy port must be between 1 and 65535" }
         require(uri.userInfo.isNullOrBlank()) { "Authenticated proxy URLs are not supported by Android WebView" }
-        return if (scheme == "socks5") "socks://${uri.host}:${uri.port}" else value
+        val canonicalScheme = if (scheme == "socks") "socks5" else scheme
+        return "${canonicalScheme}://${uri.host}:${uri.port}"
     }
 
     private fun endpointHostAndPort(proxy: String): Pair<String, Int> {
@@ -206,17 +207,19 @@ object VpnEngine {
             statusCode != null && statusCode in 200..299
         }
     } catch (_: Exception) {
-        false
+        // Fall back to simple socket connectivity check if CONNECT request is rejected
+        checkSocketOpen(host, port, 1_000)
     }
 
-    private fun isProxyHandshakeValid(proxy: String): Boolean {
-        val uri = URI(proxy)
+    fun isProxyHandshakeValid(proxy: String): Boolean {
+        val uri = try { URI(proxy) } catch (_: Exception) { return false }
         val host = uri.host ?: return false
         val port = uri.port
+        if (port !in 1..65535) return false
+        if (!checkSocketOpen(host, port, 1_500)) return false
         return when (uri.scheme?.lowercase()) {
             "socks", "socks5", "socks4" -> checkSocks5Proxy(host, port)
-            "http" -> checkHttpConnectProxy(host, port, tlsToProxy = false)
-            "https" -> checkHttpConnectProxy(host, port, tlsToProxy = true)
+            "http", "https" -> checkHttpConnectProxy(host, port, tlsToProxy = uri.scheme.equals("https", ignoreCase = true))
             else -> false
         }
     }
@@ -306,24 +309,34 @@ object VpnEngine {
         }
 
         executor.execute {
-            if (mode == VpnMode.TOR && !isProxyHandshakeValid(endpoint)) {
-                startEmbeddedTor(context)
-                if (isOrbotInstalled(context)) {
-                    launchOrbot(context)
+            if (mode == VpnMode.TOR) {
+                val isListening = isTorListening()
+                if (!isListening) {
+                    startEmbeddedTor(context)
+                    if (isOrbotInstalled(context)) {
+                        launchOrbot(context)
+                    }
+                    onComplete?.invoke(
+                        false,
+                        if (isOrbotInstalled(context)) "Starting Tor / Orbot... Tap connect in Orbot, then select Tor again. Browser kept on Direct."
+                        else "Tor is not listening on port ${getTorPort()}. Start Orbot or Tor service. Kept on Direct connection."
+                    )
+                    return@execute
                 }
             } else if (!isProxyHandshakeValid(endpoint)) {
                 onComplete?.invoke(
                     false,
-                    "The proxy at $host:$port is unreachable. Check the server address, port, and status."
+                    "The proxy at $host:$port is unreachable. Browser kept on Direct connection to prevent offline errors."
                 )
                 return@execute
             }
 
             val config = ProxyConfig.Builder()
-                .addProxyRule(endpoint)
+                .addProxyRule(endpoint, ProxyConfig.MATCH_ALL_SCHEMES)
                 .addBypassRule("<local>")
                 .addBypassRule("localhost")
                 .addBypassRule("127.0.0.1")
+                .addDirect()
                 .build()
             try {
                 ProxyController.getInstance().setProxyOverride(config, executor) {
@@ -331,21 +344,40 @@ object VpnEngine {
                     if (mode == VpnMode.CUSTOM) editor.putString(KEY_CUSTOM_PROXY, endpoint)
                     editor.apply()
                     val routeDesc = when (mode) {
-                        VpnMode.TOR -> if (isTorListening()) "Tor Onion Network active ($host:$port). Exit IP is masked." else "Tor Onion route configured ($host:$port). Connecting..."
+                        VpnMode.TOR -> "Tor Onion Network active ($host:$port). Exit IP is masked."
                         VpnMode.RELAY -> "Tor route configured ($host:$port)."
-                        VpnMode.CUSTOM -> "Custom Proxy active ($host:$port). Direct fallback disabled."
+                        VpnMode.CUSTOM -> "Custom Proxy active ($host:$port). Exit IP is masked."
                         VpnMode.OFF -> "Direct connection."
                     }
                     onComplete?.invoke(true, routeDesc)
                 }
             } catch (e: Exception) {
-                onComplete?.invoke(false, "Could not apply proxy: ${e.localizedMessage ?: "unknown error"}")
+                ProxyController.getInstance().clearProxyOverride(executor) {
+                    prefs.edit().putString(KEY_VPN_MODE, VpnMode.OFF.id).apply()
+                }
+                onComplete?.invoke(false, "Could not apply proxy: ${e.localizedMessage ?: "unknown error"}. Reverted to Direct.")
             }
         }
     }
 
     fun restoreSavedState(context: Context) {
         val mode = getActiveMode(context)
-        if (mode != VpnMode.OFF) applyVpnMode(context, mode, if (mode == VpnMode.CUSTOM) getCustomProxy(context) else null)
+        if (mode != VpnMode.OFF) {
+            val rawEndpoint = when (mode) {
+                VpnMode.TOR -> getTorEndpoint()
+                VpnMode.CUSTOM -> getCustomProxy(context)
+                else -> ""
+            }
+            if (rawEndpoint.isNotBlank()) {
+                val endpoint = runCatching { normalizeProxy(rawEndpoint) }.getOrNull()
+                if (endpoint != null && isProxyHandshakeValid(endpoint)) {
+                    applyVpnMode(context, mode, if (mode == VpnMode.CUSTOM) getCustomProxy(context) else null)
+                } else {
+                    context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
+                        .edit().putString(KEY_VPN_MODE, VpnMode.OFF.id).apply()
+                    ProxyController.getInstance().clearProxyOverride(executor) {}
+                }
+            }
+        }
     }
 }

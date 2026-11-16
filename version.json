@@ -1,6 +1,6 @@
 {
-  "versionCode": 251,
-  "versionName": "2.5.1",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.5.1/app-debug.apk",
-  "changelog": "- Minimalist Privacy Gateway: Clean single bold letter badges (O for Tor, C for Custom, D for Direct), removal of emojis, pills, and wordy descriptions.\n- Streamlined Command Bar: Removed Reader, AI Summary sparkle, and VPN key buttons from the bottom command card for a distraction-free browsing bar (all accessible via 3-dots menu).\n- Context-Aware Curiosity Searches: Deep-dive questions now prepend the article topic/title so search engines receive full context.\n- Sleek Feature Hubs: Cleaned up 3-dots menu feature hub rows by removing sub-explanations and navigation arrows."
+  "versionCode": 252,
+  "versionName": "2.5.2",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.5.2/app-debug.apk",
+  "changelog": "- Critical VPN Offline Bugfix: Fixed Android WebView offline/connection failure (ERR_PROXY_CONNECTION_FAILED) when Tor or Custom VPN is turned on.\n- Strict Proxy Reachability Guard: Prevents WebView from routing traffic to closed ports or unreachable proxies; cleanly falls back to Direct connection.\n- SOCKS5 Remote DNS Resolution: Preserves socks5:// scheme and adds MATCH_ALL_SCHEMES and addDirect() fallback so all HTTP and HTTPS traffic resolves securely without offline errors.\n- Startup Safe Recovery: Checks saved proxy availability on app launch and automatically resets to Direct mode if the remote proxy is offline."
 }
