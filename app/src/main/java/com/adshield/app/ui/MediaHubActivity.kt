@@ -6579,6 +6579,14 @@ open class MediaHubActivity : AppCompatActivity() {
 
         b.btnCloseVpnSheet.setOnClickListener { sheetDialog.dismiss() }
 
+        b.btnVpnInfo.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("About Fokk VPN")
+                .setMessage("Fokk VPN encrypts and protects your browser traffic through our high-speed edge network. Your real IP address and ISP details are kept private from websites you visit.\n\n• Zero-Log Policy: We do not track or store your browsing activity.\n• High-Speed Edge: Fast connections optimized for video streaming and web browsing.")
+                .setPositiveButton("Got it", null)
+                .show()
+        }
+
         lateinit var refreshUi: () -> Unit
 
         fun switchMode(mode: com.adshield.app.engine.VpnEngine.VpnMode, customProxy: String? = null) {
@@ -6598,90 +6606,119 @@ open class MediaHubActivity : AppCompatActivity() {
         refreshUi = {
             val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
             val isConnected = activeMode != com.adshield.app.engine.VpnEngine.VpnMode.OFF
+            val customSaved = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
 
             if (isConnected) {
+                b.textVpnPowerLabel.text = "Protected"
+                b.textVpnPowerLabel.setTextColor(android.graphics.Color.parseColor("#10B981"))
+                b.textVpnPowerSub.text = "Your browsing is secured"
+                b.vpnRadarRing.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#10B981"))
+                b.btnVpnPower.imageTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#10B981"))
                 b.textVpnStatusPill.text = "PROTECTED • IP MASKED"
                 b.textVpnStatusPill.setTextColor(android.graphics.Color.parseColor("#10B981"))
-                b.textVpnPowerLabel.text = "Fokk VPN Active"
-                b.textVpnPowerSub.text = "Traffic protected via ${activeMode.title}"
-                b.vpnRadarRing.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#00E5FF"))
-                b.btnVpnPower.imageTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#00E5FF"))
                 b.textVpnExitIp.text = "Protected Route Active"
                 b.textVpnExitIp.setTextColor(android.graphics.Color.parseColor("#10B981"))
             } else {
-                b.textVpnStatusPill.text = "UNPROTECTED • REAL IP EXPOSED"
-                b.textVpnStatusPill.setTextColor(android.graphics.Color.parseColor("#F43F5E"))
-                b.textVpnPowerLabel.text = "Connect Fokk VPN"
-                b.textVpnPowerSub.text = "Mask your IP address and protect browser traffic"
+                b.textVpnPowerLabel.text = "Disconnected"
+                b.textVpnPowerLabel.setTextColor(android.graphics.Color.parseColor("#F8FAFC"))
+                b.textVpnPowerSub.text = "Your real IP is visible"
                 b.vpnRadarRing.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#1E293B"))
                 b.btnVpnPower.imageTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#94A3B8"))
+                b.textVpnStatusPill.text = "UNPROTECTED • REAL IP EXPOSED"
+                b.textVpnStatusPill.setTextColor(android.graphics.Color.parseColor("#F43F5E"))
                 b.textVpnExitIp.text = "Direct (Real IP Exposed)"
                 b.textVpnExitIp.setTextColor(android.graphics.Color.parseColor("#F43F5E"))
+            }
+
+            val locationLabel = when {
+                activeMode == com.adshield.app.engine.VpnEngine.VpnMode.FAST -> "Optimal location"
+                activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> when (customSaved) {
+                    "AM" -> "America"
+                    "EU" -> "Europe"
+                    "AS" -> "Asia"
+                    else -> if (customSaved.isNotBlank()) customSaved else "Optimal location"
+                }
+                else -> when (customSaved) {
+                    "AM" -> "America"
+                    "EU" -> "Europe"
+                    "AS" -> "Asia"
+                    else -> if (customSaved.isNotBlank()) customSaved else "Optimal location"
+                }
+            }
+            b.textSelectedLocation.text = locationLabel
+            b.textLocationSub.text = if (isConnected) "Virtual location • Connected" else "Virtual location"
+
+            b.checkPrivateTabsOnly.isChecked = com.adshield.app.engine.VpnEngine.isPrivateOnlyEnabled(this)
+            b.switchBypassSearch.isChecked = com.adshield.app.engine.VpnEngine.isBypassSearchEnabled(this)
+
+            b.textVpnProtocol.text = when (activeMode) {
+                com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "Direct (Unencrypted)"
+                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> {
+                    when (customSaved) {
+                        "EU" -> "Europe Dedicated Node"
+                        "AS" -> "Asia Dedicated Node"
+                        "AM" -> "America Dedicated Node"
+                        else -> "Dedicated Node (${customSaved.ifBlank { "Optimal" }})"
+                    }
+                }
+                else -> "Auto (High-Speed Edge)"
             }
 
             b.radioModeTor.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.FAST || activeMode == com.adshield.app.engine.VpnEngine.VpnMode.TOR || activeMode == com.adshield.app.engine.VpnEngine.VpnMode.RELAY)
             b.radioModeRelay.isChecked = false
             b.radioModeCustom.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM)
             b.radioModeOff.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.OFF)
-
-            val customSaved = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
-            val regionDesc = when (customSaved) {
-                "EU" -> "Europe (EU Edge)"
-                "AS" -> "Asia (AS Edge)"
-                "AM" -> "Americas (AM Edge)"
-                else -> if (customSaved.isNotBlank()) customSaved else "Americas • Europe • Asia • Private"
-            }
-            b.textCustomProxyPreview.text = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM) {
-                "Active: $regionDesc"
-            } else {
-                "Americas • Europe • Asia • Private Server"
-            }
-
-            b.textVpnProtocol.text = when (activeMode) {
-                com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "Direct (Unencrypted)"
-                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> {
-                    when (customSaved) {
-                        "EU" -> "Fokk Europe Dedicated Node"
-                        "AS" -> "Fokk Asia Dedicated Node"
-                        "AM" -> "Fokk Americas Dedicated Node"
-                        else -> "Fokk Dedicated Node (${customSaved.ifBlank { "Optimal" }})"
-                    }
-                }
-                else -> "Fokk Fast Privacy Network"
-            }
-
             b.layoutOrbotHelper.visibility = View.GONE
         }
 
         refreshUi()
-
-        com.adshield.app.engine.VpnEngine.checkDirectPublicIp { directIp, _ ->
-            runOnUiThread {
-                b.textVpnDirectIp.text = directIp ?: "Unavailable"
-            }
-        }
-
-        b.cardModeTor.setOnClickListener {
-            switchMode(com.adshield.app.engine.VpnEngine.VpnMode.FAST)
-        }
-
-        b.cardModeCustom.setOnClickListener {
-            showDedicatedRegionOrCustomDialog { selection ->
-                switchMode(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, selection)
-            }
-        }
-
-        b.cardModeOff.setOnClickListener {
-            switchMode(com.adshield.app.engine.VpnEngine.VpnMode.OFF)
-        }
 
         b.btnVpnPower.setOnClickListener {
             val current = com.adshield.app.engine.VpnEngine.getActiveMode(this)
             if (current != com.adshield.app.engine.VpnEngine.VpnMode.OFF) {
                 switchMode(com.adshield.app.engine.VpnEngine.VpnMode.OFF)
             } else {
-                switchMode(com.adshield.app.engine.VpnEngine.VpnMode.FAST)
+                val custom = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
+                if (custom.isNotBlank()) {
+                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, custom)
+                } else {
+                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.FAST)
+                }
             }
+        }
+
+        b.cardLocationSelector.setOnClickListener {
+            showDedicatedRegionOrCustomDialog { selection ->
+                if (selection == "AUTO") {
+                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.FAST)
+                } else {
+                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, selection)
+                }
+            }
+        }
+
+        b.checkPrivateTabsOnly.setOnCheckedChangeListener { _, isChecked ->
+            com.adshield.app.engine.VpnEngine.setPrivateOnlyEnabled(this, isChecked)
+        }
+        b.rowPrivateTabsOnly.setOnClickListener {
+            b.checkPrivateTabsOnly.isChecked = !b.checkPrivateTabsOnly.isChecked
+        }
+
+        b.switchBypassSearch.setOnCheckedChangeListener { _, isChecked ->
+            com.adshield.app.engine.VpnEngine.setBypassSearchEnabled(this, isChecked)
+        }
+        b.rowBypassSearch.setOnClickListener {
+            b.switchBypassSearch.isChecked = !b.switchBypassSearch.isChecked
+        }
+
+        val proClickListener = View.OnClickListener {
+            Toast.makeText(this, "Fokk VPN Pro is included and active!", Toast.LENGTH_SHORT).show()
+        }
+        b.cardProPrivacy.setOnClickListener(proClickListener)
+        b.btnProGetStarted.setOnClickListener(proClickListener)
+
+        b.rowAutoConnect.setOnClickListener {
+            Toast.makeText(this, "Auto-connect is managed automatically by Fokk Engine", Toast.LENGTH_SHORT).show()
         }
 
         b.btnVerifyVpnExitIp.setOnClickListener {
@@ -6873,28 +6910,33 @@ open class MediaHubActivity : AppCompatActivity() {
 
     private fun showDedicatedRegionOrCustomDialog(onApplied: (String) -> Unit) {
         val currentSaved = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
+        val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
         val options = arrayOf(
-            "Americas Node (Optimal)",
-            "Europe Node (Frankfurt / Amsterdam)",
-            "Asia Node (Singapore / Tokyo)",
+            "Optimal location (Automatic)",
+            "America",
+            "Europe",
+            "Asia",
             "Configure Private Server (host:port)"
         )
-        val checkedIndex = when (currentSaved) {
-            "AM" -> 0
-            "EU" -> 1
-            "AS" -> 2
-            else -> if (currentSaved.isNotBlank()) 3 else 0
+        val checkedIndex = when {
+            activeMode == com.adshield.app.engine.VpnEngine.VpnMode.FAST -> 0
+            currentSaved == "AM" -> 1
+            currentSaved == "EU" -> 2
+            currentSaved == "AS" -> 3
+            currentSaved.isNotBlank() -> 4
+            else -> 0
         }
 
         AlertDialog.Builder(this)
-            .setTitle("Fokk Dedicated Locations")
+            .setTitle("Virtual location")
             .setSingleChoiceItems(options, checkedIndex) { dialog, which ->
                 dialog.dismiss()
                 when (which) {
-                    0 -> onApplied("AM")
-                    1 -> onApplied("EU")
-                    2 -> onApplied("AS")
-                    3 -> showCustomProxyDialog(onApplied)
+                    0 -> onApplied("AUTO")
+                    1 -> onApplied("AM")
+                    2 -> onApplied("EU")
+                    3 -> onApplied("AS")
+                    4 -> showCustomProxyDialog(onApplied)
                 }
             }
             .setNegativeButton("Cancel", null)

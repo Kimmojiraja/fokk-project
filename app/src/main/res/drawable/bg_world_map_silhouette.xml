@@ -1,0 +1,65 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="360dp"
+    android:height="160dp"
+    android:viewportWidth="360"
+    android:viewportHeight="160">
+
+    <!-- Stylized World Map Continents Silhouette (Subtle Dark Theme) -->
+    <!-- North America -->
+    <path
+        android:fillColor="#1E293B"
+        android:fillAlpha="0.45"
+        android:pathData="M35,25 Q45,20 65,22 Q85,24 95,35 Q105,48 95,62 Q85,75 75,70 Q60,65 50,55 Q35,45 35,25 Z" />
+    <path
+        android:fillColor="#1E293B"
+        android:fillAlpha="0.4"
+        android:pathData="M98,18 Q115,15 125,25 Q120,38 105,35 Q95,30 98,18 Z" />
+
+    <!-- South America -->
+    <path
+        android:fillColor="#1E293B"
+        android:fillAlpha="0.45"
+        android:pathData="M78,82 Q95,85 105,98 Q112,115 102,135 Q92,150 85,145 Q78,135 75,115 Q72,98 78,82 Z" />
+
+    <!-- Europe -->
+    <path
+        android:fillColor="#1E293B"
+        android:fillAlpha="0.45"
+        android:pathData="M165,25 Q185,22 195,32 Q200,45 185,52 Q172,55 162,45 Q158,35 165,25 Z" />
+    <path
+        android:fillColor="#1E293B"
+        android:fillAlpha="0.4"
+        android:pathData="M152,28 Q158,25 162,32 Q158,38 152,35 Z" />
+
+    <!-- Africa -->
+    <path
+        android:fillColor="#1E293B"
+        android:fillAlpha="0.45"
+        android:pathData="M165,60 Q192,58 205,75 Q212,95 200,120 Q188,138 178,135 Q168,125 162,105 Q155,85 165,60 Z" />
+
+    <!-- Asia -->
+    <path
+        android:fillColor="#1E293B"
+        android:fillAlpha="0.45"
+        android:pathData="M205,25 Q245,18 290,28 Q315,45 305,70 Q285,85 260,80 Q240,75 225,62 Q210,50 205,25 Z" />
+    <path
+        android:fillColor="#1E293B"
+        android:fillAlpha="0.4"
+        android:pathData="M245,82 Q260,80 270,95 Q265,108 250,105 Q240,95 245,82 Z" />
+
+    <!-- Australia & Oceania -->
+    <path
+        android:fillColor="#1E293B"
+        android:fillAlpha="0.45"
+        android:pathData="M275,112 Q305,108 318,125 Q312,142 295,145 Q278,142 272,128 Q270,118 275,112 Z" />
+
+    <!-- Islands / Details -->
+    <path
+        android:fillColor="#1E293B"
+        android:fillAlpha="0.35"
+        android:pathData="M310,88 Q318,85 322,95 Q318,102 312,98 Z" />
+    <path
+        android:fillColor="#1E293B"
+        android:fillAlpha="0.35"
+        android:pathData="M325,130 Q332,128 335,138 Q330,145 325,140 Z" />
+</vector>

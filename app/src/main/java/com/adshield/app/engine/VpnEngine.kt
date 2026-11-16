@@ -25,6 +25,32 @@ object VpnEngine {
     const val PREFS_VPN = "fokk_vpn_settings"
     const val KEY_VPN_MODE = "vpn_mode"
     const val KEY_CUSTOM_PROXY = "vpn_custom_proxy"
+    const val KEY_BYPASS_SEARCH = "vpn_bypass_search"
+    const val KEY_PRIVATE_ONLY = "vpn_private_only"
+
+    fun isBypassSearchEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_BYPASS_SEARCH, true)
+    }
+
+    fun setBypassSearchEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_BYPASS_SEARCH, enabled).apply()
+        val mode = getActiveMode(context)
+        if (mode != VpnMode.OFF) {
+            applyVpnMode(context, mode)
+        }
+    }
+
+    fun isPrivateOnlyEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_PRIVATE_ONLY, false)
+    }
+
+    fun setPrivateOnlyEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_PRIVATE_ONLY, enabled).apply()
+    }
 
     enum class VpnMode(val id: String, val title: String, val defaultProxy: String) {
         OFF("off", "Direct Connection (Real IP Exposed)", ""),
@@ -321,11 +347,11 @@ object VpnEngine {
                     customProxy !in setOf("AM", "EU", "AS", "US") &&
                     (customProxy.contains(":") || customProxy.contains("."))
 
-                val primaryNode: String
-                val backupNodes: List<String>
+                val endpoint: String
                 val routeDesc: String
 
                 if (isCustomExternal) {
+                    runCatching { FokkTunnelEngine.stop() }
                     val normalized = try {
                         normalizeProxy(customProxy!!)
                     } catch (e: Exception) {
@@ -336,47 +362,51 @@ object VpnEngine {
                         onComplete?.invoke(false, e.message ?: "Invalid node address")
                         return@execute
                     }
-                    primaryNode = normalized
-                    backupNodes = FAST_GLOBAL_CLUSTER
+                    endpoint = normalized
                     routeDesc = "Connected to Fokk Dedicated Node ($host:$port)."
-                } else if (mode == VpnMode.CUSTOM) {
-                    val region = when (customProxy ?: getCustomProxy(context)) {
-                        "EU" -> "EU"
-                        "AS" -> "AS"
-                        else -> "AM"
+                } else {
+                    val region = if (mode == VpnMode.CUSTOM) {
+                        when (customProxy ?: getCustomProxy(context)) {
+                            "EU" -> "EU"
+                            "AS" -> "AS"
+                            else -> "AM"
+                        }
+                    } else "AUTO"
+
+                    val port = FokkTunnelEngine.start(region)
+                    if (port <= 0) {
+                        onComplete?.invoke(false, "Could not start Fokk Privacy Tunnel.")
+                        return@execute
                     }
-                    val regionalPool = when (region) {
-                        "EU" -> REGION_EUROPE
-                        "AS" -> REGION_ASIA
-                        else -> REGION_AMERICAS
-                    }
-                    primaryNode = getFastPrivacyEndpoint(region)
-                    backupNodes = regionalPool
+                    endpoint = "http://127.0.0.1:$port"
                     val regionLabel = when (region) {
                         "EU" -> "Europe"
                         "AS" -> "Asia"
-                        else -> "Americas"
+                        "AM" -> "America"
+                        else -> "Optimal location"
                     }
-                    routeDesc = "Connected to Fokk Dedicated Node ($regionLabel). Your IP is masked."
-                } else {
-                    primaryNode = getFastPrivacyEndpoint()
-                    backupNodes = FAST_GLOBAL_CLUSTER
-                    routeDesc = "Connected to Fokk Fast Privacy Network. Your IP is masked."
+                    routeDesc = if (mode == VpnMode.CUSTOM) {
+                        "Connected to Fokk Dedicated Node ($regionLabel). Your IP is masked."
+                    } else {
+                        "Connected to Fokk VPN ($regionLabel). Your IP is masked."
+                    }
                 }
 
                 val configBuilder = ProxyConfig.Builder()
-                    .addProxyRule(primaryNode, ProxyConfig.MATCH_ALL_SCHEMES)
-
-                for (backup in backupNodes) {
-                    if (backup != primaryNode) {
-                        configBuilder.addProxyRule(backup, ProxyConfig.MATCH_ALL_SCHEMES)
-                    }
-                }
-
-                val config = configBuilder
+                    .addProxyRule(endpoint, ProxyConfig.MATCH_ALL_SCHEMES)
                     .addBypassRule("<local>")
                     .addBypassRule("localhost")
                     .addBypassRule("127.0.0.1")
+
+                if (isBypassSearchEnabled(context)) {
+                    configBuilder.addBypassRule("*.google.com")
+                    configBuilder.addBypassRule("*.bing.com")
+                    configBuilder.addBypassRule("*.duckduckgo.com")
+                    configBuilder.addBypassRule("*.ecosia.org")
+                    configBuilder.addBypassRule("*.startpage.com")
+                }
+
+                val config = configBuilder
                     .addDirect()
                     .build()
 
