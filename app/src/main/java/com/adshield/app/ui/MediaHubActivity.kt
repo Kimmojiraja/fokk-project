@@ -1995,8 +1995,9 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(activity)
                 val proxyEndpoint = when (activeMode) {
-                    com.adshield.app.engine.VpnEngine.VpnMode.TOR -> com.adshield.app.engine.VpnEngine.getTorEndpoint()
-                    com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> com.adshield.app.engine.VpnEngine.getRelayEndpoint()
+                    com.adshield.app.engine.VpnEngine.VpnMode.FAST,
+                    com.adshield.app.engine.VpnEngine.VpnMode.TOR,
+                    com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> com.adshield.app.engine.VpnEngine.getFastPrivacyEndpoint()
                     com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> com.adshield.app.engine.VpnEngine.getCustomProxy(activity)
                     com.adshield.app.engine.VpnEngine.VpnMode.OFF -> null
                 }
@@ -2073,8 +2074,9 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(activity)
                 val proxyEndpoint = when (activeMode) {
-                    com.adshield.app.engine.VpnEngine.VpnMode.TOR -> com.adshield.app.engine.VpnEngine.getTorEndpoint()
-                    com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> com.adshield.app.engine.VpnEngine.getRelayEndpoint()
+                    com.adshield.app.engine.VpnEngine.VpnMode.FAST,
+                    com.adshield.app.engine.VpnEngine.VpnMode.TOR,
+                    com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> com.adshield.app.engine.VpnEngine.getFastPrivacyEndpoint()
                     com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> com.adshield.app.engine.VpnEngine.getCustomProxy(activity)
                     com.adshield.app.engine.VpnEngine.VpnMode.OFF -> null
                 }
@@ -4893,11 +4895,10 @@ open class MediaHubActivity : AppCompatActivity() {
         val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
         val isProxyActive = activeMode != com.adshield.app.engine.VpnEngine.VpnMode.OFF
         binding.dotNavVpnActive.visibility = if (isProxyActive) View.VISIBLE else View.GONE
-        val tintColor = when (activeMode) {
-            com.adshield.app.engine.VpnEngine.VpnMode.TOR -> android.graphics.Color.parseColor("#A855F7")
-            com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> android.graphics.Color.parseColor("#00E5FF")
-            com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> android.graphics.Color.parseColor("#10B981")
-            com.adshield.app.engine.VpnEngine.VpnMode.OFF -> android.graphics.Color.parseColor("#94A3B8")
+        val tintColor = if (isProxyActive) {
+            android.graphics.Color.parseColor("#00E5FF")
+        } else {
+            android.graphics.Color.parseColor("#94A3B8")
         }
         binding.imgNavVpnIcon.imageTintList = android.content.res.ColorStateList.valueOf(tintColor)
     }
@@ -5897,18 +5898,9 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         val activeVpnMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
-        sheetBinding.textMenuVpnStatus.text = when (activeVpnMode) {
-            com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "OFF"
-            com.adshield.app.engine.VpnEngine.VpnMode.TOR -> "TOR"
-            com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> "RELAY"
-            com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> "PROXY"
-        }
-        val vpnStatusColor = when (activeVpnMode) {
-            com.adshield.app.engine.VpnEngine.VpnMode.OFF -> 0xFF94A3B8.toInt()
-            com.adshield.app.engine.VpnEngine.VpnMode.TOR -> 0xFFA855F7.toInt()
-            com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> 0xFF00E5FF.toInt()
-            com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> 0xFF10B981.toInt()
-        }
+        val isVpnActive = activeVpnMode != com.adshield.app.engine.VpnEngine.VpnMode.OFF
+        sheetBinding.textMenuVpnStatus.text = if (isVpnActive) "PROTECTED" else "OFF"
+        val vpnStatusColor = if (isVpnActive) 0xFF00E5FF.toInt() else 0xFF94A3B8.toInt()
         sheetBinding.textMenuVpnStatus.setTextColor(vpnStatusColor)
         sheetBinding.btnToolVpnMode.setOnClickListener {
             dialog.dismiss()
@@ -6570,17 +6562,8 @@ open class MediaHubActivity : AppCompatActivity() {
         lateinit var refreshUi: () -> Unit
 
         fun switchMode(mode: com.adshield.app.engine.VpnEngine.VpnMode, customProxy: String? = null) {
-            val progress = if (mode == com.adshield.app.engine.VpnEngine.VpnMode.TOR && !com.adshield.app.engine.VpnEngine.isTorListening()) {
-                android.app.ProgressDialog(this).apply {
-                    setMessage("Connecting to Tor Onion Network...\nEstablishing circuit (takes a few seconds)")
-                    setCancelable(false)
-                    show()
-                }
-            } else null
-
             com.adshield.app.engine.VpnEngine.applyVpnMode(this, mode, customProxy) { success, msg ->
                 runOnUiThread {
-                    try { progress?.dismiss() } catch (_: Exception) {}
                     if (success) {
                         activeWebView?.reload()
                         lastVpnRouteFingerprint = getVpnRouteFingerprint()
@@ -6597,51 +6580,39 @@ open class MediaHubActivity : AppCompatActivity() {
             val isConnected = activeMode != com.adshield.app.engine.VpnEngine.VpnMode.OFF
 
             if (isConnected) {
-                b.textVpnStatusPill.text = "CONNECTED (MASKED)"
+                b.textVpnStatusPill.text = "PROTECTED • IP MASKED"
                 b.textVpnStatusPill.setTextColor(android.graphics.Color.parseColor("#10B981"))
-                b.textVpnPowerLabel.text = "Privacy Gateway Active"
-                b.textVpnPowerSub.text = "Traffic is routed through ${activeMode.title}"
+                b.textVpnPowerLabel.text = "Fokk VPN Active"
+                b.textVpnPowerSub.text = "Traffic protected via ${activeMode.title}"
                 b.vpnRadarRing.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#00E5FF"))
                 b.btnVpnPower.imageTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#00E5FF"))
-                b.textVpnExitIp.text = "Route Active — Tap Verify"
+                b.textVpnExitIp.text = "Protected Route Active"
                 b.textVpnExitIp.setTextColor(android.graphics.Color.parseColor("#10B981"))
             } else {
-                b.textVpnStatusPill.text = "DIRECT (IP EXPOSED)"
+                b.textVpnStatusPill.text = "UNPROTECTED • REAL IP EXPOSED"
                 b.textVpnStatusPill.setTextColor(android.graphics.Color.parseColor("#F43F5E"))
-                b.textVpnPowerLabel.text = "Tap to Connect"
-                b.textVpnPowerSub.text = "Choose a privacy relay below to mask your IP"
+                b.textVpnPowerLabel.text = "Connect Fokk VPN"
+                b.textVpnPowerSub.text = "Mask your IP address and protect browser traffic"
                 b.vpnRadarRing.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#1E293B"))
                 b.btnVpnPower.imageTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#94A3B8"))
                 b.textVpnExitIp.text = "Direct (Real IP Exposed)"
                 b.textVpnExitIp.setTextColor(android.graphics.Color.parseColor("#F43F5E"))
             }
 
-            b.radioModeTor.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.TOR)
+            b.radioModeTor.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.FAST || activeMode == com.adshield.app.engine.VpnEngine.VpnMode.TOR || activeMode == com.adshield.app.engine.VpnEngine.VpnMode.RELAY)
             b.radioModeRelay.isChecked = false
             b.radioModeCustom.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM)
             b.radioModeOff.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.OFF)
 
             b.textVpnProtocol.text = when (activeMode) {
-                com.adshield.app.engine.VpnEngine.VpnMode.TOR -> "Tor Onion SOCKS5 (${com.adshield.app.engine.VpnEngine.getTorEndpoint()})"
-                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> "Custom Proxy (${com.adshield.app.engine.VpnEngine.getCustomProxy(this).ifBlank { "Not configured" }})"
-                com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "Direct (Browser proxy off)"
-                else -> "Direct (Browser proxy off)"
+                com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "Direct (Unencrypted)"
+                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> "Fokk Dedicated Node (${com.adshield.app.engine.VpnEngine.getCustomProxy(this).ifBlank { "Not configured" }})"
+                else -> "Fokk Fast Privacy Network"
             }
 
             val customSaved = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
-            b.textCustomProxyPreview.text = if (customSaved.isNotBlank()) customSaved else "Tap to configure (SOCKS5 / HTTP)"
-
-            val torListening = com.adshield.app.engine.VpnEngine.isTorListening()
-            b.layoutOrbotHelper.visibility = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.TOR && !torListening) View.VISIBLE else View.GONE
-            b.textOrbotStatus.text = if (torListening) "✓ Tor Onion Network active on port ${com.adshield.app.engine.VpnEngine.getTorPort()}" else "Tor Onion daemon starting (127.0.0.1:9050)..."
-            b.textOrbotStatus.setTextColor(if (torListening) android.graphics.Color.parseColor("#10B981") else android.graphics.Color.parseColor("#A855F7"))
-            b.btnLaunchOrbot.text = if (com.adshield.app.engine.VpnEngine.isOrbotInstalled(this)) "Open Orbot" else "Start Tor"
-            b.btnLaunchOrbot.setOnClickListener {
-                if (com.adshield.app.engine.VpnEngine.isOrbotInstalled(this)) {
-                    com.adshield.app.engine.VpnEngine.launchOrbot(this)
-                }
-                switchMode(com.adshield.app.engine.VpnEngine.VpnMode.TOR)
-            }
+            b.textCustomProxyPreview.text = if (customSaved.isNotBlank()) customSaved else "Tap to configure private node"
+            b.layoutOrbotHelper.visibility = View.GONE
         }
 
         refreshUi()
@@ -6653,7 +6624,7 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         b.cardModeTor.setOnClickListener {
-            switchMode(com.adshield.app.engine.VpnEngine.VpnMode.TOR)
+            switchMode(com.adshield.app.engine.VpnEngine.VpnMode.FAST)
         }
 
         b.cardModeCustom.setOnClickListener {
@@ -6671,14 +6642,7 @@ open class MediaHubActivity : AppCompatActivity() {
             if (current != com.adshield.app.engine.VpnEngine.VpnMode.OFF) {
                 switchMode(com.adshield.app.engine.VpnEngine.VpnMode.OFF)
             } else {
-                val custom = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
-                if (com.adshield.app.engine.VpnEngine.isTorListening()) {
-                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.TOR)
-                } else if (custom.isNotBlank()) {
-                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, custom)
-                } else {
-                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.TOR)
-                }
+                switchMode(com.adshield.app.engine.VpnEngine.VpnMode.FAST)
             }
         }
 
@@ -6783,17 +6747,17 @@ open class MediaHubActivity : AppCompatActivity() {
                     }
                     val comparison = when {
                         mode == com.adshield.app.engine.VpnEngine.VpnMode.OFF ->
-                            "The browser proxy is off, so this is the direct public IP."
+                            "Fokk VPN is disconnected. Browser is using direct unencrypted public IP."
                         directIp == null ->
-                            "The browser IP was read, but the direct connection could not be compared${directError?.let { ": $it" } ?: "."}"
+                            "Protected IP verified ($ip), direct connection baseline was unreachable."
                         ip == directIp ->
-                            "This matches the direct public IP. The selected proxy is not changing the exit IP for this request."
+                            "Matches direct IP. Browser traffic may not be masked."
                         else ->
-                            "This differs from the direct public IP. The browser request is exiting through a different address."
+                            "✓ Protected by Fokk VPN. Real IP is masked (${directIp} → ${ip})."
                     }
                     AlertDialog.Builder(this)
-                        .setTitle("Browser IP Verification")
-                        .setMessage("Browser IP: $ip\nDirect IP: ${directIp ?: "Unavailable"}\nMode: ${mode.title}\n\n$comparison")
+                        .setTitle("Fokk VPN Protection Check")
+                        .setMessage("Masked IP: $ip\nDirect IP: ${directIp ?: "Unavailable"}\nRouting: ${mode.title}\n\n$comparison")
                         .setPositiveButton("OK", null)
                         .show()
                 }
@@ -6871,7 +6835,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
     private fun showCustomProxyDialog(onApplied: ((String) -> Unit)? = null) {
         val input = EditText(this).apply {
-            hint = "socks5://host:port or http://host:port"
+            hint = "host:port (e.g. 159.203.61.169:1080)"
             setText(com.adshield.app.engine.VpnEngine.getCustomProxy(this@MediaHubActivity))
             setSingleLine(true)
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
@@ -6881,10 +6845,10 @@ open class MediaHubActivity : AppCompatActivity() {
             addView(input)
         }
         AlertDialog.Builder(this)
-            .setTitle("Custom Browser Proxy")
-            .setMessage("Enter the address of an active SOCKS5 or HTTP proxy server:")
+            .setTitle("Fokk Dedicated Node")
+            .setMessage("Enter the address of your dedicated node (e.g. 159.203.61.169:1080):")
             .setView(container)
-            .setPositiveButton("Apply") { _, _ ->
+            .setPositiveButton("Connect") { _, _ ->
                 val proxyUrl = input.text.toString().trim()
                 if (proxyUrl.isNotEmpty()) {
                     if (onApplied != null) {

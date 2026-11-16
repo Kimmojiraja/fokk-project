@@ -110,15 +110,6 @@
             android:foregroundServiceType="mediaPlayback"
             android:exported="false" />
 
-        <!-- Embedded Native Tor SOCKS5 Service -->
-        <service
-            android:name="org.torproject.jni.TorService"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="org.torproject.android.intent.action.START" />
-                <action android:name="org.torproject.android.intent.action.STOP" />
-            </intent-filter>
-        </service>
 
         <!-- In-App APK FileProvider for 1-Tap Direct Updates -->
         <provider

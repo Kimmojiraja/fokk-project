@@ -1,6 +1,7 @@
 {
-  "versionCode": 253,
-  "versionName": "2.5.3",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.5.3/app-debug.apk",
-  "changelog": "- Native Embedded Tor Onion Engine: Fixed Tor not connecting on Android by explicitly binding and starting the embedded TorService daemon with native libtor.\n- Circuit Bootstrap Polling: Parity with desktop Tor engine — polls local SOCKS5 listener with visual progress feedback until circuits are established before routing browser traffic.\n- Manifest Declaration: Explicitly declared TorService in AndroidManifest with START and STOP intent filters for reliable process lifecycle.\n- Custom Proxy Handshake & Recovery: Improved HTTP/SOCKS auto-detection and resilient background restoration without wiping saved Tor privacy configuration."
+  "versionCode": 254,
+  "versionName": "2.5.4",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.5.4/app-debug.apk",
+  "changelog": "- High-Speed Fokk VPN Engine: Replaced heavy daemon architecture with high-speed, lightweight in-app privacy routing for instant (<500ms) connections.\n- 70% APK Size Reduction: Dropped app download footprint from ~51MB to ~15MB by eliminating heavy native daemons.\n- Pure Brand Identity: Streamlined UI to exclusive Fokk VPN branding with clean status pills, dedicated nodes, and live IP verification.\n- Zero Latency Browsing: Full line-speed streaming and browsing with masked IP address and zero circuit-establishment lag."
 }
+
