@@ -143,445 +143,506 @@
                 android:contentDescription="Downloads" />
         </LinearLayout>
 
-        <!-- 2. FOKK SHIELD FOR THIS SITE CARD (Always-On Status Hub) -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardShieldDefenseStatus"
+        <!-- 2. OPERA-STYLE TOP QUICK ACTIONS: VPN, Shield, Reader, Night Mode -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:clickable="true"
-            android:focusable="true"
-            app:cardBackgroundColor="#121214"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeColor="#242426"
-            app:strokeWidth="1dp">
+            android:layout_marginBottom="8dp"
+            android:orientation="horizontal">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="14dp">
+            <!-- 1. Fokk VPN Quick Squircle -->
+            <RelativeLayout
+                android:layout_width="0dp"
+                android:layout_height="86dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="3dp">
 
                 <LinearLayout
+                    android:id="@+id/btnMenuQuickVpn"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <ImageView
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:background="@drawable/bg_circle_icon_button"
-                        android:padding="5dp"
-                        android:src="@drawable/ic_shield_check"
-                        app:tint="#34D399" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="12dp"
-                        android:orientation="vertical">
-
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Fokk Shield Protection"
-                                android:textColor="@color/text_primary"
-                                android:textSize="14.5sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="8dp"
-                                android:background="@drawable/bg_stat_chip"
-                                android:paddingHorizontal="6dp"
-                                android:paddingVertical="1dp"
-                                android:text="SHIELD ACTIVE"
-                                android:textColor="#34D399"
-                                android:textSize="9sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-                    </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_arrow_forward"
-                        app:tint="@color/text_secondary" />
-                </LinearLayout>
-
-                <!-- Hidden helper views for backward compatibility -->
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:visibility="gone">
-                    <TextView android:id="@+id/textMenuBlockedInfo" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switchMenuShield"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true" />
-                    <TextView android:id="@+id/badgeSocialShield" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-                    <TextView android:id="@+id/badgeAiFilter" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-                    <LinearLayout android:id="@+id/rowShieldHub" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-                </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- 3. DAILY ESSENTIALS QUICK GRID -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardBackgroundColor="#121214"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeColor="#242426"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="12dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="10dp"
-                    android:text="Daily Essentials"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11.5sp"
-                    android:textStyle="bold"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.06" />
-
-                <!-- 1-Tap Burn Session -->
-                <LinearLayout
-                    android:id="@+id/rowBurnSession"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:layout_marginVertical="6dp"
-                    android:background="@drawable/bg_burn_session"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_menu_squircle"
                     android:clickable="true"
                     android:focusable="true"
                     android:gravity="center"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="12dp">
+                    android:orientation="vertical"
+                    android:padding="6dp">
 
                     <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:src="@drawable/ic_fire" />
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_shield_check"
+                        app:tint="#00E5FF" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text="Burn Session (Purge All History &amp; Cache)"
-                        android:textColor="#FF6B6B"
-                        android:textSize="12.5sp"
+                        android:layout_marginTop="5dp"
+                        android:text="VPN"
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textMenuQuickVpnStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Off"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="9.5sp" />
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/btnMenuVpnInfo"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentEnd="true"
+                    android:layout_margin="5dp"
+                    android:background="@drawable/bg_info_badge"
+                    android:padding="2dp"
+                    android:src="@drawable/ic_info"
+                    app:tint="#8E8E93" />
+            </RelativeLayout>
+
+            <!-- 2. Ad Blocker Quick Squircle -->
+            <RelativeLayout
+                android:layout_width="0dp"
+                android:layout_height="86dp"
+                android:layout_weight="1"
+                android:layout_marginHorizontal="3dp">
+
+                <LinearLayout
+                    android:id="@+id/btnMenuQuickShield"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_menu_squircle"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="6dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_shield_check"
+                        app:tint="#34D399" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:text="Ad Blocker"
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textMenuQuickShieldStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="On"
+                        android:textColor="#34D399"
+                        android:textSize="9.5sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
-                <!-- Grid Row 1: New Tab, New Private Tab, Reader Mode -->
+                <ImageView
+                    android:id="@+id/btnMenuShieldInfo"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentEnd="true"
+                    android:layout_margin="5dp"
+                    android:background="@drawable/bg_info_badge"
+                    android:padding="2dp"
+                    android:src="@drawable/ic_info"
+                    app:tint="#8E8E93" />
+            </RelativeLayout>
+
+            <!-- 3. Reader Quick Squircle -->
+            <RelativeLayout
+                android:layout_width="0dp"
+                android:layout_height="86dp"
+                android:layout_weight="1"
+                android:layout_marginHorizontal="3dp">
+
                 <LinearLayout
+                    android:id="@+id/btnMenuQuickReader"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:orientation="horizontal">
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_menu_squircle"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="6dp">
 
-                    <!-- New Tab -->
-                    <LinearLayout
-                        android:id="@+id/rowNewTab"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:background="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:gravity="center"
-                        android:orientation="horizontal">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_reader"
+                        app:tint="#A78BFA" />
 
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:background="@drawable/bg_circle_icon_button"
-                            android:padding="5dp"
-                            android:src="@drawable/ic_add"
-                            app:tint="#FFFFFF" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:text="Reader"
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:text="New Tab"
-                            android:textColor="@color/text_primary"
-                            android:textSize="12.5sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-
-                    <!-- New Private Tab -->
-                    <LinearLayout
-                        android:id="@+id/rowPrivateTab"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:background="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:gravity="center"
-                        android:orientation="horizontal">
-
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:background="@drawable/bg_circle_icon_button"
-                            android:padding="5dp"
-                            android:src="@drawable/ic_incognito"
-                            app:tint="#FFFFFF" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:text="Private Tab"
-                            android:textColor="@color/text_primary"
-                            android:textSize="12.5sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-
-                    <!-- Reader Mode -->
-                    <LinearLayout
-                        android:id="@+id/rowReaderMode"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:background="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:gravity="center"
-                        android:orientation="horizontal">
-
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:background="@drawable/bg_circle_icon_button"
-                            android:padding="5dp"
-                            android:src="@drawable/ic_reader"
-                            app:tint="#FFFFFF" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:text="Reader"
-                            android:textColor="@color/text_primary"
-                            android:textSize="12.5sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/textMenuQuickReaderStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Off"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="9.5sp" />
                 </LinearLayout>
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginVertical="6dp"
-                    android:background="#222225" />
+                <ImageView
+                    android:id="@+id/btnMenuReaderInfo"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentEnd="true"
+                    android:layout_margin="5dp"
+                    android:background="@drawable/bg_info_badge"
+                    android:padding="2dp"
+                    android:src="@drawable/ic_info"
+                    app:tint="#8E8E93" />
+            </RelativeLayout>
 
-                <!-- Grid Row 2: Desktop Mode, Dark Mode, Share -->
+            <!-- 4. Night Mode Quick Squircle -->
+            <RelativeLayout
+                android:layout_width="0dp"
+                android:layout_height="86dp"
+                android:layout_weight="1"
+                android:layout_marginStart="3dp">
+
                 <LinearLayout
+                    android:id="@+id/btnMenuQuickNight"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:orientation="horizontal">
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_menu_squircle"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="6dp">
 
-                    <!-- Desktop Mode -->
-                    <LinearLayout
-                        android:id="@+id/rowDesktopSite"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:background="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:gravity="center"
-                        android:orientation="horizontal">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_dark_mode"
+                        app:tint="#FBBF24" />
 
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:background="@drawable/bg_circle_icon_button"
-                            android:padding="5dp"
-                            android:src="@drawable/ic_desktop"
-                            app:tint="#FFFFFF" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:text="Night mode"
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:text="Desktop"
-                            android:textColor="@color/text_primary"
-                            android:textSize="12.5sp" />
-
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchDesktop"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="4dp"
-                            android:scaleX="0.75"
-                            android:scaleY="0.75"
-                            app:thumbTint="#FFFFFF"
-                            app:trackTint="#3F3F46" />
-                    </LinearLayout>
-
-                    <!-- Dark Mode -->
-                    <LinearLayout
-                        android:id="@+id/rowDarkMode"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:background="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:gravity="center"
-                        android:orientation="horizontal">
-
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:background="@drawable/bg_circle_icon_button"
-                            android:padding="5dp"
-                            android:src="@drawable/ic_dark_mode"
-                            app:tint="#FFFFFF" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:text="Dark Mode"
-                            android:textColor="@color/text_primary"
-                            android:textSize="12.5sp" />
-
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchDarkMode"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="4dp"
-                            android:scaleX="0.75"
-                            android:scaleY="0.75"
-                            app:thumbTint="#FFFFFF"
-                            app:trackTint="#3F3F46" />
-                    </LinearLayout>
-
-                    <!-- Share -->
-                    <LinearLayout
-                        android:id="@+id/rowShare"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:background="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:gravity="center"
-                        android:orientation="horizontal">
-
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:background="@drawable/bg_circle_icon_button"
-                            android:padding="5dp"
-                            android:src="@drawable/ic_share"
-                            app:tint="#FFFFFF" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:text="Share"
-                            android:textColor="@color/text_primary"
-                            android:textSize="12.5sp" />
-                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/textMenuQuickNightStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Off"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="9.5sp" />
                 </LinearLayout>
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginVertical="6dp"
-                    android:background="#222225" />
+                <ImageView
+                    android:id="@+id/btnMenuNightInfo"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentEnd="true"
+                    android:layout_margin="5dp"
+                    android:background="@drawable/bg_info_badge"
+                    android:padding="2dp"
+                    android:src="@drawable/ic_info"
+                    app:tint="#8E8E93" />
+            </RelativeLayout>
+        </LinearLayout>
 
-                <!-- Grid Row 3: Add to Home Screen, Add to Startpage -->
+        <!-- Ask Fokk AI Full-Width Action Pill -->
+        <LinearLayout
+            android:id="@+id/btnMenuAskAi"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_menu_ai_pill"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="14dp">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_sparkle"
+                app:tint="#A78BFA" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ask Fokk AI"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13.5sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Intelligent page summary &amp; web analysis"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="10.5sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_arrow_forward"
+                app:tint="@color/text_secondary" />
+        </LinearLayout>
+
+        <!-- 3. DAILY ESSENTIALS (Unboxed Modern 2-Column Grid) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="4dp"
+                android:text="Daily Essentials"
+                android:textColor="@color/text_secondary"
+                android:textSize="11.5sp"
+                android:textStyle="bold"
+                android:textAllCaps="true"
+                android:letterSpacing="0.06" />
+
+            <!-- Grid Row 1: New Tab & Private Tab -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginBottom="6dp"
+                android:orientation="horizontal">
+
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:orientation="horizontal">
+                    android:id="@+id/rowNewTab"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:background="@drawable/bg_menu_grid_item"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="12dp">
 
-                    <!-- Add to Home Screen -->
-                    <LinearLayout
-                        android:id="@+id/rowAddToHomeScreen"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:background="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:gravity="center"
-                        android:orientation="horizontal">
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_add"
+                        app:tint="#FFFFFF" />
 
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:background="@drawable/bg_circle_icon_button"
-                            android:padding="5dp"
-                            android:src="@drawable/ic_home"
-                            app:tint="#FFFFFF" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="New Tab"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:text="Add to Home"
-                            android:textColor="@color/text_primary"
-                            android:textSize="12.5sp" />
-                    </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/rowPrivateTab"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:background="@drawable/bg_menu_grid_item"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="12dp">
 
-                    <!-- Add to Startpage Shortcuts -->
-                    <LinearLayout
-                        android:id="@+id/rowAddToStartpageShortcuts"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:background="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:gravity="center"
-                        android:orientation="horizontal">
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_incognito"
+                        app:tint="#FFFFFF" />
 
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:background="@drawable/bg_circle_icon_button"
-                            android:padding="5dp"
-                            android:src="@drawable/ic_add"
-                            app:tint="#FFFFFF" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:text="Add to Shortcuts"
-                            android:textColor="@color/text_primary"
-                            android:textSize="12.5sp" />
-                    </LinearLayout>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="Private Tab"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+
+            <!-- Grid Row 2: Desktop Site & Share -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginBottom="6dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:id="@+id/rowDesktopSite"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:background="@drawable/bg_menu_grid_item"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="12dp">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_desktop"
+                        app:tint="#FFFFFF" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:text="Desktop Site"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switchDesktop"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:scaleX="0.75"
+                        android:scaleY="0.75"
+                        app:thumbTint="#FFFFFF"
+                        app:trackTint="#3F3F46" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/rowShare"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:background="@drawable/bg_menu_grid_item"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="12dp">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_share"
+                        app:tint="#FFFFFF" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="Share"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Grid Row 3: Add to Home & Add to Shortcuts -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:id="@+id/rowAddToHomeScreen"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:background="@drawable/bg_menu_grid_item"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="12dp">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_home"
+                        app:tint="#FFFFFF" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="Add to Home"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/rowAddToStartpageShortcuts"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:background="@drawable/bg_menu_grid_item"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="12dp">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_add"
+                        app:tint="#FFFFFF" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="Add to Shortcuts"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
 
         <!-- Firefox-Style Collapsible "... More" Row -->
         <LinearLayout
@@ -638,14 +699,42 @@
             android:visibility="gone"
             app:cardBackgroundColor="#121214"
             app:cardCornerRadius="16dp"
-            app:strokeColor="#242426"
-            app:strokeWidth="1dp">
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="12dp">
+
+                <!-- 1-Tap Burn Session moved inside More -->
+                <LinearLayout
+                    android:id="@+id/rowBurnSession"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginBottom="12dp"
+                    android:background="@drawable/bg_burn_session"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="12dp">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:src="@drawable/ic_fire" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="Burn Session (Purge All History &amp; Cache)"
+                        android:textColor="#FF6B6B"
+                        android:textSize="12.5sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -973,16 +1062,15 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 4. MODULAR FEATURE SUB-PAGES NAVIGATION HUB -->
+        <!-- 4. MODULAR FEATURE SUB-PAGES NAVIGATION HUB (Unboxed Clean List) -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="8dp"
             app:cardBackgroundColor="#121214"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeColor="#242426"
-            app:strokeWidth="1dp">
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -1223,7 +1311,67 @@
                     android:layout_height="1dp"
                     android:background="#222225" />
 
-                <!-- 7. About, Privacy & Community -->
+                <!-- 7. Fokk Shield Protection (Second to Last, No Arrow) -->
+                <LinearLayout
+                    android:id="@+id/rowNavShieldStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="6dp">
+
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:background="@drawable/bg_circle_icon_button"
+                        android:padding="5dp"
+                        android:src="@drawable/ic_shield_check"
+                        app:tint="#34D399" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Fokk Shield Protection"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Shield active · Tracking &amp; ad defense"
+                            android:textColor="#34D399"
+                            android:textSize="10.5sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_badge_pill"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="1dp"
+                        android:text="ACTIVE"
+                        android:textColor="#34D399"
+                        android:textSize="9sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#222225" />
+
+                <!-- 8. About, Privacy & Community -->
                 <LinearLayout
                     android:id="@+id/rowNavAbout"
                     android:layout_width="match_parent"
@@ -1260,6 +1408,14 @@
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:visibility="gone">
+            <View android:id="@+id/cardShieldDefenseStatus" android:layout_width="0dp" android:layout_height="0dp" />
+            <View android:id="@+id/rowShieldHub" android:layout_width="0dp" android:layout_height="0dp" />
+            <TextView android:id="@+id/textMenuBlockedInfo" android:layout_width="0dp" android:layout_height="0dp" />
+            <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchMenuShield" android:layout_width="0dp" android:layout_height="0dp" />
+            <TextView android:id="@+id/badgeSocialShield" android:layout_width="0dp" android:layout_height="0dp" />
+            <View android:id="@+id/rowReaderMode" android:layout_width="0dp" android:layout_height="0dp" />
+            <View android:id="@+id/rowDarkMode" android:layout_width="0dp" android:layout_height="0dp" />
+            <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchDarkMode" android:layout_width="0dp" android:layout_height="0dp" />
             <View android:id="@+id/rowSavedPages" android:layout_width="0dp" android:layout_height="0dp" />
             <View android:id="@+id/rowAppUpdates" android:layout_width="0dp" android:layout_height="0dp" />
             <TextView android:id="@+id/textAppVersionInfo" android:layout_width="0dp" android:layout_height="0dp" />
