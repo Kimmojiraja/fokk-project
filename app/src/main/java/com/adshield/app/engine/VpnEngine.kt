@@ -109,12 +109,16 @@ object VpnEngine {
         }
     }
 
+    private const val TOR_ACTION_START = "org.torproject.android.intent.action.START"
+    private const val TOR_ACTION_STOP = "org.torproject.android.intent.action.STOP"
+    private const val TOR_EXTRA_PACKAGE_NAME = "org.torproject.android.intent.extra.SERVICE_PACKAGE_NAME"
+
     fun startEmbeddedTor(context: Context) {
         try {
             val appCtx = context.applicationContext
             val intent = Intent(appCtx, org.torproject.jni.TorService::class.java).apply {
-                action = org.torproject.jni.TorService.ACTION_START
-                putExtra(org.torproject.jni.TorService.EXTRA_SERVICE_PACKAGE_NAME, appCtx.packageName)
+                action = TOR_ACTION_START
+                putExtra(TOR_EXTRA_PACKAGE_NAME, appCtx.packageName)
             }
             if (!isTorBound) {
                 val conn = object : ServiceConnection {
@@ -153,7 +157,7 @@ object VpnEngine {
                 torServiceConnection = null
             }
             val intent = Intent(appCtx, org.torproject.jni.TorService::class.java).apply {
-                action = org.torproject.jni.TorService.ACTION_STOP
+                action = TOR_ACTION_STOP
             }
             try {
                 appCtx.stopService(intent)

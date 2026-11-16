@@ -6567,7 +6567,32 @@ open class MediaHubActivity : AppCompatActivity() {
 
         b.btnCloseVpnSheet.setOnClickListener { sheetDialog.dismiss() }
 
-        fun refreshUi() {
+        lateinit var refreshUi: () -> Unit
+
+        fun switchMode(mode: com.adshield.app.engine.VpnEngine.VpnMode, customProxy: String? = null) {
+            val progress = if (mode == com.adshield.app.engine.VpnEngine.VpnMode.TOR && !com.adshield.app.engine.VpnEngine.isTorListening()) {
+                android.app.ProgressDialog(this).apply {
+                    setMessage("Connecting to Tor Onion Network...\nEstablishing circuit (takes a few seconds)")
+                    setCancelable(false)
+                    show()
+                }
+            } else null
+
+            com.adshield.app.engine.VpnEngine.applyVpnMode(this, mode, customProxy) { success, msg ->
+                runOnUiThread {
+                    try { progress?.dismiss() } catch (_: Exception) {}
+                    if (success) {
+                        activeWebView?.reload()
+                        lastVpnRouteFingerprint = getVpnRouteFingerprint()
+                        updateVpnIndicatorUi()
+                    }
+                    refreshUi()
+                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        refreshUi = {
             val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
             val isConnected = activeMode != com.adshield.app.engine.VpnEngine.VpnMode.OFF
 
@@ -6624,29 +6649,6 @@ open class MediaHubActivity : AppCompatActivity() {
         com.adshield.app.engine.VpnEngine.checkDirectPublicIp { directIp, _ ->
             runOnUiThread {
                 b.textVpnDirectIp.text = directIp ?: "Unavailable"
-            }
-        }
-
-        fun switchMode(mode: com.adshield.app.engine.VpnEngine.VpnMode, customProxy: String? = null) {
-            val progress = if (mode == com.adshield.app.engine.VpnEngine.VpnMode.TOR && !com.adshield.app.engine.VpnEngine.isTorListening()) {
-                android.app.ProgressDialog(this).apply {
-                    setMessage("Connecting to Tor Onion Network...\nEstablishing circuit (takes a few seconds)")
-                    setCancelable(false)
-                    show()
-                }
-            } else null
-
-            com.adshield.app.engine.VpnEngine.applyVpnMode(this, mode, customProxy) { success, msg ->
-                runOnUiThread {
-                    try { progress?.dismiss() } catch (_: Exception) {}
-                    if (success) {
-                        activeWebView?.reload()
-                        lastVpnRouteFingerprint = getVpnRouteFingerprint()
-                        updateVpnIndicatorUi()
-                    }
-                    refreshUi()
-                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-                }
             }
         }
 
