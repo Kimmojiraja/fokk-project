@@ -31,15 +31,15 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_stat_chip"
-                android:paddingHorizontal="8dp"
+                android:paddingHorizontal="10dp"
                 android:paddingVertical="4dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="PRIVACY GATEWAY"
+                    android:text="FOKK VPN"
                     android:textColor="@color/fokk_cyan"
-                    android:textSize="10sp"
+                    android:textSize="10.5sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.08" />
             </LinearLayout>
@@ -52,9 +52,9 @@
                 android:background="@drawable/bg_engine_capsule"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="3dp"
-                android:text="DIRECT (IP EXPOSED)"
+                android:text="UNPROTECTED • REAL IP EXPOSED"
                 android:textColor="#F43F5E"
-                android:textSize="10.5sp"
+                android:textSize="10sp"
                 android:textStyle="bold" />
 
             <View
@@ -102,7 +102,7 @@
                     android:backgroundTint="#0F172A"
                     android:src="@drawable/ic_vpn_key"
                     app:tint="@color/text_secondary"
-                    android:contentDescription="Toggle Privacy Route" />
+                    android:contentDescription="Toggle Fokk VPN" />
             </FrameLayout>
 
             <TextView
@@ -110,7 +110,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="Tap to Connect"
+                android:text="Connect Fokk VPN"
                 android:textColor="@color/text_primary"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -120,7 +120,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Choose a privacy route below to mask your IP"
+                android:text="Mask your IP address and protect browser traffic"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp"
                 android:gravity="center" />
@@ -138,7 +138,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="IP MASKING STATUS"
+                android:text="FOKK VPN STATUS"
                 android:textColor="@color/text_secondary"
                 android:textSize="10.5sp"
                 android:textStyle="bold"
@@ -207,7 +207,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Active Protocol:"
+                    android:text="Protection Mode:"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
 
@@ -218,7 +218,7 @@
                     android:layout_weight="1"
                     android:layout_marginStart="8dp"
                     android:gravity="end"
-                    android:text="Direct (Browser proxy off)"
+                    android:text="Direct (Real IP visible)"
                     android:textColor="@color/fokk_cyan"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -229,7 +229,7 @@
                 android:layout_height="40dp"
                 android:layout_marginTop="12dp"
                 android:paddingVertical="0dp"
-                android:text="Verify Exit IP from Active Tab"
+                android:text="Verify Fokk VPN Protection"
                 android:textColor="@color/fokk_cyan"
                 android:textSize="12sp"
                 android:textStyle="bold"
@@ -239,19 +239,19 @@
                 app:cornerRadius="10dp" />
         </LinearLayout>
 
-        <!-- Route Protocol Selector Label -->
+        <!-- Route Selector Label -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
             android:layout_marginBottom="8dp"
-            android:text="CHOOSE PRIVACY ROUTE"
+            android:text="CHOOSE FOKK VPN ROUTE"
             android:textColor="@color/text_secondary"
             android:textSize="10.5sp"
             android:textStyle="bold"
             android:letterSpacing="0.08" />
 
-        <!-- Option 1: Tor Onion Network -->
+        <!-- Option 1: Fokk Fast Privacy Network -->
         <LinearLayout
             android:id="@+id/cardModeTor"
             android:layout_width="match_parent"
@@ -274,20 +274,34 @@
                     android:layout_height="32dp"
                     android:gravity="center"
                     android:background="@drawable/bg_circle_icon_button"
-                    android:text="O"
-                    android:textColor="#A855F7"
+                    android:text="F"
+                    android:textColor="@color/fokk_cyan"
                     android:textSize="15sp"
                     android:textStyle="bold" />
 
-                <TextView
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
                     android:layout_weight="1"
-                    android:text="Tor Onion Network"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Fokk Fast Privacy Network"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="High-speed global routing • Instant connection"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
+                </LinearLayout>
 
                 <RadioButton
                     android:id="@+id/radioModeTor"
@@ -297,39 +311,26 @@
                     android:focusable="false" />
             </LinearLayout>
 
+            <!-- Compatibility views (kept invisible for view binding) -->
             <LinearLayout
                 android:id="@+id/layoutOrbotHelper"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
                 android:visibility="gone">
-
                 <TextView
                     android:id="@+id/textOrbotStatus"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Tor SOCKS5 port (127.0.0.1:9050)"
-                    android:textColor="#A855F7"
-                    android:textSize="11sp" />
-
+                    android:layout_height="0dp"
+                    android:visibility="gone" />
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnLaunchOrbot"
-                    android:layout_width="wrap_content"
-                    android:layout_height="32dp"
-                    android:paddingHorizontal="10dp"
-                    android:paddingVertical="0dp"
-                    android:text="Start Tor"
-                    android:textColor="#FFFFFF"
-                    android:textSize="10.5sp"
-                    app:backgroundTint="#7C3AED"
-                    app:cornerRadius="8dp" />
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:visibility="gone" />
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Option 2: Custom Proxy Endpoint -->
+        <!-- Option 2: Fokk Dedicated Node -->
         <LinearLayout
             android:id="@+id/cardModeCustom"
             android:layout_width="match_parent"
@@ -352,7 +353,7 @@
                     android:layout_height="32dp"
                     android:gravity="center"
                     android:background="@drawable/bg_circle_icon_button"
-                    android:text="C"
+                    android:text="P"
                     android:textColor="#10B981"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -367,7 +368,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Custom Proxy Endpoint"
+                        android:text="Fokk Dedicated Node"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp"
                         android:textStyle="bold" />
@@ -377,7 +378,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Tap to configure (SOCKS5 / HTTP)"
+                        android:text="Tap to configure private server"
                         android:textColor="@color/text_secondary"
                         android:textSize="11sp" />
                 </LinearLayout>
@@ -391,7 +392,7 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Option 3: Direct Connection -->
+        <!-- Option 3: Direct Browsing -->
         <LinearLayout
             android:id="@+id/cardModeOff"
             android:layout_width="match_parent"
@@ -410,19 +411,33 @@
                 android:gravity="center"
                 android:background="@drawable/bg_circle_icon_button"
                 android:text="D"
-                android:textColor="#00E5FF"
+                android:textColor="#94A3B8"
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
-            <TextView
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
                 android:layout_weight="1"
-                android:text="Direct Connection"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Direct Browsing"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Standard unencrypted browsing (Real IP visible)"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp" />
+            </LinearLayout>
 
             <RadioButton
                 android:id="@+id/radioModeOff"
@@ -445,7 +460,7 @@
                 android:visibility="gone" />
         </LinearLayout>
 
-        <!-- Fail-Closed Notice Footer -->
+        <!-- Protection Notice Footer -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -457,7 +472,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Fail-Closed Protection: Direct fallback is strictly disabled while a route is active to prevent IP leakage."
+                android:text="Fokk Privacy Protection: Browser traffic is encrypted and your real IP is masked from destination websites."
                 android:textColor="@color/text_secondary"
                 android:textSize="11sp" />
         </LinearLayout>
