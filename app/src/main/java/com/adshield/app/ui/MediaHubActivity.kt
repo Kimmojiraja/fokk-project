@@ -6872,15 +6872,19 @@ open class MediaHubActivity : AppCompatActivity() {
 
     private fun showCustomProxyDialog(onApplied: ((String) -> Unit)? = null) {
         val input = EditText(this).apply {
-            hint = "socks5://host:port, http://host:port, or https://host:port"
+            hint = "socks5://host:port or http://host:port"
             setText(com.adshield.app.engine.VpnEngine.getCustomProxy(this@MediaHubActivity))
-            minLines = 3
-            maxLines = 8
-            setSingleLine(false)
+            setSingleLine(true)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
+        }
+        val container = android.widget.FrameLayout(this).apply {
+            setPadding(48, 16, 48, 0)
+            addView(input)
         }
         AlertDialog.Builder(this)
             .setTitle("Custom Browser Proxy")
-            .setView(input)
+            .setMessage("Enter the address of an active SOCKS5 or HTTP proxy server:")
+            .setView(container)
             .setPositiveButton("Apply") { _, _ ->
                 val proxyUrl = input.text.toString().trim()
                 if (proxyUrl.isNotEmpty()) {
@@ -6898,7 +6902,7 @@ open class MediaHubActivity : AppCompatActivity() {
                                     lastVpnRouteFingerprint = getVpnRouteFingerprint()
                                     updateVpnIndicatorUi()
                                 }
-                                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
                             }
                         }
                     }
