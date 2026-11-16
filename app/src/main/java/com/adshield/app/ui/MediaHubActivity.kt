@@ -1995,8 +1995,9 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(activity)
                 val proxyEndpoint = when (activeMode) {
-                    com.adshield.app.engine.VpnEngine.VpnMode.TOR -> com.adshield.app.engine.VpnEngine.getTorEndpoint()
-                    com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> com.adshield.app.engine.VpnEngine.getRelayEndpoint()
+                    com.adshield.app.engine.VpnEngine.VpnMode.FAST,
+                    com.adshield.app.engine.VpnEngine.VpnMode.TOR,
+                    com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> com.adshield.app.engine.VpnEngine.getFastPrivacyEndpoint()
                     com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> com.adshield.app.engine.VpnEngine.getCustomProxy(activity)
                     com.adshield.app.engine.VpnEngine.VpnMode.OFF -> null
                 }
@@ -2073,8 +2074,9 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(activity)
                 val proxyEndpoint = when (activeMode) {
-                    com.adshield.app.engine.VpnEngine.VpnMode.TOR -> com.adshield.app.engine.VpnEngine.getTorEndpoint()
-                    com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> com.adshield.app.engine.VpnEngine.getRelayEndpoint()
+                    com.adshield.app.engine.VpnEngine.VpnMode.FAST,
+                    com.adshield.app.engine.VpnEngine.VpnMode.TOR,
+                    com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> com.adshield.app.engine.VpnEngine.getFastPrivacyEndpoint()
                     com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> com.adshield.app.engine.VpnEngine.getCustomProxy(activity)
                     com.adshield.app.engine.VpnEngine.VpnMode.OFF -> null
                 }
