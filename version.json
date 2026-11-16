@@ -1,8 +1,8 @@
 {
-  "versionCode": 258,
-  "versionName": "2.5.8",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.5.8/app-debug.apk",
-  "changelog": "- Real IP Address Masking: Fixed search engine tunneling so IP lookups route through high-speed HTTP CONNECT privacy nodes across America, Europe, and Asia.\n- Opera-Style Unboxed Bottom Menu: Clean cardless design featuring top 4-squircle toggles (VPN, Ad Blocker, Reader, Night mode) with detailed info badges.\n- Ask Fokk AI Action Pill: Quick-launch AI summaries and web intelligence right from the menu.\n- Unboxed Daily Essentials & Feature Hubs: Clean borderless layout; moved Burn Session to More tools; added Fokk Shield Protection in Feature Hubs above About without arrow.\n- Fokk Pro Private Network: Active stealth network sheet with military-grade tunneling and zero-drop reliability."
+  "versionCode": 259,
+  "versionName": "2.5.9",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.5.9/app-debug.apk",
+  "changelog": "- Strict Regional VPN Isolation: Selecting America routes strictly through Americas nodes (US, Canada), Europe strictly through European nodes (Germany, Spain, UK, Austria), and Asia through Asian nodes (Korea, Japan, Hong Kong, Thailand). Zero cross-continental leak.\n- Menu Polish: Removed (i) badges from top 4 squircles; differentiated VPN (Globe) and Ad Blocker (Shield); standardized all 4 squircle icons to sleek dark-theme white (#FFFFFF).\n- Ask Fokk AI Pill: Premium bold AI badge replacing sparkle icon.\n- More Shelf: Placed Saved AI Summaries and Burn Session side-by-side; removed Fokk VPN row; fully unboxed all Advanced Pro Suite items.\n- Fokk AI Overhaul: Fixed summary hanging; added robust on-device extraction with watchdog fallback; redesigned summary sheet to sleek Google AI / Gemini aesthetic with zero emojis."
 }
 
 

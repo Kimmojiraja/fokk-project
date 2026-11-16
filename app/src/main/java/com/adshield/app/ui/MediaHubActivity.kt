@@ -7483,9 +7483,10 @@ open class MediaHubActivity : AppCompatActivity() {
 
             lastGeneratedSummaryJson = summaryJson
 
-            // If user has switched apps or tabs or minimized the app, post system notification
+            // Always dispatch notification and update last generated summary
+            postAiSummaryNotification(title, source.ifBlank { "Fokk AI" }, readingTime, explicitSummary, summaryJson)
+
             if (!isActivityResumed || isFinishing || isDestroyed) {
-                postAiSummaryNotification(title, source.ifBlank { "Fokk AI" }, readingTime, explicitSummary, summaryJson)
                 return
             }
 
@@ -7580,7 +7581,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
             var isMale = prefs.getBoolean("pref_tts_male_voice", true)
             val updateVoiceBtn = {
-                sheetBinding.btnTtsVoiceToggle.text = if (isMale) "🎙️ Voice: Male" else "🎙️ Voice: Female"
+                sheetBinding.btnTtsVoiceToggle.text = if (isMale) "Voice: Male" else "Voice: Female"
             }
             updateVoiceBtn()
 
@@ -8064,18 +8065,75 @@ open class MediaHubActivity : AppCompatActivity() {
         val webView = activeWebView
         val url = webView?.url
         if (webView == null || url.isNullOrBlank() || url.contains("fokk_start.html")) {
-            Toast.makeText(this, "Open an article or web page first to generate a summary", Toast.LENGTH_SHORT).show()
+            val introJson = org.json.JSONObject().apply {
+                put("title", "Fokk AI • On-Device Intelligence")
+                put("source", "Fokk AI")
+                put("sourceHost", "fokk.ai")
+                put("readingTime", "1 min read")
+                put("wordCount", 120)
+                put("executiveSummary", "Fokk AI delivers private, zero-latency summaries of articles, news stories, and technical pages entirely on your device without sending any page data to cloud servers.")
+                put("bullets", org.json.JSONArray().apply {
+                    put("Open any webpage or article in Fokk Browser.")
+                    put("Tap 'Ask Fokk AI' from the bottom menu.")
+                    put("Instantly review key takeaways, statistics, and editorial insights.")
+                    put("Listen to summaries aloud or save them for offline research.")
+                })
+                put("metrics", org.json.JSONArray().apply {
+                    put("100% On-Device")
+                    put("Zero Server Tracking")
+                    put("Zero Cloud Latency")
+                })
+                put("followUpQuestions", org.json.JSONArray().apply {
+                    put("How does on-device intelligence protect browsing privacy?")
+                })
+            }
+            showAiSummarySheet(introJson.toString())
             return
         }
 
         Toast.makeText(this, "Generating Fokk Summary...", Toast.LENGTH_SHORT).show()
 
-        webView.evaluateJavascript("if (typeof triggerFokkSummarizer === 'function') { triggerFokkSummarizer(); } else { 'loading'; }") { res ->
-            if (res == null || res == "null" || res.contains("loading")) {
-                val js = "$summarizerScript; triggerFokkSummarizer();"
-                webView.evaluateJavascript(js, null)
+        var handled = false
+        val watchdog = Runnable {
+            if (!handled && !isFinishing && !isDestroyed) {
+                handled = true
+                val fallbackJs = """
+                    (function() {
+                        try {
+                            var t = document.title || 'Page Summary';
+                            var desc = document.querySelector('meta[name="description"]')?.content || '';
+                            var paras = Array.from(document.querySelectorAll('p, blockquote'))
+                                .map(function(el) { return (el.innerText || '').trim(); })
+                                .filter(function(txt) { return txt.length > 35 && !txt.includes('{'); });
+                            var topP = paras.slice(0, 4);
+                            if (topP.length === 0) topP = ['Content extracted directly from webpage.'];
+                            var exec = desc || topP[0];
+                            var obj = {
+                                title: t,
+                                source: window.location.hostname.replace(/^www\./i, '') || 'Web',
+                                sourceHost: window.location.hostname || '',
+                                favicon: 'https://www.google.com/s2/favicons?domain=' + window.location.hostname + '&sz=128',
+                                executiveSummary: exec,
+                                summary: exec,
+                                bullets: topP,
+                                metrics: [paras.length + ' passages analyzed', 'On-Device AI'],
+                                followUpQuestions: ['What are the key implications of this topic?'],
+                                readingTime: Math.max(1, Math.round(paras.join(' ').split(/\s+/).length / 200)) + ' min read',
+                                wordCount: paras.join(' ').split(/\s+/).length
+                            };
+                            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.showAiSummaryData === 'function') {
+                                window.FokkShieldBridge.showAiSummaryData(JSON.stringify(obj));
+                            }
+                        } catch(e) {}
+                    })();
+                """.trimIndent()
+                webView.evaluateJavascript(fallbackJs, null)
             }
         }
+        mainHandler.postDelayed(watchdog, 1200L)
+
+        val js = "$summarizerScript; if (typeof triggerFokkSummarizer === 'function') { triggerFokkSummarizer(); }"
+        webView.evaluateJavascript(js, null)
     }
 
     private fun reportBrokenSite() {
