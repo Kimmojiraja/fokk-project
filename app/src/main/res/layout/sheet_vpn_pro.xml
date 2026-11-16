@@ -65,7 +65,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Fokk VPN Pro"
+                            android:text="Fokk Relay Pro"
                             android:textColor="#F8FAFC"
                             android:textSize="18sp"
                             android:textStyle="bold" />

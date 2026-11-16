@@ -167,14 +167,14 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_globe"
-                    app:tint="#FFFFFF" />
+                    android:src="@drawable/ic_fokk_relay"
+                    app:tint="#00E5FF" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="5dp"
-                    android:text="VPN"
+                    android:text="Fokk Relay"
                     android:textColor="@color/text_primary"
                     android:textSize="12sp"
                     android:textStyle="bold" />

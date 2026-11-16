@@ -45,6 +45,7 @@ class AdShieldApp : Application() {
         }
         applicationScope.launch { blocklistEngine.initialize() }
         applicationScope.launch { braveEngine.initialize() }
+        com.adshield.app.engine.FokkTunnelEngine.init(this)
     }
 
     private fun createNotificationChannels() {

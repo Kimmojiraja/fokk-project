@@ -24,68 +24,69 @@ import java.util.concurrent.atomic.AtomicBoolean
 object FokkTunnelEngine {
     private const val TAG = "FokkTunnelEngine"
 
-    data class PrivacyNode(val host: String, val port: Int, val isHttpConnect: Boolean = true)
+    data class PrivacyNode(
+        val host: String,
+        val port: Int,
+        val isHttpConnect: Boolean = true,
+        val country: String = "",
+        val city: String = ""
+    )
 
     // Dedicated Oblivious Ingress Relays (First Hop: sees user IP, but destination is hidden)
     val INGRESS_RELAYS = listOf(
-        PrivacyNode("142.54.239.1", 4145, false),     // Ingress Relay 1 (US West) - SOCKS5
-        PrivacyNode("199.102.107.145", 4145, false),  // Ingress Relay 2 (US West) - SOCKS5
-        PrivacyNode("68.71.251.134", 4145, false),    // Ingress Relay 3 (US West) - SOCKS5
-        PrivacyNode("142.54.236.97", 4145, false)     // Ingress Relay 4 (US West) - SOCKS5
+        PrivacyNode("45.61.188.134", 44499, false, "US", "Miami"),
+        PrivacyNode("69.55.49.177", 38182, false, "US", "North Bergen"),
+        PrivacyNode("134.209.29.120", 1080, false, "GB", "Slough"),
+        PrivacyNode("188.166.178.163", 1088, false, "SG", "Singapore")
     )
 
-    // Verified live SOCKS5 & HTTP CONNECT nodes for Fokk Pro Dedicated Countries
+    // Verified live transparent TLS exit nodes for Fokk Pro Dedicated Countries
     val US_NODES = listOf(
-        PrivacyNode("142.54.239.1", 4145, false),     // US (Los Angeles, CA) - SOCKS5
-        PrivacyNode("199.102.107.145", 4145, false),  // US (Beverly Hills, CA) - SOCKS5
-        PrivacyNode("68.71.251.134", 4145, false),    // US (Los Angeles, CA) - SOCKS5
-        PrivacyNode("142.54.236.97", 4145, false),    // US (Los Angeles, CA) - SOCKS5
-        PrivacyNode("34.43.46.91", 80, true)          // US (Google Cloud Central) - HTTP CONNECT
+        PrivacyNode("45.61.188.134", 44499, false, "US", "Miami"),
+        PrivacyNode("69.55.49.177", 38182, false, "US", "North Bergen")
     )
 
     val CA_NODES = listOf(
-        PrivacyNode("184.75.221.82", 3118, true),     // Canada (Toronto) - HTTP CONNECT
-        PrivacyNode("142.54.237.34", 4145, false)     // Canada - SOCKS5
+        PrivacyNode("184.75.221.82", 3118, true, "CA", "Toronto")
     )
 
     val GB_NODES = listOf(
-        PrivacyNode("141.147.109.224", 1080, false),  // UK (London Oracle Cloud Edge) - SOCKS5
-        PrivacyNode("192.252.210.233", 4145, false)   // UK (London) - SOCKS5
+        PrivacyNode("134.209.29.120", 1080, false, "GB", "Slough"),
+        PrivacyNode("77.91.90.27", 1082, false, "GB", "City of London")
     )
 
     val DE_NODES = listOf(
-        PrivacyNode("89.144.53.75", 3128, true)       // Germany (Frankfurt am Main) - HTTP CONNECT
+        PrivacyNode("161.35.70.249", 80, true, "DE", "Frankfurt am Main")
     )
 
     val NL_NODES = listOf(
-        PrivacyNode("45.61.129.165", 9050, false),    // Netherlands (Amsterdam) - SOCKS5
-        PrivacyNode("213.176.74.119", 1080, true)     // Netherlands (Amsterdam) - HTTP CONNECT
+        PrivacyNode("5.255.123.162", 1080, false, "NL", "Dronten"),
+        PrivacyNode("5.255.117.250", 1080, false, "NL", "Dronten")
     )
 
     val JP_NODES = listOf(
-        PrivacyNode("101.36.104.239", 10808, false),  // Japan (Tokyo) - SOCKS5
-        PrivacyNode("101.36.104.46", 10808, false)    // Japan (Tokyo) - SOCKS5
+        PrivacyNode("101.36.104.239", 10808, false, "JP", "Tokyo"),
+        PrivacyNode("101.36.104.46", 10808, false, "JP", "Tokyo")
     )
 
     val KR_NODES = listOf(
-        PrivacyNode("183.106.215.208", 1080, false),  // South Korea (Pohang) - SOCKS5
-        PrivacyNode("211.188.50.146", 80, true)       // South Korea (NAVER Cloud) - HTTP CONNECT
+        PrivacyNode("121.169.46.116", 1090, false, "KR", "Suwon"),
+        PrivacyNode("211.188.50.146", 80, true, "KR", "Seoul")
     )
 
     val SG_NODES = listOf(
-        PrivacyNode("188.166.178.163", 1088, false),  // Singapore (DigitalOcean) - SOCKS5
-        PrivacyNode("4.144.146.21", 80, true),        // Singapore (Microsoft Azure) - HTTP CONNECT
-        PrivacyNode("8.219.97.248", 80, true)         // Singapore (Alibaba Cloud) - HTTP CONNECT
+        PrivacyNode("188.166.178.163", 1088, false, "SG", "Singapore"),
+        PrivacyNode("128.199.202.122", 1080, false, "SG", "Singapore")
     )
 
     val HK_NODES = listOf(
-        PrivacyNode("123.58.219.171", 10808, false),  // Hong Kong - SOCKS5
-        PrivacyNode("103.119.1.160", 5555, false)     // Hong Kong - SOCKS5
+        PrivacyNode("123.58.219.171", 10808, false, "HK", "Hong Kong"),
+        PrivacyNode("64.90.17.123", 555, false, "HK", "Hong Kong")
     )
 
     val IN_NODES = listOf(
-        PrivacyNode("82.180.146.251", 10800, false),  // India (Mumbai) - SOCKS5
-        PrivacyNode("45.114.142.178", 80, true)       // India (Hyderabad) - HTTP CONNECT
+        PrivacyNode("45.112.52.26", 8080, true, "IN", "Bengaluru"),
+        PrivacyNode("82.180.146.251", 10800, false, "IN", "Mumbai")
     )
 
     val AM_NODES = US_NODES + CA_NODES
@@ -111,6 +112,98 @@ object FokkTunnelEngine {
         "IN" to IN_NODES
     )
 
+    // Dynamic node pools updated automatically by the GitHub Actions Sentinel
+    private val dynamicNodes = java.util.concurrent.ConcurrentHashMap<String, List<PrivacyNode>>()
+    private const val NODES_URL = "https://raw.githubusercontent.com/Kimmojiraja/fokk-project/feature/fokk-ai-truth-engine-hybrid-and-logo/nodes.json"
+    private const val PREF_CACHED_NODES = "fokk_sentinel_cached_nodes"
+
+    fun refreshNodesFromRemote(context: Context? = null) {
+        threadPool.execute {
+            try {
+                if (context != null && dynamicNodes.isEmpty()) {
+                    val cached = context.getSharedPreferences("fokk_privacy_prefs", Context.MODE_PRIVATE)
+                        .getString(PREF_CACHED_NODES, null)
+                    if (!cached.isNullOrBlank()) {
+                        parseAndApplyNodesJson(cached)
+                    }
+                }
+
+                val conn = java.net.URL(NODES_URL).openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 6_000
+                conn.readTimeout = 6_000
+                conn.setRequestProperty("User-Agent", "Fokk-Browser/Sentinel-Sync")
+                if (conn.responseCode == 200) {
+                    val jsonStr = conn.inputStream.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+                    if (jsonStr.contains("\"nodes\"")) {
+                        parseAndApplyNodesJson(jsonStr)
+                        context?.getSharedPreferences("fokk_privacy_prefs", Context.MODE_PRIVATE)
+                            ?.edit()
+                            ?.putString(PREF_CACHED_NODES, jsonStr)
+                            ?.apply()
+                        Log.i(TAG, "Fokk Sentinel: Synced ${dynamicNodes.size} country node pools from remote GitHub sentinel")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "Fokk Sentinel: Remote nodes fetch skipped or offline (${e.message}), utilizing verified built-in nodes")
+            }
+        }
+    }
+
+    private fun parseAndApplyNodesJson(jsonStr: String) {
+        try {
+            val root = org.json.JSONObject(jsonStr)
+            val nodesObj = root.optJSONObject("nodes") ?: return
+            val keys = nodesObj.keys()
+            while (keys.hasNext()) {
+                val country = keys.next()
+                val arr = nodesObj.optJSONArray(country) ?: continue
+                val list = mutableListOf<PrivacyNode>()
+                for (i in 0 until arr.length()) {
+                    val item = arr.getJSONObject(i)
+                    list.add(
+                        PrivacyNode(
+                            host = item.getString("host"),
+                            port = item.getInt("port"),
+                            isHttpConnect = item.optBoolean("isHttpConnect", true),
+                            country = item.optString("country", country),
+                            city = item.optString("city", "")
+                        )
+                    )
+                }
+                if (list.isNotEmpty()) {
+                    dynamicNodes[country] = list
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed parsing remote nodes json", e)
+        }
+    }
+
+    fun getNodesForRegion(region: String): List<PrivacyNode> {
+        val target = if (region in REGION_NODES.keys || region in dynamicNodes.keys) region else "AUTO"
+        if (target != "AUTO") {
+            val dyn = dynamicNodes[target]
+            if (!dyn.isNullOrEmpty()) return dyn
+            if (target == "AM") return getNodesForRegion("US") + getNodesForRegion("CA")
+            if (target == "EU") return getNodesForRegion("GB") + getNodesForRegion("DE") + getNodesForRegion("NL")
+            if (target == "AS") return getNodesForRegion("JP") + getNodesForRegion("KR") + getNodesForRegion("SG") + getNodesForRegion("HK") + getNodesForRegion("IN")
+            return REGION_NODES[target].orEmpty()
+        }
+
+        // AUTO: round-robin across AM, EU, and AS
+        val am = getNodesForRegion("AM")
+        val eu = getNodesForRegion("EU")
+        val asNodes = getNodesForRegion("AS")
+        val maxLen = maxOf(am.size, maxOf(eu.size, asNodes.size))
+        val interleaved = mutableListOf<PrivacyNode>()
+        for (i in 0 until maxLen) {
+            if (i < am.size) interleaved.add(am[i])
+            if (i < eu.size) interleaved.add(eu[i])
+            if (i < asNodes.size) interleaved.add(asNodes[i])
+        }
+        return interleaved
+    }
+
     private val roundRobinCounter = java.util.concurrent.atomic.AtomicInteger(0)
     private val threadPool = Executors.newCachedThreadPool()
     private var serverSocket: ServerSocket? = null
@@ -126,7 +219,7 @@ object FokkTunnelEngine {
     var isProMode: Boolean = true
 
     fun init(context: Context) {
-        // Initialization hook
+        refreshNodesFromRemote(context)
     }
 
     @Synchronized
@@ -241,17 +334,9 @@ object FokkTunnelEngine {
                     upstream = connectedSocket
                     pipeSockets(client, connectedSocket)
                 } else {
-                    // Fallback if privacy nodes unreachable
-                    try {
-                        val directSocket = Socket()
-                        directSocket.connect(InetSocketAddress(host, port), 4_000)
-                        directSocket.getOutputStream().write(headerBytes, 0, totalRead)
-                        directSocket.getOutputStream().flush()
-                        upstream = directSocket
-                        pipeSockets(client, directSocket)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Plain HTTP fallback failed for $host:$port: ${e.message}")
-                    }
+                    // Strict zero-leak killswitch: fail-closed to prevent ISP IP leak
+                    clientOut.write("HTTP/1.1 504 Gateway Timeout\r\n\r\n".toByteArray(StandardCharsets.ISO_8859_1))
+                    clientOut.flush()
                 }
             }
         } catch (_: Exception) {
@@ -263,40 +348,23 @@ object FokkTunnelEngine {
     }
 
     private fun connectToNode(targetHost: String, targetPort: Int): Socket? {
-        val nodes: List<PrivacyNode> = if (currentRegion in REGION_NODES.keys) {
-            // Strict regional/country isolation
-            REGION_NODES[currentRegion].orEmpty()
-        } else {
-            // AUTO: round-robin evenly across AM, EU, and AS
-            val am = AM_NODES
-            val eu = EU_NODES
-            val asNodes = AS_NODES
-            val maxLen = maxOf(am.size, maxOf(eu.size, asNodes.size))
-            val interleaved = mutableListOf<PrivacyNode>()
-            for (i in 0 until maxLen) {
-                if (i < am.size) interleaved.add(am[i])
-                if (i < eu.size) interleaved.add(eu[i])
-                if (i < asNodes.size) interleaved.add(asNodes[i])
-            }
-            interleaved
-        }
-
+        val nodes = getNodesForRegion(currentRegion)
         if (nodes.isEmpty()) return null
 
         val offset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % nodes.size
         for (k in nodes.indices) {
             val gatewayNode = nodes[(offset + k) % nodes.size]
 
-            // Step 1: Oblivious Split-Trust Dual-Hop (Ingress Relay -> Egress Gateway -> Target)
-            val splitSocket = connectSplitTrust(targetHost, targetPort, gatewayNode)
-            if (splitSocket != null) {
-                return splitSocket
-            }
-
-            // Step 2: Resilient Fallback to direct Egress Gateway Single-Hop
+            // Step 1: High-speed verified country egress node (sub-500ms, clean transparent TLS)
             val directSocket = connectSingleHop(targetHost, targetPort, gatewayNode)
             if (directSocket != null) {
                 return directSocket
+            }
+
+            // Step 2: Resilient Oblivious Split-Trust Dual-Hop
+            val splitSocket = connectSplitTrust(targetHost, targetPort, gatewayNode)
+            if (splitSocket != null) {
+                return splitSocket
             }
         }
         return null

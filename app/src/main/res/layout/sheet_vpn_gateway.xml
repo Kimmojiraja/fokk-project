@@ -43,7 +43,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_centerInParent="true"
-                android:text="VPN"
+                android:text="Fokk Relay"
                 android:textColor="#F8FAFC"
                 android:textSize="20sp"
                 android:textStyle="bold" />
@@ -57,7 +57,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_info"
                 app:tint="#94A3B8"
-                android:contentDescription="VPN Information" />
+                android:contentDescription="Fokk Relay Information" />
         </RelativeLayout>
 
         <!-- Hero Area: World Map Silhouette + Power Button + Status -->
@@ -102,9 +102,9 @@
                         android:layout_gravity="center"
                         android:background="@drawable/bg_tab_counter"
                         android:backgroundTint="#0F172A"
-                        android:src="@drawable/ic_vpn_power"
+                        android:src="@drawable/ic_fokk_relay"
                         app:tint="#94A3B8"
-                        android:contentDescription="Toggle Fokk VPN" />
+                        android:contentDescription="Toggle Fokk Relay" />
                 </FrameLayout>
 
                 <!-- Status Label ("Protected" / "Disconnected") -->
@@ -219,7 +219,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Use VPN for private tabs only"
+                android:text="Use Fokk Relay for private tabs only"
                 android:textColor="#F8FAFC"
                 android:textSize="15sp" />
 
@@ -253,7 +253,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Bypass VPN for search"
+                    android:text="Bypass Relay for search"
                     android:textColor="#F8FAFC"
                     android:textSize="15sp" />
 
@@ -304,7 +304,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Unlock Fokk VPN Pro to keep your entire browsing session safe &amp; secure"
+                    android:text="Unlock Fokk Relay Pro to keep your entire browsing session safe &amp; secure"
                     android:textColor="#E0E7FF"
                     android:textSize="12sp"
                     android:lineSpacingExtra="2dp" />
@@ -389,7 +389,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="VPN protocol"
+                    android:text="Relay protocol"
                     android:textColor="#F8FAFC"
                     android:textSize="14sp" />
 
