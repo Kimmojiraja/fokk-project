@@ -1413,6 +1413,7 @@
             <TextView android:id="@+id/textMenuBlockedInfo" android:layout_width="0dp" android:layout_height="0dp" />
             <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchMenuShield" android:layout_width="0dp" android:layout_height="0dp" />
             <TextView android:id="@+id/badgeSocialShield" android:layout_width="0dp" android:layout_height="0dp" />
+            <TextView android:id="@+id/badgeAiFilter" android:layout_width="0dp" android:layout_height="0dp" />
             <View android:id="@+id/rowReaderMode" android:layout_width="0dp" android:layout_height="0dp" />
             <View android:id="@+id/rowDarkMode" android:layout_width="0dp" android:layout_height="0dp" />
             <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/switchDarkMode" android:layout_width="0dp" android:layout_height="0dp" />
