@@ -321,14 +321,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:visibility="gone"
-                android:contentDescription="Privacy Gateway / VPN">
+                android:contentDescription="Fokk Relay">
 
                 <ImageView
                     android:id="@+id/imgNavVpnIcon"
                     android:layout_width="18dp"
                     android:layout_height="18dp"
                     android:layout_gravity="center"
-                    android:src="@drawable/ic_vpn_key"
+                    android:src="@drawable/ic_fokk_relay"
                     app:tint="@color/text_secondary" />
 
                 <View

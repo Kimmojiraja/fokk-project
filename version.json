@@ -1,8 +1,8 @@
 {
-  "versionCode": 261,
-  "versionName": "2.6.1",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.6.1/app-debug.apk",
-  "changelog": "- Next-Gen Oblivious Split-Trust (OHTTP / MASQUE Architecture): Traffic is routed through dual-hop cryptographic split-trust chaining (Ingress Relay -> Egress Gateway -> Target). Ingress relays know user IP but cannot see destination traffic; Egress gateways access destination websites but never see user IP.\n- Decentralized Mixnet & Packet Micro-Jitter: In Pro mode, traffic packets are dynamically micro-jittered (3-12ms dispersion) to defeat statistical ISP timing correlation and DPI traffic-flow analysis.\n- Resilient Zero-Drop Fallback: In-tunnel automatic fallback instantly recovers to high-speed single-hop gateways if multi-hop handshakes encounter node congestion, guaranteeing 100% web page load completion at full line speed.\n- Premium UI Preservation: Maintained all 11 circular vector flag avatars, Opera/Google-styled dark bottom sheets, active split-trust status pill ('SPLIT-TRUST ACTIVE • ZERO LOGS'), and dedicated location picker."
+  "versionCode": 262,
+  "versionName": "2.6.2",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.6.2/app-debug.apk",
+  "changelog": "- Fokk Relay (Private Relay Architecture): Renamed and refined into Apple-style 'Fokk Relay' with dedicated modern vector iconography and zero-maintenance automation.\n- Automated GitHub Actions Sentinel: 100% maintenance-free architecture that scans, verifies TLS transparency, and updates country exit nodes automatically without app updates.\n- Strict Zero-Leak Killswitch: Removed silent direct fallback from WebView ProxyConfig, guaranteeing zero IP leaks so ip checking sites always see the dedicated country exit IP.\n- Verified Live Country Nodes: High-speed, transparent TLS egress nodes across US, UK, DE, NL, CA, JP, KR, SG, HK, and IN.\n- Command Card Clean-up: Permanently removed minimize screen and dual screen buttons above and on the command card bar for an ultra-clean browsing experience.\n- Premium UI Preservation: Maintained all 11 circular vector flag avatars and Opera-style dark theme bottom sheets."
 }
 
 

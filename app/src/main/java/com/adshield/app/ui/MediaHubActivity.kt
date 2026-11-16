@@ -5944,8 +5944,8 @@ open class MediaHubActivity : AppCompatActivity() {
         }
         sheetBinding.btnMenuVpnInfo.setOnClickListener {
             AlertDialog.Builder(this)
-                .setTitle("About Fokk VPN")
-                .setMessage("Fokk VPN encrypts and protects your browser traffic through our high-speed edge network. Your real IP address and ISP details are kept private from websites you visit.\n\n• Zero-Log Policy: We do not track or store your browsing activity.\n• High-Speed Edge: Fast connections optimized for video streaming and web browsing.")
+                .setTitle("About Fokk Relay")
+                .setMessage("Fokk Relay encrypts and protects your browser traffic through our high-speed edge network with zero IP leaks. Your real IP address and ISP details are kept private from websites you visit.\n\n• Zero-Log Policy: We do not track or store your browsing activity.\n• High-Speed Edge: Fast connections optimized for video streaming and web browsing.")
                 .setPositiveButton("Got it", null)
                 .show()
         }
@@ -6935,16 +6935,16 @@ open class MediaHubActivity : AppCompatActivity() {
                     }
                     val comparison = when {
                         mode == com.adshield.app.engine.VpnEngine.VpnMode.OFF ->
-                            "Fokk VPN is disconnected. Browser is using direct unencrypted public IP."
+                            "Fokk Relay is disconnected. Browser is using direct unencrypted public IP."
                         directIp == null ->
                             "Protected IP verified ($ip), direct connection baseline was unreachable."
                         ip == directIp ->
                             "Matches direct IP. Browser traffic may not be masked."
                         else ->
-                            "✓ Protected by Fokk VPN. Real IP is masked (${directIp} → ${ip})."
+                            "✓ Protected by Fokk Relay. Real IP is masked (${directIp} → ${ip})."
                     }
                     AlertDialog.Builder(this)
-                        .setTitle("Fokk VPN Protection Check")
+                        .setTitle("Fokk Relay Protection Check")
                         .setMessage("Masked IP: $ip\nDirect IP: ${directIp ?: "Unavailable"}\nRouting: ${mode.title}\n\n$comparison")
                         .setPositiveButton("OK", null)
                         .show()
@@ -8450,8 +8450,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 binding.topBar.visibility = View.VISIBLE
             }
             binding.layoutCollapsedBar.visibility = View.GONE
-            binding.bottomNav.visibility = View.VISIBLE
-            binding.btnPictureInPicture.visibility = if (isMediaPlaying && hasActiveVideo) View.VISIBLE else View.GONE
+            binding.btnPictureInPicture.visibility = View.GONE
             activeWebView?.evaluateJavascript("if (typeof window.__fokk_exit_pip_view === 'function') window.__fokk_exit_pip_view();", null)
             activeWebView?.requestLayout()
         }
@@ -8903,10 +8902,7 @@ open class MediaHubActivity : AppCompatActivity() {
         }
         isMediaPlaying = isPlaying
         this.hasActiveVideo = hasActiveVideo
-        binding.btnPictureInPicture.visibility = if (
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isPlaying && hasActiveVideo &&
-                !(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode)
-        ) View.VISIBLE else View.GONE
+        binding.btnPictureInPicture.visibility = View.GONE
         if (!title.isNullOrBlank()) {
             currentMediaTitle = title
         }

@@ -373,12 +373,12 @@ object VpnEngine {
                 ProxyController.getInstance().clearProxyOverride(executor) {
                     runCatching {
                         prefs.edit().putString(KEY_VPN_MODE, mode.id).apply()
-                        onComplete?.invoke(true, "Fokk VPN disconnected. Traffic is direct.")
+                        onComplete?.invoke(true, "Fokk Relay disconnected. Traffic is direct.")
                     }
                 }
             } catch (t: Throwable) {
                 runCatching { prefs.edit().putString(KEY_VPN_MODE, mode.id).apply() }
-                onComplete?.invoke(true, "Fokk VPN disconnected. Traffic is direct.")
+                onComplete?.invoke(true, "Fokk Relay disconnected. Traffic is direct.")
             }
             return
         }
@@ -445,7 +445,6 @@ object VpnEngine {
                 }
 
                 val config = configBuilder
-                    .addDirect()
                     .build()
 
                 try {
@@ -463,11 +462,11 @@ object VpnEngine {
                             prefs.edit().putString(KEY_VPN_MODE, VpnMode.OFF.id).apply()
                         }
                     }
-                    onComplete?.invoke(false, "Could not apply Fokk VPN: ${e.localizedMessage ?: "unknown error"}. Reverted to Direct.")
+                    onComplete?.invoke(false, "Could not apply Fokk Relay: ${e.localizedMessage ?: "unknown error"}. Reverted to Direct.")
                 }
             } catch (t: Throwable) {
                 Log.e("VpnEngine", "Unexpected error applying VPN mode", t)
-                onComplete?.invoke(false, "Fokk VPN initialization error. Kept on Direct.")
+                onComplete?.invoke(false, "Fokk Relay initialization error. Kept on Direct.")
             }
         }
     }
