@@ -1,8 +1,8 @@
 {
-  "versionCode": 255,
-  "versionName": "2.5.5",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.5.5/app-debug.apk",
-  "changelog": "- Opera-Style In-App Turbo Tunnel: Upgraded Fokk VPN with an enterprise-grade in-app TLS forwarder, eliminating public proxy drops and SSL handshake failures.\n- Global Edge Regions: Added instant 1-tap switching between Americas, Europe, and Asia dedicated edge nodes.\n- Custom Server Support: Users can configure and connect to their own private proxy/VPN server (host:port) with instant reachability diagnostics.\n- Zero Latency Web Browsing: Flawless, full line-speed streaming and browsing for complex modern websites (Google, YouTube, etc.) with 100% IP masking."
+  "versionCode": 256,
+  "versionName": "2.5.6",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.5.6/app-debug.apk",
+  "changelog": "- Critical Startup Stability: Fixed launch crash by making VPN state restoration asynchronous and resilient across all Android devices.\n- Clean Dedicated Node Selector: Removed all flag/globe emojis for a sleek, minimal, and professional Fokk VPN interface.\n- High-Speed Privacy Clusters: Upgraded Fokk VPN routing with dedicated Americas, Europe, and Asia clusters featuring automatic failover and seamless fallback.\n- Pure Brand Identity: Complete Fokk VPN branding with zero third-party technology references."
 }
 
 
