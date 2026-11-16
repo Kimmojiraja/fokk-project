@@ -5934,6 +5934,89 @@ open class MediaHubActivity : AppCompatActivity() {
         sheetBinding.badgeSocialShield.alpha = if (isShieldEnabled) 1.0f else 0.4f
         sheetBinding.badgeAiFilter.alpha = if (isShieldEnabled) 1.0f else 0.4f
 
+        // --- Opera-Style Top Quick Squircles & Actions ---
+        val isQuickVpnActive = activeVpnMode != com.adshield.app.engine.VpnEngine.VpnMode.OFF
+        sheetBinding.textMenuQuickVpnStatus.text = if (isQuickVpnActive) "Protected" else "Off"
+        sheetBinding.textMenuQuickVpnStatus.setTextColor(android.graphics.Color.parseColor(if (isQuickVpnActive) "#00E5FF" else "#8E8E93"))
+        sheetBinding.btnMenuQuickVpn.setOnClickListener {
+            dialog.dismiss()
+            showVpnModeSelector()
+        }
+        sheetBinding.btnMenuVpnInfo.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("About Fokk VPN")
+                .setMessage("Fokk VPN encrypts and protects your browser traffic through our high-speed edge network. Your real IP address and ISP details are kept private from websites you visit.\n\n• Zero-Log Policy: We do not track or store your browsing activity.\n• High-Speed Edge: Fast connections optimized for video streaming and web browsing.")
+                .setPositiveButton("Got it", null)
+                .show()
+        }
+
+        sheetBinding.textMenuQuickShieldStatus.text = if (isShieldEnabled) "On" else "Off"
+        sheetBinding.textMenuQuickShieldStatus.setTextColor(android.graphics.Color.parseColor(if (isShieldEnabled) "#34D399" else "#8E8E93"))
+        sheetBinding.btnMenuQuickShield.setOnClickListener {
+            if (isThirdPartyMediaService(activeWebView?.url)) {
+                Toast.makeText(this, "Filtering is disabled for this service", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val newState = !isShieldEnabled
+            setShieldEnabledForCurrentSite(newState)
+            sheetBinding.textMenuQuickShieldStatus.text = if (newState) "On" else "Off"
+            sheetBinding.textMenuQuickShieldStatus.setTextColor(android.graphics.Color.parseColor(if (newState) "#34D399" else "#8E8E93"))
+            sheetBinding.switchMenuShield.isChecked = newState
+            val msg = if (newState) "Fokk Shield Protection Enabled" else "Fokk Shield Paused"
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+            activeWebView?.reload()
+        }
+        sheetBinding.btnMenuShieldInfo.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("About Fokk Shield")
+                .setMessage("Fokk Shield blocks aggressive ads, third-party tracking scripts, malware domains, and telemetry trackers to deliver a faster and private browsing experience.")
+                .setPositiveButton("Got it", null)
+                .show()
+        }
+
+        sheetBinding.textMenuQuickReaderStatus.text = "Reader"
+        sheetBinding.btnMenuQuickReader.setOnClickListener {
+            dialog.dismiss()
+            openReaderView()
+        }
+        sheetBinding.btnMenuReaderInfo.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("About Reader Mode")
+                .setMessage("Reader mode strips away clutter, buttons, and navigation elements from articles, giving you a clean and distraction-free reading experience.")
+                .setPositiveButton("Got it", null)
+                .show()
+        }
+
+        sheetBinding.textMenuQuickNightStatus.text = if (isDarkMode) "On" else "Off"
+        sheetBinding.textMenuQuickNightStatus.setTextColor(android.graphics.Color.parseColor(if (isDarkMode) "#FBBF24" else "#8E8E93"))
+        sheetBinding.btnMenuQuickNight.setOnClickListener {
+            isDarkMode = !isDarkMode
+            sheetBinding.textMenuQuickNightStatus.text = if (isDarkMode) "On" else "Off"
+            sheetBinding.textMenuQuickNightStatus.setTextColor(android.graphics.Color.parseColor(if (isDarkMode) "#FBBF24" else "#8E8E93"))
+            sheetBinding.switchDarkMode.isChecked = isDarkMode
+            if (!isThirdPartyMediaService(activeWebView?.url)) {
+                injectDarkModeScript(activeWebView, isDarkMode)
+            }
+            dialog.dismiss()
+        }
+        sheetBinding.btnMenuNightInfo.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("About Night Mode")
+                .setMessage("Night mode forces dark color schemes on any webpage, reducing eye strain and saving battery in low-light environments.")
+                .setPositiveButton("Got it", null)
+                .show()
+        }
+
+        sheetBinding.btnMenuAskAi.setOnClickListener {
+            dialog.dismiss()
+            showSmartPageSummaryDialog()
+        }
+
+        sheetBinding.rowNavShieldStatus.setOnClickListener {
+            dialog.dismiss()
+            openShieldDashboard()
+        }
+
         sheetBinding.cardShieldDefenseStatus.setOnClickListener {
             dialog.dismiss()
             openShieldDashboard()
@@ -6712,7 +6795,7 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         val proClickListener = View.OnClickListener {
-            Toast.makeText(this, "Fokk VPN Pro is included and active!", Toast.LENGTH_SHORT).show()
+            showVpnProDialog()
         }
         b.cardProPrivacy.setOnClickListener(proClickListener)
         b.btnProGetStarted.setOnClickListener(proClickListener)
@@ -6725,6 +6808,30 @@ open class MediaHubActivity : AppCompatActivity() {
             sheetDialog.dismiss()
             showVerifyBrowserExitDialog()
         }
+
+        sheetDialog.show()
+    }
+
+    private fun showVpnProDialog() {
+        val sheetDialog = BottomSheetDialog(this)
+        val b = com.adshield.app.databinding.SheetVpnProBinding.inflate(layoutInflater)
+        sheetDialog.setContentView(b.root)
+
+        val isPro = com.adshield.app.engine.VpnEngine.isProModeEnabled(this)
+        b.switchProActivation.isChecked = isPro
+        b.textProStatusHeader.text = if (isPro) "Fokk Pro Active" else "Fokk Pro Inactive"
+        b.textProStatusSub.text = if (isPro) "Ultra-stealth encryption is enabled" else "Basic proxy routing active"
+
+        b.switchProActivation.setOnCheckedChangeListener { _, isChecked ->
+            com.adshield.app.engine.VpnEngine.setProModeEnabled(this, isChecked)
+            b.textProStatusHeader.text = if (isChecked) "Fokk Pro Active" else "Fokk Pro Inactive"
+            b.textProStatusSub.text = if (isChecked) "Ultra-stealth encryption is enabled" else "Basic proxy routing active"
+            val msg = if (isChecked) "Fokk Pro Network Activated" else "Standard Network Activated"
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        }
+
+        b.btnCloseProSheet.setOnClickListener { sheetDialog.dismiss() }
+        b.btnDoneProSheet.setOnClickListener { sheetDialog.dismiss() }
 
         sheetDialog.show()
     }

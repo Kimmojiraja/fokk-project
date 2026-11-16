@@ -27,10 +27,11 @@ object VpnEngine {
     const val KEY_CUSTOM_PROXY = "vpn_custom_proxy"
     const val KEY_BYPASS_SEARCH = "vpn_bypass_search"
     const val KEY_PRIVATE_ONLY = "vpn_private_only"
+    const val KEY_PRO_MODE = "vpn_pro_mode"
 
     fun isBypassSearchEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
-        return prefs.getBoolean(KEY_BYPASS_SEARCH, true)
+        return prefs.getBoolean(KEY_BYPASS_SEARCH, false)
     }
 
     fun setBypassSearchEnabled(context: Context, enabled: Boolean) {
@@ -50,6 +51,16 @@ object VpnEngine {
     fun setPrivateOnlyEnabled(context: Context, enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_PRIVATE_ONLY, enabled).apply()
+    }
+
+    fun isProModeEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_PRO_MODE, true)
+    }
+
+    fun setProModeEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_PRO_MODE, enabled).apply()
     }
 
     enum class VpnMode(val id: String, val title: String, val defaultProxy: String) {

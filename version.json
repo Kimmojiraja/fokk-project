@@ -1,8 +1,8 @@
 {
-  "versionCode": 257,
-  "versionName": "2.5.7",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.5.7/app-debug.apk",
-  "changelog": "- Complete Opera-Style Dark Theme VPN UI: Redesigned VPN dashboard with world map silhouette, central power control with glowing radar indicator, virtual location selector, and Fokk Pro Privacy banner.\n- Zero-Drop Adaptive Web Routing: In-app adaptive forwarder connects to privacy nodes with instant direct bridge fallback so pages NEVER fail to load or timeout on Indian mobile networks (Jio 5G/Airtel).\n- Clean Virtual Location Selector: Choose between Optimal location, America, Europe, Asia, or custom private servers without emojis.\n- Browser Preferences: Added toggles for 'Use VPN for private tabs only' and 'Bypass VPN for search' engines."
+  "versionCode": 258,
+  "versionName": "2.5.8",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.5.8/app-debug.apk",
+  "changelog": "- Real IP Address Masking: Fixed search engine tunneling so IP lookups route through high-speed HTTP CONNECT privacy nodes across America, Europe, and Asia.\n- Opera-Style Unboxed Bottom Menu: Clean cardless design featuring top 4-squircle toggles (VPN, Ad Blocker, Reader, Night mode) with detailed info badges.\n- Ask Fokk AI Action Pill: Quick-launch AI summaries and web intelligence right from the menu.\n- Unboxed Daily Essentials & Feature Hubs: Clean borderless layout; moved Burn Session to More tools; added Fokk Shield Protection in Feature Hubs above About without arrow.\n- Fokk Pro Private Network: Active stealth network sheet with military-grade tunneling and zero-drop reliability."
 }
 
 

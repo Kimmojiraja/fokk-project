@@ -24,25 +24,28 @@ import java.util.concurrent.atomic.AtomicBoolean
 object FokkTunnelEngine {
     private const val TAG = "FokkTunnelEngine"
 
-    // High-speed regional privacy clusters (host, port)
+    data class PrivacyNode(val host: String, val port: Int, val isHttpConnect: Boolean = true)
+
+    // High-speed verified regional privacy clusters (HTTP CONNECT & SOCKS5)
     val REGION_NODES = mapOf(
         "AM" to listOf(
-            "159.203.61.169" to 1080,
-            "198.199.86.11" to 1080,
-            "192.111.137.35" to 4145,
-            "107.152.98.5" to 4145
+            PrivacyNode("4.144.146.21", 80, true),       // Azure US (Exit: 20.44.210.140)
+            PrivacyNode("198.199.86.11", 3128, true),    // DigitalOcean US (Exit: 198.199.86.11)
+            PrivacyNode("96.18.6.140", 8080, true),      // US (Exit: 96.18.6.140)
+            PrivacyNode("34.43.46.91", 80, true),        // GCP US (Exit: 35.230.222.184)
+            PrivacyNode("187.33.150.169", 3128, true)    // Americas (Exit: 187.33.150.169)
         ),
         "EU" to listOf(
-            "188.166.40.163" to 1080,
-            "178.62.204.145" to 1080,
-            "138.68.107.167" to 1080,
-            "46.101.114.99" to 1080
+            PrivacyNode("54.36.150.233", 3128, true),    // OVH France (Exit: 137.74.202.174)
+            PrivacyNode("45.155.226.177", 3128, true),   // Europe (Exit: 45.155.226.177)
+            PrivacyNode("188.166.178.163", 3129, true),  // DigitalOcean Frankfurt (Exit: 188.166.178.163)
+            PrivacyNode("65.108.159.129", 1080, false)   // Hetzner Europe (Exit: 204.8.96.74)
         ),
         "AS" to listOf(
-            "128.199.202.122" to 1080,
-            "139.59.248.86" to 1080,
-            "128.199.93.181" to 1080,
-            "139.59.227.185" to 1080
+            PrivacyNode("211.188.50.146", 80, true),     // Asia Korea/Japan (Exit: 49.50.143.106)
+            PrivacyNode("211.188.55.218", 80, true),     // Asia (Exit: 49.50.143.106)
+            PrivacyNode("61.91.162.126", 8080, true),    // Asia Thailand (Exit: 103.10.231.189)
+            PrivacyNode("49.229.100.235", 8080, true)    // Asia (Exit: 49.229.100.235)
         )
     )
 
@@ -145,63 +148,7 @@ object FokkTunnelEngine {
                 val targetHost = target.substringBefore(":")
                 val targetPort = target.substringAfter(":", "443").toIntOrNull() ?: 443
 
-                var connectedSocket: Socket? = null
-
-                // 1. Try connecting via regional privacy edge nodes (SOCKS5 connect)
-                val nodes = (if (currentRegion == "AUTO") REGION_NODES.values.flatten() else (REGION_NODES[currentRegion] ?: REGION_NODES.values.flatten())).shuffled()
-                for ((nodeHost, nodePort) in nodes) {
-                    try {
-                        val proxySock = Socket()
-                        proxySock.connect(InetSocketAddress(nodeHost, nodePort), 1_200)
-                        proxySock.soTimeout = 8_000
-
-                        // SOCKS5 greeting: VER=5, NMETHODS=1, METHOD=0 (No Auth)
-                        proxySock.getOutputStream().write(byteArrayOf(0x05, 0x01, 0x00))
-                        val authResp = ByteArray(2)
-                        proxySock.getInputStream().read(authResp)
-                        if (authResp[0] != 0x05.toByte() || authResp[1] != 0x00.toByte()) {
-                            proxySock.close()
-                            continue
-                        }
-
-                        // SOCKS5 CONNECT to targetHost:targetPort
-                        val hostBytes = targetHost.toByteArray(StandardCharsets.ISO_8859_1)
-                        val req = ByteArray(4 + 1 + hostBytes.size + 2)
-                        req[0] = 0x05 // VER
-                        req[1] = 0x01 // CMD CONNECT
-                        req[2] = 0x00 // RSV
-                        req[3] = 0x03 // ATYP DOMAINNAME
-                        req[4] = hostBytes.size.toByte()
-                        System.arraycopy(hostBytes, 0, req, 5, hostBytes.size)
-                        req[req.size - 2] = (targetPort shr 8).toByte()
-                        req[req.size - 1] = (targetPort and 0xFF).toByte()
-
-                        proxySock.getOutputStream().write(req)
-                        val connResp = ByteArray(10)
-                        proxySock.getInputStream().read(connResp)
-                        if (connResp[0] == 0x05.toByte() && connResp[1] == 0x00.toByte()) {
-                            connectedSocket = proxySock
-                            break
-                        } else {
-                            proxySock.close()
-                        }
-                    } catch (_: Exception) {
-                        // Node timeout or unreachable from ISP, test next
-                    }
-                }
-
-                // 2. Zero-Drop Guarantee: If all remote privacy nodes are blocked by ISP/firewall,
-                // establish a direct high-speed bridge so the page NEVER fails to load!
-                if (connectedSocket == null) {
-                    try {
-                        val direct = Socket()
-                        direct.connect(InetSocketAddress(targetHost, targetPort), 4_000)
-                        connectedSocket = direct
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Connection to $targetHost:$targetPort failed: ${e.message}")
-                    }
-                }
-
+                val connectedSocket = connectToNode(targetHost, targetPort)
                 if (connectedSocket == null) {
                     clientOut.write("HTTP/1.1 504 Gateway Timeout\r\n\r\n".toByteArray(StandardCharsets.ISO_8859_1))
                     clientOut.flush()
@@ -213,23 +160,31 @@ object FokkTunnelEngine {
                 clientOut.flush()
                 pipeSockets(client, connectedSocket)
             } else {
-                // Plain HTTP request: extract host and port
+                // Plain HTTP request: extract host and port and route through tunnel
                 val hostHeader = requestText.lineSequence()
                     .firstOrNull { it.startsWith("Host:", ignoreCase = true) }
                     ?.substringAfter(":")?.trim() ?: target.substringBefore("/").substringBefore(":")
                 val host = hostHeader.substringBefore(":")
                 val port = hostHeader.substringAfter(":", "80").toIntOrNull() ?: 80
 
-                var directSocket: Socket? = null
-                try {
-                    directSocket = Socket()
-                    directSocket.connect(InetSocketAddress(host, port), 4_000)
-                    directSocket.getOutputStream().write(headerBytes, 0, totalRead)
-                    directSocket.getOutputStream().flush()
-                    upstream = directSocket
-                    pipeSockets(client, directSocket)
-                } catch (e: Exception) {
-                    directSocket?.close()
+                val connectedSocket = connectToNode(host, port)
+                if (connectedSocket != null) {
+                    connectedSocket.getOutputStream().write(headerBytes, 0, totalRead)
+                    connectedSocket.getOutputStream().flush()
+                    upstream = connectedSocket
+                    pipeSockets(client, connectedSocket)
+                } else {
+                    // Fallback if privacy nodes unreachable
+                    try {
+                        val directSocket = Socket()
+                        directSocket.connect(InetSocketAddress(host, port), 4_000)
+                        directSocket.getOutputStream().write(headerBytes, 0, totalRead)
+                        directSocket.getOutputStream().flush()
+                        upstream = directSocket
+                        pipeSockets(client, directSocket)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Plain HTTP fallback failed for $host:$port: ${e.message}")
+                    }
                 }
             }
         } catch (_: Exception) {
@@ -238,6 +193,80 @@ object FokkTunnelEngine {
             runCatching { client.close() }
             runCatching { upstream?.close() }
         }
+    }
+
+    private fun connectToNode(targetHost: String, targetPort: Int): Socket? {
+        val primaryPool = (REGION_NODES[currentRegion] ?: REGION_NODES.values.flatten())
+        val backupPool = REGION_NODES.values.flatten()
+        val nodes = (primaryPool + backupPool).distinctBy { "${it.host}:${it.port}" }
+
+        for (node in nodes) {
+            try {
+                val proxySock = Socket()
+                proxySock.connect(InetSocketAddress(node.host, node.port), 1_800)
+                proxySock.soTimeout = 10_000
+
+                if (node.isHttpConnect) {
+                    val connectReq = "CONNECT $targetHost:$targetPort HTTP/1.1\r\nHost: $targetHost:$targetPort\r\nProxy-Connection: Keep-Alive\r\n\r\n"
+                    proxySock.getOutputStream().write(connectReq.toByteArray(StandardCharsets.ISO_8859_1))
+                    proxySock.getOutputStream().flush()
+
+                    val headerBuf = ByteArray(1024)
+                    var readCount = 0
+                    val inStream = proxySock.getInputStream()
+                    while (readCount < headerBuf.size) {
+                        val b = inStream.read()
+                        if (b == -1) break
+                        headerBuf[readCount++] = b.toByte()
+                        if (readCount >= 4 &&
+                            headerBuf[readCount - 4] == '\r'.code.toByte() &&
+                            headerBuf[readCount - 3] == '\n'.code.toByte() &&
+                            headerBuf[readCount - 2] == '\r'.code.toByte() &&
+                            headerBuf[readCount - 1] == '\n'.code.toByte()
+                        ) {
+                            break
+                        }
+                    }
+                    val resp = String(headerBuf, 0, readCount, StandardCharsets.ISO_8859_1)
+                    if (resp.contains("200")) {
+                        return proxySock
+                    } else {
+                        proxySock.close()
+                    }
+                } else {
+                    // SOCKS5 greeting
+                    proxySock.getOutputStream().write(byteArrayOf(0x05, 0x01, 0x00))
+                    val authResp = ByteArray(2)
+                    proxySock.getInputStream().read(authResp)
+                    if (authResp[0] != 0x05.toByte() || authResp[1] != 0x00.toByte()) {
+                        proxySock.close()
+                        continue
+                    }
+
+                    // SOCKS5 CONNECT
+                    val hostBytes = targetHost.toByteArray(StandardCharsets.ISO_8859_1)
+                    val req = ByteArray(4 + 1 + hostBytes.size + 2)
+                    req[0] = 0x05
+                    req[1] = 0x01
+                    req[2] = 0x00
+                    req[3] = 0x03
+                    req[4] = hostBytes.size.toByte()
+                    System.arraycopy(hostBytes, 0, req, 5, hostBytes.size)
+                    req[req.size - 2] = (targetPort shr 8).toByte()
+                    req[req.size - 1] = (targetPort and 0xFF).toByte()
+
+                    proxySock.getOutputStream().write(req)
+                    val connResp = ByteArray(10)
+                    proxySock.getInputStream().read(connResp)
+                    if (connResp[0] == 0x05.toByte() && connResp[1] == 0x00.toByte()) {
+                        return proxySock
+                    } else {
+                        proxySock.close()
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+        return null
     }
 
     private fun pipeSockets(s1: Socket, s2: Socket) {
