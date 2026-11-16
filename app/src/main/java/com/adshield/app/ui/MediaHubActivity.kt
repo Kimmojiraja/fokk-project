@@ -6655,6 +6655,24 @@ open class MediaHubActivity : AppCompatActivity() {
         addNewTab("file:///android_asset/fokk_contributing.html", isPrivate = false)
     }
 
+    private fun applyVpnModeWithFeedback(
+        mode: com.adshield.app.engine.VpnEngine.VpnMode,
+        customProxy: String? = null,
+        onDone: (() -> Unit)? = null
+    ) {
+        com.adshield.app.engine.VpnEngine.applyVpnMode(this, mode, customProxy) { success, msg ->
+            runOnUiThread {
+                if (success) {
+                    activeWebView?.reload()
+                    lastVpnRouteFingerprint = getVpnRouteFingerprint()
+                    updateVpnIndicatorUi()
+                }
+                onDone?.invoke()
+                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     private fun showVpnModeSelector() {
         val sheetDialog = BottomSheetDialog(this)
         val b = SheetVpnGatewayBinding.inflate(layoutInflater)
@@ -6673,16 +6691,8 @@ open class MediaHubActivity : AppCompatActivity() {
         lateinit var refreshUi: () -> Unit
 
         fun switchMode(mode: com.adshield.app.engine.VpnEngine.VpnMode, customProxy: String? = null) {
-            com.adshield.app.engine.VpnEngine.applyVpnMode(this, mode, customProxy) { success, msg ->
-                runOnUiThread {
-                    if (success) {
-                        activeWebView?.reload()
-                        lastVpnRouteFingerprint = getVpnRouteFingerprint()
-                        updateVpnIndicatorUi()
-                    }
-                    refreshUi()
-                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-                }
+            applyVpnModeWithFeedback(mode, customProxy) {
+                refreshUi()
             }
         }
 
@@ -6817,9 +6827,9 @@ open class MediaHubActivity : AppCompatActivity() {
             sheetDialog.dismiss()
             showDedicatedRegionOrCustomDialog { selection ->
                 if (selection == "AUTO") {
-                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.FAST)
+                    applyVpnModeWithFeedback(com.adshield.app.engine.VpnEngine.VpnMode.FAST)
                 } else {
-                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, selection)
+                    applyVpnModeWithFeedback(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, selection)
                 }
             }
         }
