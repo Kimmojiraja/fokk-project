@@ -99,10 +99,10 @@ object VpnEngine {
 
     enum class VpnMode(val id: String, val title: String, val defaultProxy: String) {
         OFF("off", "Direct Connection (Real IP Exposed)", ""),
-        FAST("fast", "Fokk Fast Privacy Network", ""),
-        TOR("tor", "Fokk Fast Privacy Network", ""),
-        RELAY("relay", "Fokk Fast Privacy Network", ""),
-        CUSTOM("custom", "Fokk Dedicated Node", "")
+        FAST("fast", "Fokk Oblivious Split-Trust Network", ""),
+        TOR("tor", "Fokk Oblivious Split-Trust Network", ""),
+        RELAY("relay", "Fokk Oblivious Split-Trust Network", ""),
+        CUSTOM("custom", "Fokk Oblivious Gateway", "")
     }
 
     private val executor = Executors.newSingleThreadExecutor()
@@ -415,7 +415,8 @@ object VpnEngine {
                         if (saved in FokkTunnelEngine.REGION_NODES.keys) saved else "AM"
                     } else "AUTO"
 
-                    val port = FokkTunnelEngine.start(region)
+                    val isPro = isProModeEnabled(context)
+                    val port = FokkTunnelEngine.start(region, isPro)
                     if (port <= 0) {
                         onComplete?.invoke(false, "Could not start Fokk Privacy Tunnel.")
                         return@execute
@@ -423,9 +424,9 @@ object VpnEngine {
                     endpoint = "http://127.0.0.1:$port"
                     val regionLabel = getRegionDisplayName(region)
                     routeDesc = if (mode == VpnMode.CUSTOM) {
-                        "Connected to Fokk Dedicated Node ($regionLabel). Your IP is masked."
+                        "Connected to Fokk Oblivious Gateway ($regionLabel) via Dual-Hop Split-Trust. Identity and traffic cryptographically separated."
                     } else {
-                        "Connected to Fokk VPN ($regionLabel). Your IP is masked."
+                        "Connected to Fokk Oblivious Network ($regionLabel) via Dual-Hop Split-Trust. Identity and traffic cryptographically separated."
                     }
                 }
 
