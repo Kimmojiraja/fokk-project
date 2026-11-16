@@ -1998,7 +1998,12 @@ open class MediaHubActivity : AppCompatActivity() {
                     com.adshield.app.engine.VpnEngine.VpnMode.FAST,
                     com.adshield.app.engine.VpnEngine.VpnMode.TOR,
                     com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> com.adshield.app.engine.VpnEngine.getFastPrivacyEndpoint()
-                    com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> com.adshield.app.engine.VpnEngine.getCustomProxy(activity)
+                    com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> {
+                        val saved = com.adshield.app.engine.VpnEngine.getCustomProxy(activity)
+                        if (saved in setOf("AM", "EU", "AS") || saved.isBlank()) {
+                            com.adshield.app.engine.VpnEngine.getFastPrivacyEndpoint()
+                        } else saved
+                    }
                     com.adshield.app.engine.VpnEngine.VpnMode.OFF -> null
                 }
                 val routeProxy = if (!proxyEndpoint.isNullOrBlank()) {
@@ -2077,7 +2082,12 @@ open class MediaHubActivity : AppCompatActivity() {
                     com.adshield.app.engine.VpnEngine.VpnMode.FAST,
                     com.adshield.app.engine.VpnEngine.VpnMode.TOR,
                     com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> com.adshield.app.engine.VpnEngine.getFastPrivacyEndpoint()
-                    com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> com.adshield.app.engine.VpnEngine.getCustomProxy(activity)
+                    com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> {
+                        val saved = com.adshield.app.engine.VpnEngine.getCustomProxy(activity)
+                        if (saved in setOf("AM", "EU", "AS") || saved.isBlank()) {
+                            com.adshield.app.engine.VpnEngine.getFastPrivacyEndpoint()
+                        } else saved
+                    }
                     com.adshield.app.engine.VpnEngine.VpnMode.OFF -> null
                 }
                 val routeProxy = if (!proxyEndpoint.isNullOrBlank()) {
@@ -6604,14 +6614,32 @@ open class MediaHubActivity : AppCompatActivity() {
             b.radioModeCustom.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM)
             b.radioModeOff.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.OFF)
 
+            val customSaved = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
+            val regionDesc = when (customSaved) {
+                "EU" -> "Europe (EU Edge)"
+                "AS" -> "Asia (AS Edge)"
+                "AM" -> "Americas (AM Edge)"
+                else -> if (customSaved.isNotBlank()) customSaved else "Americas • Europe • Asia • Private"
+            }
+            b.textCustomProxyPreview.text = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM) {
+                "Active: $regionDesc"
+            } else {
+                "Americas • Europe • Asia • Private Server"
+            }
+
             b.textVpnProtocol.text = when (activeMode) {
                 com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "Direct (Unencrypted)"
-                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> "Fokk Dedicated Node (${com.adshield.app.engine.VpnEngine.getCustomProxy(this).ifBlank { "Not configured" }})"
+                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> {
+                    when (customSaved) {
+                        "EU" -> "Fokk Europe Dedicated Node"
+                        "AS" -> "Fokk Asia Dedicated Node"
+                        "AM" -> "Fokk Americas Dedicated Node"
+                        else -> "Fokk Dedicated Node (${customSaved.ifBlank { "Optimal" }})"
+                    }
+                }
                 else -> "Fokk Fast Privacy Network"
             }
 
-            val customSaved = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
-            b.textCustomProxyPreview.text = if (customSaved.isNotBlank()) customSaved else "Tap to configure private node"
             b.layoutOrbotHelper.visibility = View.GONE
         }
 
@@ -6628,8 +6656,8 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         b.cardModeCustom.setOnClickListener {
-            showCustomProxyDialog { proxy ->
-                switchMode(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, proxy)
+            showDedicatedRegionOrCustomDialog { selection ->
+                switchMode(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, selection)
             }
         }
 
@@ -6833,10 +6861,43 @@ open class MediaHubActivity : AppCompatActivity() {
         loadNextEndpoint(null)
     }
 
+    private fun showDedicatedRegionOrCustomDialog(onApplied: (String) -> Unit) {
+        val currentSaved = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
+        val options = arrayOf(
+            "🇺🇸 Americas Node (Optimal)",
+            "🇪🇺 Europe Node (Frankfurt / Amsterdam)",
+            "🌏 Asia Node (Singapore / Tokyo)",
+            "⚙️ Configure Private Server (host:port)"
+        )
+        val checkedIndex = when (currentSaved) {
+            "AM" -> 0
+            "EU" -> 1
+            "AS" -> 2
+            else -> if (currentSaved.isNotBlank()) 3 else 0
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Fokk Dedicated Locations")
+            .setSingleChoiceItems(options, checkedIndex) { dialog, which ->
+                dialog.dismiss()
+                when (which) {
+                    0 -> onApplied("AM")
+                    1 -> onApplied("EU")
+                    2 -> onApplied("AS")
+                    3 -> showCustomProxyDialog(onApplied)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     private fun showCustomProxyDialog(onApplied: ((String) -> Unit)? = null) {
         val input = EditText(this).apply {
-            hint = "host:port (e.g. 159.203.61.169:1080)"
-            setText(com.adshield.app.engine.VpnEngine.getCustomProxy(this@MediaHubActivity))
+            hint = "host:port (e.g. 1.2.3.4:1080)"
+            val saved = com.adshield.app.engine.VpnEngine.getCustomProxy(this@MediaHubActivity)
+            if (saved !in setOf("AM", "EU", "AS")) {
+                setText(saved)
+            }
             setSingleLine(true)
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
         }
@@ -6845,8 +6906,8 @@ open class MediaHubActivity : AppCompatActivity() {
             addView(input)
         }
         AlertDialog.Builder(this)
-            .setTitle("Fokk Dedicated Node")
-            .setMessage("Enter the address of your dedicated node (e.g. 159.203.61.169:1080):")
+            .setTitle("Fokk Private Server")
+            .setMessage("Enter the address of your private proxy or VPN server:")
             .setView(container)
             .setPositiveButton("Connect") { _, _ ->
                 val proxyUrl = input.text.toString().trim()

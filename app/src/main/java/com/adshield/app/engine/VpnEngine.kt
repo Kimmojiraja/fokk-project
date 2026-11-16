@@ -18,8 +18,8 @@ import javax.net.ssl.SSLSocketFactory
 /**
  * High-speed privacy routing engine for Fokk Browser.
  *
- * Masks user IP address and encrypts browser traffic through Fokk Fast Privacy
- * Network nodes via AndroidX ProxyController.
+ * Directs browser traffic through the Opera-style in-app Turbo Tunnel Engine
+ * or custom dedicated nodes via AndroidX ProxyController.
  */
 object VpnEngine {
     const val PREFS_VPN = "fokk_vpn_settings"
@@ -36,14 +36,6 @@ object VpnEngine {
 
     private val executor = Executors.newSingleThreadExecutor()
 
-    // Curated high-speed privacy nodes
-    private val FAST_PRIVACY_NODES = listOf(
-        "socks5://159.203.61.169:1080",
-        "socks5://198.199.86.11:1080",
-        "socks5://192.111.137.35:4145",
-        "socks5://107.152.98.5:4145"
-    )
-
     fun isSupported(): Boolean = WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)
 
     fun getActiveMode(context: Context): VpnMode {
@@ -57,21 +49,9 @@ object VpnEngine {
         return VpnMode.values().firstOrNull { it.id == id } ?: VpnMode.OFF
     }
 
-    /**
-     * Resolves the fastest accessible privacy node from the curated cluster.
-     */
     fun getFastPrivacyEndpoint(): String {
-        for (node in FAST_PRIVACY_NODES) {
-            try {
-                val uri = URI(node)
-                val host = uri.host ?: continue
-                val port = uri.port
-                if (checkSocketOpen(host, port, 400)) {
-                    return node
-                }
-            } catch (_: Exception) {}
-        }
-        return FAST_PRIVACY_NODES.first()
+        val endpoint = FokkTunnelEngine.getLocalEndpoint()
+        return if (endpoint.isNotBlank()) endpoint else "http://127.0.0.1:28080"
     }
 
     // Compatibility aliases mapping to fast privacy routing
@@ -266,6 +246,7 @@ object VpnEngine {
             return
         }
         if (mode == VpnMode.OFF) {
+            FokkTunnelEngine.stop()
             ProxyController.getInstance().clearProxyOverride(executor) {
                 prefs.edit().putString(KEY_VPN_MODE, mode.id).apply()
                 onComplete?.invoke(true, "Fokk VPN disconnected. Traffic is direct.")
@@ -274,29 +255,64 @@ object VpnEngine {
         }
 
         executor.execute {
-            val rawEndpoint = when (mode) {
-                VpnMode.OFF -> ""
-                VpnMode.FAST, VpnMode.TOR, VpnMode.RELAY -> getFastPrivacyEndpoint()
-                VpnMode.CUSTOM -> customProxy ?: getCustomProxy(context)
-            }
+            FokkTunnelEngine.init(context)
 
-            val endpoint = try {
-                normalizeProxy(rawEndpoint)
-            } catch (e: Exception) {
-                onComplete?.invoke(false, e.message ?: "Invalid node address")
-                return@execute
-            }
-            val (host, port) = try { endpointHostAndPort(endpoint) } catch (e: Exception) {
-                onComplete?.invoke(false, e.message ?: "Invalid node address")
-                return@execute
-            }
+            val isCustomExternal = mode == VpnMode.CUSTOM &&
+                customProxy != null &&
+                customProxy !in setOf("AM", "EU", "AS", "US") &&
+                (customProxy.contains(":") || customProxy.contains("."))
 
-            if (mode == VpnMode.CUSTOM && !isProxyHandshakeValid(endpoint)) {
-                onComplete?.invoke(
-                    false,
-                    "The node at $host:$port is unreachable. Browser kept on Direct connection to prevent offline errors."
-                )
-                return@execute
+            val endpoint: String
+            val routeDesc: String
+
+            if (isCustomExternal) {
+                // External custom private server
+                FokkTunnelEngine.stop()
+                val normalized = try {
+                    normalizeProxy(customProxy!!)
+                } catch (e: Exception) {
+                    onComplete?.invoke(false, e.message ?: "Invalid node address")
+                    return@execute
+                }
+                val (host, port) = try { endpointHostAndPort(normalized) } catch (e: Exception) {
+                    onComplete?.invoke(false, e.message ?: "Invalid node address")
+                    return@execute
+                }
+                if (!isProxyHandshakeValid(normalized)) {
+                    onComplete?.invoke(
+                        false,
+                        "The node at $host:$port is unreachable. Browser kept on Direct connection to prevent offline errors."
+                    )
+                    return@execute
+                }
+                endpoint = normalized
+                routeDesc = "Connected to Fokk Dedicated Node ($host:$port)."
+            } else {
+                // Opera-style In-App Turbo Tunnel Engine
+                val region = if (mode == VpnMode.CUSTOM) {
+                    when (customProxy ?: getCustomProxy(context)) {
+                        "EU" -> "EU"
+                        "AS" -> "AS"
+                        else -> "AM"
+                    }
+                } else "AM"
+
+                val port = FokkTunnelEngine.start(region)
+                if (port <= 0) {
+                    onComplete?.invoke(false, "Could not initialize Fokk Turbo Tunnel.")
+                    return@execute
+                }
+                endpoint = "http://127.0.0.1:$port"
+                val regionLabel = when (region) {
+                    "EU" -> "Europe"
+                    "AS" -> "Asia"
+                    else -> "Americas"
+                }
+                routeDesc = if (mode == VpnMode.CUSTOM) {
+                    "Connected to Fokk Dedicated Node ($regionLabel). Your IP is masked."
+                } else {
+                    "Connected to Fokk Fast Privacy Network ($regionLabel). Your IP is masked."
+                }
             }
 
             val config = ProxyConfig.Builder()
@@ -304,19 +320,15 @@ object VpnEngine {
                 .addBypassRule("<local>")
                 .addBypassRule("localhost")
                 .addBypassRule("127.0.0.1")
-                .addDirect()
                 .build()
 
             try {
                 ProxyController.getInstance().setProxyOverride(config, executor) {
                     val editor = prefs.edit().putString(KEY_VPN_MODE, mode.id)
-                    if (mode == VpnMode.CUSTOM) editor.putString(KEY_CUSTOM_PROXY, endpoint)
-                    editor.apply()
-                    val routeDesc = when (mode) {
-                        VpnMode.FAST, VpnMode.TOR, VpnMode.RELAY -> "Connected to Fokk VPN. Your IP address is masked."
-                        VpnMode.CUSTOM -> "Connected to Fokk Dedicated Node ($host:$port)."
-                        VpnMode.OFF -> "Fokk VPN disconnected."
+                    if (mode == VpnMode.CUSTOM && customProxy != null) {
+                        editor.putString(KEY_CUSTOM_PROXY, customProxy)
                     }
+                    editor.apply()
                     onComplete?.invoke(true, routeDesc)
                 }
             } catch (e: Exception) {
@@ -334,16 +346,7 @@ object VpnEngine {
             applyVpnMode(context, mode)
         } else if (mode == VpnMode.CUSTOM) {
             val savedProxy = getCustomProxy(context)
-            if (savedProxy.isNotBlank()) {
-                val endpoint = runCatching { normalizeProxy(savedProxy) }.getOrNull()
-                if (endpoint != null) {
-                    applyVpnMode(context, mode, savedProxy)
-                } else {
-                    context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
-                        .edit().putString(KEY_VPN_MODE, VpnMode.OFF.id).apply()
-                    ProxyController.getInstance().clearProxyOverride(executor) {}
-                }
-            }
+            applyVpnMode(context, mode, savedProxy.ifBlank { "AM" })
         }
     }
 }
