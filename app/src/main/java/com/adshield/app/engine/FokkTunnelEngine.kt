@@ -29,23 +29,27 @@ object FokkTunnelEngine {
     // High-speed verified regional privacy clusters (HTTP CONNECT & SOCKS5)
     val REGION_NODES = mapOf(
         "AM" to listOf(
-            PrivacyNode("4.144.146.21", 80, true),       // Azure US (Exit: 20.44.210.140)
-            PrivacyNode("198.199.86.11", 3128, true),    // DigitalOcean US (Exit: 198.199.86.11)
-            PrivacyNode("96.18.6.140", 8080, true),      // US (Exit: 96.18.6.140)
-            PrivacyNode("34.43.46.91", 80, true),        // GCP US (Exit: 35.230.222.184)
-            PrivacyNode("187.33.150.169", 3128, true)    // Americas (Exit: 187.33.150.169)
+            PrivacyNode("198.199.86.11", 3128, true),     // US (New York)
+            PrivacyNode("209.97.150.167", 3128, true),    // US (San Francisco)
+            PrivacyNode("159.203.61.169", 3128, true),    // Canada (Toronto)
+            PrivacyNode("184.75.221.82", 3118, true),     // Canada
+            PrivacyNode("34.43.46.91", 80, true),         // US (GCP)
+            PrivacyNode("167.99.3.26", 5511, true)        // US
         ),
         "EU" to listOf(
-            PrivacyNode("54.36.150.233", 3128, true),    // OVH France (Exit: 137.74.202.174)
-            PrivacyNode("45.155.226.177", 3128, true),   // Europe (Exit: 45.155.226.177)
-            PrivacyNode("188.166.178.163", 3129, true),  // DigitalOcean Frankfurt (Exit: 188.166.178.163)
-            PrivacyNode("65.108.159.129", 1080, false)   // Hetzner Europe (Exit: 204.8.96.74)
+            PrivacyNode("161.35.70.249", 80, true),       // Germany (Frankfurt)
+            PrivacyNode("187.33.150.169", 3128, true),    // Spain (Madrid)
+            PrivacyNode("134.209.29.120", 3128, true),    // UK (London)
+            PrivacyNode("194.182.187.78", 3128, true),    // Austria (Vienna)
+            PrivacyNode("103.237.102.191", 11111, true)   // Germany
         ),
         "AS" to listOf(
-            PrivacyNode("211.188.50.146", 80, true),     // Asia Korea/Japan (Exit: 49.50.143.106)
-            PrivacyNode("211.188.55.218", 80, true),     // Asia (Exit: 49.50.143.106)
-            PrivacyNode("61.91.162.126", 8080, true),    // Asia Thailand (Exit: 103.10.231.189)
-            PrivacyNode("49.229.100.235", 8080, true)    // Asia (Exit: 49.229.100.235)
+            PrivacyNode("211.188.50.146", 80, true),      // South Korea
+            PrivacyNode("211.188.55.218", 80, true),      // South Korea
+            PrivacyNode("139.162.78.109", 8080, true),    // Japan (Tokyo)
+            PrivacyNode("101.36.112.205", 1081, true),    // Hong Kong
+            PrivacyNode("1.20.178.201", 80, true),        // Thailand
+            PrivacyNode("43.202.114.177", 10101, true)    // South Korea
         )
     )
 
@@ -196,9 +200,23 @@ object FokkTunnelEngine {
     }
 
     private fun connectToNode(targetHost: String, targetPort: Int): Socket? {
-        val primaryPool = (REGION_NODES[currentRegion] ?: REGION_NODES.values.flatten())
-        val backupPool = REGION_NODES.values.flatten()
-        val nodes = (primaryPool + backupPool).distinctBy { "${it.host}:${it.port}" }
+        val nodes: List<PrivacyNode> = if (currentRegion in REGION_NODES.keys) {
+            // Strict regional isolation: never leak across continents if user selected a region
+            REGION_NODES[currentRegion].orEmpty()
+        } else {
+            // AUTO: round-robin evenly across AM, EU, and AS
+            val am = REGION_NODES["AM"].orEmpty()
+            val eu = REGION_NODES["EU"].orEmpty()
+            val asNodes = REGION_NODES["AS"].orEmpty()
+            val maxLen = maxOf(am.size, maxOf(eu.size, asNodes.size))
+            val interleaved = mutableListOf<PrivacyNode>()
+            for (i in 0 until maxLen) {
+                if (i < am.size) interleaved.add(am[i])
+                if (i < eu.size) interleaved.add(eu[i])
+                if (i < asNodes.size) interleaved.add(asNodes[i])
+            }
+            interleaved
+        }
 
         for (node in nodes) {
             try {
