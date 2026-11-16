@@ -3,478 +3,449 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#0A0E18"
+    android:background="#0B0F19"
     android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:paddingBottom="24dp">
 
-        <!-- Handle bar indicator -->
+        <!-- Top Drag Handle -->
         <View
             android:layout_width="38dp"
             android:layout_height="4dp"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="16dp"
-            android:background="#24344D" />
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="6dp"
+            android:background="@drawable/bg_tab_counter"
+            android:backgroundTint="#334155" />
 
-        <!-- Top Header: Title, Status Pill, Close -->
-        <LinearLayout
+        <!-- Top Bar: Back Button, Title "VPN", Info Button -->
+        <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_stat_chip"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="FOKK VPN"
-                    android:textColor="@color/fokk_cyan"
-                    android:textSize="10.5sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.08" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/textVpnStatusPill"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:background="@drawable/bg_engine_capsule"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="3dp"
-                android:text="UNPROTECTED • REAL IP EXPOSED"
-                android:textColor="#F43F5E"
-                android:textSize="10sp"
-                android:textStyle="bold" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
+            android:layout_height="52dp"
+            android:paddingHorizontal="16dp">
 
             <ImageButton
                 android:id="@+id/btnCloseVpnSheet"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_close"
-                app:tint="@color/text_secondary"
-                android:contentDescription="Close" />
-        </LinearLayout>
-
-        <!-- Power & Connection Hero Section -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/bg_stat_chip"
-            android:gravity="center_horizontal"
-            android:orientation="vertical"
-            android:padding="20dp">
-
-            <FrameLayout
-                android:layout_width="72dp"
-                android:layout_height="72dp">
-
-                <View
-                    android:id="@+id/vpnRadarRing"
-                    android:layout_width="72dp"
-                    android:layout_height="72dp"
-                    android:background="@drawable/bg_tab_counter"
-                    android:backgroundTint="#1E293B" />
-
-                <ImageButton
-                    android:id="@+id/btnVpnPower"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:layout_gravity="center"
-                    android:background="@drawable/bg_tab_counter"
-                    android:backgroundTint="#0F172A"
-                    android:src="@drawable/ic_vpn_key"
-                    app:tint="@color/text_secondary"
-                    android:contentDescription="Toggle Fokk VPN" />
-            </FrameLayout>
+                android:src="@drawable/ic_arrow_back"
+                app:tint="#F8FAFC"
+                android:contentDescription="Back" />
 
             <TextView
-                android:id="@+id/textVpnPowerLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="Connect Fokk VPN"
-                android:textColor="@color/text_primary"
-                android:textSize="16sp"
+                android:layout_centerInParent="true"
+                android:text="VPN"
+                android:textColor="#F8FAFC"
+                android:textSize="20sp"
                 android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/textVpnPowerSub"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Mask your IP address and protect browser traffic"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:gravity="center" />
-        </LinearLayout>
-
-        <!-- Exit IP Verification & Metrics Card -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:background="@drawable/bg_stat_chip"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="FOKK VPN STATUS"
-                android:textColor="@color/text_secondary"
-                android:textSize="10.5sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.08" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Browser Exit IP:"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp" />
-
-                <TextView
-                    android:id="@+id/textVpnExitIp"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="8dp"
-                    android:gravity="end"
-                    android:text="Direct (Real IP Exposed)"
-                    android:textColor="#F43F5E"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Direct Public IP:"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
-
-                <TextView
-                    android:id="@+id/textVpnDirectIp"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="8dp"
-                    android:gravity="end"
-                    android:text="—"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Protection Mode:"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
-
-                <TextView
-                    android:id="@+id/textVpnProtocol"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="8dp"
-                    android:gravity="end"
-                    android:text="Direct (Real IP visible)"
-                    android:textColor="@color/fokk_cyan"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnVerifyVpnExitIp"
-                android:layout_width="match_parent"
+            <ImageButton
+                android:id="@+id/btnVpnInfo"
+                android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:layout_marginTop="12dp"
-                android:paddingVertical="0dp"
-                android:text="Verify Fokk VPN Protection"
-                android:textColor="@color/fokk_cyan"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                app:backgroundTint="#131B2B"
-                app:strokeColor="#24344D"
-                app:strokeWidth="1dp"
-                app:cornerRadius="10dp" />
-        </LinearLayout>
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_info"
+                app:tint="#94A3B8"
+                android:contentDescription="VPN Information" />
+        </RelativeLayout>
 
-        <!-- Route Selector Label -->
-        <TextView
+        <!-- Hero Area: World Map Silhouette + Power Button + Status -->
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:layout_marginBottom="8dp"
-            android:text="CHOOSE FOKK VPN ROUTE"
-            android:textColor="@color/text_secondary"
-            android:textSize="10.5sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.08" />
+            android:layout_height="190dp"
+            android:layout_marginTop="8dp">
 
-        <!-- Option 1: Fokk Fast Privacy Network -->
-        <LinearLayout
-            android:id="@+id/cardModeTor"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
-            android:background="@drawable/bg_stat_chip"
-            android:clickable="true"
-            android:focusable="true"
-            android:orientation="vertical"
-            android:padding="14dp">
-
-            <LinearLayout
+            <!-- World Map Background Silhouette -->
+            <ImageView
                 android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter"
+                android:src="@drawable/bg_world_map_silhouette"
+                android:contentDescription="World Map" />
+
+            <!-- Centered Circular Power Button with Radar Ring -->
+            <LinearLayout
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:orientation="vertical">
 
+                <FrameLayout
+                    android:layout_width="92dp"
+                    android:layout_height="92dp">
+
+                    <!-- Radar Ring Glow -->
+                    <View
+                        android:id="@+id/vpnRadarRing"
+                        android:layout_width="92dp"
+                        android:layout_height="92dp"
+                        android:background="@drawable/bg_tab_counter"
+                        android:backgroundTint="#1E293B" />
+
+                    <!-- Inner Circle Button -->
+                    <ImageButton
+                        android:id="@+id/btnVpnPower"
+                        android:layout_width="72dp"
+                        android:layout_height="72dp"
+                        android:layout_gravity="center"
+                        android:background="@drawable/bg_tab_counter"
+                        android:backgroundTint="#0F172A"
+                        android:src="@drawable/ic_vpn_power"
+                        app:tint="#94A3B8"
+                        android:contentDescription="Toggle Fokk VPN" />
+                </FrameLayout>
+
+                <!-- Status Label ("Protected" / "Disconnected") -->
                 <TextView
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:gravity="center"
-                    android:background="@drawable/bg_circle_icon_button"
-                    android:text="F"
-                    android:textColor="@color/fokk_cyan"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Fokk Fast Privacy Network"
-                        android:textColor="@color/text_primary"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="High-speed global routing • Instant connection"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="11sp" />
-                </LinearLayout>
-
-                <RadioButton
-                    android:id="@+id/radioModeTor"
+                    android:id="@+id/textVpnPowerLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:clickable="false"
-                    android:focusable="false" />
-            </LinearLayout>
-
-            <!-- Compatibility views (kept invisible for view binding) -->
-            <LinearLayout
-                android:id="@+id/layoutOrbotHelper"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:visibility="gone">
-                <TextView
-                    android:id="@+id/textOrbotStatus"
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:visibility="gone" />
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnLaunchOrbot"
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:visibility="gone" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- Option 2: Fokk Dedicated Node -->
-        <LinearLayout
-            android:id="@+id/cardModeCustom"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
-            android:background="@drawable/bg_stat_chip"
-            android:clickable="true"
-            android:focusable="true"
-            android:orientation="vertical"
-            android:padding="14dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:gravity="center"
-                    android:background="@drawable/bg_circle_icon_button"
-                    android:text="P"
-                    android:textColor="#10B981"
-                    android:textSize="15sp"
+                    android:layout_marginTop="10dp"
+                    android:text="Disconnected"
+                    android:textColor="#F8FAFC"
+                    android:textSize="18sp"
                     android:textStyle="bold" />
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Fokk Dedicated Node &amp; Locations"
-                        android:textColor="@color/text_primary"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/textCustomProxyPreview"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Americas • Europe • Asia • Private Server"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="11sp" />
-                </LinearLayout>
-
-                <RadioButton
-                    android:id="@+id/radioModeCustom"
+                <!-- Status Subtitle ("Your browsing is secured" / "Your real IP is exposed") -->
+                <TextView
+                    android:id="@+id/textVpnPowerSub"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:clickable="false"
-                    android:focusable="false" />
+                    android:layout_marginTop="2dp"
+                    android:text="Your real IP is visible"
+                    android:textColor="#94A3B8"
+                    android:textSize="13sp" />
             </LinearLayout>
-        </LinearLayout>
+        </FrameLayout>
 
-        <!-- Option 3: Direct Browsing -->
+        <!-- Location Selector Card (Opera Style) -->
         <LinearLayout
-            android:id="@+id/cardModeOff"
+            android:id="@+id/cardLocationSelector"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="16dp"
             android:background="@drawable/bg_stat_chip"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="14dp">
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="14dp">
 
-            <TextView
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:gravity="center"
-                android:background="@drawable/bg_circle_icon_button"
-                android:text="D"
-                android:textColor="#94A3B8"
-                android:textSize="15sp"
-                android:textStyle="bold" />
+            <FrameLayout
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_tab_counter"
+                android:backgroundTint="#1E293B">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_globe"
+                    app:tint="#00E5FF"
+                    android:contentDescription="Location Globe" />
+            </FrameLayout>
 
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/textSelectedLocation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Optimal location"
+                    android:textColor="#F8FAFC"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/textLocationSub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Virtual location"
+                    android:textColor="#94A3B8"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_collapse"
+                app:tint="#94A3B8"
+                android:contentDescription="Select Location" />
+        </LinearLayout>
+
+        <!-- Divider Line -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="20dp"
+            android:background="#1E293B" />
+
+        <!-- Setting: Use VPN for private tabs only -->
+        <LinearLayout
+            android:id="@+id/rowPrivateTabsOnly"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="12dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingVertical="12dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Use VPN for private tabs only"
+                android:textColor="#F8FAFC"
+                android:textSize="15sp" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/checkPrivateTabsOnly"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:buttonTint="#00E5FF" />
+        </LinearLayout>
+
+        <!-- Setting: Bypass VPN for search -->
+        <LinearLayout
+            android:id="@+id/rowBypassSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="4dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingVertical="10dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Direct Browsing"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp"
+                    android:text="Bypass VPN for search"
+                    android:textColor="#F8FAFC"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="Allow search engines to detect your region for more relevant search results"
+                    android:textColor="#94A3B8"
+                    android:textSize="12sp"
+                    android:lineSpacingExtra="2dp" />
+            </LinearLayout>
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switchBypassSearch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <!-- Protect Your Privacy: Pro Banner (Gradient Card with Shield) -->
+        <LinearLayout
+            android:id="@+id/cardProPrivacy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_vpn_pro_card"
+            android:orientation="horizontal"
+            android:padding="18dp"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Protect your privacy"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Standard unencrypted browsing (Real IP visible)"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11sp" />
+                    android:layout_marginTop="4dp"
+                    android:text="Unlock Fokk VPN Pro to keep your entire browsing session safe &amp; secure"
+                    android:textColor="#E0E7FF"
+                    android:textSize="12sp"
+                    android:lineSpacingExtra="2dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnProGetStarted"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:layout_marginTop="12dp"
+                    android:paddingHorizontal="18dp"
+                    android:paddingVertical="0dp"
+                    android:text="Get started"
+                    android:textColor="#4F46E5"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="#FFFFFF"
+                    app:cornerRadius="18dp" />
             </LinearLayout>
 
-            <RadioButton
-                android:id="@+id/radioModeOff"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:clickable="false"
-                android:focusable="false" />
+            <!-- Shield with Padlock Graphic -->
+            <FrameLayout
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:background="@drawable/bg_tab_counter"
+                android:backgroundTint="#312E81">
+
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_lock"
+                    app:tint="#67E8F9"
+                    android:contentDescription="Shield Protection" />
+            </FrameLayout>
         </LinearLayout>
 
-        <!-- Compatibility Anchor Views for Relay -->
+        <!-- Auto-connect on device startup -->
         <LinearLayout
-            android:id="@+id/cardModeRelay"
+            android:id="@+id/rowAutoConnect"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="14dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingVertical="12dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Auto-connect on device startup"
+                android:textColor="#F8FAFC"
+                android:textSize="14sp" />
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_lock"
+                app:tint="#818CF8"
+                android:contentDescription="Locked feature" />
+        </LinearLayout>
+
+        <!-- VPN protocol: Auto -->
+        <LinearLayout
+            android:id="@+id/rowVpnProtocol"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingVertical="10dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="VPN protocol"
+                    android:textColor="#F8FAFC"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/textVpnProtocol"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Auto (High-Speed Edge)"
+                    android:textColor="#64748B"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_lock"
+                app:tint="#475569"
+                android:contentDescription="Locked feature" />
+        </LinearLayout>
+
+        <!-- Verify Exit IP Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnVerifyVpnExitIp"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="16dp"
+            android:paddingVertical="0dp"
+            android:text="Verify Browser Exit IP"
+            android:textColor="#00E5FF"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:backgroundTint="#131B2B"
+            app:strokeColor="#24344D"
+            app:strokeWidth="1dp"
+            app:cornerRadius="12dp" />
+
+        <!-- Hidden / Compatibility Views for ViewBinding -->
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:visibility="gone">
-            <RadioButton
-                android:id="@+id/radioModeRelay"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:visibility="gone" />
-        </LinearLayout>
 
-        <!-- Protection Notice Footer -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#0F172A"
-            android:padding="12dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Fokk Privacy Protection: Browser traffic is encrypted and your real IP is masked from destination websites."
-                android:textColor="@color/text_secondary"
-                android:textSize="11sp" />
+            <TextView android:id="@+id/textVpnStatusPill" android:layout_width="0dp" android:layout_height="0dp" />
+            <TextView android:id="@+id/textVpnExitIp" android:layout_width="0dp" android:layout_height="0dp" />
+            <TextView android:id="@+id/textVpnDirectIp" android:layout_width="0dp" android:layout_height="0dp" />
+            <TextView android:id="@+id/textCustomProxyPreview" android:layout_width="0dp" android:layout_height="0dp" />
+            <RadioButton android:id="@+id/radioModeTor" android:layout_width="0dp" android:layout_height="0dp" />
+            <RadioButton android:id="@+id/radioModeRelay" android:layout_width="0dp" android:layout_height="0dp" />
+            <RadioButton android:id="@+id/radioModeCustom" android:layout_width="0dp" android:layout_height="0dp" />
+            <RadioButton android:id="@+id/radioModeOff" android:layout_width="0dp" android:layout_height="0dp" />
+            <LinearLayout android:id="@+id/cardModeTor" android:layout_width="0dp" android:layout_height="0dp" />
+            <LinearLayout android:id="@+id/cardModeCustom" android:layout_width="0dp" android:layout_height="0dp" />
+            <LinearLayout android:id="@+id/cardModeOff" android:layout_width="0dp" android:layout_height="0dp" />
+            <LinearLayout android:id="@+id/layoutOrbotHelper" android:layout_width="0dp" android:layout_height="0dp" />
         </LinearLayout>
 
     </LinearLayout>

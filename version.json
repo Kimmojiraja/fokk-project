@@ -1,8 +1,8 @@
 {
-  "versionCode": 256,
-  "versionName": "2.5.6",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.5.6/app-debug.apk",
-  "changelog": "- Critical Startup Stability: Fixed launch crash by making VPN state restoration asynchronous and resilient across all Android devices.\n- Clean Dedicated Node Selector: Removed all flag/globe emojis for a sleek, minimal, and professional Fokk VPN interface.\n- High-Speed Privacy Clusters: Upgraded Fokk VPN routing with dedicated Americas, Europe, and Asia clusters featuring automatic failover and seamless fallback.\n- Pure Brand Identity: Complete Fokk VPN branding with zero third-party technology references."
+  "versionCode": 257,
+  "versionName": "2.5.7",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.5.7/app-debug.apk",
+  "changelog": "- Complete Opera-Style Dark Theme VPN UI: Redesigned VPN dashboard with world map silhouette, central power control with glowing radar indicator, virtual location selector, and Fokk Pro Privacy banner.\n- Zero-Drop Adaptive Web Routing: In-app adaptive forwarder connects to privacy nodes with instant direct bridge fallback so pages NEVER fail to load or timeout on Indian mobile networks (Jio 5G/Airtel).\n- Clean Virtual Location Selector: Choose between Optimal location, America, Europe, Asia, or custom private servers without emojis.\n- Browser Preferences: Added toggles for 'Use VPN for private tabs only' and 'Bypass VPN for search' engines."
 }
 
 
