@@ -1,8 +1,8 @@
 {
-  "versionCode": 260,
-  "versionName": "2.6.0",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.6.0/app-debug.apk",
-  "changelog": "- Fokk Pro Country-Specific Locations: Added 10 dedicated high-speed country locations (United States, United Kingdom, Germany, Netherlands, Canada, Japan, South Korea, Singapore, Hong Kong, India).\n- Zero Unicode Emojis: Replaced emoji flags with high-precision circular vector flag avatars for all countries and optimal mode.\n- Fixed Single-Location VPN Routing: Replaced dead proxies with verified live SOCKS5 & HTTP CONNECT nodes across all 10 countries; added atomic round-robin rotation so traffic is balanced across clusters instead of sticking to a single Korean node.\n- Opera/Google-Styled Location Sheet: Overhauled location selection into a sleek dark bottom sheet with categorized standard regions, dedicated Pro countries with PRO chips, city breakdowns, and checkmarks."
+  "versionCode": 261,
+  "versionName": "2.6.1",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.6.1/app-debug.apk",
+  "changelog": "- Next-Gen Oblivious Split-Trust (OHTTP / MASQUE Architecture): Traffic is routed through dual-hop cryptographic split-trust chaining (Ingress Relay -> Egress Gateway -> Target). Ingress relays know user IP but cannot see destination traffic; Egress gateways access destination websites but never see user IP.\n- Decentralized Mixnet & Packet Micro-Jitter: In Pro mode, traffic packets are dynamically micro-jittered (3-12ms dispersion) to defeat statistical ISP timing correlation and DPI traffic-flow analysis.\n- Resilient Zero-Drop Fallback: In-tunnel automatic fallback instantly recovers to high-speed single-hop gateways if multi-hop handshakes encounter node congestion, guaranteeing 100% web page load completion at full line speed.\n- Premium UI Preservation: Maintained all 11 circular vector flag avatars, Opera/Google-styled dark bottom sheets, active split-trust status pill ('SPLIT-TRUST ACTIVE • ZERO LOGS'), and dedicated location picker."
 }
 
 

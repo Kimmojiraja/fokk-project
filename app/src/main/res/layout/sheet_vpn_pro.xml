@@ -165,7 +165,7 @@
             android:textStyle="bold"
             android:letterSpacing="0.08" />
 
-        <!-- Feature 1: Ultra-Stealth Multi-Hop -->
+        <!-- Feature 1: Oblivious Split-Trust Dual-Hop -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -178,7 +178,7 @@
                 android:layout_height="24dp"
                 android:src="@drawable/ic_shield_check"
                 app:tint="#38BDF8"
-                android:contentDescription="Stealth" />
+                android:contentDescription="Split-Trust" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -190,7 +190,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Ultra-Stealth Obfuscation"
+                    android:text="Oblivious Dual-Hop Split-Trust"
                     android:textColor="#F8FAFC"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -199,7 +199,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Obfuscates packet signatures to bypass ISP DPI firewalls"
+                    android:text="Separates IP identity from destination traffic via Relay + Gateway (OHTTP/MASQUE)"
                     android:textColor="#94A3B8"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -210,7 +210,7 @@
             android:layout_height="1dp"
             android:background="#1E293B" />
 
-        <!-- Feature 2: DNS Leak Guard -->
+        <!-- Feature 2: Decentralized Mixnet Jitter -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -223,7 +223,7 @@
                 android:layout_height="24dp"
                 android:src="@drawable/ic_lock"
                 app:tint="#A78BFA"
-                android:contentDescription="DNS Guard" />
+                android:contentDescription="Mixnet" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -235,7 +235,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Zero-Leak DNS Guard"
+                    android:text="Decentralized Mixnet Timing Jitter"
                     android:textColor="#F8FAFC"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -244,7 +244,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Encrypted DoH prevents ISP from logging domain requests"
+                    android:text="Injects packet micro-jitter to defeat ISP traffic analysis and DPI surveillance"
                     android:textColor="#94A3B8"
                     android:textSize="12sp" />
             </LinearLayout>
