@@ -6610,14 +6610,12 @@ open class MediaHubActivity : AppCompatActivity() {
             b.layoutOrbotHelper.visibility = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.TOR && !torListening) View.VISIBLE else View.GONE
             b.textOrbotStatus.text = if (torListening) "✓ Tor Onion Network active on port ${com.adshield.app.engine.VpnEngine.getTorPort()}" else "Tor Onion daemon starting (127.0.0.1:9050)..."
             b.textOrbotStatus.setTextColor(if (torListening) android.graphics.Color.parseColor("#10B981") else android.graphics.Color.parseColor("#A855F7"))
-            b.btnLaunchOrbot.text = "Start Tor"
+            b.btnLaunchOrbot.text = if (com.adshield.app.engine.VpnEngine.isOrbotInstalled(this)) "Open Orbot" else "Start Tor"
             b.btnLaunchOrbot.setOnClickListener {
-                com.adshield.app.engine.VpnEngine.startEmbeddedTor(this)
                 if (com.adshield.app.engine.VpnEngine.isOrbotInstalled(this)) {
                     com.adshield.app.engine.VpnEngine.launchOrbot(this)
                 }
-                Toast.makeText(this, "Starting Tor...", Toast.LENGTH_SHORT).show()
-                refreshUi()
+                switchMode(com.adshield.app.engine.VpnEngine.VpnMode.TOR)
             }
         }
 
@@ -6630,8 +6628,17 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         fun switchMode(mode: com.adshield.app.engine.VpnEngine.VpnMode, customProxy: String? = null) {
+            val progress = if (mode == com.adshield.app.engine.VpnEngine.VpnMode.TOR && !com.adshield.app.engine.VpnEngine.isTorListening()) {
+                android.app.ProgressDialog(this).apply {
+                    setMessage("Connecting to Tor Onion Network...\nEstablishing circuit (takes a few seconds)")
+                    setCancelable(false)
+                    show()
+                }
+            } else null
+
             com.adshield.app.engine.VpnEngine.applyVpnMode(this, mode, customProxy) { success, msg ->
                 runOnUiThread {
+                    try { progress?.dismiss() } catch (_: Exception) {}
                     if (success) {
                         activeWebView?.reload()
                         lastVpnRouteFingerprint = getVpnRouteFingerprint()
@@ -6644,17 +6651,7 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         b.cardModeTor.setOnClickListener {
-            val torListening = com.adshield.app.engine.VpnEngine.isTorListening()
-            if (torListening) {
-                switchMode(com.adshield.app.engine.VpnEngine.VpnMode.TOR)
-            } else {
-                com.adshield.app.engine.VpnEngine.startEmbeddedTor(this)
-                if (com.adshield.app.engine.VpnEngine.isOrbotInstalled(this)) {
-                    com.adshield.app.engine.VpnEngine.launchOrbot(this)
-                }
-                switchMode(com.adshield.app.engine.VpnEngine.VpnMode.TOR)
-                Toast.makeText(this, "Connecting to Tor Onion Network...", Toast.LENGTH_SHORT).show()
-            }
+            switchMode(com.adshield.app.engine.VpnEngine.VpnMode.TOR)
         }
 
         b.cardModeCustom.setOnClickListener {

@@ -1,6 +1,6 @@
 {
-  "versionCode": 252,
-  "versionName": "2.5.2",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.5.2/app-debug.apk",
-  "changelog": "- Critical VPN Offline Bugfix: Fixed Android WebView offline/connection failure (ERR_PROXY_CONNECTION_FAILED) when Tor or Custom VPN is turned on.\n- Strict Proxy Reachability Guard: Prevents WebView from routing traffic to closed ports or unreachable proxies; cleanly falls back to Direct connection.\n- SOCKS5 Remote DNS Resolution: Preserves socks5:// scheme and adds MATCH_ALL_SCHEMES and addDirect() fallback so all HTTP and HTTPS traffic resolves securely without offline errors.\n- Startup Safe Recovery: Checks saved proxy availability on app launch and automatically resets to Direct mode if the remote proxy is offline."
+  "versionCode": 253,
+  "versionName": "2.5.3",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.5.3/app-debug.apk",
+  "changelog": "- Native Embedded Tor Onion Engine: Fixed Tor not connecting on Android by explicitly binding and starting the embedded TorService daemon with native libtor.\n- Circuit Bootstrap Polling: Parity with desktop Tor engine — polls local SOCKS5 listener with visual progress feedback until circuits are established before routing browser traffic.\n- Manifest Declaration: Explicitly declared TorService in AndroidManifest with START and STOP intent filters for reliable process lifecycle.\n- Custom Proxy Handshake & Recovery: Improved HTTP/SOCKS auto-detection and resilient background restoration without wiping saved Tor privacy configuration."
 }

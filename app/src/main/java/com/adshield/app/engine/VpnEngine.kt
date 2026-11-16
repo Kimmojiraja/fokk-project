@@ -1,8 +1,12 @@
 package com.adshield.app.engine
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.net.Uri
+import android.os.IBinder
+import android.util.Log
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
 import androidx.webkit.WebViewFeature
@@ -37,6 +41,9 @@ object VpnEngine {
     }
 
     private val executor = Executors.newSingleThreadExecutor()
+    private var torServiceConnection: ServiceConnection? = null
+    @Volatile
+    private var isTorBound = false
 
     fun isSupported(): Boolean = WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)
 
@@ -104,23 +111,57 @@ object VpnEngine {
 
     fun startEmbeddedTor(context: Context) {
         try {
-            val intent = Intent("org.torproject.android.intent.action.START").apply {
-                setPackage(context.packageName)
+            val appCtx = context.applicationContext
+            val intent = Intent(appCtx, org.torproject.jni.TorService::class.java).apply {
+                action = org.torproject.jni.TorService.ACTION_START
+                putExtra(org.torproject.jni.TorService.EXTRA_SERVICE_PACKAGE_NAME, appCtx.packageName)
             }
-            context.startService(intent)
+            if (!isTorBound) {
+                val conn = object : ServiceConnection {
+                    override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                        Log.i("VpnEngine", "TorService connected & bound")
+                        isTorBound = true
+                    }
+                    override fun onServiceDisconnected(name: ComponentName?) {
+                        Log.w("VpnEngine", "TorService disconnected")
+                        isTorBound = false
+                    }
+                }
+                torServiceConnection = conn
+                appCtx.bindService(intent, conn, Context.BIND_AUTO_CREATE)
+            }
+            try {
+                appCtx.startService(intent)
+            } catch (se: Exception) {
+                Log.w("VpnEngine", "startService fallback note: ${se.message}")
+            }
         } catch (e: Exception) {
-            android.util.Log.e("VpnEngine", "Failed to start embedded TorService", e)
+            Log.e("VpnEngine", "Failed to start embedded TorService", e)
         }
     }
 
     fun stopEmbeddedTor(context: Context) {
         try {
-            val intent = Intent("org.torproject.android.intent.action.STOP").apply {
-                setPackage(context.packageName)
+            val appCtx = context.applicationContext
+            if (isTorBound && torServiceConnection != null) {
+                try {
+                    appCtx.unbindService(torServiceConnection!!)
+                } catch (ue: Exception) {
+                    Log.w("VpnEngine", "Error unbinding TorService: ${ue.message}")
+                }
+                isTorBound = false
+                torServiceConnection = null
             }
-            context.startService(intent)
+            val intent = Intent(appCtx, org.torproject.jni.TorService::class.java).apply {
+                action = org.torproject.jni.TorService.ACTION_STOP
+            }
+            try {
+                appCtx.stopService(intent)
+            } catch (se: Exception) {
+                Log.w("VpnEngine", "Error stopping TorService: ${se.message}")
+            }
         } catch (e: Exception) {
-            android.util.Log.e("VpnEngine", "Failed to stop embedded TorService", e)
+            Log.e("VpnEngine", "Failed to stop embedded TorService", e)
         }
     }
 
@@ -145,7 +186,14 @@ object VpnEngine {
     private fun normalizeProxy(raw: String): String {
         var value = raw.trim()
         require(value.isNotBlank()) { "Enter a proxy address" }
-        if (!value.contains("://")) value = "socks5://$value"
+        if (!value.contains("://")) {
+            val port = value.substringAfterLast(':', "").toIntOrNull() ?: 0
+            value = if (port in setOf(80, 8080, 3128, 8000, 8888, 8889)) {
+                "http://$value"
+            } else {
+                "socks5://$value"
+            }
+        }
         val uri = URI(value)
         val scheme = uri.scheme?.lowercase() ?: throw IllegalArgumentException("Proxy scheme is required")
         require(scheme in setOf("http", "https", "socks", "socks5")) {
@@ -165,12 +213,12 @@ object VpnEngine {
 
     private fun checkSocks5Proxy(host: String, port: Int): Boolean = try {
         Socket().use { socket ->
-            socket.connect(InetSocketAddress(host, port), 1_500)
-            socket.soTimeout = 1_500
+            socket.connect(InetSocketAddress(host, port), 2_000)
+            socket.soTimeout = 2_000
             socket.getOutputStream().write(byteArrayOf(0x05, 0x01, 0x00))
             val response = ByteArray(2)
             java.io.DataInputStream(socket.getInputStream()).readFully(response)
-            response[0] == 0x05.toByte() && response[1] == 0x00.toByte()
+            response[0] == 0x05.toByte()
         }
     } catch (_: Exception) {
         false
@@ -180,7 +228,7 @@ object VpnEngine {
         val socket = if (tlsToProxy) {
             val rawSocket = Socket()
             try {
-                rawSocket.connect(InetSocketAddress(host, port), 1_500)
+                rawSocket.connect(InetSocketAddress(host, port), 2_000)
                 val sslFactory = SSLSocketFactory.getDefault() as SSLSocketFactory
                 val sslSocket = sslFactory.createSocket(rawSocket, host, port, true) as SSLSocket
                 sslSocket.soTimeout = 2_000
@@ -195,7 +243,7 @@ object VpnEngine {
             }
         } else {
             Socket().apply {
-                connect(InetSocketAddress(host, port), 1_500)
+                connect(InetSocketAddress(host, port), 2_000)
                 soTimeout = 2_000
             }
         }
@@ -203,11 +251,13 @@ object VpnEngine {
             val request = "CONNECT api.ipify.org:443 HTTP/1.1\r\nHost: api.ipify.org:443\r\nProxy-Connection: Keep-Alive\r\n\r\n"
             it.getOutputStream().write(request.toByteArray(StandardCharsets.ISO_8859_1))
             val statusLine = BufferedReader(InputStreamReader(it.getInputStream(), StandardCharsets.ISO_8859_1)).readLine()
-            val statusCode = statusLine?.split(' ')?.getOrNull(1)?.toIntOrNull()
-            statusCode != null && statusCode in 200..299
+            if (statusLine != null && (statusLine.startsWith("HTTP/") || statusLine.contains("200"))) {
+                true
+            } else {
+                checkSocketOpen(host, port, 1_000)
+            }
         }
     } catch (_: Exception) {
-        // Fall back to simple socket connectivity check if CONNECT request is rejected
         checkSocketOpen(host, port, 1_000)
     }
 
@@ -216,10 +266,17 @@ object VpnEngine {
         val host = uri.host ?: return false
         val port = uri.port
         if (port !in 1..65535) return false
-        if (!checkSocketOpen(host, port, 1_500)) return false
-        return when (uri.scheme?.lowercase()) {
-            "socks", "socks5", "socks4" -> checkSocks5Proxy(host, port)
-            "http", "https" -> checkHttpConnectProxy(host, port, tlsToProxy = uri.scheme.equals("https", ignoreCase = true))
+        if (!checkSocketOpen(host, port, 2_000)) return false
+        val scheme = uri.scheme?.lowercase()
+        return when (scheme) {
+            "socks", "socks5", "socks4" -> {
+                if (checkSocks5Proxy(host, port)) true
+                else checkHttpConnectProxy(host, port, false)
+            }
+            "http", "https" -> {
+                if (checkHttpConnectProxy(host, port, tlsToProxy = scheme == "https")) true
+                else checkSocks5Proxy(host, port)
+            }
             else -> false
         }
     }
@@ -290,40 +347,57 @@ object VpnEngine {
             return
         }
 
-        val rawEndpoint = when (mode) {
-            VpnMode.OFF -> ""
-            VpnMode.TOR -> getTorEndpoint()
-            VpnMode.RELAY -> getRelayEndpoint()
-            VpnMode.CUSTOM -> customProxy ?: getCustomProxy(context)
-        }
-
-        val endpoint = try {
-            normalizeProxy(rawEndpoint)
-        } catch (e: Exception) {
-            onComplete?.invoke(false, e.message ?: "Invalid proxy address")
-            return
-        }
-        val (host, port) = try { endpointHostAndPort(endpoint) } catch (e: Exception) {
-            onComplete?.invoke(false, e.message ?: "Invalid proxy address")
-            return
-        }
-
         executor.execute {
             if (mode == VpnMode.TOR) {
-                val isListening = isTorListening()
-                if (!isListening) {
-                    startEmbeddedTor(context)
+                startEmbeddedTor(context)
+                val startTime = System.currentTimeMillis()
+                val timeoutMs = 30_000L
+                var ready = isTorListening() && checkSocks5Proxy("127.0.0.1", getTorPort())
+                while (!ready && (System.currentTimeMillis() - startTime) < timeoutMs) {
+                    try {
+                        Thread.sleep(400)
+                    } catch (_: InterruptedException) {
+                        break
+                    }
+                    ready = isTorListening() && checkSocks5Proxy("127.0.0.1", getTorPort())
+                }
+
+                if (!ready) {
                     if (isOrbotInstalled(context)) {
                         launchOrbot(context)
+                        onComplete?.invoke(
+                            false,
+                            "Tor daemon is starting. Open Orbot or wait a moment, then select Tor again."
+                        )
+                    } else {
+                        onComplete?.invoke(
+                            false,
+                            "Tor Onion daemon is still establishing circuits. Please wait a moment and tap again."
+                        )
                     }
-                    onComplete?.invoke(
-                        false,
-                        if (isOrbotInstalled(context)) "Starting Tor / Orbot... Tap connect in Orbot, then select Tor again. Browser kept on Direct."
-                        else "Tor is not listening on port ${getTorPort()}. Start Orbot or Tor service. Kept on Direct connection."
-                    )
                     return@execute
                 }
-            } else if (!isProxyHandshakeValid(endpoint)) {
+            }
+
+            val rawEndpoint = when (mode) {
+                VpnMode.OFF -> ""
+                VpnMode.TOR -> getTorEndpoint()
+                VpnMode.RELAY -> getRelayEndpoint()
+                VpnMode.CUSTOM -> customProxy ?: getCustomProxy(context)
+            }
+
+            val endpoint = try {
+                normalizeProxy(rawEndpoint)
+            } catch (e: Exception) {
+                onComplete?.invoke(false, e.message ?: "Invalid proxy address")
+                return@execute
+            }
+            val (host, port) = try { endpointHostAndPort(endpoint) } catch (e: Exception) {
+                onComplete?.invoke(false, e.message ?: "Invalid proxy address")
+                return@execute
+            }
+
+            if (mode != VpnMode.TOR && !isProxyHandshakeValid(endpoint)) {
                 onComplete?.invoke(
                     false,
                     "The proxy at $host:$port is unreachable. Browser kept on Direct connection to prevent offline errors."
@@ -344,7 +418,7 @@ object VpnEngine {
                     if (mode == VpnMode.CUSTOM) editor.putString(KEY_CUSTOM_PROXY, endpoint)
                     editor.apply()
                     val routeDesc = when (mode) {
-                        VpnMode.TOR -> "Tor Onion Network active ($host:$port). Exit IP is masked."
+                        VpnMode.TOR -> "Connected to Tor Onion Network ($host:$port). Exit IP is masked."
                         VpnMode.RELAY -> "Tor route configured ($host:$port)."
                         VpnMode.CUSTOM -> "Custom Proxy active ($host:$port). Exit IP is masked."
                         VpnMode.OFF -> "Direct connection."
@@ -362,16 +436,16 @@ object VpnEngine {
 
     fun restoreSavedState(context: Context) {
         val mode = getActiveMode(context)
-        if (mode != VpnMode.OFF) {
-            val rawEndpoint = when (mode) {
-                VpnMode.TOR -> getTorEndpoint()
-                VpnMode.CUSTOM -> getCustomProxy(context)
-                else -> ""
-            }
-            if (rawEndpoint.isNotBlank()) {
-                val endpoint = runCatching { normalizeProxy(rawEndpoint) }.getOrNull()
-                if (endpoint != null && isProxyHandshakeValid(endpoint)) {
-                    applyVpnMode(context, mode, if (mode == VpnMode.CUSTOM) getCustomProxy(context) else null)
+        if (mode == VpnMode.TOR) {
+            // Restore Tor route asynchronously so cold daemon startup doesn't wipe saved mode
+            startEmbeddedTor(context)
+            applyVpnMode(context, VpnMode.TOR)
+        } else if (mode == VpnMode.CUSTOM) {
+            val savedProxy = getCustomProxy(context)
+            if (savedProxy.isNotBlank()) {
+                val endpoint = runCatching { normalizeProxy(savedProxy) }.getOrNull()
+                if (endpoint != null) {
+                    applyVpnMode(context, mode, savedProxy)
                 } else {
                     context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
                         .edit().putString(KEY_VPN_MODE, VpnMode.OFF.id).apply()
