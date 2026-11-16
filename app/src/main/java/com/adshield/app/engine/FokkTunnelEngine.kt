@@ -134,7 +134,7 @@ object FokkTunnelEngine {
             }
             if (totalRead == 0) return
 
-            val requestText = String(headerBytes, 0, totalRead, StandardCharsets.ISO_8959_1)
+            val requestText = String(headerBytes, 0, totalRead, StandardCharsets.ISO_8859_1)
             val firstLine = requestText.substringBefore("\r\n")
             val parts = firstLine.split(" ")
             if (parts.size < 2) return
