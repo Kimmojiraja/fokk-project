@@ -45,7 +45,6 @@ class AdShieldApp : Application() {
         }
         applicationScope.launch { blocklistEngine.initialize() }
         applicationScope.launch { braveEngine.initialize() }
-        com.adshield.app.engine.VpnEngine.restoreSavedState(this)
     }
 
     private fun createNotificationChannels() {

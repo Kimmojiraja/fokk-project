@@ -1282,7 +1282,17 @@ open class MediaHubActivity : AppCompatActivity() {
         }
         handleOpenAction(intent)
 
-        if (!isIsolatedPrivateProfile) AppUpdateManager.checkForUpdates(this, manualCheck = false)
+        if (!isIsolatedPrivateProfile) {
+            AppUpdateManager.checkForUpdates(this, manualCheck = false)
+            mainHandler.postDelayed({
+                if (!isFinishing && !isDestroyed) {
+                    runCatching {
+                        com.adshield.app.engine.VpnEngine.restoreSavedState(this)
+                        updateVpnIndicatorUi()
+                    }
+                }
+            }, 400L)
+        }
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -2001,7 +2011,7 @@ open class MediaHubActivity : AppCompatActivity() {
                     com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> {
                         val saved = com.adshield.app.engine.VpnEngine.getCustomProxy(activity)
                         if (saved in setOf("AM", "EU", "AS") || saved.isBlank()) {
-                            com.adshield.app.engine.VpnEngine.getFastPrivacyEndpoint()
+                            com.adshield.app.engine.VpnEngine.getFastPrivacyEndpoint(saved)
                         } else saved
                     }
                     com.adshield.app.engine.VpnEngine.VpnMode.OFF -> null
@@ -2085,7 +2095,7 @@ open class MediaHubActivity : AppCompatActivity() {
                     com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> {
                         val saved = com.adshield.app.engine.VpnEngine.getCustomProxy(activity)
                         if (saved in setOf("AM", "EU", "AS") || saved.isBlank()) {
-                            com.adshield.app.engine.VpnEngine.getFastPrivacyEndpoint()
+                            com.adshield.app.engine.VpnEngine.getFastPrivacyEndpoint(saved)
                         } else saved
                     }
                     com.adshield.app.engine.VpnEngine.VpnMode.OFF -> null
@@ -6864,10 +6874,10 @@ open class MediaHubActivity : AppCompatActivity() {
     private fun showDedicatedRegionOrCustomDialog(onApplied: (String) -> Unit) {
         val currentSaved = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
         val options = arrayOf(
-            "🇺🇸 Americas Node (Optimal)",
-            "🇪🇺 Europe Node (Frankfurt / Amsterdam)",
-            "🌏 Asia Node (Singapore / Tokyo)",
-            "⚙️ Configure Private Server (host:port)"
+            "Americas Node (Optimal)",
+            "Europe Node (Frankfurt / Amsterdam)",
+            "Asia Node (Singapore / Tokyo)",
+            "Configure Private Server (host:port)"
         )
         val checkedIndex = when (currentSaved) {
             "AM" -> 0
