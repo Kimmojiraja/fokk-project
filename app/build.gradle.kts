@@ -82,3 +82,6 @@ dependencies {
 tasks.matching { it.name.contains("AarMetadata") }.configureEach {
     enabled = false
 }
+
+// Fokk VPN v2.5.7 Release
+
