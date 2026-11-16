@@ -1,0 +1,35 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="36dp"
+    android:height="36dp"
+    android:viewportWidth="36"
+    android:viewportHeight="36">
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M18,18m-17,0a17,17 0,1 0,34 0a17,17 0,1 0,-34 0" />
+    <group>
+        <clip-path android:pathData="M18,18m-17,0a17,17 0,1 0,34 0a17,17 0,1 0,-34 0" />
+        <!-- Globe background -->
+        <path
+            android:fillColor="#1E293B"
+            android:pathData="M0,0h36v36h-36z" />
+        <!-- Globe latitude lines -->
+        <path
+            android:strokeColor="#38BDF8"
+            android:strokeWidth="1.2"
+            android:pathData="M1,18h34M4,11h28M4,25h28" />
+        <!-- Globe longitude lines -->
+        <path
+            android:strokeColor="#38BDF8"
+            android:strokeWidth="1.2"
+            android:pathData="M18,1v34M18,1C24,1 28,8 28,18C28,28 24,35 18,35M18,1C12,1 8,8 8,18C8,28 12,35 18,35" />
+        <!-- Center glowing core -->
+        <path
+            android:fillColor="#00E5FF"
+            android:pathData="M18,18m-3,0a3,3 0,1 0,6 0a3,3 0,1 0,-6 0" />
+    </group>
+    <!-- Border -->
+    <path
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="1.5"
+        android:pathData="M18,18m-17,0a17,17 0,1 0,34 0a17,17 0,1 0,-34 0" />
+</vector>

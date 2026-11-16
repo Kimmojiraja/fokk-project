@@ -1,0 +1,19 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="36dp"
+    android:height="36dp"
+    android:viewportWidth="36"
+    android:viewportHeight="36">
+    <group>
+        <clip-path android:pathData="M18,18m-17,0a17,17 0,1 0,34 0a17,17 0,1 0,-34 0" />
+        <!-- White Center -->
+        <path android:fillColor="#FFFFFF" android:pathData="M0,0h36v36h-36z" />
+        <!-- Red Bands -->
+        <path android:fillColor="#D80027" android:pathData="M0,0h9v36h-9zM27,0h9v36h-9z" />
+        <!-- Maple Leaf Emblem -->
+        <path android:fillColor="#D80027" android:pathData="M18,8L19.5,12.5L23,12L21,15L24,18L20.5,19L21.5,22L19,21L18.5,25L17.5,25L17,21L14.5,22L15.5,19L12,18L15,15L13,12L16.5,12.5Z" />
+    </group>
+    <path
+        android:strokeColor="#334155"
+        android:strokeWidth="1.5"
+        android:pathData="M18,18m-17,0a17,17 0,1 0,34 0a17,17 0,1 0,-34 0" />
+</vector>

@@ -1,8 +1,8 @@
 {
-  "versionCode": 259,
-  "versionName": "2.5.9",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.5.9/app-debug.apk",
-  "changelog": "- Strict Regional VPN Isolation: Selecting America routes strictly through Americas nodes (US, Canada), Europe strictly through European nodes (Germany, Spain, UK, Austria), and Asia through Asian nodes (Korea, Japan, Hong Kong, Thailand). Zero cross-continental leak.\n- Menu Polish: Removed (i) badges from top 4 squircles; differentiated VPN (Globe) and Ad Blocker (Shield); standardized all 4 squircle icons to sleek dark-theme white (#FFFFFF).\n- Ask Fokk AI Pill: Premium bold AI badge replacing sparkle icon.\n- More Shelf: Placed Saved AI Summaries and Burn Session side-by-side; removed Fokk VPN row; fully unboxed all Advanced Pro Suite items.\n- Fokk AI Overhaul: Fixed summary hanging; added robust on-device extraction with watchdog fallback; redesigned summary sheet to sleek Google AI / Gemini aesthetic with zero emojis."
+  "versionCode": 260,
+  "versionName": "2.6.0",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.6.0/app-debug.apk",
+  "changelog": "- Fokk Pro Country-Specific Locations: Added 10 dedicated high-speed country locations (United States, United Kingdom, Germany, Netherlands, Canada, Japan, South Korea, Singapore, Hong Kong, India).\n- Zero Unicode Emojis: Replaced emoji flags with high-precision circular vector flag avatars for all countries and optimal mode.\n- Fixed Single-Location VPN Routing: Replaced dead proxies with verified live SOCKS5 & HTTP CONNECT nodes across all 10 countries; added atomic round-robin rotation so traffic is balanced across clusters instead of sticking to a single Korean node.\n- Opera/Google-Styled Location Sheet: Overhauled location selection into a sleek dark bottom sheet with categorized standard regions, dedicated Pro countries with PRO chips, city breakdowns, and checkmarks."
 }
 
 

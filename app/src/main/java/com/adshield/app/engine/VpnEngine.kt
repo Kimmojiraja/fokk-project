@@ -63,6 +63,40 @@ object VpnEngine {
         prefs.edit().putBoolean(KEY_PRO_MODE, enabled).apply()
     }
 
+    fun getRegionDisplayName(code: String): String = when (code) {
+        "AM" -> "Americas"
+        "EU" -> "Europe"
+        "AS" -> "Asia & Pacific"
+        "US" -> "United States"
+        "GB" -> "United Kingdom"
+        "DE" -> "Germany"
+        "NL" -> "Netherlands"
+        "CA" -> "Canada"
+        "JP" -> "Japan"
+        "KR" -> "South Korea"
+        "SG" -> "Singapore"
+        "HK" -> "Hong Kong"
+        "IN" -> "India"
+        else -> "Optimal location"
+    }
+
+    fun getRegionFlagRes(code: String): Int = when (code) {
+        "US" -> com.adshield.app.R.drawable.ic_flag_us
+        "GB" -> com.adshield.app.R.drawable.ic_flag_gb
+        "DE" -> com.adshield.app.R.drawable.ic_flag_de
+        "NL" -> com.adshield.app.R.drawable.ic_flag_nl
+        "CA" -> com.adshield.app.R.drawable.ic_flag_ca
+        "JP" -> com.adshield.app.R.drawable.ic_flag_jp
+        "KR" -> com.adshield.app.R.drawable.ic_flag_kr
+        "SG" -> com.adshield.app.R.drawable.ic_flag_sg
+        "HK" -> com.adshield.app.R.drawable.ic_flag_hk
+        "IN" -> com.adshield.app.R.drawable.ic_flag_in
+        "AM" -> com.adshield.app.R.drawable.ic_flag_us
+        "EU" -> com.adshield.app.R.drawable.ic_flag_gb
+        "AS" -> com.adshield.app.R.drawable.ic_flag_jp
+        else -> com.adshield.app.R.drawable.ic_flag_optimal
+    }
+
     enum class VpnMode(val id: String, val title: String, val defaultProxy: String) {
         OFF("off", "Direct Connection (Real IP Exposed)", ""),
         FAST("fast", "Fokk Fast Privacy Network", ""),
@@ -376,12 +410,9 @@ object VpnEngine {
                     endpoint = normalized
                     routeDesc = "Connected to Fokk Dedicated Node ($host:$port)."
                 } else {
+                    val saved = customProxy ?: getCustomProxy(context)
                     val region = if (mode == VpnMode.CUSTOM) {
-                        when (customProxy ?: getCustomProxy(context)) {
-                            "EU" -> "EU"
-                            "AS" -> "AS"
-                            else -> "AM"
-                        }
+                        if (saved in FokkTunnelEngine.REGION_NODES.keys) saved else "AM"
                     } else "AUTO"
 
                     val port = FokkTunnelEngine.start(region)
@@ -390,12 +421,7 @@ object VpnEngine {
                         return@execute
                     }
                     endpoint = "http://127.0.0.1:$port"
-                    val regionLabel = when (region) {
-                        "EU" -> "Europe"
-                        "AS" -> "Asia"
-                        "AM" -> "America"
-                        else -> "Optimal location"
-                    }
+                    val regionLabel = getRegionDisplayName(region)
                     routeDesc = if (mode == VpnMode.CUSTOM) {
                         "Connected to Fokk Dedicated Node ($regionLabel). Your IP is masked."
                     } else {
