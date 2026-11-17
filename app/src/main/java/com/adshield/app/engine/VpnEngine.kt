@@ -55,7 +55,7 @@ object VpnEngine {
 
     fun isProModeEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
-        return prefs.getBoolean(KEY_PRO_MODE, true)
+        return prefs.getBoolean(KEY_PRO_MODE, false)
     }
 
     fun setProModeEnabled(context: Context, enabled: Boolean) {

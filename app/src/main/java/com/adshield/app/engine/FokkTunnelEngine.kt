@@ -11,7 +11,6 @@ import java.net.Socket
 import java.nio.charset.StandardCharsets
 import java.util.Locale
 import java.util.concurrent.Executors
-import java.util.concurrent.Future
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -387,6 +386,9 @@ object FokkTunnelEngine {
     private fun handleClient(client: Socket) {
         var upstream: Socket? = null
         try {
+            client.tcpNoDelay = true
+            client.sendBufferSize = 65536
+            client.receiveBufferSize = 65536
             client.soTimeout = 15_000
             val clientIn = client.getInputStream()
             val clientOut = client.getOutputStream()
@@ -426,7 +428,10 @@ object FokkTunnelEngine {
                     // Guarantees web pages NEVER fail to load with a 504 Gateway Timeout
                     connectedSocket = try {
                         val s = Socket()
-                        s.connect(InetSocketAddress(targetHost, targetPort), 3_000)
+                        s.tcpNoDelay = true
+                        s.sendBufferSize = 65536
+                        s.receiveBufferSize = 65536
+                        s.connect(InetSocketAddress(targetHost, targetPort), 2_000)
                         s
                     } catch (_: Exception) { null }
                 }
@@ -472,7 +477,7 @@ object FokkTunnelEngine {
     private fun connectThroughIngressDirect(targetHost: String, targetPort: Int): Socket? {
         val relays = INGRESS_RELAYS.filter { isNodeAlive(it) }.ifEmpty { INGRESS_RELAYS }
         val rOffset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % relays.size
-        for (k in relays.indices) {
+        for (k in 0 until minOf(2, relays.size)) {
             val relay = relays[(rOffset + k) % relays.size]
             val s = connectSingleHop(targetHost, targetPort, relay)
             if (s != null) {
@@ -545,8 +550,11 @@ object FokkTunnelEngine {
             var socket: Socket? = null
             try {
                 socket = Socket()
-                socket.connect(InetSocketAddress(relay.host, relay.port), 1_500)
-                socket.soTimeout = 8_000
+                socket.tcpNoDelay = true
+                socket.sendBufferSize = 65536
+                socket.receiveBufferSize = 65536
+                socket.connect(InetSocketAddress(relay.host, relay.port), 650)
+                socket.soTimeout = 1_200
 
                 val outStream = socket.getOutputStream()
                 val inStream = socket.getInputStream()
@@ -652,8 +660,11 @@ object FokkTunnelEngine {
         var proxySock: Socket? = null
         try {
             proxySock = Socket()
-            proxySock.connect(InetSocketAddress(node.host, node.port), 1_200)
-            proxySock.soTimeout = 8_000
+            proxySock.tcpNoDelay = true
+            proxySock.sendBufferSize = 65536
+            proxySock.receiveBufferSize = 65536
+            proxySock.connect(InetSocketAddress(node.host, node.port), 650)
+            proxySock.soTimeout = 1_200
 
             if (node.isHttpConnect) {
                 val connectReq = "CONNECT $targetHost:$targetPort HTTP/1.1\r\nHost: $targetHost:$targetPort\r\nProxy-Connection: Keep-Alive\r\n\r\n"
@@ -755,17 +766,17 @@ object FokkTunnelEngine {
     }
 
     private fun pipeSockets(s1: Socket, s2: Socket) {
-        runCatching { s1.soTimeout = 30_000 }
-        runCatching { s2.soTimeout = 30_000 }
-        val f1: Future<*> = threadPool.submit {
-            try {
-                transfer(s1.getInputStream(), s2.getOutputStream())
-            } catch (_: Exception) {}
-            runCatching { s2.shutdownOutput() }
-            runCatching { s1.close() }
-            runCatching { s2.close() }
+        runCatching {
+            s1.tcpNoDelay = true
+            s2.tcpNoDelay = true
+            s1.soTimeout = 30_000
+            s2.soTimeout = 30_000
+            s1.sendBufferSize = 65536
+            s1.receiveBufferSize = 65536
+            s2.sendBufferSize = 65536
+            s2.receiveBufferSize = 65536
         }
-        val f2: Future<*> = threadPool.submit {
+        threadPool.execute {
             try {
                 transfer(s2.getInputStream(), s1.getOutputStream())
             } catch (_: Exception) {}
@@ -773,12 +784,16 @@ object FokkTunnelEngine {
             runCatching { s2.close() }
             runCatching { s1.close() }
         }
-        runCatching { f1.get() }
-        runCatching { f2.get() }
+        try {
+            transfer(s1.getInputStream(), s2.getOutputStream())
+        } catch (_: Exception) {}
+        runCatching { s2.shutdownOutput() }
+        runCatching { s1.close() }
+        runCatching { s2.close() }
     }
 
     private fun transfer(input: InputStream, output: OutputStream) {
-        val buffer = ByteArray(16384)
+        val buffer = ByteArray(32768)
         val random = if (isProMode) java.util.concurrent.ThreadLocalRandom.current() else null
         var packetsSeen = 0
         try {
@@ -788,20 +803,24 @@ object FokkTunnelEngine {
                 packetsSeen++
 
                 // Nym-inspired micro-jitter for handshake timing decorrelation.
-                // Applied strictly to the first 3 packets (handshake phase) to decorrelate
+                // Applied strictly to the first 2 packets (handshake phase) to decorrelate
                 // connection establishment against ISP timing analysis without throttling throughput.
-                if (isProMode && random != null && packetsSeen <= 3) {
-                    val jitterMs = random.nextLong(2, 6)
+                if (isProMode && random != null && packetsSeen <= 2) {
+                    val jitterMs = random.nextLong(1, 3)
                     try {
                         Thread.sleep(jitterMs)
                     } catch (_: InterruptedException) {
                         Thread.currentThread().interrupt()
+                        break
                     }
                 }
 
                 output.write(buffer, 0, read)
-                output.flush()
+                if (input.available() == 0) {
+                    output.flush()
+                }
             }
+            output.flush()
         } catch (_: Exception) {}
     }
 }

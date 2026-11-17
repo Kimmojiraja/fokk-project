@@ -98,13 +98,32 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Optimal location (Automatic)"
-                    android:textColor="#F8FAFC"
-                    android:textSize="14.5sp"
-                    android:textStyle="bold" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Optimal location (Automatic)"
+                        android:textColor="#F8FAFC"
+                        android:textSize="14.5sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_stat_chip"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"
+                        android:text="FREE"
+                        android:textColor="#34D399"
+                        android:textSize="9.5sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -150,13 +169,32 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Americas Gateway"
-                    android:textColor="#F8FAFC"
-                    android:textSize="14.5sp"
-                    android:textStyle="bold" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Americas Gateway"
+                        android:textColor="#F8FAFC"
+                        android:textSize="14.5sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_stat_chip"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"
+                        android:text="PRO"
+                        android:textColor="#38BDF8"
+                        android:textSize="9.5sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -202,13 +240,32 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Europe Gateway"
-                    android:textColor="#F8FAFC"
-                    android:textSize="14.5sp"
-                    android:textStyle="bold" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Europe Gateway"
+                        android:textColor="#F8FAFC"
+                        android:textSize="14.5sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_stat_chip"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"
+                        android:text="PRO"
+                        android:textColor="#38BDF8"
+                        android:textSize="9.5sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -254,13 +311,32 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Asia &amp; Pacific Gateway"
-                    android:textColor="#F8FAFC"
-                    android:textSize="14.5sp"
-                    android:textStyle="bold" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Asia &amp; Pacific Gateway"
+                        android:textColor="#F8FAFC"
+                        android:textSize="14.5sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_stat_chip"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"
+                        android:text="PRO"
+                        android:textColor="#38BDF8"
+                        android:textSize="9.5sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -322,13 +398,32 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Configure Private Server"
-                    android:textColor="#F8FAFC"
-                    android:textSize="14.5sp"
-                    android:textStyle="bold" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Configure Private Server"
+                        android:textColor="#F8FAFC"
+                        android:textSize="14.5sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_stat_chip"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"
+                        android:text="PRO"
+                        android:textColor="#38BDF8"
+                        android:textSize="9.5sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/textCustomServerSub"
