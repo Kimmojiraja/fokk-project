@@ -7090,6 +7090,7 @@ open class MediaHubActivity : AppCompatActivity() {
             "AE", "IL", "ZA", "TR"
         )
 
+        val density = resources.displayMetrics.density
         val countryViews = mutableMapOf<String, View>()
         b.layoutDynamicProCountries.removeAllViews()
 
