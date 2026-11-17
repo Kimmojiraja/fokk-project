@@ -58,6 +58,8 @@ import android.util.Rational
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
+import androidx.core.view.ViewCompat
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.transition.TransitionManager
@@ -7570,6 +7572,12 @@ open class MediaHubActivity : AppCompatActivity() {
             }
             val sheetBinding = SheetAiSummaryBinding.inflate(layoutInflater)
             sheetDialog.setContentView(sheetBinding.root)
+            sheetDialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            ViewCompat.setOnApplyWindowInsetsListener(sheetBinding.root) { _, insets ->
+                val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+                sheetBinding.layoutAiChatSection.setPadding(0, 0, 0, imeBottom)
+                insets
+            }
             sheetDialog.setOnShowListener {
                 val bsView = sheetDialog.findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet)
                 if (bsView != null) {
@@ -8428,8 +8436,8 @@ open class MediaHubActivity : AppCompatActivity() {
                             val cursorText = if (!isDone) streamedBuilder.toString() + " \u258C" else streamedBuilder.toString()
                             aTv.text = formatMarkdownToSpanned(cursorText)
 
-                            sheetBinding.root.post {
-                                sheetBinding.root.smoothScrollTo(0, sheetBinding.root.height)
+                            sheetBinding.scrollAiChatResponses.post {
+                                sheetBinding.scrollAiChatResponses.fullScroll(View.FOCUS_DOWN)
                             }
 
                             if (!isDone) {
@@ -8511,8 +8519,8 @@ open class MediaHubActivity : AppCompatActivity() {
                 thinkingContainer.addView(thinkingRow)
                 sheetBinding.layoutAiChatResponses.addView(thinkingContainer)
 
-                sheetBinding.root.post {
-                    sheetBinding.root.smoothScrollTo(0, sheetBinding.root.height)
+                sheetBinding.scrollAiChatResponses.post {
+                    sheetBinding.scrollAiChatResponses.fullScroll(View.FOCUS_DOWN)
                 }
 
                 val pageCtx = lastAiPageContext.take(8000)

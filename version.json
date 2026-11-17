@@ -1,8 +1,8 @@
 {
-  "versionCode": 270,
-  "versionName": "2.7.0",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.7.0/app-debug.apk",
-  "changelog": "- Official Fokk AI Geometric Origami Sail Logo: Integrated official branding across navigation bar, summary header, thinking status, and answer cards.\n- True Black Dark Theme: Modernized Ask AI, Summary, and Truth & Bias audit surfaces to pure pitch black (#000000).\n- Ask AI Bottom Command Card: Anchored command card at bottom with voice input waveform recognition, multi-line inquiry dock, and source verification caution notice.\n- Dynamic Context-Aware Truth Audit: Replaced static scores with intelligent multi-layer forensic classification distinguishing editorial consensus, social/anecdotal testimonies, and contested claims.\n- Verified With Sources & Follow-Up Cards: Rendered horizontal source pills and interactive follow-up question cards directly below AI answers.\n- Single Unified Toolbar AI: Removed duplicate sparkles and eliminated double sheet popups."
+  "versionCode": 271,
+  "versionName": "2.7.1",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.7.1/app-debug.apk",
+  "changelog": "- Bottom-Pinned Command Card: Anchored the Ask AI command card to the bottom of the screen with automatic keyboard insets adjustment so the keyboard never obscures input.\n- Action Row Redesign: Removed redundant plus and verify pills, positioned the circular voice input button on the left, and added the enter/send button on the right.\n- Independent Chat Scroll View: Added dedicated scroll container for Ask AI responses ensuring seamless scrolling above the pinned bottom command card.\n- Build Fixes: Resolved Kotlin destructuring component count and forward-reference function calls."
 }
 
 
