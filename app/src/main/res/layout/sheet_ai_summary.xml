@@ -1,17 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:background="#000000"
-    android:fillViewport="true">
+    android:orientation="vertical">
 
+    <!-- Top Fixed Area: Handle drag indicator + Badges + Mode Selector Tabs -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="12dp">
 
+        <!-- Handle drag indicator -->
+        <View
+            android:layout_width="38dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="16dp"
+            android:background="#1E2D3D" />
         <!-- Handle drag indicator -->
         <View
             android:layout_width="38dp"
@@ -154,15 +164,28 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- ============================================================== -->
-        <!-- SECTION 1: SUMMARY & TTS MODE                                  -->
-        <!-- ============================================================== -->
-        <LinearLayout
+
+    </LinearLayout>
+
+    <!-- Main Dynamic Content Container -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- SECTION 1: SUMMARY & TTS MODE (Scrollable) -->
+        <androidx.core.widget.NestedScrollView
             android:id="@+id/layoutAiSummarySection"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="visible">
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="24dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
 
             <!-- Lead Image Container (Desktop Parity) -->
             <androidx.cardview.widget.CardView
@@ -362,18 +385,24 @@
                     app:strokeWidth="1dp"
                     app:cornerRadius="14dp" />
             </LinearLayout>
-        </LinearLayout>
 
-        <!-- ============================================================== -->
-        <!-- SECTION 2: TRUTH & BIAS AUDIT MODE                             -->
-        <!-- ============================================================== -->
-        <LinearLayout
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- SECTION 2: TRUTH & BIAS AUDIT MODE (Scrollable) -->
+        <androidx.core.widget.NestedScrollView
             android:id="@+id/layoutAiRealityAuditSection"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone">
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:visibility="gone"
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="24dp">
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
             <!-- Unboxed Reality Credibility Verdict Header -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -541,32 +570,44 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />
-        </LinearLayout>
 
-        <!-- ============================================================== -->
-        <!-- SECTION 3: ASK AI / RESEARCH INTERACTIVE MODE                  -->
-        <!-- ============================================================== -->
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- SECTION 3: ASK AI / RESEARCH INTERACTIVE MODE -->
         <LinearLayout
             android:id="@+id/layoutAiChatSection"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:orientation="vertical"
             android:visibility="gone">
 
             <!-- Dynamic Chat Responses Container -->
-            <LinearLayout
-                android:id="@+id/layoutAiChatResponses"
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/scrollAiChatResponses"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:orientation="vertical" />
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:fillViewport="true"
+                android:paddingHorizontal="20dp">
 
-            <!-- Bottom Command Card (Image 3 reference) -->
+                <LinearLayout
+                    android:id="@+id/layoutAiChatResponses"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="12dp" />
+            </androidx.core.widget.NestedScrollView>
+
+            <!-- Bottom Command Card (Always anchored to bottom) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingBottom="8dp"
+                android:paddingTop="4dp">
 
                 <!-- Command Card Outer Container -->
                 <LinearLayout
@@ -576,7 +617,7 @@
                     android:orientation="vertical"
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp"
-                    android:paddingTop="14dp"
+                    android:paddingTop="12dp"
                     android:paddingBottom="10dp">
 
                     <!-- Hint + Text Input Area -->
@@ -600,77 +641,45 @@
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:layout_marginTop="10dp"
+                        android:layout_marginTop="8dp"
                         android:layout_marginBottom="8dp"
                         android:background="#1E2D3D" />
 
-                    <!-- Action Row: + | Verify v | spacer | Voice Button -->
+                    <!-- Action Row: Voice on LEFT, Enter/Send on RIGHT -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <!-- Plus Button -->
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="+"
-                            android:textColor="#94A3B8"
-                            android:textSize="20sp"
-                            android:paddingEnd="6dp" />
+                        <!-- Voice Input Button (white circular waveform on the LEFT) -->
+                        <ImageButton
+                            android:id="@+id/btnAiVoiceInput"
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            android:background="@drawable/bg_voice_circle"
+                            android:src="@drawable/btn_voice_waveform"
+                            android:scaleType="fitCenter"
+                            android:padding="8dp"
+                            android:contentDescription="Voice Input" />
 
-                        <!-- Verify dropdown pill -->
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="30dp"
-                            android:background="@drawable/bg_engine_capsule"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal"
-                            android:paddingStart="10dp"
-                            android:paddingEnd="8dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Verify"
-                                android:textColor="#E2E8F0"
-                                android:textSize="12.5sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="4dp"
-                                android:text="v"
-                                android:textColor="#94A3B8"
-                                android:textSize="11sp" />
-                        </LinearLayout>
-
-                        <!-- Spacer -->
+                        <!-- Spacer pushing send button to the RIGHT -->
                         <View
                             android:layout_width="0dp"
                             android:layout_height="1dp"
                             android:layout_weight="1" />
 
-                        <!-- Voice Input Button (white circular waveform, Image 3) -->
-                        <ImageButton
-                            android:id="@+id/btnAiVoiceInput"
-                            android:layout_width="44dp"
-                            android:layout_height="44dp"
-                            android:background="@drawable/bg_voice_circle"
-                            android:src="@drawable/btn_voice_waveform"
-                            android:scaleType="fitCenter"
-                            android:padding="10dp"
-                            android:contentDescription="Voice Input" />
-
-                        <!-- Hidden send button retained for binding compatibility -->
+                        <!-- Enter / Send Button on the RIGHT (just like before!) -->
                         <ImageButton
                             android:id="@+id/btnSendAiQuestion"
-                            android:layout_width="0dp"
-                            android:layout_height="0dp"
-                            android:visibility="gone"
-                            android:contentDescription="Send" />
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            android:background="@drawable/bg_voice_circle"
+                            android:src="@drawable/ic_send"
+                            app:tint="#000000"
+                            android:scaleType="centerInside"
+                            android:padding="9dp"
+                            android:contentDescription="Send Question" />
 
                     </LinearLayout>
                 </LinearLayout>
@@ -679,14 +688,14 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginBottom="8dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="4dp"
                     android:gravity="center"
                     android:text="AI can make mistakes and may surface imperfect media. Always verify claims with primary direct links."
                     android:textColor="#64748B"
-                    android:textSize="11.5sp"
+                    android:textSize="11sp"
                     android:lineSpacingExtra="2dp" />
             </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
-</androidx.core.widget.NestedScrollView>
+    </FrameLayout>
+</LinearLayout>
