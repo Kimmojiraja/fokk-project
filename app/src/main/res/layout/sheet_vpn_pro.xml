@@ -87,7 +87,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Dedicated Global Relay &amp; AI Truth Engine"
+                        android:text="Dedicated Privacy Mesh &amp; AI Truth Engine"
                         android:textColor="#94A3B8"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -165,7 +165,7 @@
             android:textStyle="bold"
             android:letterSpacing="0.08" />
 
-        <!-- Pillar 1: Fokk Relay Pro -->
+        <!-- Pillar 1: Fokk Mesh Pro -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -178,7 +178,7 @@
                 android:layout_height="24dp"
                 android:src="@drawable/ic_fokk_relay"
                 app:tint="#38BDF8"
-                android:contentDescription="Fokk Relay Pro" />
+                android:contentDescription="Fokk Mesh Pro" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -190,7 +190,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Fokk Oblivious Mesh — High-Speed Privacy Relay"
+                    android:text="Fokk Oblivious Mesh — High-Speed Split Privacy"
                     android:textColor="#F8FAFC"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -343,7 +343,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="8dp"
-            android:text="All core features (AdShield ad blocking, native media streaming, WebTorrent, dual split screen, and optimal auto-relay) remain 100% free forever."
+            android:text="All core features (AdShield ad blocking, native media streaming, WebTorrent, dual split screen, and optimal auto-mesh) remain 100% free forever."
             android:textColor="#64748B"
             android:textSize="11.5sp"
             android:lineSpacingExtra="2dp" />

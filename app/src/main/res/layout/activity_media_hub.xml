@@ -321,7 +321,7 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:visibility="gone"
-                android:contentDescription="Fokk Relay">
+                android:contentDescription="Fokk Mesh">
 
                 <ImageView
                     android:id="@+id/imgNavVpnIcon"

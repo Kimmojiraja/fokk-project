@@ -147,7 +147,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Monthly ($4.99/mo) and Annual ($39.99/yr) • In-Browser Relay &amp; AI Fact-Checking"
+                        android:text="Monthly ($4.99/mo) and Annual ($39.99/yr) • In-Browser Mesh &amp; AI Truth Engine"
                         android:textColor="@color/text_secondary"
                         android:textSize="11.5sp" />
                 </LinearLayout>

@@ -1,8 +1,8 @@
 {
-  "versionCode": 265,
-  "versionName": "2.6.5",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.6.5/app-debug.apk",
-  "changelog": "- Fokk Privacy Mesh: Streamlined location picker to authentic regional oblivious gateways (Optimal Smart Routing, Americas, Europe, Asia-Pacific, and Custom Enterprise Node).\n- Zero-Risk Oblivious Routing: Eliminates unstable country proxy switching; delivers sub-15ms latency and zero CAPTCHAs without leaking traffic to untrusted middleboxes.\n- Fokk AI Truth Engine: Live OpenRouter LLM integration with real-time editorial DOM context injection and expanded conversational sheet.\n- Clean Dark Theme UI: Cleaned 800+ lines of legacy country scraper UI; strictly zero emojis across all layouts."
+  "versionCode": 266,
+  "versionName": "2.6.6",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.6.6/app-debug.apk",
+  "changelog": "- Fokk Mesh Rebrand: Transitioned feature identity to Fokk Mesh across UI, settings, about dialogs, and engine callbacks.\n- Oblivious Privacy Mesh Architecture: High-speed regional oblivious gateways (Optimal Smart Routing, Americas, Europe, Asia-Pacific, and Custom Enterprise Node) with zero-drop failover.\n- Nym Mixnet Shield: Handshake-targeted timing obfuscation to decorrelate traffic intervals from ISP inspection.\n- Fokk AI Truth Engine: Real-time editorial DOM context injection and full-screen conversational research sheet."
 }
 
 

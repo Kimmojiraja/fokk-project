@@ -5953,8 +5953,8 @@ open class MediaHubActivity : AppCompatActivity() {
         }
         sheetBinding.btnMenuVpnInfo.setOnClickListener {
             AlertDialog.Builder(this)
-                .setTitle("About Fokk Relay")
-                .setMessage("Fokk Relay encrypts and protects your browser traffic through our high-speed edge network with zero IP leaks. Your real IP address and ISP details are kept private from websites you visit.\n\n• Zero-Log Policy: We do not track or store your browsing activity.\n• High-Speed Edge: Fast connections optimized for video streaming and web browsing.")
+                .setTitle("About Fokk Mesh")
+                .setMessage("Fokk Mesh encrypts and shields your browser traffic through our high-speed oblivious privacy mesh with zero IP leaks. Your real IP address and ISP details are kept private from websites you visit.\n\n• Zero-Log Policy: We do not track or store your browsing activity.\n• High-Speed Edge: Fast connections optimized for video streaming and web browsing.\n• Oblivious Mesh Routing: Neither your ISP nor destination websites can link your identity to your browsing.")
                 .setPositiveButton("Got it", null)
                 .show()
         }
@@ -6691,8 +6691,8 @@ open class MediaHubActivity : AppCompatActivity() {
 
         b.btnVpnInfo.setOnClickListener {
             AlertDialog.Builder(this)
-                .setTitle("About Fokk Relay Architecture")
-                .setMessage("Fokk Relay is an in-browser privacy relay that protects in-app browsing traffic.\n\n• Oblivious Routing: Web requests are routed through separate proxy hops designed to dissociate your client IP from destination hostnames.\n\n• Timing Obfuscation: In Pro mode, packet timing jitter introduces micro-delays to resist DPI traffic analysis and ISP fingerprinting.\n\n• Ephemeral In-Memory Proxying: Operates under a strict zero-log operational policy with ephemeral in-memory processing. Note: Fokk Relay secures in-browser traffic only; system-wide background apps are not routed through the relay.")
+                .setTitle("About Fokk Mesh Architecture")
+                .setMessage("Fokk Mesh is an in-browser privacy mesh that protects in-app browsing traffic.\n\n• Oblivious Mesh Routing: Web requests are routed through separate oblivious hops designed to dissociate your client IP from destination hostnames.\n\n• Nym Mixnet Timing Obfuscation: In Pro mode, packet timing jitter introduces micro-delays during connection handshakes to resist DPI traffic analysis and ISP fingerprinting.\n\n• Ephemeral In-Memory Processing: Operates under a strict zero-log operational policy with ephemeral in-memory processing. Note: Fokk Mesh secures in-browser traffic only; system-wide background apps are not routed through the mesh.")
                 .setPositiveButton("Got it", null)
                 .show()
         }
@@ -6716,7 +6716,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 b.textVpnPowerSub.text = "Oblivious Split-Trust active"
                 b.vpnRadarRing.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#10B981"))
                 b.btnVpnPower.imageTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#10B981"))
-                b.textVpnStatusPill.text = "IN-BROWSER RELAY ACTIVE"
+                b.textVpnStatusPill.text = "IN-BROWSER MESH ACTIVE"
                 b.textVpnStatusPill.setTextColor(android.graphics.Color.parseColor("#10B981"))
                 b.textVpnExitIp.text = "Oblivious Tunnel Active"
                 b.textVpnExitIp.setTextColor(android.graphics.Color.parseColor("#10B981"))
@@ -6746,8 +6746,8 @@ open class MediaHubActivity : AppCompatActivity() {
             val isPro = com.adshield.app.engine.VpnEngine.isProModeEnabled(this)
             b.textVpnProtocol.text = when (activeMode) {
                 com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "Direct (Unencrypted)"
-                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> if (isPro) "Fokk Relay Pro ($locationLabel)" else "Fokk Relay ($locationLabel)"
-                else -> if (isPro) "Fokk Relay Pro (Multi-Hop)" else "Fokk Relay (Auto)"
+                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> if (isPro) "Fokk Mesh Pro ($locationLabel)" else "Fokk Mesh ($locationLabel)"
+                else -> if (isPro) "Fokk Mesh Pro (Multi-Hop)" else "Fokk Mesh (Auto)"
             }
 
             b.radioModeTor.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.FAST || activeMode == com.adshield.app.engine.VpnEngine.VpnMode.TOR || activeMode == com.adshield.app.engine.VpnEngine.VpnMode.RELAY)
@@ -6823,14 +6823,14 @@ open class MediaHubActivity : AppCompatActivity() {
         val isPro = com.adshield.app.engine.VpnEngine.isProModeEnabled(this)
         b.switchProActivation.isChecked = isPro
         b.textProStatusHeader.text = if (isPro) "Fokk Pro Active" else "Fokk Pro Inactive"
-        b.textProStatusSub.text = if (isPro) "Fokk Relay Pro & Timing Obfuscation active" else "Standard routing active"
+        b.textProStatusSub.text = if (isPro) "Fokk Mesh Pro & Timing Obfuscation active" else "Standard routing active"
 
         b.switchProActivation.setOnCheckedChangeListener { _, isChecked ->
             com.adshield.app.engine.VpnEngine.setProModeEnabled(this, isChecked)
             com.adshield.app.engine.FokkTunnelEngine.isProMode = isChecked
             b.textProStatusHeader.text = if (isChecked) "Fokk Pro Active" else "Fokk Pro Inactive"
-            b.textProStatusSub.text = if (isChecked) "Fokk Relay Pro & Timing Obfuscation active" else "Standard routing active"
-            val msg = if (isChecked) "Fokk Pro Privacy Network Activated" else "Standard Network Activated"
+            b.textProStatusSub.text = if (isChecked) "Fokk Mesh Pro & Timing Obfuscation active" else "Standard routing active"
+            val msg = if (isChecked) "Fokk Mesh Pro Privacy Network Activated" else "Standard Network Activated"
             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
         }
 
@@ -6944,16 +6944,16 @@ open class MediaHubActivity : AppCompatActivity() {
                     }
                     val comparison = when {
                         mode == com.adshield.app.engine.VpnEngine.VpnMode.OFF ->
-                            "Fokk Relay is disconnected. Browser is using direct unencrypted public IP."
+                            "Fokk Mesh is disconnected. Browser is using direct unencrypted public IP."
                         directIp == null ->
                             "Protected IP verified ($ip), direct connection baseline was unreachable."
                         ip == directIp ->
                             "Matches direct IP. Browser traffic may not be masked."
                         else ->
-                            "✓ Protected by Fokk Relay. Real IP is masked (${directIp} → ${ip})."
+                            "Protected by Fokk Mesh. Real IP is masked (${directIp} -> ${ip})."
                     }
                     AlertDialog.Builder(this)
-                        .setTitle("Fokk Relay Protection Check")
+                        .setTitle("Fokk Mesh Protection Check")
                         .setMessage("Masked IP: $ip\nDirect IP: ${directIp ?: "Unavailable"}\nRouting: ${mode.title}\n\n$comparison")
                         .setPositiveButton("OK", null)
                         .show()
