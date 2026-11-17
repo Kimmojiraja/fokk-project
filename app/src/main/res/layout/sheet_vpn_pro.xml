@@ -199,7 +199,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Select dedicated exit nodes across US, UK, DE, NL, CA, JP, KR, SG, HK, and IN with Oblivious Split-Trust and packet micro-jitter."
+                    android:text="Select dedicated in-browser exit nodes across US, UK, DE, NL, CA, JP, KR, SG, HK, and IN with multi-hop split routing and packet micro-jitter."
                     android:textColor="#94A3B8"
                     android:textSize="12sp" />
             </LinearLayout>
