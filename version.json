@@ -1,8 +1,8 @@
 {
-  "versionCode": 266,
-  "versionName": "2.6.6",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.6.6/app-debug.apk",
-  "changelog": "- Fokk Mesh Rebrand: Transitioned feature identity to Fokk Mesh across UI, settings, about dialogs, and engine callbacks.\n- Oblivious Privacy Mesh Architecture: High-speed regional oblivious gateways (Optimal Smart Routing, Americas, Europe, Asia-Pacific, and Custom Enterprise Node) with zero-drop failover.\n- Nym Mixnet Shield: Handshake-targeted timing obfuscation to decorrelate traffic intervals from ISP inspection.\n- Fokk AI Truth Engine: Real-time editorial DOM context injection and full-screen conversational research sheet."
+  "versionCode": 267,
+  "versionName": "2.6.7",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.6.7/app-debug.apk",
+  "changelog": "- Fokk Mesh Wire-Speed Optimization: Enabled TCP_NODELAY, 64KB socket streaming buffers, and non-blocking worker threads to eliminate connection stalls and browsing latency.\n- Real Fokk AI Experience: Multi-provider cloud LLM pipeline with high-speed free endpoints (Pollinations AI Mistral/OpenAI) and OpenRouter models, delivering rich formatted answers without requiring private API keys.\n- TrustMeBro Forensic Receipts: Live source citations with verified domain favicons, interactive links, and analytical evidence confidence ratings.\n- Privacy Tiering: Free unlimited Optimal Location gateway; regional gateways and timing shield gated to Fokk Pro with daily AI quotas."
 }
 
 
