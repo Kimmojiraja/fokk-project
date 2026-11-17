@@ -193,10 +193,10 @@
                 android:layout_width="30dp"
                 android:layout_height="38dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_sparkle"
-                app:tint="@color/fokk_cyan"
+                android:src="@drawable/ic_fokk_ai_logo"
+                android:scaleType="fitCenter"
                 android:visibility="gone"
-                android:contentDescription="Fokk Summary" />
+                android:contentDescription="Fokk AI" />
 
             <ImageButton
                 android:id="@+id/btnClearUrl"
@@ -355,11 +355,11 @@
 
                 <ImageView
                     android:id="@+id/imgNavAiIcon"
-                    android:layout_width="19dp"
-                    android:layout_height="19dp"
+                    android:layout_width="21dp"
+                    android:layout_height="21dp"
                     android:layout_gravity="center"
-                    android:src="@drawable/ic_sparkle"
-                    app:tint="@color/fokk_cyan" />
+                    android:src="@drawable/ic_fokk_ai_logo"
+                    android:scaleType="fitCenter" />
             </FrameLayout>
 
             <ImageButton
