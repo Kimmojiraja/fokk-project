@@ -65,52 +65,12 @@
                 android:contentDescription="Close" />
         </RelativeLayout>
 
-        <!-- Real-Time Search Bar -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="42dp"
-            android:layout_marginBottom="14dp"
-            android:background="@drawable/bg_stat_chip"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingHorizontal="14dp">
-
-            <ImageView
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@drawable/ic_search"
-                app:tint="#64748B" />
-
-            <EditText
-                android:id="@+id/editSearchLocations"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
-                android:layout_weight="1"
-                android:background="@null"
-                android:hint="Search 40+ countries or regions..."
-                android:textColor="#F8FAFC"
-                android:textColorHint="#64748B"
-                android:textSize="13.5sp"
-                android:singleLine="true" />
-
-            <ImageButton
-                android:id="@+id/btnClearSearchLocations"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_close"
-                app:tint="#64748B"
-                android:visibility="gone"
-                android:contentDescription="Clear Search" />
-        </LinearLayout>
-
-        <!-- SECTION 1: GLOBAL REGIONS -->
+        <!-- SECTION 1: PRIVACY MESH GATEWAYS -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:text="STANDARD REGIONS"
+            android:text="PRIVACY MESH GATEWAYS"
             android:textColor="#64748B"
             android:textSize="11.5sp"
             android:textStyle="bold"
@@ -124,7 +84,7 @@
             android:background="?attr/selectableItemBackground"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingVertical="10dp">
+            android:paddingVertical="12dp">
 
             <ImageView
                 android:layout_width="36dp"
@@ -149,8 +109,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="Balanced low-latency routing across all clusters"
+                    android:layout_marginTop="2dp"
+                    android:text="Lowest latency routing across nearest privacy nodes"
                     android:textColor="#94A3B8"
                     android:textSize="11.5sp" />
             </LinearLayout>
@@ -176,7 +136,7 @@
             android:background="?attr/selectableItemBackground"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingVertical="10dp">
+            android:paddingVertical="12dp">
 
             <ImageView
                 android:layout_width="36dp"
@@ -193,7 +153,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Americas"
+                    android:text="Americas Gateway"
                     android:textColor="#F8FAFC"
                     android:textSize="14.5sp"
                     android:textStyle="bold" />
@@ -201,8 +161,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="United States &amp; Canada"
+                    android:layout_marginTop="2dp"
+                    android:text="Oblivious ingress • North America backbone"
                     android:textColor="#94A3B8"
                     android:textSize="11.5sp" />
             </LinearLayout>
@@ -228,7 +188,7 @@
             android:background="?attr/selectableItemBackground"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingVertical="10dp">
+            android:paddingVertical="12dp">
 
             <ImageView
                 android:layout_width="36dp"
@@ -245,7 +205,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Europe"
+                    android:text="Europe Gateway"
                     android:textColor="#F8FAFC"
                     android:textSize="14.5sp"
                     android:textStyle="bold" />
@@ -253,8 +213,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="United Kingdom, Germany, Netherlands"
+                    android:layout_marginTop="2dp"
+                    android:text="Oblivious ingress • European backbone"
                     android:textColor="#94A3B8"
                     android:textSize="11.5sp" />
             </LinearLayout>
@@ -272,7 +232,7 @@
             android:layout_height="1dp"
             android:background="#1E293B" />
 
-        <!-- 4. Asia -->
+        <!-- 4. Asia & Pacific -->
         <LinearLayout
             android:id="@+id/rowLocationAs"
             android:layout_width="match_parent"
@@ -280,7 +240,7 @@
             android:background="?attr/selectableItemBackground"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingVertical="10dp">
+            android:paddingVertical="12dp">
 
             <ImageView
                 android:layout_width="36dp"
@@ -297,7 +257,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Asia &amp; Pacific"
+                    android:text="Asia &amp; Pacific Gateway"
                     android:textColor="#F8FAFC"
                     android:textSize="14.5sp"
                     android:textStyle="bold" />
@@ -305,8 +265,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="Japan, Korea, Singapore, Hong Kong, India"
+                    android:layout_marginTop="2dp"
+                    android:text="Oblivious ingress • Asia-Pacific backbone"
                     android:textColor="#94A3B8"
                     android:textSize="11.5sp" />
             </LinearLayout>
@@ -319,760 +279,13 @@
                 android:visibility="gone" />
         </LinearLayout>
 
-        <!-- SECTION 2: FOKK PRO COUNTRIES -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
-            android:layout_marginBottom="8dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <ImageView
-                android:layout_width="14dp"
-                android:layout_height="14dp"
-                android:src="@drawable/ic_crown"
-                app:tint="#F59E0B" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:text="FOKK PRO DEDICATED COUNTRIES"
-                android:textColor="#A78BFA"
-                android:textSize="11.5sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.08" />
-        </LinearLayout>
-
-        <!-- Dynamic 44 Countries Container -->
-        <LinearLayout
-            android:id="@+id/layoutDynamicProCountries"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
-
-        <!-- Legacy Static Rows Container (Preserves ViewBinding IDs) -->
-        <LinearLayout
-            android:id="@+id/layoutLegacyProCountries"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-        <!-- Pro Country: United States -->
-        <LinearLayout
-            android:id="@+id/rowLocationUs"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="10dp">
-
-            <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_flag_us" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="United States"
-                        android:textColor="#F8FAFC"
-                        android:textSize="14.5sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_stat_chip"
-                        android:paddingHorizontal="5dp"
-                        android:paddingVertical="1dp"
-                        android:text="PRO"
-                        android:textColor="#A78BFA"
-                        android:textSize="9sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="Los Angeles, Beverly Hills, Google Cloud"
-                    android:textColor="#94A3B8"
-                    android:textSize="11.5sp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/checkLocationUs"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_check"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#1E293B" />
-
-        <!-- Pro Country: United Kingdom -->
-        <LinearLayout
-            android:id="@+id/rowLocationGb"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="10dp">
-
-            <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_flag_gb" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="United Kingdom"
-                        android:textColor="#F8FAFC"
-                        android:textSize="14.5sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_stat_chip"
-                        android:paddingHorizontal="5dp"
-                        android:paddingVertical="1dp"
-                        android:text="PRO"
-                        android:textColor="#A78BFA"
-                        android:textSize="9sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="London (Oracle Cloud 10Gbps Edge)"
-                    android:textColor="#94A3B8"
-                    android:textSize="11.5sp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/checkLocationGb"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_check"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#1E293B" />
-
-        <!-- Pro Country: Germany -->
-        <LinearLayout
-            android:id="@+id/rowLocationDe"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="10dp">
-
-            <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_flag_de" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Germany"
-                        android:textColor="#F8FAFC"
-                        android:textSize="14.5sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_stat_chip"
-                        android:paddingHorizontal="5dp"
-                        android:paddingVertical="1dp"
-                        android:text="PRO"
-                        android:textColor="#A78BFA"
-                        android:textSize="9sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="Frankfurt am Main (Hesse Edge)"
-                    android:textColor="#94A3B8"
-                    android:textSize="11.5sp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/checkLocationDe"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_check"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#1E293B" />
-
-        <!-- Pro Country: Netherlands -->
-        <LinearLayout
-            android:id="@+id/rowLocationNl"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="10dp">
-
-            <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_flag_nl" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Netherlands"
-                        android:textColor="#F8FAFC"
-                        android:textSize="14.5sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_stat_chip"
-                        android:paddingHorizontal="5dp"
-                        android:paddingVertical="1dp"
-                        android:text="PRO"
-                        android:textColor="#A78BFA"
-                        android:textSize="9sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="Amsterdam High-Throughput"
-                    android:textColor="#94A3B8"
-                    android:textSize="11.5sp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/checkLocationNl"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_check"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#1E293B" />
-
-        <!-- Pro Country: Canada -->
-        <LinearLayout
-            android:id="@+id/rowLocationCa"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="10dp">
-
-            <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_flag_ca" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Canada"
-                        android:textColor="#F8FAFC"
-                        android:textSize="14.5sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_stat_chip"
-                        android:paddingHorizontal="5dp"
-                        android:paddingVertical="1dp"
-                        android:text="PRO"
-                        android:textColor="#A78BFA"
-                        android:textSize="9sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="Toronto Edge"
-                    android:textColor="#94A3B8"
-                    android:textSize="11.5sp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/checkLocationCa"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_check"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#1E293B" />
-
-        <!-- Pro Country: Japan -->
-        <LinearLayout
-            android:id="@+id/rowLocationJp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="10dp">
-
-            <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_flag_jp" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Japan"
-                        android:textColor="#F8FAFC"
-                        android:textSize="14.5sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_stat_chip"
-                        android:paddingHorizontal="5dp"
-                        android:paddingVertical="1dp"
-                        android:text="PRO"
-                        android:textColor="#A78BFA"
-                        android:textSize="9sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="Tokyo Ultra-Low Latency"
-                    android:textColor="#94A3B8"
-                    android:textSize="11.5sp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/checkLocationJp"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_check"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#1E293B" />
-
-        <!-- Pro Country: South Korea -->
-        <LinearLayout
-            android:id="@+id/rowLocationKr"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="10dp">
-
-            <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_flag_kr" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="South Korea"
-                        android:textColor="#F8FAFC"
-                        android:textSize="14.5sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_stat_chip"
-                        android:paddingHorizontal="5dp"
-                        android:paddingVertical="1dp"
-                        android:text="PRO"
-                        android:textColor="#A78BFA"
-                        android:textSize="9sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="Seoul / Pohang (NAVER Cloud)"
-                    android:textColor="#94A3B8"
-                    android:textSize="11.5sp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/checkLocationKr"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_check"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#1E293B" />
-
-        <!-- Pro Country: Singapore -->
-        <LinearLayout
-            android:id="@+id/rowLocationSg"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="10dp">
-
-            <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_flag_sg" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Singapore"
-                        android:textColor="#F8FAFC"
-                        android:textSize="14.5sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_stat_chip"
-                        android:paddingHorizontal="5dp"
-                        android:paddingVertical="1dp"
-                        android:text="PRO"
-                        android:textColor="#A78BFA"
-                        android:textSize="9sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="Singapore Straits Cloud (Azure &amp; DO)"
-                    android:textColor="#94A3B8"
-                    android:textSize="11.5sp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/checkLocationSg"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_check"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#1E293B" />
-
-        <!-- Pro Country: Hong Kong -->
-        <LinearLayout
-            android:id="@+id/rowLocationHk"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="10dp">
-
-            <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_flag_hk" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Hong Kong"
-                        android:textColor="#F8FAFC"
-                        android:textSize="14.5sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_stat_chip"
-                        android:paddingHorizontal="5dp"
-                        android:paddingVertical="1dp"
-                        android:text="PRO"
-                        android:textColor="#A78BFA"
-                        android:textSize="9sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="Hong Kong Gateway"
-                    android:textColor="#94A3B8"
-                    android:textSize="11.5sp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/checkLocationHk"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_check"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#1E293B" />
-
-        <!-- Pro Country: India -->
-        <LinearLayout
-            android:id="@+id/rowLocationIn"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="10dp">
-
-            <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_flag_in" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="India"
-                        android:textColor="#F8FAFC"
-                        android:textSize="14.5sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_stat_chip"
-                        android:paddingHorizontal="5dp"
-                        android:paddingVertical="1dp"
-                        android:text="PRO"
-                        android:textColor="#A78BFA"
-                        android:textSize="9sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="Mumbai &amp; Hyderabad"
-                    android:textColor="#94A3B8"
-                    android:textSize="11.5sp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/checkLocationIn"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_check"
-                android:visibility="gone" />
-        </LinearLayout>
-        </LinearLayout>
-
-        <!-- SECTION 3: ADVANCED -->
+        <!-- SECTION 2: ADVANCED & ENTERPRISE -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
+            android:layout_marginTop="24dp"
             android:layout_marginBottom="8dp"
-            android:text="ADVANCED"
+            android:text="ADVANCED &amp; ENTERPRISE"
             android:textColor="#64748B"
             android:textSize="11.5sp"
             android:textStyle="bold"
@@ -1086,7 +299,7 @@
             android:background="?attr/selectableItemBackground"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingVertical="10dp">
+            android:paddingVertical="12dp">
 
             <FrameLayout
                 android:layout_width="36dp"
@@ -1121,8 +334,8 @@
                     android:id="@+id/textCustomServerSub"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="Connect to private proxy (host:port)"
+                    android:layout_marginTop="2dp"
+                    android:text="Connect to custom SOCKS5 / enterprise proxy (host:port)"
                     android:textColor="#94A3B8"
                     android:textSize="11.5sp" />
             </LinearLayout>

@@ -7043,17 +7043,7 @@ open class MediaHubActivity : AppCompatActivity() {
             "AUTO" to b.checkLocationAuto,
             "AM" to b.checkLocationAm,
             "EU" to b.checkLocationEu,
-            "AS" to b.checkLocationAs,
-            "US" to b.checkLocationUs,
-            "GB" to b.checkLocationGb,
-            "DE" to b.checkLocationDe,
-            "NL" to b.checkLocationNl,
-            "CA" to b.checkLocationCa,
-            "JP" to b.checkLocationJp,
-            "KR" to b.checkLocationKr,
-            "SG" to b.checkLocationSg,
-            "HK" to b.checkLocationHk,
-            "IN" to b.checkLocationIn
+            "AS" to b.checkLocationAs
         )
 
         checkMap.values.forEach { it.visibility = View.GONE }
@@ -7075,157 +7065,11 @@ open class MediaHubActivity : AppCompatActivity() {
 
         b.btnCloseLocationSheet.setOnClickListener { sheetDialog.dismiss() }
 
-        // Standard regions
+        // Privacy Mesh regional gateways
         b.rowLocationAuto.setOnClickListener { select("AUTO") }
         b.rowLocationAm.setOnClickListener { select("AM") }
         b.rowLocationEu.setOnClickListener { select("EU") }
         b.rowLocationAs.setOnClickListener { select("AS") }
-
-        val allProCountries = listOf(
-            // Americas (10)
-            "US", "CA", "MX", "BR", "AR", "CL", "CO", "PE", "CR", "PA",
-            // Europe (18)
-            "GB", "DE", "NL", "FR", "CH", "SE", "NO", "FI", "ES", "IT", "PL", "IE", "BE", "AT", "CZ", "DK", "PT", "RO",
-            // Asia & Pacific (12)
-            "JP", "KR", "SG", "HK", "IN", "AU", "NZ", "TW", "MY", "ID", "TH", "VN",
-            // Middle East & Africa (4)
-            "AE", "IL", "ZA", "TR"
-        )
-
-        val density = resources.displayMetrics.density
-        val countryViews = mutableMapOf<String, View>()
-        b.layoutDynamicProCountries.removeAllViews()
-
-        for (code in allProCountries) {
-            val name = com.adshield.app.engine.VpnEngine.getRegionDisplayName(code)
-            val flagRes = com.adshield.app.engine.VpnEngine.getRegionFlagRes(code)
-
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                background = ContextCompat.getDrawable(this@MediaHubActivity, android.R.drawable.list_selector_background)
-                setPadding(0, (10 * density).toInt(), 0, (10 * density).toInt())
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-                isClickable = true
-                isFocusable = true
-                setOnClickListener { select(code) }
-            }
-
-            val flagIv = ImageView(this).apply {
-                setImageResource(flagRes)
-                layoutParams = LinearLayout.LayoutParams((36 * density).toInt(), (36 * density).toInt())
-            }
-
-            val textContainer = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginStart = (14 * density).toInt()
-                }
-            }
-
-            val titleRow = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-            }
-
-            val nameTv = TextView(this).apply {
-                text = name
-                setTextColor(Color.parseColor("#F8FAFC"))
-                textSize = 14.5f
-                setTypeface(null, Typeface.BOLD)
-            }
-
-            val proBadge = TextView(this).apply {
-                text = "PRO"
-                setTextColor(Color.parseColor("#F59E0B"))
-                textSize = 10f
-                setTypeface(null, Typeface.BOLD)
-                setBackgroundResource(R.drawable.bg_stat_chip)
-                setPadding((6 * density).toInt(), (1 * density).toInt(), (6 * density).toInt(), (1 * density).toInt())
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    marginStart = (8 * density).toInt()
-                }
-            }
-            titleRow.addView(nameTv)
-            titleRow.addView(proBadge)
-
-            val subTv = TextView(this).apply {
-                text = "Verified High-Speed Exit • Ultra-Low Latency"
-                setTextColor(Color.parseColor("#94A3B8"))
-                textSize = 11.5f
-            }
-            textContainer.addView(titleRow)
-            textContainer.addView(subTv)
-
-            val checkIv = ImageView(this).apply {
-                setImageResource(R.drawable.ic_check)
-                setColorFilter(Color.parseColor("#38BDF8"))
-                layoutParams = LinearLayout.LayoutParams((20 * density).toInt(), (20 * density).toInt())
-                visibility = if (activeCode == code) View.VISIBLE else View.GONE
-            }
-
-            val divider = View(this).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    (1 * density).toInt()
-                )
-                setBackgroundColor(Color.parseColor("#1E293B"))
-            }
-
-            val itemWrapper = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-                addView(row.apply {
-                    addView(flagIv)
-                    addView(textContainer)
-                    addView(checkIv)
-                })
-                addView(divider)
-            }
-
-            countryViews[code] = itemWrapper
-            b.layoutDynamicProCountries.addView(itemWrapper)
-        }
-
-        // Live Search Filtering
-        b.editSearchLocations.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val q = s?.toString()?.trim()?.lowercase(Locale.ROOT).orEmpty()
-                b.btnClearSearchLocations.visibility = if (q.isNotEmpty()) View.VISIBLE else View.GONE
-
-                val matchAuto = "optimal".contains(q) || "auto".contains(q)
-                val matchAm = "americas".contains(q) || "united states".contains(q) || "canada".contains(q)
-                val matchEu = "europe".contains(q) || "germany".contains(q) || "uk".contains(q)
-                val matchAs = "asia".contains(q) || "japan".contains(q) || "singapore".contains(q)
-
-                b.rowLocationAuto.visibility = if (q.isEmpty() || matchAuto) View.VISIBLE else View.GONE
-                b.rowLocationAm.visibility = if (q.isEmpty() || matchAm) View.VISIBLE else View.GONE
-                b.rowLocationEu.visibility = if (q.isEmpty() || matchEu) View.VISIBLE else View.GONE
-                b.rowLocationAs.visibility = if (q.isEmpty() || matchAs) View.VISIBLE else View.GONE
-
-                for ((code, view) in countryViews) {
-                    val name = com.adshield.app.engine.VpnEngine.getRegionDisplayName(code).lowercase(Locale.ROOT)
-                    val codeLower = code.lowercase(Locale.ROOT)
-                    val matches = q.isEmpty() || name.contains(q) || codeLower.contains(q)
-                    view.visibility = if (matches) View.VISIBLE else View.GONE
-                }
-            }
-            override fun afterTextChanged(s: Editable?) {}
-        })
-
-        b.btnClearSearchLocations.setOnClickListener {
-            b.editSearchLocations.text?.clear()
-        }
 
         b.rowLocationCustom.setOnClickListener {
             sheetDialog.dismiss()
