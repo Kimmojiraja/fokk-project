@@ -1,8 +1,8 @@
 {
-  "versionCode": 268,
-  "versionName": "2.6.8",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.6.8/app-debug.apk",
-  "changelog": "- Fokk AI Browser-Side Search & Truth Engine: Native client-side search across Wikipedia and DuckDuckGo for real-time web citations without third-party API quotas.\n- Multi-Source Forensic Receipts: Live verified source chips with Google S2 domain favicons, canonical links, and 94% verified consensus audits.\n- Resilient Free LLM Cascade: Particle-1, Ernie 5.5 Flash, and Nemotron 3.5 Lightning with reasoning and content extraction.\n- Clean Single Bottom Sheet: Removed duplicate stacking sheets and unwanted AI summary system notifications.\n- Twitter/X and SPA Context Extraction: Enhanced DOM selector pipeline extracting content from single-page social feeds."
+  "versionCode": 269,
+  "versionName": "2.6.9",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.6.9/app-debug.apk",
+  "changelog": "- Resolved Dots and Punctuation Bug: Overhauled emoji stripping to character code-point iteration, preventing character range stripping and preserving all text, words, and numbers.\n- Unboxed Top Bar Source Display: Rendered high-resolution source logo and canonical publication name directly on the header without card wrappers.\n- Audio Controls Repositioning: Relocated Voice Selector and TTS status to the bottom of the summary view for an uncluttered reading start.\n- TrustMeBro Multi-Layer Matrix: Implemented 3-layer cross-examination breakdown across Domain Authenticity, Rhetorical Tone, and Empirical Density with unboxed claim rows.\n- Open-World Ask AI & Typewriter Stream: Unboxed answer view streaming words dynamically with cursor animation, auto-scroll, and clean bottom input dock."
 }
 
 
