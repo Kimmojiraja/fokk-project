@@ -7869,19 +7869,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 sheetBinding.layoutAiExtractedClaims.addView(claimCard)
             }
 
-            // Interactive Ask AI Chat Assistant
-            fun appendChatAnswer(question: String, answer: String) {
-                val qCard = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_stat_chip)
-                    setPadding((12 * density).toInt(), (10 * density).toInt(), (12 * density).toInt(), (10 * density).toInt())
-                    layoutParams = LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        bottomMargin = (10 * density).toInt()
-                    }
-                }
+            // Interactive Ask AI Chat Assistant (TrustMeBro Forensic Engine)
             fun renderChatAnswerCard(
                 container: LinearLayout,
                 question: String,
