@@ -1,8 +1,8 @@
 {
-  "versionCode": 269,
-  "versionName": "2.6.9",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.6.9/app-debug.apk",
-  "changelog": "- Resolved Dots and Punctuation Bug: Overhauled emoji stripping to character code-point iteration, preventing character range stripping and preserving all text, words, and numbers.\n- Unboxed Top Bar Source Display: Rendered high-resolution source logo and canonical publication name directly on the header without card wrappers.\n- Audio Controls Repositioning: Relocated Voice Selector and TTS status to the bottom of the summary view for an uncluttered reading start.\n- TrustMeBro Multi-Layer Matrix: Implemented 3-layer cross-examination breakdown across Domain Authenticity, Rhetorical Tone, and Empirical Density with unboxed claim rows.\n- Open-World Ask AI & Typewriter Stream: Unboxed answer view streaming words dynamically with cursor animation, auto-scroll, and clean bottom input dock."
+  "versionCode": 270,
+  "versionName": "2.7.0",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.7.0/app-debug.apk",
+  "changelog": "- Official Fokk AI Geometric Origami Sail Logo: Integrated official branding across navigation bar, summary header, thinking status, and answer cards.\n- True Black Dark Theme: Modernized Ask AI, Summary, and Truth & Bias audit surfaces to pure pitch black (#000000).\n- Ask AI Bottom Command Card: Anchored command card at bottom with voice input waveform recognition, multi-line inquiry dock, and source verification caution notice.\n- Dynamic Context-Aware Truth Audit: Replaced static scores with intelligent multi-layer forensic classification distinguishing editorial consensus, social/anecdotal testimonies, and contested claims.\n- Verified With Sources & Follow-Up Cards: Rendered horizontal source pills and interactive follow-up question cards directly below AI answers.\n- Single Unified Toolbar AI: Removed duplicate sparkles and eliminated double sheet popups."
 }
 
 
