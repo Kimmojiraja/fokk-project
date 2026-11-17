@@ -77,6 +77,44 @@ object VpnEngine {
         "SG" -> "Singapore"
         "HK" -> "Hong Kong"
         "IN" -> "India"
+        // Americas
+        "MX" -> "Mexico"
+        "BR" -> "Brazil"
+        "AR" -> "Argentina"
+        "CL" -> "Chile"
+        "CO" -> "Colombia"
+        "PE" -> "Peru"
+        "CR" -> "Costa Rica"
+        "PA" -> "Panama"
+        // Europe
+        "FR" -> "France"
+        "CH" -> "Switzerland"
+        "SE" -> "Sweden"
+        "NO" -> "Norway"
+        "FI" -> "Finland"
+        "ES" -> "Spain"
+        "IT" -> "Italy"
+        "PL" -> "Poland"
+        "IE" -> "Ireland"
+        "BE" -> "Belgium"
+        "AT" -> "Austria"
+        "CZ" -> "Czech Republic"
+        "DK" -> "Denmark"
+        "PT" -> "Portugal"
+        "RO" -> "Romania"
+        // Asia & Pacific
+        "AU" -> "Australia"
+        "NZ" -> "New Zealand"
+        "TW" -> "Taiwan"
+        "MY" -> "Malaysia"
+        "ID" -> "Indonesia"
+        "TH" -> "Thailand"
+        "VN" -> "Vietnam"
+        // Middle East & Africa
+        "AE" -> "United Arab Emirates"
+        "IL" -> "Israel"
+        "ZA" -> "South Africa"
+        "TR" -> "Turkey"
         else -> "Optimal location"
     }
 
@@ -91,6 +129,10 @@ object VpnEngine {
         "SG" -> com.adshield.app.R.drawable.ic_flag_sg
         "HK" -> com.adshield.app.R.drawable.ic_flag_hk
         "IN" -> com.adshield.app.R.drawable.ic_flag_in
+        "FR" -> com.adshield.app.R.drawable.ic_flag_fr
+        "BR" -> com.adshield.app.R.drawable.ic_flag_br
+        "CH" -> com.adshield.app.R.drawable.ic_flag_ch
+        "IT" -> com.adshield.app.R.drawable.ic_flag_it
         "AM" -> com.adshield.app.R.drawable.ic_flag_us
         "EU" -> com.adshield.app.R.drawable.ic_flag_gb
         "AS" -> com.adshield.app.R.drawable.ic_flag_jp
@@ -124,35 +166,35 @@ object VpnEngine {
 
     // Curated high-performance regional privacy clusters
     val REGION_AMERICAS = listOf(
+        "socks5://45.61.188.134:44499",
+        "socks5://69.55.49.177:38182",
         "socks5://159.203.61.169:1080",
         "socks5://198.199.86.11:1080",
-        "socks5://192.111.137.35:4145",
-        "socks5://107.152.98.5:4145",
-        "socks5://192.111.139.163:4145"
+        "socks5://184.170.251.30:11288"
     )
 
     val REGION_EUROPE = listOf(
-        "socks5://188.166.40.163:1080",
-        "socks5://178.62.204.145:1080",
-        "socks5://138.68.107.167:1080",
-        "socks5://46.101.114.99:1080",
-        "socks5://167.99.138.167:1080"
+        "socks5://5.75.133.113:10802",
+        "socks5://193.218.118.128:1080",
+        "socks5://134.209.29.120:1080",
+        "socks5://49.13.22.249:10805",
+        "socks5://171.25.158.95:1080"
     )
 
     val REGION_ASIA = listOf(
+        "socks5://188.166.178.163:1088",
         "socks5://128.199.202.122:1080",
-        "socks5://139.59.248.86:1080",
-        "socks5://128.199.93.181:1080",
-        "socks5://139.59.227.185:1080",
-        "socks5://139.59.88.232:1080"
+        "socks5://101.36.104.239:10808",
+        "socks5://123.58.219.171:10808",
+        "socks5://183.87.145.150:2080"
     )
 
     val FAST_GLOBAL_CLUSTER = listOf(
-        "socks5://159.203.61.169:1080",
-        "socks5://188.166.40.163:1080",
-        "socks5://128.199.202.122:1080",
-        "socks5://198.199.86.11:1080",
-        "socks5://178.62.204.145:1080"
+        "socks5://45.61.188.134:44499",
+        "socks5://134.209.29.120:1080",
+        "socks5://5.75.133.113:10802",
+        "socks5://188.166.178.163:1088",
+        "socks5://101.36.104.239:10808"
     )
 
     fun getFastPrivacyEndpoint(region: String? = null): String {

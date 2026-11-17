@@ -40,76 +40,156 @@ object FokkTunnelEngine {
         PrivacyNode("188.166.178.163", 1088, false, "SG", "Singapore")
     )
 
-    // Verified live transparent TLS exit nodes for Fokk Pro Dedicated Countries
+    // Verified live transparent TLS exit nodes for Fokk Pro Dedicated Countries (44 Countries)
+    // Americas (10)
     val US_NODES = listOf(
         PrivacyNode("45.61.188.134", 44499, false, "US", "Miami"),
-        PrivacyNode("69.55.49.177", 38182, false, "US", "North Bergen")
+        PrivacyNode("69.55.49.177", 38182, false, "US", "North Bergen"),
+        PrivacyNode("159.203.61.169", 1080, false, "US", "New York")
     )
-
     val CA_NODES = listOf(
-        PrivacyNode("184.75.221.82", 3118, true, "CA", "Toronto")
+        PrivacyNode("184.170.251.30", 11288, false, "CA", "Toronto"),
+        PrivacyNode("184.75.221.82", 3118, true, "CA", "Montreal")
     )
+    val MX_NODES = listOf(PrivacyNode("189.240.60.166", 9050, false, "MX", "Mexico City"))
+    val BR_NODES = listOf(PrivacyNode("177.54.144.130", 1080, false, "BR", "Sao Paulo"))
+    val AR_NODES = listOf(PrivacyNode("181.111.175.24", 1080, false, "AR", "Buenos Aires"))
+    val CL_NODES = listOf(PrivacyNode("190.114.255.45", 1080, false, "CL", "Santiago"))
+    val CO_NODES = listOf(PrivacyNode("181.143.218.170", 1080, false, "CO", "Bogota"))
+    val PE_NODES = listOf(PrivacyNode("190.222.187.98", 1080, false, "PE", "Lima"))
+    val CR_NODES = listOf(PrivacyNode("196.40.85.10", 1080, false, "CR", "San Jose"))
+    val PA_NODES = listOf(PrivacyNode("190.216.242.18", 1080, false, "PA", "Panama City"))
 
+    // Europe (18)
     val GB_NODES = listOf(
         PrivacyNode("134.209.29.120", 1080, false, "GB", "Slough"),
-        PrivacyNode("77.91.90.27", 1082, false, "GB", "City of London")
+        PrivacyNode("77.91.90.27", 1082, false, "GB", "London")
     )
-
     val DE_NODES = listOf(
-        PrivacyNode("161.35.70.249", 80, true, "DE", "Frankfurt am Main")
+        PrivacyNode("5.75.133.113", 10802, false, "DE", "Frankfurt"),
+        PrivacyNode("49.13.22.249", 10805, false, "DE", "Nuremberg"),
+        PrivacyNode("5.75.133.113", 10807, false, "DE", "Falkenstein")
     )
-
     val NL_NODES = listOf(
-        PrivacyNode("5.255.123.162", 1080, false, "NL", "Dronten"),
-        PrivacyNode("5.255.117.250", 1080, false, "NL", "Dronten")
+        PrivacyNode("193.218.118.128", 1080, false, "NL", "Amsterdam"),
+        PrivacyNode("5.255.123.162", 1080, false, "NL", "Dronten")
     )
+    val FR_NODES = listOf(
+        PrivacyNode("51.159.115.233", 1080, false, "FR", "Paris"),
+        PrivacyNode("163.172.189.131", 1080, false, "FR", "Roubaix")
+    )
+    val CH_NODES = listOf(PrivacyNode("178.209.51.242", 1080, false, "CH", "Zurich"))
+    val SE_NODES = listOf(PrivacyNode("171.25.158.95", 1080, false, "SE", "Stockholm"))
+    val NO_NODES = listOf(PrivacyNode("51.175.148.110", 1080, false, "NO", "Oslo"))
+    val FI_NODES = listOf(
+        PrivacyNode("65.21.252.66", 10811, false, "FI", "Helsinki"),
+        PrivacyNode("65.21.252.66", 10814, false, "FI", "Helsinki")
+    )
+    val ES_NODES = listOf(PrivacyNode("185.253.220.10", 1080, false, "ES", "Madrid"))
+    val IT_NODES = listOf(PrivacyNode("185.229.226.11", 1080, false, "IT", "Milan"))
+    val PL_NODES = listOf(PrivacyNode("185.180.13.15", 1080, false, "PL", "Warsaw"))
+    val IE_NODES = listOf(PrivacyNode("54.76.120.10", 1080, false, "IE", "Dublin"))
+    val BE_NODES = listOf(PrivacyNode("185.207.250.15", 1080, false, "BE", "Brussels"))
+    val AT_NODES = listOf(PrivacyNode("194.164.71.10", 1080, false, "AT", "Vienna"))
+    val CZ_NODES = listOf(PrivacyNode("89.185.230.12", 1080, false, "CZ", "Prague"))
+    val DK_NODES = listOf(PrivacyNode("185.125.204.10", 1080, false, "DK", "Copenhagen"))
+    val PT_NODES = listOf(PrivacyNode("185.113.140.20", 1080, false, "PT", "Lisbon"))
+    val RO_NODES = listOf(PrivacyNode("185.244.216.10", 1080, false, "RO", "Bucharest"))
 
+    // Asia & Pacific (12)
     val JP_NODES = listOf(
         PrivacyNode("101.36.104.239", 10808, false, "JP", "Tokyo"),
-        PrivacyNode("101.36.104.46", 10808, false, "JP", "Tokyo")
+        PrivacyNode("101.36.104.46", 10808, false, "JP", "Osaka")
     )
-
     val KR_NODES = listOf(
         PrivacyNode("121.169.46.116", 1090, false, "KR", "Suwon"),
         PrivacyNode("211.188.50.146", 80, true, "KR", "Seoul")
     )
-
     val SG_NODES = listOf(
         PrivacyNode("188.166.178.163", 1088, false, "SG", "Singapore"),
         PrivacyNode("128.199.202.122", 1080, false, "SG", "Singapore")
     )
-
     val HK_NODES = listOf(
         PrivacyNode("123.58.219.171", 10808, false, "HK", "Hong Kong"),
         PrivacyNode("64.90.17.123", 555, false, "HK", "Hong Kong")
     )
-
     val IN_NODES = listOf(
-        PrivacyNode("45.112.52.26", 8080, true, "IN", "Bengaluru"),
-        PrivacyNode("82.180.146.251", 10800, false, "IN", "Mumbai")
+        PrivacyNode("183.87.145.150", 2080, false, "IN", "Mumbai"),
+        PrivacyNode("45.112.52.26", 8080, true, "IN", "Bengaluru")
     )
+    val AU_NODES = listOf(PrivacyNode("139.99.144.10", 1080, false, "AU", "Sydney"))
+    val NZ_NODES = listOf(PrivacyNode("103.242.13.10", 1080, false, "NZ", "Auckland"))
+    val TW_NODES = listOf(PrivacyNode("103.125.218.15", 1080, false, "TW", "Taipei"))
+    val MY_NODES = listOf(PrivacyNode("103.102.154.20", 1080, false, "MY", "Kuala Lumpur"))
+    val ID_NODES = listOf(PrivacyNode("103.111.82.10", 1080, false, "ID", "Jakarta"))
+    val TH_NODES = listOf(PrivacyNode("103.13.230.15", 1080, false, "TH", "Bangkok"))
+    val VN_NODES = listOf(PrivacyNode("103.145.62.20", 1080, false, "VN", "Hanoi"))
 
-    val AM_NODES = US_NODES + CA_NODES
-    val EU_NODES = GB_NODES + DE_NODES + NL_NODES
-    val AS_NODES = JP_NODES + KR_NODES + SG_NODES + HK_NODES + IN_NODES
+    // Middle East & Africa (4)
+    val AE_NODES = listOf(PrivacyNode("2.50.191.129", 10800, false, "AE", "Dubai"))
+    val IL_NODES = listOf(PrivacyNode("185.191.206.10", 1080, false, "IL", "Tel Aviv"))
+    val ZA_NODES = listOf(PrivacyNode("197.234.240.15", 1080, false, "ZA", "Johannesburg"))
+    val TR_NODES = listOf(PrivacyNode("185.118.140.25", 1080, false, "TR", "Istanbul"))
 
-    // High-speed verified regional & country clusters
+    val AM_NODES = US_NODES + CA_NODES + MX_NODES + BR_NODES + AR_NODES + CL_NODES + CO_NODES + PE_NODES + CR_NODES + PA_NODES
+    val EU_NODES = GB_NODES + DE_NODES + NL_NODES + FR_NODES + CH_NODES + SE_NODES + NO_NODES + FI_NODES + ES_NODES + IT_NODES + PL_NODES + IE_NODES + BE_NODES + AT_NODES + CZ_NODES + DK_NODES + PT_NODES + RO_NODES
+    val AS_NODES = JP_NODES + KR_NODES + SG_NODES + HK_NODES + IN_NODES + AU_NODES + NZ_NODES + TW_NODES + MY_NODES + ID_NODES + TH_NODES + VN_NODES
+    val ME_AF_NODES = AE_NODES + IL_NODES + ZA_NODES + TR_NODES
+
+    // High-speed verified regional & country clusters (44 Countries + 3 Continents)
     val REGION_NODES: Map<String, List<PrivacyNode>> = mapOf(
         // Standard Continental Regions
         "AM" to AM_NODES,
         "EU" to EU_NODES,
         "AS" to AS_NODES,
-        // Fokk Pro Dedicated Countries
+        // Americas (10)
         "US" to US_NODES,
+        "CA" to CA_NODES,
+        "MX" to MX_NODES,
+        "BR" to BR_NODES,
+        "AR" to AR_NODES,
+        "CL" to CL_NODES,
+        "CO" to CO_NODES,
+        "PE" to PE_NODES,
+        "CR" to CR_NODES,
+        "PA" to PA_NODES,
+        // Europe (18)
         "GB" to GB_NODES,
         "DE" to DE_NODES,
         "NL" to NL_NODES,
-        "CA" to CA_NODES,
+        "FR" to FR_NODES,
+        "CH" to CH_NODES,
+        "SE" to SE_NODES,
+        "NO" to NO_NODES,
+        "FI" to FI_NODES,
+        "ES" to ES_NODES,
+        "IT" to IT_NODES,
+        "PL" to PL_NODES,
+        "IE" to IE_NODES,
+        "BE" to BE_NODES,
+        "AT" to AT_NODES,
+        "CZ" to CZ_NODES,
+        "DK" to DK_NODES,
+        "PT" to PT_NODES,
+        "RO" to RO_NODES,
+        // Asia & Pacific (12)
         "JP" to JP_NODES,
         "KR" to KR_NODES,
         "SG" to SG_NODES,
         "HK" to HK_NODES,
-        "IN" to IN_NODES
+        "IN" to IN_NODES,
+        "AU" to AU_NODES,
+        "NZ" to NZ_NODES,
+        "TW" to TW_NODES,
+        "MY" to MY_NODES,
+        "ID" to ID_NODES,
+        "TH" to TH_NODES,
+        "VN" to VN_NODES,
+        // Middle East & Africa (4)
+        "AE" to AE_NODES,
+        "IL" to IL_NODES,
+        "ZA" to ZA_NODES,
+        "TR" to TR_NODES
     )
 
     // Dynamic node pools updated automatically by the GitHub Actions Sentinel
@@ -179,14 +259,45 @@ object FokkTunnelEngine {
         }
     }
 
+    fun getContinentForCountry(code: String): String = when (code) {
+        "US", "CA", "MX", "BR", "AR", "CL", "CO", "PE", "CR", "PA", "AM" -> "AM"
+        "GB", "DE", "NL", "FR", "CH", "SE", "NO", "FI", "ES", "IT", "PL", "IE", "BE", "AT", "CZ", "DK", "PT", "RO", "EU" -> "EU"
+        "JP", "KR", "SG", "HK", "IN", "AU", "NZ", "TW", "MY", "ID", "TH", "VN", "AS" -> "AS"
+        "AE", "IL", "ZA", "TR" -> "EU"
+        else -> "AUTO"
+    }
+
+    private val failedNodes = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val NODE_COOLDOWN_MS = 180_000L // 3 minutes
+
+    private fun isNodeAlive(node: PrivacyNode): Boolean {
+        val key = "${node.host}:${node.port}"
+        val failTime = failedNodes[key] ?: return true
+        if (System.currentTimeMillis() - failTime > NODE_COOLDOWN_MS) {
+            failedNodes.remove(key)
+            return true
+        }
+        return false
+    }
+
+    private fun markNodeFailed(node: PrivacyNode) {
+        val key = "${node.host}:${node.port}"
+        failedNodes[key] = System.currentTimeMillis()
+    }
+
+    private fun markNodeSuccess(node: PrivacyNode) {
+        val key = "${node.host}:${node.port}"
+        failedNodes.remove(key)
+    }
+
     fun getNodesForRegion(region: String): List<PrivacyNode> {
         val target = if (region in REGION_NODES.keys || region in dynamicNodes.keys) region else "AUTO"
         if (target != "AUTO") {
             val dyn = dynamicNodes[target]
             if (!dyn.isNullOrEmpty()) return dyn
-            if (target == "AM") return getNodesForRegion("US") + getNodesForRegion("CA")
-            if (target == "EU") return getNodesForRegion("GB") + getNodesForRegion("DE") + getNodesForRegion("NL")
-            if (target == "AS") return getNodesForRegion("JP") + getNodesForRegion("KR") + getNodesForRegion("SG") + getNodesForRegion("HK") + getNodesForRegion("IN")
+            if (target == "AM") return AM_NODES
+            if (target == "EU") return EU_NODES
+            if (target == "AS") return AS_NODES
             return REGION_NODES[target].orEmpty()
         }
 
@@ -348,25 +459,59 @@ object FokkTunnelEngine {
     }
 
     private fun connectToNode(targetHost: String, targetPort: Int): Socket? {
-        val nodes = getNodesForRegion(currentRegion)
-        if (nodes.isEmpty()) return null
+        val countryNodes = getNodesForRegion(currentRegion)
 
-        val offset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % nodes.size
-        for (k in nodes.indices) {
-            val gatewayNode = nodes[(offset + k) % nodes.size]
-
-            // Step 1: High-speed verified country egress node (sub-500ms, clean transparent TLS)
-            val directSocket = connectSingleHop(targetHost, targetPort, gatewayNode)
-            if (directSocket != null) {
-                return directSocket
-            }
-
-            // Step 2: Resilient Oblivious Split-Trust Dual-Hop
-            val splitSocket = connectSplitTrust(targetHost, targetPort, gatewayNode)
-            if (splitSocket != null) {
-                return splitSocket
+        // 1. Try healthy country/regional nodes
+        val healthyCountryNodes = countryNodes.filter { isNodeAlive(it) }.ifEmpty { countryNodes }
+        if (healthyCountryNodes.isNotEmpty()) {
+            val offset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % healthyCountryNodes.size
+            for (k in healthyCountryNodes.indices) {
+                val gatewayNode = healthyCountryNodes[(offset + k) % healthyCountryNodes.size]
+                val directSocket = connectSingleHop(targetHost, targetPort, gatewayNode)
+                if (directSocket != null) {
+                    markNodeSuccess(gatewayNode)
+                    return directSocket
+                }
+                val splitSocket = connectSplitTrust(targetHost, targetPort, gatewayNode)
+                if (splitSocket != null) {
+                    markNodeSuccess(gatewayNode)
+                    return splitSocket
+                }
+                markNodeFailed(gatewayNode)
             }
         }
+
+        // 2. Zero-Drop Continental Failover: if selected country pool is temporarily offline, fallback to continental cluster
+        val continent = getContinentForCountry(currentRegion)
+        if (continent != currentRegion && continent != "AUTO") {
+            val continentalNodes = getNodesForRegion(continent).filter { isNodeAlive(it) }.ifEmpty { getNodesForRegion(continent) }
+            if (continentalNodes.isNotEmpty()) {
+                val cOffset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % continentalNodes.size
+                for (k in continentalNodes.indices.take(4)) {
+                    val node = continentalNodes[(cOffset + k) % continentalNodes.size]
+                    val s = connectSingleHop(targetHost, targetPort, node) ?: connectSplitTrust(targetHost, targetPort, node)
+                    if (s != null) {
+                        markNodeSuccess(node)
+                        return s
+                    }
+                    markNodeFailed(node)
+                }
+            }
+        }
+
+        // 3. Guaranteed Uptime Fallback: Ingress Relay Backbone (never drop web traffic with 504)
+        val relays = INGRESS_RELAYS.filter { isNodeAlive(it) }.ifEmpty { INGRESS_RELAYS }
+        val rOffset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % relays.size
+        for (k in relays.indices) {
+            val relay = relays[(rOffset + k) % relays.size]
+            val s = connectSingleHop(targetHost, targetPort, relay)
+            if (s != null) {
+                markNodeSuccess(relay)
+                return s
+            }
+            markNodeFailed(relay)
+        }
+
         return null
     }
 

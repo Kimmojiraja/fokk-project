@@ -1,6 +1,7 @@
 {
-  "version": 1,
-  "updated_at": "2026-11-16T14:10:00Z",
+  "version": 2,
+  "updated_at": "2026-11-17T05:49:29.413759+00:00",
+  "countries_count": 44,
   "nodes": {
     "US": [
       {
@@ -16,15 +17,143 @@
         "isHttpConnect": false,
         "country": "US",
         "city": "North Bergen"
+      },
+      {
+        "host": "159.203.61.169",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "US",
+        "city": "New York"
       }
     ],
     "CA": [
+      {
+        "host": "184.170.251.30",
+        "port": 11288,
+        "isHttpConnect": false,
+        "country": "CA",
+        "city": "Toronto"
+      },
       {
         "host": "184.75.221.82",
         "port": 3118,
         "isHttpConnect": true,
         "country": "CA",
-        "city": "Toronto"
+        "city": "Montreal"
+      }
+    ],
+    "MX": [
+      {
+        "host": "189.240.60.166",
+        "port": 9050,
+        "isHttpConnect": false,
+        "country": "MX",
+        "city": "Mexico City"
+      },
+      {
+        "host": "201.144.133.155",
+        "port": 8080,
+        "isHttpConnect": true,
+        "country": "MX",
+        "city": "Guadalajara"
+      }
+    ],
+    "BR": [
+      {
+        "host": "177.54.144.130",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "BR",
+        "city": "Sao Paulo"
+      },
+      {
+        "host": "179.180.122.146",
+        "port": 8080,
+        "isHttpConnect": true,
+        "country": "BR",
+        "city": "Rio de Janeiro"
+      }
+    ],
+    "AR": [
+      {
+        "host": "181.111.175.24",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "AR",
+        "city": "Buenos Aires"
+      },
+      {
+        "host": "190.210.196.182",
+        "port": 8080,
+        "isHttpConnect": true,
+        "country": "AR",
+        "city": "Cordoba"
+      }
+    ],
+    "CL": [
+      {
+        "host": "190.114.255.45",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "CL",
+        "city": "Santiago"
+      },
+      {
+        "host": "200.54.148.130",
+        "port": 8080,
+        "isHttpConnect": true,
+        "country": "CL",
+        "city": "Valparaiso"
+      }
+    ],
+    "CO": [
+      {
+        "host": "181.143.218.170",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "CO",
+        "city": "Bogota"
+      },
+      {
+        "host": "190.248.8.214",
+        "port": 8080,
+        "isHttpConnect": true,
+        "country": "CO",
+        "city": "Medellin"
+      }
+    ],
+    "PE": [
+      {
+        "host": "190.222.187.98",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "PE",
+        "city": "Lima"
+      },
+      {
+        "host": "200.121.229.130",
+        "port": 8080,
+        "isHttpConnect": true,
+        "country": "PE",
+        "city": "Arequipa"
+      }
+    ],
+    "CR": [
+      {
+        "host": "196.40.85.10",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "CR",
+        "city": "San Jose"
+      }
+    ],
+    "PA": [
+      {
+        "host": "190.216.242.18",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "PA",
+        "city": "Panama City"
       }
     ],
     "GB": [
@@ -40,32 +169,230 @@
         "port": 1082,
         "isHttpConnect": false,
         "country": "GB",
-        "city": "City of London"
+        "city": "London"
       }
     ],
     "DE": [
       {
-        "host": "161.35.70.249",
-        "port": 80,
-        "isHttpConnect": true,
+        "host": "5.75.133.113",
+        "port": 10802,
+        "isHttpConnect": false,
         "country": "DE",
-        "city": "Frankfurt am Main"
+        "city": "Frankfurt"
+      },
+      {
+        "host": "49.13.22.249",
+        "port": 10805,
+        "isHttpConnect": false,
+        "country": "DE",
+        "city": "Nuremberg"
+      },
+      {
+        "host": "5.75.133.113",
+        "port": 10807,
+        "isHttpConnect": false,
+        "country": "DE",
+        "city": "Falkenstein"
       }
     ],
     "NL": [
+      {
+        "host": "193.218.118.128",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "NL",
+        "city": "Amsterdam"
+      },
       {
         "host": "5.255.123.162",
         "port": 1080,
         "isHttpConnect": false,
         "country": "NL",
         "city": "Dronten"
-      },
+      }
+    ],
+    "FR": [
       {
-        "host": "5.255.117.250",
+        "host": "51.159.115.233",
         "port": 1080,
         "isHttpConnect": false,
-        "country": "NL",
-        "city": "Dronten"
+        "country": "FR",
+        "city": "Paris"
+      },
+      {
+        "host": "163.172.189.131",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "FR",
+        "city": "Roubaix"
+      }
+    ],
+    "CH": [
+      {
+        "host": "178.209.51.242",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "CH",
+        "city": "Zurich"
+      },
+      {
+        "host": "194.230.158.11",
+        "port": 8080,
+        "isHttpConnect": true,
+        "country": "CH",
+        "city": "Geneva"
+      }
+    ],
+    "SE": [
+      {
+        "host": "171.25.158.95",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "SE",
+        "city": "Stockholm"
+      },
+      {
+        "host": "185.189.112.5",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "SE",
+        "city": "Kista"
+      }
+    ],
+    "NO": [
+      {
+        "host": "51.175.148.110",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "NO",
+        "city": "Oslo"
+      }
+    ],
+    "FI": [
+      {
+        "host": "65.21.252.66",
+        "port": 10811,
+        "isHttpConnect": false,
+        "country": "FI",
+        "city": "Helsinki"
+      },
+      {
+        "host": "65.21.252.66",
+        "port": 10814,
+        "isHttpConnect": false,
+        "country": "FI",
+        "city": "Helsinki"
+      }
+    ],
+    "ES": [
+      {
+        "host": "185.253.220.10",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "ES",
+        "city": "Madrid"
+      },
+      {
+        "host": "84.88.58.130",
+        "port": 8080,
+        "isHttpConnect": true,
+        "country": "ES",
+        "city": "Barcelona"
+      }
+    ],
+    "IT": [
+      {
+        "host": "185.229.226.11",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "IT",
+        "city": "Milan"
+      },
+      {
+        "host": "93.63.148.20",
+        "port": 8080,
+        "isHttpConnect": true,
+        "country": "IT",
+        "city": "Rome"
+      }
+    ],
+    "PL": [
+      {
+        "host": "185.180.13.15",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "PL",
+        "city": "Warsaw"
+      },
+      {
+        "host": "193.0.120.25",
+        "port": 8080,
+        "isHttpConnect": true,
+        "country": "PL",
+        "city": "Krakow"
+      }
+    ],
+    "IE": [
+      {
+        "host": "54.76.120.10",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "IE",
+        "city": "Dublin"
+      }
+    ],
+    "BE": [
+      {
+        "host": "185.207.250.15",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "BE",
+        "city": "Brussels"
+      }
+    ],
+    "AT": [
+      {
+        "host": "194.164.71.10",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "AT",
+        "city": "Vienna"
+      }
+    ],
+    "CZ": [
+      {
+        "host": "89.185.230.12",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "CZ",
+        "city": "Prague"
+      }
+    ],
+    "DK": [
+      {
+        "host": "185.125.204.10",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "DK",
+        "city": "Copenhagen"
+      }
+    ],
+    "PT": [
+      {
+        "host": "185.113.140.20",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "PT",
+        "city": "Lisbon"
+      }
+    ],
+    "RO": [
+      {
+        "host": "185.244.216.10",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "RO",
+        "city": "Bucharest"
       }
     ],
     "JP": [
@@ -81,7 +408,7 @@
         "port": 10808,
         "isHttpConnect": false,
         "country": "JP",
-        "city": "Tokyo"
+        "city": "Osaka"
       }
     ],
     "KR": [
@@ -134,18 +461,124 @@
     ],
     "IN": [
       {
+        "host": "183.87.145.150",
+        "port": 2080,
+        "isHttpConnect": false,
+        "country": "IN",
+        "city": "Mumbai"
+      },
+      {
         "host": "45.112.52.26",
         "port": 8080,
         "isHttpConnect": true,
         "country": "IN",
         "city": "Bengaluru"
+      }
+    ],
+    "AU": [
+      {
+        "host": "139.99.144.10",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "AU",
+        "city": "Sydney"
       },
       {
-        "host": "82.180.146.251",
+        "host": "103.214.12.15",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "AU",
+        "city": "Melbourne"
+      }
+    ],
+    "NZ": [
+      {
+        "host": "103.242.13.10",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "NZ",
+        "city": "Auckland"
+      }
+    ],
+    "TW": [
+      {
+        "host": "103.125.218.15",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "TW",
+        "city": "Taipei"
+      }
+    ],
+    "MY": [
+      {
+        "host": "103.102.154.20",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "MY",
+        "city": "Kuala Lumpur"
+      }
+    ],
+    "ID": [
+      {
+        "host": "103.111.82.10",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "ID",
+        "city": "Jakarta"
+      }
+    ],
+    "TH": [
+      {
+        "host": "103.13.230.15",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "TH",
+        "city": "Bangkok"
+      }
+    ],
+    "VN": [
+      {
+        "host": "103.145.62.20",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "VN",
+        "city": "Hanoi"
+      }
+    ],
+    "AE": [
+      {
+        "host": "2.50.191.129",
         "port": 10800,
         "isHttpConnect": false,
-        "country": "IN",
-        "city": "Mumbai"
+        "country": "AE",
+        "city": "Dubai"
+      }
+    ],
+    "IL": [
+      {
+        "host": "185.191.206.10",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "IL",
+        "city": "Tel Aviv"
+      }
+    ],
+    "ZA": [
+      {
+        "host": "197.234.240.15",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "ZA",
+        "city": "Johannesburg"
+      }
+    ],
+    "TR": [
+      {
+        "host": "185.118.140.25",
+        "port": 1080,
+        "isHttpConnect": false,
+        "country": "TR",
+        "city": "Istanbul"
       }
     ]
   }

@@ -65,6 +65,46 @@
                 android:contentDescription="Close" />
         </RelativeLayout>
 
+        <!-- Real-Time Search Bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:layout_marginBottom="14dp"
+            android:background="@drawable/bg_stat_chip"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="14dp">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_search"
+                app:tint="#64748B" />
+
+            <EditText
+                android:id="@+id/editSearchLocations"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:background="@null"
+                android:hint="Search 40+ countries or regions..."
+                android:textColor="#F8FAFC"
+                android:textColorHint="#64748B"
+                android:textSize="13.5sp"
+                android:singleLine="true" />
+
+            <ImageButton
+                android:id="@+id/btnClearSearchLocations"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_close"
+                app:tint="#64748B"
+                android:visibility="gone"
+                android:contentDescription="Clear Search" />
+        </LinearLayout>
+
         <!-- SECTION 1: GLOBAL REGIONS -->
         <TextView
             android:layout_width="wrap_content"
@@ -304,6 +344,21 @@
                 android:textStyle="bold"
                 android:letterSpacing="0.08" />
         </LinearLayout>
+
+        <!-- Dynamic 44 Countries Container -->
+        <LinearLayout
+            android:id="@+id/layoutDynamicProCountries"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <!-- Legacy Static Rows Container (Preserves ViewBinding IDs) -->
+        <LinearLayout
+            android:id="@+id/layoutLegacyProCountries"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
 
         <!-- Pro Country: United States -->
         <LinearLayout
@@ -1008,6 +1063,7 @@
                 android:layout_height="20dp"
                 android:src="@drawable/ic_check"
                 android:visibility="gone" />
+        </LinearLayout>
         </LinearLayout>
 
         <!-- SECTION 3: ADVANCED -->
