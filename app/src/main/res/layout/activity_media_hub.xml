@@ -343,6 +343,25 @@
                     android:visibility="gone" />
             </FrameLayout>
 
+            <FrameLayout
+                android:id="@+id/btnNavAi"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:layout_marginStart="1dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="Fokk AI Assistant">
+
+                <ImageView
+                    android:id="@+id/imgNavAiIcon"
+                    android:layout_width="19dp"
+                    android:layout_height="19dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_sparkle"
+                    app:tint="@color/fokk_cyan" />
+            </FrameLayout>
+
             <ImageButton
                 android:id="@+id/btnNavFavorite"
                 android:layout_width="34dp"

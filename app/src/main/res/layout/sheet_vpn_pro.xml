@@ -190,7 +190,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Fokk Relay Pro — 10 Global Exit Locations"
+                    android:text="Fokk Relay Pro — 40+ Global Exit Locations"
                     android:textColor="#F8FAFC"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -199,7 +199,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Select dedicated in-browser exit nodes across US, UK, DE, NL, CA, JP, KR, SG, HK, and IN with multi-hop split routing and packet micro-jitter."
+                    android:text="Select dedicated in-browser exit nodes across 40+ worldwide countries with automatic zero-drop failover, multi-hop split routing, and packet micro-jitter."
                     android:textColor="#94A3B8"
                     android:textSize="12sp" />
             </LinearLayout>

@@ -14,7 +14,16 @@ import os
 import sys
 from datetime import datetime, timezone
 
-TARGET_COUNTRIES = ["US", "CA", "GB", "DE", "NL", "JP", "KR", "SG", "HK", "IN"]
+TARGET_COUNTRIES = [
+    # Americas (10)
+    "US", "CA", "MX", "BR", "AR", "CL", "CO", "PE", "CR", "PA",
+    # Europe (18)
+    "GB", "DE", "NL", "FR", "CH", "SE", "NO", "FI", "ES", "IT", "PL", "IE", "BE", "AT", "CZ", "DK", "PT", "RO",
+    # Asia & Pacific (12)
+    "JP", "KR", "SG", "HK", "IN", "AU", "NZ", "TW", "MY", "ID", "TH", "VN",
+    # Middle East & Africa (4)
+    "AE", "IL", "ZA", "TR"
+]
 NODES_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "nodes.json")
 
 ctx = ssl.create_default_context()

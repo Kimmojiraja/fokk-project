@@ -23,6 +23,50 @@ const PRESET_LOCATIONS = {
         iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="6" r="6"/><circle cx="12" cy="2" r="2"/></svg>',
         setupTip: 'Starts the bundled Tor client and routes this browser through its local SOCKS port.'
     },
+    'relay_auto': {
+        id: 'relay_auto',
+        name: 'Fokk Smart Relay (Optimal)',
+        badge: 'Zero-Drop Relay',
+        protocol: 'Split-Trust SOCKS5',
+        description: 'Automatic high-speed oblivious relay routing across 40+ global country locations.',
+        region: 'Global Optimal',
+        color: '#00E5FF',
+        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>',
+        setupTip: 'Connects through the high-reliability multi-country Fokk Relay network.'
+    },
+    'relay_eu': {
+        id: 'relay_eu',
+        name: 'Europe Cluster (40+ Locations)',
+        badge: 'EU Pro Egress',
+        protocol: 'Split-Trust SOCKS5',
+        description: 'Dedicated high-speed privacy routing across Germany, UK, Netherlands, France, and Nordic exits.',
+        region: 'Europe (Frankfurt / London / Amsterdam)',
+        color: '#38BDF8',
+        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>',
+        setupTip: 'Routes browser requests through verified European high-speed privacy nodes.'
+    },
+    'relay_am': {
+        id: 'relay_am',
+        name: 'Americas Cluster (40+ Locations)',
+        badge: 'Americas Pro Egress',
+        protocol: 'Split-Trust SOCKS5',
+        description: 'Dedicated high-speed privacy routing across United States, Canada, and Latin American exits.',
+        region: 'Americas (New York / Miami / Toronto)',
+        color: '#34D399',
+        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M6 12h12"/></svg>',
+        setupTip: 'Routes browser requests through verified Americas high-speed privacy nodes.'
+    },
+    'relay_as': {
+        id: 'relay_as',
+        name: 'Asia & Pacific Cluster (40+ Locations)',
+        badge: 'APAC Pro Egress',
+        protocol: 'Split-Trust SOCKS5',
+        description: 'Dedicated high-speed privacy routing across Singapore, Japan, Hong Kong, and Australia exits.',
+        region: 'Asia & Pacific (Singapore / Tokyo / Hong Kong)',
+        color: '#F59E0B',
+        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>',
+        setupTip: 'Routes browser requests through verified Asia-Pacific high-speed privacy nodes.'
+    },
     'custom': {
         id: 'custom',
         name: 'Custom Endpoint',
