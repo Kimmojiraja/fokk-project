@@ -1,8 +1,8 @@
 {
-  "versionCode": 267,
-  "versionName": "2.6.7",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.6.7/app-debug.apk",
-  "changelog": "- Fokk Mesh Wire-Speed Optimization: Enabled TCP_NODELAY, 64KB socket streaming buffers, and non-blocking worker threads to eliminate connection stalls and browsing latency.\n- Real Fokk AI Experience: Multi-provider cloud LLM pipeline with high-speed free endpoints (Pollinations AI Mistral/OpenAI) and OpenRouter models, delivering rich formatted answers without requiring private API keys.\n- TrustMeBro Forensic Receipts: Live source citations with verified domain favicons, interactive links, and analytical evidence confidence ratings.\n- Privacy Tiering: Free unlimited Optimal Location gateway; regional gateways and timing shield gated to Fokk Pro with daily AI quotas."
+  "versionCode": 268,
+  "versionName": "2.6.8",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.6.8/app-debug.apk",
+  "changelog": "- Fokk AI Browser-Side Search & Truth Engine: Native client-side search across Wikipedia and DuckDuckGo for real-time web citations without third-party API quotas.\n- Multi-Source Forensic Receipts: Live verified source chips with Google S2 domain favicons, canonical links, and 94% verified consensus audits.\n- Resilient Free LLM Cascade: Particle-1, Ernie 5.5 Flash, and Nemotron 3.5 Lightning with reasoning and content extraction.\n- Clean Single Bottom Sheet: Removed duplicate stacking sheets and unwanted AI summary system notifications.\n- Twitter/X and SPA Context Extraction: Enhanced DOM selector pipeline extracting content from single-page social feeds."
 }
 
 
