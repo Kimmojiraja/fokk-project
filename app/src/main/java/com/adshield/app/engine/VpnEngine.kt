@@ -431,7 +431,7 @@ object VpnEngine {
 
                 val isCustomExternal = mode == VpnMode.CUSTOM &&
                     customProxy != null &&
-                    customProxy !in setOf("AM", "EU", "AS", "US") &&
+                    customProxy !in FokkTunnelEngine.REGION_NODES.keys &&
                     (customProxy.contains(":") || customProxy.contains("."))
 
                 val endpoint: String
