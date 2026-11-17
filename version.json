@@ -1,8 +1,8 @@
 {
-  "versionCode": 262,
-  "versionName": "2.6.2",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.6.2/app-debug.apk",
-  "changelog": "- Fokk Relay (Private Relay Architecture): Renamed and refined into Apple-style 'Fokk Relay' with dedicated modern vector iconography and zero-maintenance automation.\n- Automated GitHub Actions Sentinel: 100% maintenance-free architecture that scans, verifies TLS transparency, and updates country exit nodes automatically without app updates.\n- Strict Zero-Leak Killswitch: Removed silent direct fallback from WebView ProxyConfig, guaranteeing zero IP leaks so ip checking sites always see the dedicated country exit IP.\n- Verified Live Country Nodes: High-speed, transparent TLS egress nodes across US, UK, DE, NL, CA, JP, KR, SG, HK, and IN.\n- Command Card Clean-up: Permanently removed minimize screen and dual screen buttons above and on the command card bar for an ultra-clean browsing experience.\n- Premium UI Preservation: Maintained all 11 circular vector flag avatars and Opera-style dark theme bottom sheets."
+  "versionCode": 265,
+  "versionName": "2.6.5",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.6.5/app-debug.apk",
+  "changelog": "- Fokk Privacy Mesh: Streamlined location picker to authentic regional oblivious gateways (Optimal Smart Routing, Americas, Europe, Asia-Pacific, and Custom Enterprise Node).\n- Zero-Risk Oblivious Routing: Eliminates unstable country proxy switching; delivers sub-15ms latency and zero CAPTCHAs without leaking traffic to untrusted middleboxes.\n- Fokk AI Truth Engine: Live OpenRouter LLM integration with real-time editorial DOM context injection and expanded conversational sheet.\n- Clean Dark Theme UI: Cleaned 800+ lines of legacy country scraper UI; strictly zero emojis across all layouts."
 }
 
 
