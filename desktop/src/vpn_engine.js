@@ -32,7 +32,7 @@ const PRESET_LOCATIONS = {
         region: 'Global Optimal',
         color: '#00E5FF',
         iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>',
-        setupTip: 'Connects through the high-reliability multi-country Fokk Relay network.'
+        setupTip: 'Connects through the high-reliability multi-region Fokk Mesh network.'
     },
     'relay_eu': {
         id: 'relay_eu',
@@ -514,7 +514,7 @@ class VpnEngine extends EventEmitter {
                 const torPort = await this.ensureTorRunning();
                 if (torPort) {
                     proxyRules = `socks5://127.0.0.1:${torPort}`;
-                    locationName = PRESET_LOCATIONS[this.activeMode]?.name || 'Fokk Relay Network';
+                    locationName = PRESET_LOCATIONS[this.activeMode]?.name || 'Fokk Mesh Network';
                 } else {
                     throw new Error('The bundled Tor runtime is missing from this desktop build. Routing was not enabled.');
                 }

@@ -680,7 +680,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:text="Unlock multi-country relay routing and AI fact-checking verification. Supports independent development."
+                android:text="Unlock regional privacy mesh routing and AI truth engine verification. Supports independent development."
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp"
                 android:lineSpacingExtra="2dp" />
