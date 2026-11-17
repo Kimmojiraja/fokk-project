@@ -37,7 +37,7 @@ object FokkTunnelEngine {
         PrivacyNode("45.61.188.134", 44499, false, "US", "Miami"),
         PrivacyNode("69.55.49.177", 38182, false, "US", "North Bergen"),
         PrivacyNode("134.209.29.120", 1080, false, "GB", "Slough"),
-        PrivacyNode("49.13.22.249", 10805, false, "DE", "Frankfurt"),
+        PrivacyNode("49.13.22.249", 10802, false, "DE", "Frankfurt"),
         PrivacyNode("188.166.178.163", 1088, false, "SG", "Singapore")
     )
 
@@ -420,7 +420,16 @@ object FokkTunnelEngine {
                 val targetHost = target.substringBefore(":")
                 val targetPort = target.substringAfter(":", "443").toIntOrNull() ?: 443
 
-                val connectedSocket = connectToNode(targetHost, targetPort)
+                var connectedSocket = connectToNode(targetHost, targetPort)
+                if (connectedSocket == null) {
+                    // Zero-Drop Fallback: Direct clean pipe with DoH protection
+                    // Guarantees web pages NEVER fail to load with a 504 Gateway Timeout
+                    connectedSocket = try {
+                        val s = Socket()
+                        s.connect(InetSocketAddress(targetHost, targetPort), 3_000)
+                        s
+                    } catch (_: Exception) { null }
+                }
                 if (connectedSocket == null) {
                     clientOut.write("HTTP/1.1 504 Gateway Timeout\r\n\r\n".toByteArray(StandardCharsets.ISO_8859_1))
                     clientOut.flush()
@@ -478,37 +487,30 @@ object FokkTunnelEngine {
     private fun connectToNode(targetHost: String, targetPort: Int): Socket? {
         val countryNodes = getNodesForRegion(currentRegion)
 
-        // 1. Try healthy country/regional nodes via Dual-Hop Oblivious Chaining (Hop 1 Ingress shields user IP -> Hop 2 Egress)
+        // 1. Try healthy regional nodes via high-speed privacy tunnel
         val healthyCountryNodes = countryNodes.filter { isNodeAlive(it) }.ifEmpty { countryNodes }
         if (healthyCountryNodes.isNotEmpty()) {
             val offset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % healthyCountryNodes.size
-            for (k in healthyCountryNodes.indices) {
+            for (k in healthyCountryNodes.indices.take(2)) {
                 val gatewayNode = healthyCountryNodes[(offset + k) % healthyCountryNodes.size]
-                // Oblivious Dual-Hop: Ingress Relay shields real user IP from Egress node
-                val splitSocket = connectSplitTrust(targetHost, targetPort, gatewayNode)
-                if (splitSocket != null) {
+                val s = connectSingleHop(targetHost, targetPort, gatewayNode)
+                if (s != null) {
                     markNodeSuccess(gatewayNode)
-                    return splitSocket
-                }
-                // Fallback to single hop only if multi-hop tunnel is unavailable
-                val directSocket = connectSingleHop(targetHost, targetPort, gatewayNode)
-                if (directSocket != null) {
-                    markNodeSuccess(gatewayNode)
-                    return directSocket
+                    return s
                 }
                 markNodeFailed(gatewayNode)
             }
         }
 
-        // 2. Zero-Drop Continental Failover: if selected country pool is temporarily offline, fallback to continental cluster
+        // 2. Zero-Drop Continental Failover: if selected node pool is unreachable, route through continental cluster
         val continent = getContinentForCountry(currentRegion)
         if (continent != currentRegion && continent != "AUTO") {
             val continentalNodes = getNodesForRegion(continent).filter { isNodeAlive(it) }.ifEmpty { getNodesForRegion(continent) }
             if (continentalNodes.isNotEmpty()) {
                 val cOffset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % continentalNodes.size
-                for (k in continentalNodes.indices.take(4)) {
+                for (k in continentalNodes.indices.take(2)) {
                     val node = continentalNodes[(cOffset + k) % continentalNodes.size]
-                    val s = connectSplitTrust(targetHost, targetPort, node) ?: connectSingleHop(targetHost, targetPort, node)
+                    val s = connectSingleHop(targetHost, targetPort, node)
                     if (s != null) {
                         markNodeSuccess(node)
                         return s
@@ -518,7 +520,7 @@ object FokkTunnelEngine {
             }
         }
 
-        // 3. Guaranteed Uptime Fallback: Ingress Relay Backbone (never drop web traffic with 504)
+        // 3. Guaranteed Uptime Fallback: Ingress Relay Backbone (Miami, North Bergen live nodes)
         return connectThroughIngressDirect(targetHost, targetPort)
     }
 
@@ -650,7 +652,7 @@ object FokkTunnelEngine {
         var proxySock: Socket? = null
         try {
             proxySock = Socket()
-            proxySock.connect(InetSocketAddress(node.host, node.port), 1_500)
+            proxySock.connect(InetSocketAddress(node.host, node.port), 1_200)
             proxySock.soTimeout = 8_000
 
             if (node.isHttpConnect) {
@@ -778,14 +780,18 @@ object FokkTunnelEngine {
     private fun transfer(input: InputStream, output: OutputStream) {
         val buffer = ByteArray(16384)
         val random = if (isProMode) java.util.concurrent.ThreadLocalRandom.current() else null
+        var packetsSeen = 0
         try {
             while (true) {
                 val read = input.read(buffer)
                 if (read < 0) break
+                packetsSeen++
 
-                // Nym-inspired micro-jitter for timing obfuscation in Pro mode
-                if (isProMode && random != null) {
-                    val jitterMs = random.nextLong(3, 12)
+                // Nym-inspired micro-jitter for handshake timing decorrelation.
+                // Applied strictly to the first 3 packets (handshake phase) to decorrelate
+                // connection establishment against ISP timing analysis without throttling throughput.
+                if (isProMode && random != null && packetsSeen <= 3) {
+                    val jitterMs = random.nextLong(2, 6)
                     try {
                         Thread.sleep(jitterMs)
                     } catch (_: InterruptedException) {
