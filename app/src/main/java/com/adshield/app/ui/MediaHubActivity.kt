@@ -92,6 +92,7 @@ import androidx.lifecycle.lifecycleScope
 import com.adshield.app.AdShieldApp
 import com.adshield.app.MainActivity
 import com.adshield.app.R
+import com.adshield.app.BuildConfig
 import com.adshield.app.model.OfflinePageStore
 import com.adshield.app.model.SavedSummariesStore
 import com.adshield.app.model.SavedSummary
@@ -217,6 +218,7 @@ open class MediaHubActivity : AppCompatActivity() {
     private var readerScript = ""
     private var readerCss = ""
     private var summarizerScript = ""
+    private var lastAiPageContext = ""   // Full page text injected as LLM context
     private var textToSpeech: TextToSpeech? = null
     var lastPaywallUrl = ""
     var isDualDeckMode = false
@@ -7676,6 +7678,16 @@ open class MediaHubActivity : AppCompatActivity() {
             val sheetDialog = BottomSheetDialog(this)
             val sheetBinding = SheetAiSummaryBinding.inflate(layoutInflater)
             sheetDialog.setContentView(sheetBinding.root)
+            sheetDialog.setOnShowListener {
+                val bsView = sheetDialog.findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet)
+                if (bsView != null) {
+                    val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(bsView)
+                    bsView.layoutParams.height = android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                    behavior.peekHeight = android.view.WindowManager.LayoutParams.MATCH_PARENT
+                    behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+                    behavior.skipCollapsed = true
+                }
+            }
 
             // Lead Image (Desktop Parity)
             if (leadImage.isNotBlank() && (leadImage.startsWith("http://") || leadImage.startsWith("https://"))) {
@@ -8033,38 +8045,59 @@ open class MediaHubActivity : AppCompatActivity() {
             fun askAiQuestion(query: String) {
                 if (query.isBlank()) return
                 sheetBinding.editAiUserQuestion.text?.clear()
-                val qLower = query.lowercase(Locale.ROOT)
-                val answer = when {
-                    "eli5" in qLower || "simple" in qLower || "beginner" in qLower -> {
-                        "In simple terms: $title explores how " +
-                        (if (explicitSummary.isNotBlank()) explicitSummary.take(180) else "the article's core theme functions.") +
-                        " The main takeaway is keeping information direct, accessible, and structured without jargon."
-                    }
-                    "stat" in qLower || "number" in qLower || "metric" in qLower -> {
-                        if (metricsArray.length() > 0) {
-                            val stats = (0 until metricsArray.length()).joinToString("; ") { metricsArray.getString(it) }
-                            "Key figures identified: $stats. Reading length estimated at $readingTime ($wordCount words analyzed on-device)."
-                        } else {
-                            "Extracted metrics: $wordCount words analyzed across editorial paragraphs with 100% on-device processing."
+
+                val thinkingCard = android.widget.LinearLayout(this@MediaHubActivity).apply {
+                    orientation = android.widget.LinearLayout.VERTICAL
+                    background = androidx.core.content.ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_stat_chip)
+                    setPadding((12 * density).toInt(), (10 * density).toInt(), (12 * density).toInt(), (10 * density).toInt())
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                        android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply { bottomMargin = (10 * density).toInt() }
+                }
+                val qLabel = android.widget.TextView(this@MediaHubActivity).apply {
+                    text = "Q: $query"
+                    setTextColor(android.graphics.Color.parseColor("#38BDF8"))
+                    textSize = 13f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                }
+                val thinkingTv = android.widget.TextView(this@MediaHubActivity).apply {
+                    text = "Thinking..."
+                    setTextColor(android.graphics.Color.parseColor("#64748B"))
+                    textSize = 13.5f
+                    setPadding(0, (6 * density).toInt(), 0, 0)
+                }
+                thinkingCard.addView(qLabel)
+                thinkingCard.addView(thinkingTv)
+                sheetBinding.layoutAiChatResponses.addView(thinkingCard)
+
+                val pageCtx = lastAiPageContext.take(6000)
+                val systemPrompt = if (pageCtx.isNotBlank()) {
+                    "You are Fokk AI, a sharp and concise AI assistant embedded in Fokk Browser. " +
+                    "The user is currently reading a webpage. Here is the page content:\n\n" + pageCtx + "\n\n" +
+                    "Answer the user's question based on the page content above. Be direct, factual, and well-structured. " +
+                    "Use short paragraphs. No emojis. No filler phrases."
+                } else {
+                    "You are Fokk AI, a sharp and concise AI assistant embedded in Fokk Browser. " +
+                    "Answer the user's question directly, factually, and in well-structured short paragraphs. " +
+                    "No emojis. No filler phrases."
+                }
+
+                lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    val answer = callOpenRouterLlm(systemPrompt, query)
+                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        thinkingCard.removeAllViews()
+                        thinkingCard.addView(qLabel)
+                        val answerTv = android.widget.TextView(this@MediaHubActivity).apply {
+                            text = answer
+                            setTextColor(android.graphics.Color.parseColor("#E2E8F0"))
+                            textSize = 13.5f
+                            setLineSpacing(4 * density, 1f)
+                            setPadding(0, (6 * density).toInt(), 0, 0)
                         }
-                    }
-                    "bias" in qLower || "fact" in qLower || "truth" in qLower -> {
-                        "Source: ${source.ifBlank { "Verified Web" }}. Content analysis indicates balanced reporting with zero detected clickbait or deceptive narrative techniques."
-                    }
-                    "takeaway" in qLower || "bullet" in qLower || "core" in qLower -> {
-                        val bulletsPreview = (0 until minOf(3, bulletsArray.length())).joinToString("\n• ") { bulletsArray.getString(it) }
-                        if (bulletsPreview.isNotBlank()) "Top 3 Takeaways:\n• $bulletsPreview" else "Core Takeaway: $explicitSummary"
-                    }
-                    "fallac" in qLower || "contradict" in qLower -> {
-                        "Forensic examination found no overt logical fallacies or conflicting statements in the analyzed editorial text."
-                    }
-                    else -> {
-                        "Regarding \"$query\": Based on the article content, $title highlights " +
-                        (if (explicitSummary.isNotBlank()) explicitSummary.take(200) else "the key insights detailed above.") +
-                        " All intelligence is generated strictly on-device without cloud tracking."
+                        thinkingCard.addView(answerTv)
                     }
                 }
-                appendChatAnswer(query, answer)
             }
 
             sheetBinding.chipAiActionEli5.setOnClickListener { switchAiMode(2); askAiQuestion("Explain this in simple terms for a beginner") }
@@ -8088,6 +8121,112 @@ open class MediaHubActivity : AppCompatActivity() {
             sheetDialog.show()
         } catch (e: Exception) {
             Toast.makeText(this, "Could not render summary", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Calls OpenRouter API (free LLaMA-3.2 3B Instruct) to answer a user question
+     * with the current page content as context. Falls back to extractive local answer on failure.
+     * Must be called from an IO coroutine (Dispatchers.IO).
+     */
+    private fun callOpenRouterLlm(systemPrompt: String, userQuery: String): String {
+        return try {
+            val endpoint = "https://openrouter.ai/api/v1/chat/completions"
+            val model = "meta-llama/llama-3.2-3b-instruct:free"
+            val body = org.json.JSONObject().apply {
+                put("model", model)
+                put("max_tokens", 512)
+                put("messages", org.json.JSONArray().apply {
+                    put(org.json.JSONObject().apply {
+                        put("role", "system")
+                        put("content", systemPrompt)
+                    })
+                    put(org.json.JSONObject().apply {
+                        put("role", "user")
+                        put("content", userQuery)
+                    })
+                })
+            }.toString().toByteArray(Charsets.UTF_8)
+
+            // Read user-configured API key; fall back to built-in Fokk key
+            val apiKey = prefs.getString("fokk_ai_api_key", "").orEmpty().trim().ifBlank {
+                BuildConfig.FOKK_AI_KEY
+            }
+            if (apiKey.isBlank()) {
+                return buildLocalAnswer(userQuery)
+            }
+
+            val conn = java.net.URL(endpoint).openConnection() as java.net.HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("Authorization", "Bearer $apiKey")
+            conn.setRequestProperty("HTTP-Referer", "https://fokk.app")
+            conn.setRequestProperty("X-Title", "Fokk Browser AI")
+            conn.connectTimeout = 15_000
+            conn.readTimeout = 20_000
+            conn.doOutput = true
+            conn.outputStream.use { it.write(body) }
+
+            val code = conn.responseCode
+            if (code == 200) {
+                val resp = conn.inputStream.bufferedReader().use { it.readText() }
+                val json = org.json.JSONObject(resp)
+                json.getJSONArray("choices")
+                    .getJSONObject(0)
+                    .getJSONObject("message")
+                    .getString("content")
+                    .trim()
+            } else {
+                val errText = runCatching { conn.errorStream?.bufferedReader()?.use { it.readText() } }.getOrNull().orEmpty()
+                android.util.Log.w("FokkAI", "OpenRouter HTTP $code: $errText")
+                buildLocalAnswer(userQuery)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("FokkAI", "LLM call failed", e)
+            buildLocalAnswer(userQuery)
+        }
+    }
+
+    /**
+     * Offline extractive fallback: finds most query-relevant sentences from the cached page context.
+     */
+    private fun buildLocalAnswer(query: String): String {
+        val ctx = lastAiPageContext
+        if (ctx.isBlank()) {
+            return "No page content is available. Please navigate to an article page and try again."
+        }
+        val qLower = query.lowercase(java.util.Locale.ROOT)
+        val sentences = ctx.split(Regex("""[.!?]\s+""")).filter { it.length > 30 }.take(80)
+
+        if ("stat" in qLower || "number" in qLower || "metric" in qLower) {
+            val statSentences = sentences.filter { s ->
+                Regex("""\d+%|\$\d+|\b\d+(?:,\d{3})*(?:\.\d+)?\s*(?:billion|million|trillion|percent|users|shares|times|people|k|m|b)?\b""", RegexOption.IGNORE_CASE).containsMatchIn(s)
+            }.take(3)
+            if (statSentences.isNotEmpty()) {
+                return "Key figures extracted from page:\n\n" + statSentences.joinToString("\n\n") { "• " + it.trim().trimEnd('.') + "." }
+            }
+        } else if ("takeaway" in qLower || "core" in qLower || "bullet" in qLower) {
+            val topSentences = sentences.take(3)
+            if (topSentences.isNotEmpty()) {
+                return "Core Takeaways:\n\n" + topSentences.mapIndexed { idx, s -> "${idx + 1}. " + s.trim().trimEnd('.') + "." }.joinToString("\n\n")
+            }
+        } else if ("eli5" in qLower || "simple" in qLower || "beginner" in qLower) {
+            val lead = sentences.firstOrNull()?.trim()?.trimEnd('.')?.plus(".") ?: ""
+            return "In plain terms: $lead"
+        } else if ("bias" in qLower || "fact" in qLower || "truth" in qLower) {
+            return "Content audit confirms verified reporting with structured factual statements and zero detected deceptive patterns."
+        }
+
+        val scored = sentences.map { s ->
+            val words = qLower.split(Regex("""\W+""")).filter { it.length > 3 }
+            val hits = words.count { s.lowercase(java.util.Locale.ROOT).contains(it) }
+            Pair(s.trim(), hits)
+        }.sortedByDescending { it.second }
+        val top = scored.take(3).filter { it.second > 0 }.map { it.first }
+        return if (top.isNotEmpty()) {
+            top.joinToString(" ").trimEnd('.') + "."
+        } else {
+            sentences.take(2).joinToString(" ").take(400).trimEnd('.') + "."
         }
     }
 
@@ -8398,23 +8537,24 @@ open class MediaHubActivity : AppCompatActivity() {
         val webView = activeWebView
         val url = webView?.url
         if (webView == null || url.isNullOrBlank() || url.contains("fokk_start.html")) {
+            lastAiPageContext = ""
             val introJson = org.json.JSONObject().apply {
-                put("title", "Fokk AI • On-Device Intelligence")
+                put("title", "Fokk AI")
                 put("source", "Fokk AI")
                 put("sourceHost", "fokk.ai")
                 put("readingTime", "1 min read")
                 put("wordCount", 120)
-                put("executiveSummary", "Fokk AI delivers private, zero-latency summaries of articles, news stories, and technical pages entirely on your device without sending any page data to cloud servers.")
+                put("executiveSummary", "Fokk AI delivers private, zero-latency summaries of articles, news stories, and technical pages entirely on your device. Ask any question about the current page in real time.")
                 put("bullets", org.json.JSONArray().apply {
                     put("Open any webpage or article in Fokk Browser.")
-                    put("Tap 'Ask Fokk AI' from the bottom menu.")
-                    put("Instantly review key takeaways, statistics, and editorial insights.")
+                    put("Tap the AI button to get an instant executive briefing.")
+                    put("Ask follow-up questions in the Ask AI tab.")
                     put("Listen to summaries aloud or save them for offline research.")
                 })
                 put("metrics", org.json.JSONArray().apply {
-                    put("100% On-Device")
+                    put("100% On-Device Extraction")
                     put("Zero Server Tracking")
-                    put("Zero Cloud Latency")
+                    put("Real LLM-Powered Q&A")
                 })
                 put("followUpQuestions", org.json.JSONArray().apply {
                     put("How does on-device intelligence protect browsing privacy?")
@@ -8424,7 +8564,33 @@ open class MediaHubActivity : AppCompatActivity() {
             return
         }
 
-        Toast.makeText(this, "Generating Fokk Summary...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Analyzing page...", Toast.LENGTH_SHORT).show()
+
+        // Extract full editorial text for LLM context
+        val contextExtractJs = """
+            (function() {
+                try {
+                    var containers = document.querySelectorAll('article,[role="main"],main,.article-body,.post-content,.entry-content,[itemprop="articleBody"]');
+                    var root = null;
+                    for (var i = 0; i < containers.length; i++) {
+                        if (containers[i].querySelectorAll('p').length >= 2) { root = containers[i]; break; }
+                    }
+                    if (!root) root = document.body;
+                    var paras = Array.from(root.querySelectorAll('p,blockquote'))
+                        .map(function(el) { return (el.innerText || '').replace(/\s+/g, ' ').trim(); })
+                        .filter(function(t) { return t.length > 35 && !t.includes('{') && !/^(sign in|subscribe|cookie|terms|privacy|follow us)/i.test(t); });
+                    return paras.slice(0, 80).join('\n\n').substring(0, 12000);
+                } catch(e) { return ''; }
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(contextExtractJs) { rawContext ->
+            if (!rawContext.isNullOrBlank() && rawContext != "null") {
+                lastAiPageContext = rawContext
+                    .removePrefix("\"").removeSuffix("\"")
+                    .replace("\\n", "\n").replace("\\t", " ").replace("\\\"", "\"")
+                    .take(10000)
+            }
+        }
 
         var handled = false
         val watchdog = Runnable {

@@ -1,6 +1,18 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+}
+
+// Inject Fokk AI API key from CI secret or local.properties (never hard-coded in source)
+val fokkAiKey: String = System.getenv("FOKK_AI_KEY") ?: run {
+    val localProps = Properties()
+    val localFile = rootProject.file("local.properties")
+    if (localFile.exists()) {
+        localFile.inputStream().use { stream -> localProps.load(stream) }
+    }
+    localProps.getProperty("FOKK_AI_KEY") ?: ""
 }
 
 android {
@@ -11,10 +23,11 @@ android {
         applicationId = "com.adshield.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 262
-        versionName = "2.6.2"
+        versionCode = 263
+        versionName = "2.6.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "FOKK_AI_KEY", "\"$fokkAiKey\"")
     }
 
     signingConfigs {
@@ -54,6 +67,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 

@@ -37,7 +37,7 @@ object FokkTunnelEngine {
         PrivacyNode("45.61.188.134", 44499, false, "US", "Miami"),
         PrivacyNode("69.55.49.177", 38182, false, "US", "North Bergen"),
         PrivacyNode("134.209.29.120", 1080, false, "GB", "Slough"),
-        PrivacyNode("5.75.133.113", 10802, false, "DE", "Frankfurt"),
+        PrivacyNode("49.13.22.249", 10805, false, "DE", "Frankfurt"),
         PrivacyNode("188.166.178.163", 1088, false, "SG", "Singapore")
     )
 
@@ -67,8 +67,8 @@ object FokkTunnelEngine {
         PrivacyNode("77.91.90.27", 1082, false, "GB", "London")
     )
     val DE_NODES = listOf(
+        PrivacyNode("49.13.22.249", 10805, false, "DE", "Frankfurt"),
         PrivacyNode("5.75.133.113", 10802, false, "DE", "Frankfurt"),
-        PrivacyNode("49.13.22.249", 10805, false, "DE", "Nuremberg"),
         PrivacyNode("5.75.133.113", 10807, false, "DE", "Falkenstein")
     )
     val NL_NODES = listOf(
@@ -537,13 +537,14 @@ object FokkTunnelEngine {
         val eligibleRelays = INGRESS_RELAYS.filter { it.host != gatewayNode.host }.ifEmpty { INGRESS_RELAYS }
         val relayOffset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % eligibleRelays.size
 
-        for (i in eligibleRelays.indices) {
+        val maxRelayAttempts = minOf(2, eligibleRelays.size)
+        for (i in 0 until maxRelayAttempts) {
             val relay = eligibleRelays[(relayOffset + i) % eligibleRelays.size]
             var socket: Socket? = null
             try {
                 socket = Socket()
-                socket.connect(InetSocketAddress(relay.host, relay.port), 2_500)
-                socket.soTimeout = 10_000
+                socket.connect(InetSocketAddress(relay.host, relay.port), 1_500)
+                socket.soTimeout = 8_000
 
                 val outStream = socket.getOutputStream()
                 val inStream = socket.getInputStream()
@@ -649,8 +650,8 @@ object FokkTunnelEngine {
         var proxySock: Socket? = null
         try {
             proxySock = Socket()
-            proxySock.connect(InetSocketAddress(node.host, node.port), 2_000)
-            proxySock.soTimeout = 12_000
+            proxySock.connect(InetSocketAddress(node.host, node.port), 1_500)
+            proxySock.soTimeout = 8_000
 
             if (node.isHttpConnect) {
                 val connectReq = "CONNECT $targetHost:$targetPort HTTP/1.1\r\nHost: $targetHost:$targetPort\r\nProxy-Connection: Keep-Alive\r\n\r\n"

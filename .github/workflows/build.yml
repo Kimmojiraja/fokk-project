@@ -36,6 +36,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build Debug APK
+        env:
+          FOKK_AI_KEY: ${{ secrets.FOKK_AI_KEY }}
         run: |
           set -o pipefail
           gradle assembleDebug --stacktrace 2>&1 | tee build.log
