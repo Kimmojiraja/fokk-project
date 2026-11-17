@@ -333,11 +333,19 @@
         }
         selected.sort((a, b) => a.index - b.index);
 
+        function cleanSentenceItem(str) {
+            return (str || '')
+                .replace(/^[\s•*–—\-\d.)\]]+/g, '')
+                .replace(/^[\s“"‘']+/, '')
+                .replace(/[\s”"’']+$/, '')
+                .trim();
+        }
+
         // Synthesize Executive Brief (Cohesive 1-2 sentence narrative)
         let executiveSummary = "";
         if (selected.length > 0) {
-            const lead = selected[0].sentence.replace(/^[\s“"‘']+/, '').replace(/[\s”"’']+$/, '');
-            const second = selected.length > 1 ? selected[1].sentence.replace(/^[\s“"‘']+/, '').replace(/[\s”"’']+$/, '') : '';
+            const lead = cleanSentenceItem(selected[0].sentence);
+            const second = selected.length > 1 ? cleanSentenceItem(selected[1].sentence) : '';
             if (second && !second.toLowerCase().includes(lead.slice(0, 25).toLowerCase())) {
                 const secondClean = second.charAt(0).toLowerCase() + second.slice(1);
                 executiveSummary = `${lead} Furthermore, ${secondClean}`;
@@ -345,11 +353,11 @@
                 executiveSummary = lead;
             }
         } else {
-            executiveSummary = rawSentences[0];
+            executiveSummary = cleanSentenceItem(rawSentences[0]);
         }
 
         // Key Insights & Analysis bullets (distinct takeaways)
-        const bullets = selected.map(item => item.sentence);
+        const bullets = selected.map(item => cleanSentenceItem(item.sentence)).filter(b => b.length > 10);
 
         // Extract Key Figures & Metrics
         const metricRegex = /(?:\$\d+(?:\.\d+)?\s*(?:billion|million|trillion|k|m|b)?|\d+(?:\.\d+)?%|\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b|\b20\d{2}\b)/gi;

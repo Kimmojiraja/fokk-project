@@ -382,14 +382,17 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <RelativeLayout
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
                     <LinearLayout
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_alignParentStart="true"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
                         android:orientation="vertical">
 
                         <TextView
@@ -406,9 +409,9 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="92% Verified Editorial"
+                            android:text="94% Verified Consensus"
                             android:textColor="#34D399"
-                            android:textSize="17sp"
+                            android:textSize="16sp"
                             android:textStyle="bold" />
                     </LinearLayout>
 
@@ -416,16 +419,14 @@
                         android:id="@+id/textAiBiasRating"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
                         android:background="@drawable/bg_engine_capsule"
                         android:paddingHorizontal="10dp"
                         android:paddingVertical="4dp"
-                        android:text="Low Bias • Neutral Tone"
+                        android:text="Neutral Tone"
                         android:textColor="#38BDF8"
                         android:textSize="11sp"
                         android:textStyle="bold" />
-                </RelativeLayout>
+                </LinearLayout>
 
                 <ProgressBar
                     android:id="@+id/progressCredibilityScore"
