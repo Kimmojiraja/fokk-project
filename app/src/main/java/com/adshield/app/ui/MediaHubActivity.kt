@@ -7929,29 +7929,39 @@ open class MediaHubActivity : AppCompatActivity() {
             val isSensational = sensationalKeywords.any { titleLower.contains(it) || ctxLower.contains(it) }
 
             // Determine content classification
-            val (credScore, credLabel, verdictColor, biasRating, layer1Text, layer2Text, layer3Text) = when {
-                isEditorial -> listOf(
+            data class ForensicAuditResult(
+                val credScore: Int,
+                val credLabel: String,
+                val verdictColor: String,
+                val biasRating: String,
+                val layer1Text: String,
+                val layer2Text: String,
+                val layer3Text: String
+            )
+
+            val audit = when {
+                isEditorial -> ForensicAuditResult(
                     93, "Verified Editorial Consensus",
                     "#34D399", "Neutral Tone",
                     "Verified canonical origin ($sourceHost). Cryptographic TLS transport with zero detected phishing, clickbait masking, or malicious redirects.",
                     "Objective editorial framework with documented attribution. Fact-first tone with low emotive sensationalism and established editorial standards.",
                     "${maxOf(1, bulletsCount * 5)} analytical passages cross-examined against primary wire records and verified encyclopedic archives."
                 )
-                isSocial -> listOf(
+                isSocial -> ForensicAuditResult(
                     62, "First-Person Report / Anecdotal Claim",
                     "#FBBF24", "Subjective / Personal",
                     "Verified domain identity ($sourceHost). Platform-authenticated post with no external corroboration or editorial oversight.",
                     "First-person personal narrative. Subjective experience reported without independent verification or documented third-party attribution.",
                     "Claims extracted from personal account. No cross-referenced wire records. Credibility reflects individual experience, not verified public fact."
                 )
-                isSensational -> listOf(
+                isSensational -> ForensicAuditResult(
                     41, "Contested Claim — Verify Before Sharing",
                     "#F87171", "High Sensationalism",
                     "Domain flagged for elevated sensationalism index ($sourceHost). Requires independent primary source verification before accepting claims.",
                     "Rhetorical framing detected with high emotive language and low factual density. Attribution absent or unverifiable.",
                     "Low empirical density. Claims unsupported by traceable primary wire sources. Cross-examination against encyclopedic archives returned low overlap."
                 )
-                else -> listOf(
+                else -> ForensicAuditResult(
                     76, "Partial Consensus — Moderate Confidence",
                     "#38BDF8", "Balanced Tone",
                     "Verified origin domain ($sourceHost). Standard TLS transport detected. No phishing or redirect anomalies detected.",
@@ -7960,25 +7970,15 @@ open class MediaHubActivity : AppCompatActivity() {
                 )
             }
 
-            @Suppress("UNCHECKED_CAST")
-            val parts = listOf(credScore, credLabel, verdictColor, biasRating, layer1Text, layer2Text, layer3Text) as List<Any>
-            val credScoreVal = (parts[0] as Int)
-            val credLabelVal = parts[1] as String
-            val verdictColorVal = parts[2] as String
-            val biasRatingVal = parts[3] as String
-            val layer1TextVal = parts[4] as String
-            val layer2TextVal = parts[5] as String
-            val layer3TextVal = parts[6] as String
-
-            sheetBinding.textAiCredibilityScore.text = "$credScoreVal% $credLabelVal"
-            sheetBinding.textAiCredibilityScore.setTextColor(Color.parseColor(verdictColorVal))
-            sheetBinding.progressCredibilityScore.progress = credScoreVal
+            sheetBinding.textAiCredibilityScore.text = "${audit.credScore}% ${audit.credLabel}"
+            sheetBinding.textAiCredibilityScore.setTextColor(Color.parseColor(audit.verdictColor))
+            sheetBinding.progressCredibilityScore.progress = audit.credScore
             sheetBinding.progressCredibilityScore.progressTintList =
-                android.content.res.ColorStateList.valueOf(Color.parseColor(verdictColorVal))
-            sheetBinding.textAiBiasRating.text = biasRatingVal
-            sheetBinding.textAiSourceReputation.text = layer1TextVal
-            sheetBinding.textAiBiasAnalysis.text = layer2TextVal
-            sheetBinding.textAiEvidenceDensity.text = layer3TextVal
+                android.content.res.ColorStateList.valueOf(Color.parseColor(audit.verdictColor))
+            sheetBinding.textAiBiasRating.text = audit.biasRating
+            sheetBinding.textAiSourceReputation.text = audit.layer1Text
+            sheetBinding.textAiBiasAnalysis.text = audit.layer2Text
+            sheetBinding.textAiEvidenceDensity.text = audit.layer3Text
 
             // Unboxed Key Verifiable Factual Claims
             sheetBinding.layoutAiExtractedClaims.removeAllViews()
@@ -8026,6 +8026,9 @@ open class MediaHubActivity : AppCompatActivity() {
                 claimRow.addView(claimTv)
                 sheetBinding.layoutAiExtractedClaims.addView(claimRow)
             }
+
+            // Forward declaration for interactive follow-up questions
+            var askAiQuestionFunc: ((String) -> Unit)? = null
 
             // Interactive Ask AI Chat Assistant (Open-World Unboxed Canvas & Typewriter Stream)
             fun renderChatAnswerCard(
@@ -8372,7 +8375,7 @@ open class MediaHubActivity : AppCompatActivity() {
                             isFocusable = true
                             setOnClickListener {
                                 sheetBinding.editAiUserQuestion.setText(fq)
-                                askAiQuestion(fq)
+                                askAiQuestionFunc?.invoke(fq)
                             }
                         }
                         val fqTv = TextView(this@MediaHubActivity).apply {
@@ -8570,6 +8573,7 @@ open class MediaHubActivity : AppCompatActivity() {
                     }
                 }
             }
+            askAiQuestionFunc = { q -> askAiQuestion(q) }
 
             sheetBinding.btnSendAiQuestion.setOnClickListener {
                 val q = sheetBinding.editAiUserQuestion.text?.toString()?.trim().orEmpty()
