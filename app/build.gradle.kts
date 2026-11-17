@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -5,10 +7,12 @@ plugins {
 
 // Inject Fokk AI API key from CI secret or local.properties (never hard-coded in source)
 val fokkAiKey: String = System.getenv("FOKK_AI_KEY") ?: run {
-    val localProps = java.util.Properties()
+    val localProps = Properties()
     val localFile = rootProject.file("local.properties")
-    if (localFile.exists()) localFile.inputStream().use { localProps.load(it) }
-    localProps.getProperty("FOKK_AI_KEY", "")
+    if (localFile.exists()) {
+        localFile.inputStream().use { stream -> localProps.load(stream) }
+    }
+    localProps.getProperty("FOKK_AI_KEY") ?: ""
 }
 
 android {
