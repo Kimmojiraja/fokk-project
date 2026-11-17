@@ -931,345 +931,303 @@
         </LinearLayout>
 
         <!-- 4. MODULAR FEATURE SUB-PAGES NAVIGATION HUB (Unboxed Clean List) -->
-        <com.google.android.material.card.MaterialCardView
+        <!-- 4. MODULAR FEATURE SUB-PAGES NAVIGATION HUB (Open World Premium List) -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
             android:layout_marginBottom="8dp"
-            app:cardBackgroundColor="#121214"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="0dp">
+            android:orientation="vertical">
 
-            <LinearLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="12dp">
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="8dp"
+                android:text="Feature Hubs"
+                android:textColor="@color/text_secondary"
+                android:textSize="11.5sp"
+                android:textStyle="bold"
+                android:textAllCaps="true"
+                android:letterSpacing="0.06" />
+
+            <!-- 1. Fokk Pro -->
+            <LinearLayout
+                android:id="@+id/rowNavFundraising"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="4dp">
+
+                <ImageView
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="@drawable/bg_circle_icon_button"
+                    android:padding="5dp"
+                    android:src="@drawable/ic_crown"
+                    app:tint="#F59E0B" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="6dp"
-                    android:text="Feature Hubs"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11.5sp"
-                    android:textStyle="bold"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.06" />
+                    android:layout_marginStart="12dp"
+                    android:text="Fokk Pro"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
-                <!-- 1. Fokk Pro -->
-                <LinearLayout
-                    android:id="@+id/rowNavFundraising"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="6dp">
-
-                    <ImageView
-                        android:layout_width="26dp"
-                        android:layout_height="26dp"
-                        android:background="@drawable/bg_circle_icon_button"
-                        android:padding="5dp"
-                        android:src="@drawable/ic_crown"
-                        app:tint="#F59E0B" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:text="Fokk Pro"
-                        android:textColor="@color/text_primary"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:background="@drawable/bg_badge_pill"
-                        android:paddingHorizontal="6dp"
-                        android:paddingVertical="1dp"
-                        android:text="PRO"
-                        android:textColor="#F59E0B"
-                        android:textSize="9sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="#222225" />
-
-                <!-- 2. General & Search Engines -->
-                <LinearLayout
-                    android:id="@+id/rowNavGeneral"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="6dp">
-
-                    <ImageView
-                        android:layout_width="26dp"
-                        android:layout_height="26dp"
-                        android:background="@drawable/bg_circle_icon_button"
-                        android:padding="5dp"
-                        android:src="@drawable/ic_settings"
-                        app:tint="#38BDF8" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:text="General &amp; Search Engines"
-                        android:textColor="@color/text_primary"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="#222225" />
-
-                <!-- 3. Shield & Ghost Stealth -->
-                <LinearLayout
-                    android:id="@+id/rowNavShield"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="6dp">
-
-                    <ImageView
-                        android:layout_width="26dp"
-                        android:layout_height="26dp"
-                        android:background="@drawable/bg_circle_icon_button"
-                        android:padding="5dp"
-                        android:src="@drawable/ic_shield_check"
-                        app:tint="#34D399" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:text="Shield &amp; Ghost Stealth"
-                        android:textColor="@color/text_primary"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="#222225" />
-
-                <!-- 4. Media, Gestures & PiP -->
-                <LinearLayout
-                    android:id="@+id/rowNavMedia"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="6dp">
-
-                    <ImageView
-                        android:layout_width="26dp"
-                        android:layout_height="26dp"
-                        android:background="@drawable/bg_circle_icon_button"
-                        android:padding="5dp"
-                        android:src="@drawable/ic_video"
-                        app:tint="#A855F7" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:text="Media, Gestures &amp; PiP"
-                        android:textColor="@color/text_primary"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="#222225" />
-
-                <!-- 5. Biometric Vault & Stealth Decoy -->
-                <LinearLayout
-                    android:id="@+id/rowNavVault"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="6dp">
-
-                    <ImageView
-                        android:layout_width="26dp"
-                        android:layout_height="26dp"
-                        android:background="@drawable/bg_circle_icon_button"
-                        android:padding="5dp"
-                        android:src="@drawable/ic_lock"
-                        app:tint="#F59E0B" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:text="Biometric Vault &amp; Stealth Decoy"
-                        android:textColor="@color/text_primary"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="#222225" />
-
-                <!-- 6. Extensions & User Scripts -->
-                <LinearLayout
-                    android:id="@+id/rowNavExtensions"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="6dp">
-
-                    <ImageView
-                        android:layout_width="26dp"
-                        android:layout_height="26dp"
-                        android:background="@drawable/bg_circle_icon_button"
-                        android:padding="5dp"
-                        android:src="@drawable/ic_extension"
-                        app:tint="#818CF8" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:text="Extensions &amp; User Scripts"
-                        android:textColor="@color/text_primary"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="#222225" />
-
-                <!-- 7. Fokk Shield Protection (Second to Last, No Arrow) -->
-                <LinearLayout
-                    android:id="@+id/rowNavShieldStatus"
-                    android:layout_width="match_parent"
-                    android:layout_height="46dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="6dp">
-
-                    <ImageView
-                        android:layout_width="26dp"
-                        android:layout_height="26dp"
-                        android:background="@drawable/bg_circle_icon_button"
-                        android:padding="5dp"
-                        android:src="@drawable/ic_shield_check"
-                        app:tint="#34D399" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Fokk Shield Protection"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Shield active · Tracking &amp; ad defense"
-                            android:textColor="#34D399"
-                            android:textSize="10.5sp" />
-                    </LinearLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/bg_badge_pill"
-                        android:paddingHorizontal="6dp"
-                        android:paddingVertical="1dp"
-                        android:text="ACTIVE"
-                        android:textColor="#34D399"
-                        android:textSize="9sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="#222225" />
-
-                <!-- 8. About, Privacy & Community -->
-                <LinearLayout
-                    android:id="@+id/rowNavAbout"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="6dp">
-
-                    <ImageView
-                        android:layout_width="26dp"
-                        android:layout_height="26dp"
-                        android:background="@drawable/bg_circle_icon_button"
-                        android:padding="5dp"
-                        android:src="@drawable/ic_info"
-                        app:tint="#38BDF8" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:text="About, Privacy &amp; Community"
-                        android:textColor="@color/text_primary"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_badge_pill"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="1dp"
+                    android:text="PRO"
+                    android:textColor="#F59E0B"
+                    android:textSize="9sp"
+                    android:textStyle="bold" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+
+            <!-- 2. General & Search Engines -->
+            <LinearLayout
+                android:id="@+id/rowNavGeneral"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="4dp">
+
+                <ImageView
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="@drawable/bg_circle_icon_button"
+                    android:padding="5dp"
+                    android:src="@drawable/ic_settings"
+                    app:tint="#38BDF8" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:text="General &amp; Search Engines"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- 3. Shield & Ghost Stealth -->
+            <LinearLayout
+                android:id="@+id/rowNavShield"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="4dp">
+
+                <ImageView
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="@drawable/bg_circle_icon_button"
+                    android:padding="5dp"
+                    android:src="@drawable/ic_shield_check"
+                    app:tint="#34D399" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:text="Shield &amp; Ghost Stealth"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- 4. Media, Gestures & PiP -->
+            <LinearLayout
+                android:id="@+id/rowNavMedia"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="4dp">
+
+                <ImageView
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="@drawable/bg_circle_icon_button"
+                    android:padding="5dp"
+                    android:src="@drawable/ic_video"
+                    app:tint="#A855F7" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:text="Media, Gestures &amp; PiP"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- 5. Biometric Vault & Stealth Decoy -->
+            <LinearLayout
+                android:id="@+id/rowNavVault"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="4dp">
+
+                <ImageView
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="@drawable/bg_circle_icon_button"
+                    android:padding="5dp"
+                    android:src="@drawable/ic_lock"
+                    app:tint="#F59E0B" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:text="Biometric Vault &amp; Stealth Decoy"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- 6. Extensions & User Scripts -->
+            <LinearLayout
+                android:id="@+id/rowNavExtensions"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="4dp">
+
+                <ImageView
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="@drawable/bg_circle_icon_button"
+                    android:padding="5dp"
+                    android:src="@drawable/ic_extension"
+                    app:tint="#818CF8" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:text="Extensions &amp; User Scripts"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- 7. Fokk Shield Protection -->
+            <LinearLayout
+                android:id="@+id/rowNavShieldStatus"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="4dp">
+
+                <ImageView
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="@drawable/bg_circle_icon_button"
+                    android:padding="5dp"
+                    android:src="@drawable/ic_shield_check"
+                    app:tint="#34D399" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Fokk Shield Protection"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Shield active · Tracking &amp; ad defense"
+                        android:textColor="#34D399"
+                        android:textSize="10.5sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_badge_pill"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="1dp"
+                    android:text="ACTIVE"
+                    android:textColor="#34D399"
+                    android:textSize="9sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- 8. About, Privacy & Community -->
+            <LinearLayout
+                android:id="@+id/rowNavAbout"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="4dp">
+
+                <ImageView
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="@drawable/bg_circle_icon_button"
+                    android:padding="5dp"
+                    android:src="@drawable/ic_info"
+                    app:tint="#38BDF8" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:text="About, Privacy &amp; Community"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
 
         <!-- Hidden / Backward Compatibility Anchor Views for Activity bindings -->
         <LinearLayout

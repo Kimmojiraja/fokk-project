@@ -10,14 +10,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="20dp">
 
         <!-- Handle Indicator -->
         <View
             android:layout_width="36dp"
             android:layout_height="4dp"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="14dp"
             android:background="#1E293B" />
 
         <!-- Header -->
@@ -26,7 +26,7 @@
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:layout_marginBottom="14dp">
+            android:layout_marginBottom="18dp">
 
             <ImageView
                 android:layout_width="22dp"
@@ -54,429 +54,425 @@
                 android:contentDescription="Close" />
         </LinearLayout>
 
-        <!-- 1. Default Browser Card -->
-        <com.google.android.material.card.MaterialCardView
+        <!-- 1. Default Browser Row -->
+        <LinearLayout
             android:id="@+id/cardSetDefaultBrowser"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="16dp"
+            android:background="?attr/selectableItemBackground"
             android:clickable="true"
             android:focusable="true"
-            app:cardBackgroundColor="#121826"
-            app:cardCornerRadius="14dp"
-            app:strokeColor="#1E2A3E"
-            app:strokeWidth="1dp">
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingVertical="10dp"
+            android:paddingHorizontal="4dp">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_launch"
+                app:tint="#38BDF8" />
 
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Set as Default Browser"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14.5sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Open links securely with built-in ad defense"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_arrow_forward"
+                app:tint="@color/text_secondary" />
+        </LinearLayout>
+
+        <!-- 2. Search Engines Selection -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="8dp"
+                android:text="DEFAULT SEARCH ENGINE"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
+
+            <!-- Ecosia -->
+            <LinearLayout
+                android:id="@+id/rowEngineEcosia"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="14dp">
+                android:paddingHorizontal="4dp">
 
                 <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_launch"
-                    app:tint="#38BDF8" />
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_engine_ecosia" />
 
-                <LinearLayout
+                <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
+                    android:layout_marginStart="10dp"
                     android:layout_weight="1"
+                    android:text="Ecosia (Eco-friendly)"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13.5sp" />
+
+                <RadioButton
+                    android:id="@+id/radioEngineEcosia"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:clickable="false"
+                    app:buttonTint="@color/fokk_cyan" />
+            </LinearLayout>
+
+            <!-- DuckDuckGo -->
+            <LinearLayout
+                android:id="@+id/rowEngineDdg"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="4dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_engine_duckduckgo" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:text="DuckDuckGo (Private)"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13.5sp" />
+
+                <RadioButton
+                    android:id="@+id/radioEngineDdg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:clickable="false"
+                    app:buttonTint="@color/fokk_cyan" />
+            </LinearLayout>
+
+            <!-- Brave Search -->
+            <LinearLayout
+                android:id="@+id/rowEngineBrave"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="4dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_engine_brave" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:text="Brave Search (Independent)"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13.5sp" />
+
+                <RadioButton
+                    android:id="@+id/radioEngineBrave"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:clickable="false"
+                    app:buttonTint="@color/fokk_cyan" />
+            </LinearLayout>
+
+            <!-- Google -->
+            <LinearLayout
+                android:id="@+id/rowEngineGoogle"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="4dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_engine_google" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:text="Google"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13.5sp" />
+
+                <RadioButton
+                    android:id="@+id/radioEngineGoogle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:clickable="false"
+                    app:buttonTint="@color/fokk_cyan" />
+            </LinearLayout>
+
+            <!-- Startpage -->
+            <LinearLayout
+                android:id="@+id/rowEngineStartpage"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="4dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_engine_startpage" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:text="Startpage (Google results privately)"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13.5sp" />
+
+                <RadioButton
+                    android:id="@+id/radioEngineStartpage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:clickable="false"
+                    app:buttonTint="@color/fokk_cyan" />
+            </LinearLayout>
+
+            <!-- Microsoft Bing -->
+            <LinearLayout
+                android:id="@+id/rowEngineBing"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="4dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_engine_bing" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:text="Microsoft Bing (Copilot AI)"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13.5sp" />
+
+                <RadioButton
+                    android:id="@+id/radioEngineBing"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:clickable="false"
+                    app:buttonTint="@color/fokk_cyan" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 3. Navigation & Appearance -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="8dp"
+                android:text="NAVIGATION &amp; APPEARANCE"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
+
+            <!-- Command Bar Position -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingVertical="8dp"
+                android:paddingHorizontal="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@id/switchToolbarPosition"
                     android:orientation="vertical">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Set as Default Browser"
+                        android:text="Command Bar Position"
                         android:textColor="@color/text_primary"
-                        android:textSize="14.5sp"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textToolbarPosLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Bottom (Thumb-friendly reach)"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchToolbarPosition"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    app:thumbTint="@color/fokk_cyan"
+                    app:trackTint="#1E2A3E" />
+            </RelativeLayout>
+
+            <!-- HTTPS-Only Mode -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingVertical="8dp"
+                android:paddingHorizontal="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@id/switchHttpsOnly"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="HTTPS-Only Enforcement"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Open links securely with built-in ad defense"
+                        android:text="Automatically upgrade HTTP connections to TLS"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
                 </LinearLayout>
 
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:src="@drawable/ic_arrow_forward"
-                    app:tint="@color/text_secondary" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- 2. Search Engines Selection -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardBackgroundColor="#121826"
-            app:cardCornerRadius="14dp"
-            app:strokeColor="#1E2A3E"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="14dp">
-
-                <TextView
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchHttpsOnly"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="10dp"
-                    android:text="Default Search Engine"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14.5sp"
-                    android:textStyle="bold" />
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:checked="true"
+                    app:thumbTint="#10B981"
+                    app:trackTint="#1E2A3E" />
+            </RelativeLayout>
 
-                <!-- Ecosia -->
-                <LinearLayout
-                    android:id="@+id/rowEngineEcosia"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_engine_ecosia" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:layout_weight="1"
-                        android:text="Ecosia (Eco-friendly)"
-                        android:textColor="@color/text_primary"
-                        android:textSize="13.5sp" />
-
-                    <RadioButton
-                        android:id="@+id/radioEngineEcosia"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:clickable="false"
-                        app:buttonTint="@color/fokk_cyan" />
-                </LinearLayout>
-
-                <!-- DuckDuckGo -->
-                <LinearLayout
-                    android:id="@+id/rowEngineDdg"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_engine_duckduckgo" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:layout_weight="1"
-                        android:text="DuckDuckGo (Private)"
-                        android:textColor="@color/text_primary"
-                        android:textSize="13.5sp" />
-
-                    <RadioButton
-                        android:id="@+id/radioEngineDdg"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:clickable="false"
-                        app:buttonTint="@color/fokk_cyan" />
-                </LinearLayout>
-
-                <!-- Brave Search -->
-                <LinearLayout
-                    android:id="@+id/rowEngineBrave"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_engine_brave" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:layout_weight="1"
-                        android:text="Brave Search (Independent)"
-                        android:textColor="@color/text_primary"
-                        android:textSize="13.5sp" />
-
-                    <RadioButton
-                        android:id="@+id/radioEngineBrave"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:clickable="false"
-                        app:buttonTint="@color/fokk_cyan" />
-                </LinearLayout>
-
-                <!-- Google -->
-                <LinearLayout
-                    android:id="@+id/rowEngineGoogle"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_engine_google" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:layout_weight="1"
-                        android:text="Google"
-                        android:textColor="@color/text_primary"
-                        android:textSize="13.5sp" />
-
-                    <RadioButton
-                        android:id="@+id/radioEngineGoogle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:clickable="false"
-                        app:buttonTint="@color/fokk_cyan" />
-                </LinearLayout>
-
-                <!-- Startpage -->
-                <LinearLayout
-                    android:id="@+id/rowEngineStartpage"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_engine_startpage" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:layout_weight="1"
-                        android:text="Startpage (Google results privately)"
-                        android:textColor="@color/text_primary"
-                        android:textSize="13.5sp" />
-
-                    <RadioButton
-                        android:id="@+id/radioEngineStartpage"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:clickable="false"
-                        app:buttonTint="@color/fokk_cyan" />
-                </LinearLayout>
-
-                <!-- Microsoft Bing -->
-                <LinearLayout
-                    android:id="@+id/rowEngineBing"
-                    android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_engine_bing" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:layout_weight="1"
-                        android:text="Microsoft Bing (Copilot AI)"
-                        android:textColor="@color/text_primary"
-                        android:textSize="13.5sp" />
-
-                    <RadioButton
-                        android:id="@+id/radioEngineBing"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:clickable="false"
-                        app:buttonTint="@color/fokk_cyan" />
-                </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- 3. Toolbar Position & Layout -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardBackgroundColor="#121826"
-            app:cardCornerRadius="14dp"
-            app:strokeColor="#1E2A3E"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
+            <!-- Daylight Mode (Light Theme) -->
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="14dp">
+                android:paddingVertical="8dp"
+                android:paddingHorizontal="4dp">
 
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentStart="true"
-                        android:layout_centerVertical="true"
-                        android:layout_toStartOf="@id/switchToolbarPosition"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Command Bar Position"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/textToolbarPosLabel"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="Bottom (Thumb-friendly reach)"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
-                    </LinearLayout>
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switchToolbarPosition"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        app:thumbTint="@color/fokk_cyan"
-                        app:trackTint="#1E2A3E" />
-                </RelativeLayout>
-
-                <!-- HTTPS-Only Mode -->
-                <RelativeLayout
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp">
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@id/switchLightMode"
+                    android:orientation="vertical">
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentStart="true"
-                        android:layout_centerVertical="true"
-                        android:layout_toStartOf="@id/switchHttpsOnly"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="HTTPS-Only Enforcement"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="Automatically upgrade HTTP connections to TLS"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
-                    </LinearLayout>
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switchHttpsOnly"
+                    <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:checked="true"
-                        app:thumbTint="#10B981"
-                        app:trackTint="#1E2A3E" />
-                </RelativeLayout>
+                        android:text="Daylight Mode (Light Theme)"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
 
-                <!-- 4. Daylight Mode (Light Theme) -->
-                <RelativeLayout
-                    android:layout_width="match_parent"
+                    <TextView
+                        android:id="@+id/textLightModeDesc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Switch to bright pearl appearance"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchLightMode"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentStart="true"
-                        android:layout_centerVertical="true"
-                        android:layout_toStartOf="@id/switchLightMode"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Daylight Mode (Light Theme)"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/textLightModeDesc"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="Switch to bright pearl appearance"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
-                    </LinearLayout>
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switchLightMode"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        app:thumbTint="@color/fokk_cyan"
-                        app:trackTint="#1E2A3E" />
-                </RelativeLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    app:thumbTint="@color/fokk_cyan"
+                    app:trackTint="#1E2A3E" />
+            </RelativeLayout>
+        </LinearLayout>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

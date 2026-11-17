@@ -1,5 +1,7 @@
 # Fokk Browser Project
 
+> **The lightweight browser that fact-checks what you read, privately.**
+
 <p align="center">
   <img width="800" alt="Fokk Browser Project" src="https://github.com/user-attachments/assets/70e9a0ca-0f16-46ad-ae70-c9cf176e186e" />
 </p>
@@ -16,7 +18,7 @@ Fokk was created out of frustration with how modern web browsers have quietly tu
 
 At the foundation of this speed is the AdShield engine. Rather than relying on fragile DOM-level cosmetic hiding or artificial playback manipulation like fast-forwarding ads at extreme speeds, AdShield operates at the earliest network boundary. By intercepting web requests and player payloads at document start (`document-start`), AdShield completely neutralizes ad slots, sponsored media sequences, and telemetry beacons before they can load into memory. This allows web applications to run at their intended speed without broken layouts or flickering player interfaces. Combined with Fokk's native media engine, users experience uninterrupted background audio, picture-in-picture video, and in-browser WebTorrent streaming directly over WebRTC without installing external downloaders or media utilities.
 
-To protect against internet service provider surveillance and network traffic fingerprinting, Fokk incorporates Fokk Relay—an oblivious split-trust transport architecture designed to decouple user identity from destination traffic. Requests are passed through separate cryptographic nodes such that no single server knows both who you are and where you are going. To further thwart advanced surveillance, Fokk injects packet timing micro-jitter into every session, actively breaking the statistical timing patterns used by deep packet inspection systems to identify encrypted traffic flows.
+To protect against internet service provider surveillance and network traffic fingerprinting while browsing, Fokk incorporates Fokk Relay—an in-browser privacy relay utilizing oblivious split-routing to separate user client IP addresses from destination hostnames. Unlike whole-device VPN tunnels that route unrelated background app traffic, Fokk Relay specifically defends web requests within the active browser session across independent proxy hops. To further resist deep packet inspection (DPI) and statistical traffic analysis, Fokk applies packet timing obfuscation with subtle micro-jitter, effectively preventing surveillance nodes from correlating request and response streams under a strict zero-log operational policy.
 
 In an online environment increasingly flooded with automated disinformation, deceptive claims, and synthetic media, private browsing alone is no longer enough. The Fokk AI Truth Engine brings real-time forensic auditing directly into your browsing experience. Operating locally with structured heuristic models and verifiable evidence databases, the Truth Engine evaluates claims, detects subtle media bias, and flags coordinated manipulation directly inside social feeds across platforms like X, Reddit, Threads, and YouTube. It provides instant, objective context badges right where you read, helping you navigate complex narratives with clarity while ensuring your browsing habits remain strictly private.
 

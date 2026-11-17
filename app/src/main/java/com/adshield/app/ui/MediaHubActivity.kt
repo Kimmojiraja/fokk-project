@@ -6682,8 +6682,8 @@ open class MediaHubActivity : AppCompatActivity() {
 
         b.btnVpnInfo.setOnClickListener {
             AlertDialog.Builder(this)
-                .setTitle("About Fokk Privacy Architecture")
-                .setMessage("Fokk uses next-generation Oblivious Split-Trust & Mixnet architecture.\n\n• Oblivious Split-Trust (OHTTP/MASQUE): Your connection is split between an Ingress Relay and an Egress Gateway. The Ingress Relay sees your IP but cannot see your destination; the Egress Gateway accesses your destination but never knows your IP. No single entity ever knows who you are and where you are going.\n\n• Decentralized Mixnet & Timing Obfuscation: In Pro mode, traffic micro-jitter obfuscates packet sizes and intervals to defeat ISP traffic analysis and DPI surveillance.\n\n• Zero Logs: Built cryptographically to guarantee absolute zero-log privacy.")
+                .setTitle("About Fokk Relay Architecture")
+                .setMessage("Fokk Relay is an in-browser privacy relay that protects in-app browsing traffic.\n\n• Oblivious Routing: Web requests are routed through separate proxy hops designed to dissociate your client IP from destination hostnames.\n\n• Timing Obfuscation: In Pro mode, packet timing jitter introduces micro-delays to resist DPI traffic analysis and ISP fingerprinting.\n\n• Ephemeral In-Memory Proxying: Operates under a strict zero-log operational policy with ephemeral in-memory processing. Note: Fokk Relay secures in-browser traffic only; system-wide background apps are not routed through the relay.")
                 .setPositiveButton("Got it", null)
                 .show()
         }
@@ -6707,7 +6707,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 b.textVpnPowerSub.text = "Oblivious Split-Trust active"
                 b.vpnRadarRing.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#10B981"))
                 b.btnVpnPower.imageTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#10B981"))
-                b.textVpnStatusPill.text = "SPLIT-TRUST ACTIVE • ZERO LOGS"
+                b.textVpnStatusPill.text = "IN-BROWSER RELAY ACTIVE"
                 b.textVpnStatusPill.setTextColor(android.graphics.Color.parseColor("#10B981"))
                 b.textVpnExitIp.text = "Oblivious Tunnel Active"
                 b.textVpnExitIp.setTextColor(android.graphics.Color.parseColor("#10B981"))
@@ -6717,7 +6717,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 b.textVpnPowerSub.text = "Your real IP is visible"
                 b.vpnRadarRing.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#1E293B"))
                 b.btnVpnPower.imageTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#94A3B8"))
-                b.textVpnStatusPill.text = "UNPROTECTED • REAL IP EXPOSED"
+                b.textVpnStatusPill.text = "DIRECT CONNECTION"
                 b.textVpnStatusPill.setTextColor(android.graphics.Color.parseColor("#F43F5E"))
                 b.textVpnExitIp.text = "Direct (Real IP Exposed)"
                 b.textVpnExitIp.setTextColor(android.graphics.Color.parseColor("#F43F5E"))
@@ -6737,8 +6737,8 @@ open class MediaHubActivity : AppCompatActivity() {
             val isPro = com.adshield.app.engine.VpnEngine.isProModeEnabled(this)
             b.textVpnProtocol.text = when (activeMode) {
                 com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "Direct (Unencrypted)"
-                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> if (isPro) "Decentralized Mixnet ($locationLabel)" else "Oblivious Split-Trust ($locationLabel)"
-                else -> if (isPro) "Decentralized Mixnet (Multi-Hop)" else "Oblivious Split-Trust (OHTTP/MASQUE)"
+                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> if (isPro) "Fokk Relay Pro ($locationLabel)" else "Fokk Relay ($locationLabel)"
+                else -> if (isPro) "Fokk Relay Pro (Multi-Hop)" else "Fokk Relay (Auto)"
             }
 
             b.radioModeTor.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.FAST || activeMode == com.adshield.app.engine.VpnEngine.VpnMode.TOR || activeMode == com.adshield.app.engine.VpnEngine.VpnMode.RELAY)
@@ -6814,13 +6814,13 @@ open class MediaHubActivity : AppCompatActivity() {
         val isPro = com.adshield.app.engine.VpnEngine.isProModeEnabled(this)
         b.switchProActivation.isChecked = isPro
         b.textProStatusHeader.text = if (isPro) "Fokk Pro Active" else "Fokk Pro Inactive"
-        b.textProStatusSub.text = if (isPro) "Oblivious Split-Trust & Mixnet active" else "Standard routing active"
+        b.textProStatusSub.text = if (isPro) "Fokk Relay Pro & Timing Obfuscation active" else "Standard routing active"
 
         b.switchProActivation.setOnCheckedChangeListener { _, isChecked ->
             com.adshield.app.engine.VpnEngine.setProModeEnabled(this, isChecked)
             com.adshield.app.engine.FokkTunnelEngine.isProMode = isChecked
             b.textProStatusHeader.text = if (isChecked) "Fokk Pro Active" else "Fokk Pro Inactive"
-            b.textProStatusSub.text = if (isChecked) "Oblivious Split-Trust & Mixnet active" else "Standard routing active"
+            b.textProStatusSub.text = if (isChecked) "Fokk Relay Pro & Timing Obfuscation active" else "Standard routing active"
             val msg = if (isChecked) "Fokk Pro Privacy Network Activated" else "Standard Network Activated"
             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
         }
