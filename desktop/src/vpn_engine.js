@@ -145,6 +145,7 @@ class VpnEngine extends EventEmitter {
         this.activeSessions = new Set();
         this.torProcess = null;
         this.torPort = null;
+        this.lastTorMode = null;
         this.routeHealthTimer = null;
 
         this.loadConfig();
@@ -331,9 +332,8 @@ class VpnEngine extends EventEmitter {
     }
 
     async ensureTorRunning() {
-        // Only report Tor when this engine owns the Tor process. A random local
-        // SOCKS listener is not proof that traffic is routed through Tor.
-        if (this.torProcess && this.torPort && await checkSocks5Listener(this.torPort, '127.0.0.1', 800)) {
+        // Only report Tor when this engine owns the Tor process, is on the requested mode, and socket is alive
+        if (this.torProcess && this.torPort && this.lastTorMode === this.activeMode && await checkSocks5Listener(this.torPort, '127.0.0.1', 800)) {
             return this.torPort;
         }
 
@@ -389,8 +389,22 @@ class VpnEngine extends EventEmitter {
                 '--Log', 'notice stdout'
             );
 
+            // Add regional exit nodes based on active relay mode
+            let exitNodesArg = null;
+            if (this.activeMode === 'relay_eu') {
+                exitNodesArg = '{de},{gb},{fr},{nl},{ch},{se},{es},{it}';
+            } else if (this.activeMode === 'relay_am') {
+                exitNodesArg = '{us},{ca},{br},{mx}';
+            } else if (this.activeMode === 'relay_as') {
+                exitNodesArg = '{jp},{sg},{au},{kr},{hk}';
+            }
+            if (exitNodesArg) {
+                args.push('--ExitNodes', exitNodesArg, '--StrictNodes', '0');
+            }
+
             this.torProcess = spawn(torBin, args, { env, cwd: torRoot, detached: false });
             this.torPort = chosenPort;
+            this.lastTorMode = this.activeMode;
 
             const captureStartupLog = chunk => {
                 startupLog = `${startupLog}${chunk.toString('utf8')}`.slice(-2_000);
@@ -491,15 +505,16 @@ class VpnEngine extends EventEmitter {
             if (this.killSwitch) {
                 await this.applyProxyRules('127.0.0.1:9');
             }
-            if (this.activeMode !== 'tor') await this.stopEmbeddedTor();
+            const isTorBased = this.activeMode === 'tor' || this.activeMode.startsWith('relay_');
+            if (!isTorBased) await this.stopEmbeddedTor();
             let proxyRules = '';
             let locationName = '';
 
-            if (this.activeMode === 'tor') {
+            if (isTorBased) {
                 const torPort = await this.ensureTorRunning();
                 if (torPort) {
                     proxyRules = `socks5://127.0.0.1:${torPort}`;
-                    locationName = 'Tor network (exit varies)';
+                    locationName = PRESET_LOCATIONS[this.activeMode]?.name || 'Fokk Relay Network';
                 } else {
                     throw new Error('The bundled Tor runtime is missing from this desktop build. Routing was not enabled.');
                 }

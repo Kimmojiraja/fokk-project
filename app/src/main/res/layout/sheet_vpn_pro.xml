@@ -250,6 +250,48 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Split-Trust Security Architecture Banner -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_stat_chip"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_shield_check"
+                    app:tint="#10B981"
+                    android:contentDescription="Security Check" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="Split-Trust Zero-Knowledge Architecture"
+                    android:textColor="#10B981"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Dual-Hop Oblivious Chaining cryptographically separates your real IP from visited sites. Hop 1 shields identity; Hop 2 connects to the web. Zero single entity knows both who you are and where you browse. Encrypted DNS-over-HTTPS built in."
+                android:textColor="#94A3B8"
+                android:textSize="11sp"
+                android:lineSpacingExtra="1.5dp" />
+        </LinearLayout>
+
         <!-- Freemium Guarantee Note -->
         <TextView
             android:layout_width="match_parent"

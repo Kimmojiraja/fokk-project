@@ -27,6 +27,8 @@ TARGET_COUNTRIES = [
 NODES_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "nodes.json")
 
 ctx = ssl.create_default_context()
+ctx.check_hostname = True
+ctx.verify_mode = ssl.CERT_REQUIRED
 
 try:
     import socks

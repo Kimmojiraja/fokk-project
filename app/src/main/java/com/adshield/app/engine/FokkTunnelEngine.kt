@@ -37,6 +37,7 @@ object FokkTunnelEngine {
         PrivacyNode("45.61.188.134", 44499, false, "US", "Miami"),
         PrivacyNode("69.55.49.177", 38182, false, "US", "North Bergen"),
         PrivacyNode("134.209.29.120", 1080, false, "GB", "Slough"),
+        PrivacyNode("5.75.133.113", 10802, false, "DE", "Frankfurt"),
         PrivacyNode("188.166.178.163", 1088, false, "SG", "Singapore")
     )
 
@@ -438,7 +439,8 @@ object FokkTunnelEngine {
                 val host = hostHeader.substringBefore(":")
                 val port = hostHeader.substringAfter(":", "80").toIntOrNull() ?: 80
 
-                val connectedSocket = connectToNode(host, port)
+                // Plain HTTP: route strictly through trusted Ingress relay backbone to prevent sniffing
+                val connectedSocket = connectThroughIngressDirect(host, port) ?: connectToNode(host, port)
                 if (connectedSocket != null) {
                     connectedSocket.getOutputStream().write(headerBytes, 0, totalRead)
                     connectedSocket.getOutputStream().flush()
@@ -458,24 +460,41 @@ object FokkTunnelEngine {
         }
     }
 
+    private fun connectThroughIngressDirect(targetHost: String, targetPort: Int): Socket? {
+        val relays = INGRESS_RELAYS.filter { isNodeAlive(it) }.ifEmpty { INGRESS_RELAYS }
+        val rOffset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % relays.size
+        for (k in relays.indices) {
+            val relay = relays[(rOffset + k) % relays.size]
+            val s = connectSingleHop(targetHost, targetPort, relay)
+            if (s != null) {
+                markNodeSuccess(relay)
+                return s
+            }
+            markNodeFailed(relay)
+        }
+        return null
+    }
+
     private fun connectToNode(targetHost: String, targetPort: Int): Socket? {
         val countryNodes = getNodesForRegion(currentRegion)
 
-        // 1. Try healthy country/regional nodes
+        // 1. Try healthy country/regional nodes via Dual-Hop Oblivious Chaining (Hop 1 Ingress shields user IP -> Hop 2 Egress)
         val healthyCountryNodes = countryNodes.filter { isNodeAlive(it) }.ifEmpty { countryNodes }
         if (healthyCountryNodes.isNotEmpty()) {
             val offset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % healthyCountryNodes.size
             for (k in healthyCountryNodes.indices) {
                 val gatewayNode = healthyCountryNodes[(offset + k) % healthyCountryNodes.size]
-                val directSocket = connectSingleHop(targetHost, targetPort, gatewayNode)
-                if (directSocket != null) {
-                    markNodeSuccess(gatewayNode)
-                    return directSocket
-                }
+                // Oblivious Dual-Hop: Ingress Relay shields real user IP from Egress node
                 val splitSocket = connectSplitTrust(targetHost, targetPort, gatewayNode)
                 if (splitSocket != null) {
                     markNodeSuccess(gatewayNode)
                     return splitSocket
+                }
+                // Fallback to single hop only if multi-hop tunnel is unavailable
+                val directSocket = connectSingleHop(targetHost, targetPort, gatewayNode)
+                if (directSocket != null) {
+                    markNodeSuccess(gatewayNode)
+                    return directSocket
                 }
                 markNodeFailed(gatewayNode)
             }
@@ -489,7 +508,7 @@ object FokkTunnelEngine {
                 val cOffset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % continentalNodes.size
                 for (k in continentalNodes.indices.take(4)) {
                     val node = continentalNodes[(cOffset + k) % continentalNodes.size]
-                    val s = connectSingleHop(targetHost, targetPort, node) ?: connectSplitTrust(targetHost, targetPort, node)
+                    val s = connectSplitTrust(targetHost, targetPort, node) ?: connectSingleHop(targetHost, targetPort, node)
                     if (s != null) {
                         markNodeSuccess(node)
                         return s
@@ -500,19 +519,7 @@ object FokkTunnelEngine {
         }
 
         // 3. Guaranteed Uptime Fallback: Ingress Relay Backbone (never drop web traffic with 504)
-        val relays = INGRESS_RELAYS.filter { isNodeAlive(it) }.ifEmpty { INGRESS_RELAYS }
-        val rOffset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % relays.size
-        for (k in relays.indices) {
-            val relay = relays[(rOffset + k) % relays.size]
-            val s = connectSingleHop(targetHost, targetPort, relay)
-            if (s != null) {
-                markNodeSuccess(relay)
-                return s
-            }
-            markNodeFailed(relay)
-        }
-
-        return null
+        return connectThroughIngressDirect(targetHost, targetPort)
     }
 
     /**
