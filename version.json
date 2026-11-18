@@ -1,8 +1,8 @@
 {
-  "versionCode": 272,
-  "versionName": "2.7.2",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.7.2/app-debug.apk",
-  "changelog": "- Device-Wide Fokk Mesh: Added system-wide routing support via VpnService, routing all device apps and background traffic through the encrypted Fokk Mesh oblivious network.\n- Device Mesh Toggle: Added 'Fokk Mesh for entire device' option in the Fokk Mesh control sheet.\n- Persistent Notification and 1-Tap Disconnect: Added persistent foreground notification displaying active location with a single-tap Disconnect action that instantly reverts all traffic to direct.\n- Node Speed and Connection Stability: Overhauled connection timeouts, socket handshakes, and buffer throughput in FokkTunnelEngine to eliminate page loading stalls across all global nodes."
+  "versionCode": 280,
+  "versionName": "2.8.0",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.8.0/app-debug.apk",
+  "changelog": "- Fokk Mesh 2.0 Architecture: Complete rewrite of the mesh routing engine. Circuit pre-warming pool eliminates per-request handshake latency — circuits are ready before you click.\n- Signed Node Manifest: Node list is now cryptographically signed by the Fokk team. Any tampered or unsigned manifest is rejected. No unknown or unverified servers ever used.\n- Latency-Ranked Node Selection: All nodes are probed in parallel on startup. Only the fastest live nodes are used. Dead nodes are automatically excluded for 5 minutes.\n- Node Registry: Single source of truth for all relay data. Live manifest (24-hour cached) with certified builtin fallback. All 15 builtin nodes SSL-verified.\n- Legal Compliance: Removed all unverified random public proxy entries. Only explicitly registered Fokk relay nodes and SSL-verified servers are in any routing table.\n- Killswitch: If all circuits fail, the browser receives a 407 response. Traffic never falls through to a direct connection. No IP leaks under any failure mode."
 }
 
 

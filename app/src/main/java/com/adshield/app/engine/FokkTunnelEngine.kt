@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import java.io.InputStream
 import java.io.OutputStream
-import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
@@ -14,11 +13,21 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * High-performance in-app Privacy Tunnel Engine for Fokk VPN.
+ * Fokk Mesh 2.0 — High-Performance Privacy Tunnel Engine
  *
- * Runs a local loopback forwarder on 127.0.0.1 that securely routes
- * browser traffic through regional privacy nodes with instantaneous zero-drop fallback.
- * Guarantees that every page loads at full line speed without 502 errors or connection freezes.
+ * Architecture:
+ *   - FokkCircuitManager maintains a pool of pre-warmed 2-hop circuits
+ *     (ingress relay -> egress node) so every request gets a circuit instantly.
+ *   - FokkNodeProber runs in background to rank nodes by real latency and
+ *     mark dead nodes so they are never tried.
+ *   - NodeRegistry is the single source of truth for all node data,
+ *     reading from the signed FokkNodeManifest with certified builtin fallback.
+ *
+ * Trust model:
+ *   - Only nodes in the signed manifest OR the certified builtin list are used.
+ *   - No random public proxies. No unknown servers.
+ *   - Killswitch: if no circuit can be built, returns 407 to the browser.
+ *     Traffic NEVER falls through to a direct connection (no IP leaks).
  */
 object FokkTunnelEngine {
     private const val TAG = "FokkTunnelEngine"
@@ -26,364 +35,119 @@ object FokkTunnelEngine {
     data class PrivacyNode(
         val host: String,
         val port: Int,
-        val isHttpConnect: Boolean = true,
+        val isHttpConnect: Boolean = false,
         val country: String = "",
         val city: String = ""
     )
 
-    // Dedicated Oblivious Ingress Relays (First Hop: sees user IP, but destination is hidden)
-    val INGRESS_RELAYS = listOf(
-        PrivacyNode("45.61.188.134", 44499, false, "US", "Miami"),
-        PrivacyNode("69.55.49.177", 38182, false, "US", "North Bergen"),
-        PrivacyNode("134.209.29.120", 1080, false, "GB", "Slough"),
-        PrivacyNode("49.13.22.249", 10802, false, "DE", "Frankfurt"),
-        PrivacyNode("188.166.178.163", 1088, false, "SG", "Singapore")
+    // ---------------------------------------------------------------------------
+    // Region map — used by VpnEngine for display and region switching
+    // ---------------------------------------------------------------------------
+    val REGION_NODES: Map<String, String> = mapOf(
+        "AM" to "Americas",
+        "EU" to "Europe",
+        "AS" to "Asia & Pacific",
+        "US" to "United States",
+        "GB" to "United Kingdom",
+        "DE" to "Germany",
+        "NL" to "Netherlands",
+        "FR" to "France",
+        "SE" to "Sweden",
+        "CA" to "Canada",
+        "JP" to "Japan",
+        "KR" to "South Korea",
+        "SG" to "Singapore",
+        "HK" to "Hong Kong",
+        "IN" to "India"
     )
 
-    // Verified live transparent TLS exit nodes for Fokk Pro Dedicated Countries (44 Countries)
-    // Americas (10)
-    val US_NODES = listOf(
-        PrivacyNode("45.61.188.134", 44499, false, "US", "Miami"),
-        PrivacyNode("69.55.49.177", 38182, false, "US", "North Bergen"),
-        PrivacyNode("159.203.61.169", 1080, false, "US", "New York")
-    )
-    val CA_NODES = listOf(
-        PrivacyNode("184.170.251.30", 11288, false, "CA", "Toronto"),
-        PrivacyNode("184.75.221.82", 3118, true, "CA", "Montreal")
-    )
-    val MX_NODES = listOf(PrivacyNode("189.240.60.166", 9050, false, "MX", "Mexico City"))
-    val BR_NODES = listOf(PrivacyNode("177.54.144.130", 1080, false, "BR", "Sao Paulo"))
-    val AR_NODES = listOf(PrivacyNode("181.111.175.24", 1080, false, "AR", "Buenos Aires"))
-    val CL_NODES = listOf(PrivacyNode("190.114.255.45", 1080, false, "CL", "Santiago"))
-    val CO_NODES = listOf(PrivacyNode("181.143.218.170", 1080, false, "CO", "Bogota"))
-    val PE_NODES = listOf(PrivacyNode("190.222.187.98", 1080, false, "PE", "Lima"))
-    val CR_NODES = listOf(PrivacyNode("196.40.85.10", 1080, false, "CR", "San Jose"))
-    val PA_NODES = listOf(PrivacyNode("190.216.242.18", 1080, false, "PA", "Panama City"))
+    // ---------------------------------------------------------------------------
+    // Tunnel lifecycle
+    // ---------------------------------------------------------------------------
+    private val isRunning = AtomicBoolean(false)
+    private var serverSocket: ServerSocket? = null
 
-    // Europe (18)
-    val GB_NODES = listOf(
-        PrivacyNode("134.209.29.120", 1080, false, "GB", "Slough"),
-        PrivacyNode("77.91.90.27", 1082, false, "GB", "London")
-    )
-    val DE_NODES = listOf(
-        PrivacyNode("49.13.22.249", 10805, false, "DE", "Frankfurt"),
-        PrivacyNode("5.75.133.113", 10802, false, "DE", "Frankfurt"),
-        PrivacyNode("5.75.133.113", 10807, false, "DE", "Falkenstein")
-    )
-    val NL_NODES = listOf(
-        PrivacyNode("193.218.118.128", 1080, false, "NL", "Amsterdam"),
-        PrivacyNode("5.255.123.162", 1080, false, "NL", "Dronten")
-    )
-    val FR_NODES = listOf(
-        PrivacyNode("51.159.115.233", 1080, false, "FR", "Paris"),
-        PrivacyNode("163.172.189.131", 1080, false, "FR", "Roubaix")
-    )
-    val CH_NODES = listOf(PrivacyNode("178.209.51.242", 1080, false, "CH", "Zurich"))
-    val SE_NODES = listOf(PrivacyNode("171.25.158.95", 1080, false, "SE", "Stockholm"))
-    val NO_NODES = listOf(PrivacyNode("51.175.148.110", 1080, false, "NO", "Oslo"))
-    val FI_NODES = listOf(
-        PrivacyNode("65.21.252.66", 10811, false, "FI", "Helsinki"),
-        PrivacyNode("65.21.252.66", 10814, false, "FI", "Helsinki")
-    )
-    val ES_NODES = listOf(PrivacyNode("185.253.220.10", 1080, false, "ES", "Madrid"))
-    val IT_NODES = listOf(PrivacyNode("185.229.226.11", 1080, false, "IT", "Milan"))
-    val PL_NODES = listOf(PrivacyNode("185.180.13.15", 1080, false, "PL", "Warsaw"))
-    val IE_NODES = listOf(PrivacyNode("54.76.120.10", 1080, false, "IE", "Dublin"))
-    val BE_NODES = listOf(PrivacyNode("185.207.250.15", 1080, false, "BE", "Brussels"))
-    val AT_NODES = listOf(PrivacyNode("194.164.71.10", 1080, false, "AT", "Vienna"))
-    val CZ_NODES = listOf(PrivacyNode("89.185.230.12", 1080, false, "CZ", "Prague"))
-    val DK_NODES = listOf(PrivacyNode("185.125.204.10", 1080, false, "DK", "Copenhagen"))
-    val PT_NODES = listOf(PrivacyNode("185.113.140.20", 1080, false, "PT", "Lisbon"))
-    val RO_NODES = listOf(PrivacyNode("185.244.216.10", 1080, false, "RO", "Bucharest"))
+    @Volatile var localPort: Int = 0
+        private set
 
-    // Asia & Pacific (12)
-    val JP_NODES = listOf(
-        PrivacyNode("101.36.104.239", 10808, false, "JP", "Tokyo"),
-        PrivacyNode("101.36.104.46", 10808, false, "JP", "Osaka")
-    )
-    val KR_NODES = listOf(
-        PrivacyNode("121.169.46.116", 1090, false, "KR", "Suwon"),
-        PrivacyNode("211.188.50.146", 80, true, "KR", "Seoul")
-    )
-    val SG_NODES = listOf(
-        PrivacyNode("188.166.178.163", 1088, false, "SG", "Singapore"),
-        PrivacyNode("128.199.202.122", 1080, false, "SG", "Singapore")
-    )
-    val HK_NODES = listOf(
-        PrivacyNode("123.58.219.171", 10808, false, "HK", "Hong Kong"),
-        PrivacyNode("64.90.17.123", 555, false, "HK", "Hong Kong")
-    )
-    val IN_NODES = listOf(
-        PrivacyNode("183.87.145.150", 2080, false, "IN", "Mumbai"),
-        PrivacyNode("45.112.52.26", 8080, true, "IN", "Bengaluru")
-    )
-    val AU_NODES = listOf(PrivacyNode("139.99.144.10", 1080, false, "AU", "Sydney"))
-    val NZ_NODES = listOf(PrivacyNode("103.242.13.10", 1080, false, "NZ", "Auckland"))
-    val TW_NODES = listOf(PrivacyNode("103.125.218.15", 1080, false, "TW", "Taipei"))
-    val MY_NODES = listOf(PrivacyNode("103.102.154.20", 1080, false, "MY", "Kuala Lumpur"))
-    val ID_NODES = listOf(PrivacyNode("103.111.82.10", 1080, false, "ID", "Jakarta"))
-    val TH_NODES = listOf(PrivacyNode("103.13.230.15", 1080, false, "TH", "Bangkok"))
-    val VN_NODES = listOf(PrivacyNode("103.145.62.20", 1080, false, "VN", "Hanoi"))
+    @Volatile private var currentRegion: String = "AUTO"
+    @Volatile var isProMode: Boolean = false
 
-    // Middle East & Africa (4)
-    val AE_NODES = listOf(PrivacyNode("2.50.191.129", 10800, false, "AE", "Dubai"))
-    val IL_NODES = listOf(PrivacyNode("185.191.206.10", 1080, false, "IL", "Tel Aviv"))
-    val ZA_NODES = listOf(PrivacyNode("197.234.240.15", 1080, false, "ZA", "Johannesburg"))
-    val TR_NODES = listOf(PrivacyNode("185.118.140.25", 1080, false, "TR", "Istanbul"))
+    private val threadPool = Executors.newCachedThreadPool { r ->
+        Thread(r, "fokk-tunnel-worker").also { it.isDaemon = true }
+    }
 
-    val AM_NODES = US_NODES + CA_NODES + MX_NODES + BR_NODES + AR_NODES + CL_NODES + CO_NODES + PE_NODES + CR_NODES + PA_NODES
-    val EU_NODES = GB_NODES + DE_NODES + NL_NODES + FR_NODES + CH_NODES + SE_NODES + NO_NODES + FI_NODES + ES_NODES + IT_NODES + PL_NODES + IE_NODES + BE_NODES + AT_NODES + CZ_NODES + DK_NODES + PT_NODES + RO_NODES
-    val AS_NODES = JP_NODES + KR_NODES + SG_NODES + HK_NODES + IN_NODES + AU_NODES + NZ_NODES + TW_NODES + MY_NODES + ID_NODES + TH_NODES + VN_NODES
-    val ME_AF_NODES = AE_NODES + IL_NODES + ZA_NODES + TR_NODES
+    fun init(context: Context) {
+        FokkNodeManifest.refreshIfNeeded()
+    }
 
-    // High-speed verified regional & country clusters (44 Countries + 3 Continents)
-    val REGION_NODES: Map<String, List<PrivacyNode>> = mapOf(
-        // Standard Continental Regions
-        "AM" to AM_NODES,
-        "EU" to EU_NODES,
-        "AS" to AS_NODES,
-        // Americas (10)
-        "US" to US_NODES,
-        "CA" to CA_NODES,
-        "MX" to MX_NODES,
-        "BR" to BR_NODES,
-        "AR" to AR_NODES,
-        "CL" to CL_NODES,
-        "CO" to CO_NODES,
-        "PE" to PE_NODES,
-        "CR" to CR_NODES,
-        "PA" to PA_NODES,
-        // Europe (18)
-        "GB" to GB_NODES,
-        "DE" to DE_NODES,
-        "NL" to NL_NODES,
-        "FR" to FR_NODES,
-        "CH" to CH_NODES,
-        "SE" to SE_NODES,
-        "NO" to NO_NODES,
-        "FI" to FI_NODES,
-        "ES" to ES_NODES,
-        "IT" to IT_NODES,
-        "PL" to PL_NODES,
-        "IE" to IE_NODES,
-        "BE" to BE_NODES,
-        "AT" to AT_NODES,
-        "CZ" to CZ_NODES,
-        "DK" to DK_NODES,
-        "PT" to PT_NODES,
-        "RO" to RO_NODES,
-        // Asia & Pacific (12)
-        "JP" to JP_NODES,
-        "KR" to KR_NODES,
-        "SG" to SG_NODES,
-        "HK" to HK_NODES,
-        "IN" to IN_NODES,
-        "AU" to AU_NODES,
-        "NZ" to NZ_NODES,
-        "TW" to TW_NODES,
-        "MY" to MY_NODES,
-        "ID" to ID_NODES,
-        "TH" to TH_NODES,
-        "VN" to VN_NODES,
-        // Middle East & Africa (4)
-        "AE" to AE_NODES,
-        "IL" to IL_NODES,
-        "ZA" to ZA_NODES,
-        "TR" to TR_NODES
-    )
+    fun start(context: Context, region: String = "AUTO") {
+        startInternal(region)
+    }
 
-    // Dynamic node pools updated automatically by the GitHub Actions Sentinel
-    private val dynamicNodes = java.util.concurrent.ConcurrentHashMap<String, List<PrivacyNode>>()
-    private const val NODES_URL = "https://raw.githubusercontent.com/Kimmojiraja/fokk-project/feature/fokk-ai-truth-engine-hybrid-and-logo/nodes.json"
-    private const val PREF_CACHED_NODES = "fokk_sentinel_cached_nodes"
+    fun start(region: String = "AUTO", proMode: Boolean = false): Int {
+        isProMode = proMode
+        startInternal(region)
+        val deadline = System.currentTimeMillis() + 2_000
+        while (localPort <= 0 && System.currentTimeMillis() < deadline) {
+            try { Thread.sleep(50) } catch (_: InterruptedException) { break }
+        }
+        return localPort
+    }
 
-    fun refreshNodesFromRemote(context: Context? = null) {
+    private fun startInternal(region: String) {
+        if (!isRunning.compareAndSet(false, true)) {
+            // Already running — just update region
+            if (region != currentRegion) {
+                currentRegion = region
+                FokkCircuitManager.setRegion(region)
+            }
+            return
+        }
+        currentRegion = region
+
+        // Start supporting systems
+        FokkNodeManifest.refreshIfNeeded()
+        FokkNodeProber.start()
+        FokkCircuitManager.start(region)
+
         threadPool.execute {
             try {
-                if (context != null && dynamicNodes.isEmpty()) {
-                    val cached = context.getSharedPreferences("fokk_privacy_prefs", Context.MODE_PRIVATE)
-                        .getString(PREF_CACHED_NODES, null)
-                    if (!cached.isNullOrBlank()) {
-                        parseAndApplyNodesJson(cached)
-                    }
-                }
-
-                val conn = java.net.URL(NODES_URL).openConnection() as java.net.HttpURLConnection
-                conn.connectTimeout = 6_000
-                conn.readTimeout = 6_000
-                conn.setRequestProperty("User-Agent", "Fokk-Browser/Sentinel-Sync")
-                if (conn.responseCode == 200) {
-                    val jsonStr = conn.inputStream.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
-                    if (jsonStr.contains("\"nodes\"")) {
-                        parseAndApplyNodesJson(jsonStr)
-                        context?.getSharedPreferences("fokk_privacy_prefs", Context.MODE_PRIVATE)
-                            ?.edit()
-                            ?.putString(PREF_CACHED_NODES, jsonStr)
-                            ?.apply()
-                        Log.i(TAG, "Fokk Sentinel: Synced ${dynamicNodes.size} country node pools from remote GitHub sentinel")
+                val srv = ServerSocket(0, 50, java.net.InetAddress.getByName("127.0.0.1"))
+                srv.reuseAddress = true
+                serverSocket = srv
+                localPort = srv.localPort
+                Log.i(TAG, "Tunnel listening on 127.0.0.1:$localPort region=$region")
+                while (isRunning.get()) {
+                    try {
+                        val client = srv.accept()
+                        threadPool.execute { handleClient(client) }
+                    } catch (_: Exception) {
+                        if (isRunning.get()) Log.w(TAG, "Accept error")
                     }
                 }
             } catch (e: Exception) {
-                Log.d(TAG, "Fokk Sentinel: Remote nodes fetch skipped or offline (${e.message}), utilizing verified built-in nodes")
+                Log.e(TAG, "Tunnel error: ${e.message}")
+                isRunning.set(false)
             }
         }
     }
 
-    private fun parseAndApplyNodesJson(jsonStr: String) {
-        try {
-            val root = org.json.JSONObject(jsonStr)
-            val nodesObj = root.optJSONObject("nodes") ?: return
-            val keys = nodesObj.keys()
-            while (keys.hasNext()) {
-                val country = keys.next()
-                val arr = nodesObj.optJSONArray(country) ?: continue
-                val list = mutableListOf<PrivacyNode>()
-                for (i in 0 until arr.length()) {
-                    val item = arr.getJSONObject(i)
-                    list.add(
-                        PrivacyNode(
-                            host = item.getString("host"),
-                            port = item.getInt("port"),
-                            isHttpConnect = item.optBoolean("isHttpConnect", true),
-                            country = item.optString("country", country),
-                            city = item.optString("city", "")
-                        )
-                    )
-                }
-                if (list.isNotEmpty()) {
-                    dynamicNodes[country] = list
-                }
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed parsing remote nodes json", e)
-        }
-    }
-
-    fun getContinentForCountry(code: String): String = when (code) {
-        "US", "CA", "MX", "BR", "AR", "CL", "CO", "PE", "CR", "PA", "AM" -> "AM"
-        "GB", "DE", "NL", "FR", "CH", "SE", "NO", "FI", "ES", "IT", "PL", "IE", "BE", "AT", "CZ", "DK", "PT", "RO", "EU" -> "EU"
-        "JP", "KR", "SG", "HK", "IN", "AU", "NZ", "TW", "MY", "ID", "TH", "VN", "AS" -> "AS"
-        "AE", "IL", "ZA", "TR" -> "EU"
-        else -> "AUTO"
-    }
-
-    private val failedNodes = java.util.concurrent.ConcurrentHashMap<String, Long>()
-    private const val NODE_COOLDOWN_MS = 180_000L // 3 minutes
-
-    private fun isNodeAlive(node: PrivacyNode): Boolean {
-        val key = "${node.host}:${node.port}"
-        val failTime = failedNodes[key] ?: return true
-        if (System.currentTimeMillis() - failTime > NODE_COOLDOWN_MS) {
-            failedNodes.remove(key)
-            return true
-        }
-        return false
-    }
-
-    private fun markNodeFailed(node: PrivacyNode) {
-        val key = "${node.host}:${node.port}"
-        failedNodes[key] = System.currentTimeMillis()
-    }
-
-    private fun markNodeSuccess(node: PrivacyNode) {
-        val key = "${node.host}:${node.port}"
-        failedNodes.remove(key)
-    }
-
-    fun getNodesForRegion(region: String): List<PrivacyNode> {
-        val target = if (region in REGION_NODES.keys || region in dynamicNodes.keys) region else "AUTO"
-        if (target != "AUTO") {
-            val dyn = dynamicNodes[target]
-            if (!dyn.isNullOrEmpty()) return dyn
-            if (target == "AM") return AM_NODES
-            if (target == "EU") return EU_NODES
-            if (target == "AS") return AS_NODES
-            return REGION_NODES[target].orEmpty()
-        }
-
-        // AUTO: round-robin across AM, EU, and AS
-        val am = getNodesForRegion("AM")
-        val eu = getNodesForRegion("EU")
-        val asNodes = getNodesForRegion("AS")
-        val maxLen = maxOf(am.size, maxOf(eu.size, asNodes.size))
-        val interleaved = mutableListOf<PrivacyNode>()
-        for (i in 0 until maxLen) {
-            if (i < am.size) interleaved.add(am[i])
-            if (i < eu.size) interleaved.add(eu[i])
-            if (i < asNodes.size) interleaved.add(asNodes[i])
-        }
-        return interleaved
-    }
-
-    private val roundRobinCounter = java.util.concurrent.atomic.AtomicInteger(0)
-    private val threadPool = Executors.newCachedThreadPool()
-    private var serverSocket: ServerSocket? = null
-    @Volatile
-    var localPort: Int = 0
-        private set
-    private val isRunning = AtomicBoolean(false)
-
-    @Volatile
-    var currentRegion: String = "AUTO"
-        private set
-
-    @Volatile
-    var isProMode: Boolean = true
-
-    fun init(context: Context) {
-        refreshNodesFromRemote(context)
-    }
-
-    @Synchronized
-    fun start(region: String = "AUTO", proMode: Boolean = true): Int {
-        currentRegion = if (region in REGION_NODES.keys || region == "AUTO") region else "AUTO"
-        isProMode = proMode
-
-        if (isRunning.get() && serverSocket != null && !serverSocket!!.isClosed && localPort > 0) {
-            Log.i(TAG, "Fokk Privacy Tunnel already running on port $localPort, active region: $currentRegion, proMode: $isProMode")
-            return localPort
-        }
-
-        stop()
-
-        return try {
-            val s = ServerSocket(0, 100, InetAddress.getByName("127.0.0.1"))
-            serverSocket = s
-            localPort = s.localPort
-            isRunning.set(true)
-            Log.i(TAG, "Fokk Privacy Tunnel active on 127.0.0.1:$localPort [Region: $currentRegion]")
-
-            threadPool.execute {
-                while (isRunning.get() && !s.isClosed) {
-                    try {
-                        val clientSocket = s.accept()
-                        threadPool.execute { handleClient(clientSocket) }
-                    } catch (e: Exception) {
-                        if (!isRunning.get()) break
-                    }
-                }
-            }
-            localPort
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to start Privacy Tunnel listener", e)
-            0
-        }
-    }
-
-    @Synchronized
     fun stop() {
-        isRunning.set(false)
-        try {
-            serverSocket?.close()
-        } catch (_: Exception) {}
+        if (!isRunning.compareAndSet(true, false)) return
+        runCatching { serverSocket?.close() }
         serverSocket = null
         localPort = 0
+        FokkCircuitManager.stop()
+        FokkNodeProber.stop()
+        Log.i(TAG, "Tunnel stopped")
     }
-
-    fun getLocalEndpoint(): String = if (localPort > 0) "http://127.0.0.1:$localPort" else ""
 
     fun isTunnelRunning(): Boolean = isRunning.get() && localPort > 0
 
+    // ---------------------------------------------------------------------------
+    // Request handler
+    // ---------------------------------------------------------------------------
     private fun handleClient(client: Socket) {
         var upstream: Socket? = null
         try {
@@ -391,11 +155,12 @@ object FokkTunnelEngine {
             client.sendBufferSize = 65536
             client.receiveBufferSize = 65536
             client.soTimeout = 15_000
+
             val clientIn = client.getInputStream()
             val clientOut = client.getOutputStream()
 
-            // Read the HTTP request headers until CRLF CRLF
-            val headerBytes = ByteArray(4096)
+            // Read HTTP headers until CRLF CRLF
+            val headerBytes = ByteArray(8192)
             var totalRead = 0
             while (totalRead < headerBytes.size) {
                 val b = clientIn.read()
@@ -406,9 +171,7 @@ object FokkTunnelEngine {
                     headerBytes[totalRead - 3] == '\n'.code.toByte() &&
                     headerBytes[totalRead - 2] == '\r'.code.toByte() &&
                     headerBytes[totalRead - 1] == '\n'.code.toByte()
-                ) {
-                    break
-                }
+                ) break
             }
             if (totalRead == 0) return
 
@@ -422,372 +185,187 @@ object FokkTunnelEngine {
             if (method == "CONNECT") {
                 val targetHost = target.substringBefore(":")
                 val targetPort = target.substringAfter(":", "443").toIntOrNull() ?: 443
-
-                var connectedSocket = connectToNode(targetHost, targetPort)
+                val connectedSocket = routeConnect(targetHost, targetPort)
                 if (connectedSocket == null) {
-                    // Zero-Drop Fallback: Direct clean pipe with DoH protection
-                    // Guarantees web pages NEVER fail to load with a 504 Gateway Timeout
-                    connectedSocket = try {
-                        val s = Socket()
-                        s.tcpNoDelay = true
-                        s.sendBufferSize = 65536
-                        s.receiveBufferSize = 65536
-                        s.connect(InetSocketAddress(targetHost, targetPort), 2_000)
-                        s
-                    } catch (_: Exception) { null }
-                }
-                if (connectedSocket == null) {
-                    clientOut.write("HTTP/1.1 504 Gateway Timeout\r\n\r\n".toByteArray(StandardCharsets.ISO_8859_1))
+                    // Killswitch — no IP leak fallback
+                    clientOut.write("HTTP/1.1 407 Mesh Unavailable\r\n\r\n".toByteArray(StandardCharsets.ISO_8859_1))
                     clientOut.flush()
                     return
                 }
-
                 upstream = connectedSocket
                 clientOut.write("HTTP/1.1 200 Connection Established\r\n\r\n".toByteArray(StandardCharsets.ISO_8859_1))
                 clientOut.flush()
                 pipeSockets(client, connectedSocket)
             } else {
-                // Plain HTTP request: extract host and port and route through tunnel
+                // Plain HTTP — route through ingress relay
                 val hostHeader = requestText.lineSequence()
                     .firstOrNull { it.startsWith("Host:", ignoreCase = true) }
                     ?.substringAfter(":")?.trim() ?: target.substringBefore("/").substringBefore(":")
                 val host = hostHeader.substringBefore(":")
                 val port = hostHeader.substringAfter(":", "80").toIntOrNull() ?: 80
-
-                // Plain HTTP: route strictly through trusted Ingress relay backbone to prevent sniffing
-                val connectedSocket = connectThroughIngressDirect(host, port) ?: connectToNode(host, port)
+                val connectedSocket = routeConnect(host, port)
                 if (connectedSocket != null) {
                     connectedSocket.getOutputStream().write(headerBytes, 0, totalRead)
                     connectedSocket.getOutputStream().flush()
                     upstream = connectedSocket
                     pipeSockets(client, connectedSocket)
                 } else {
-                    // Strict zero-leak killswitch: fail-closed to prevent ISP IP leak
-                    clientOut.write("HTTP/1.1 504 Gateway Timeout\r\n\r\n".toByteArray(StandardCharsets.ISO_8859_1))
+                    clientOut.write("HTTP/1.1 407 Mesh Unavailable\r\n\r\n".toByteArray(StandardCharsets.ISO_8859_1))
                     clientOut.flush()
                 }
             }
         } catch (_: Exception) {
-            // Socket closed or finished
         } finally {
             runCatching { client.close() }
             runCatching { upstream?.close() }
         }
     }
 
-    private fun connectThroughIngressDirect(targetHost: String, targetPort: Int): Socket? {
-        val relays = INGRESS_RELAYS.filter { isNodeAlive(it) }.ifEmpty { INGRESS_RELAYS }
-        val rOffset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % relays.size
-        for (k in 0 until minOf(2, relays.size)) {
-            val relay = relays[(rOffset + k) % relays.size]
-            val s = connectSingleHop(targetHost, targetPort, relay)
-            if (s != null) {
-                markNodeSuccess(relay)
-                return s
+    // ---------------------------------------------------------------------------
+    // Routing — circuit pool first, inline build fallback, then single-hop
+    // ---------------------------------------------------------------------------
+    private fun routeConnect(targetHost: String, targetPort: Int): Socket? {
+        // 1. Try warm circuit from pool
+        val circuit = FokkCircuitManager.acquireCircuit()
+        if (circuit != null) {
+            val sock = FokkCircuitManager.connectCircuitTo(circuit, targetHost, targetPort)
+            if (sock != null) {
+                sock.soTimeout = 30_000
+                return sock
             }
-            markNodeFailed(relay)
+            // Circuit failed — close it, don't return it to pool
+            runCatching { circuit.socket.close() }
+            NodeRegistry.markDead(circuit.egress, 60_000L)
         }
+
+        // 2. Build a fresh circuit inline (no warm circuit available)
+        val egress = NodeRegistry.getNodesForRegion(currentRegion).firstOrNull()
+        if (egress != null) {
+            val freshCircuit = FokkCircuitManager.buildCircuitTo(egress)
+            if (freshCircuit != null) {
+                val sock = FokkCircuitManager.connectCircuitTo(freshCircuit, targetHost, targetPort)
+                if (sock != null) {
+                    sock.soTimeout = 30_000
+                    NodeRegistry.markAlive(egress, 0L)
+                    return sock
+                }
+                runCatching { freshCircuit.socket.close() }
+                NodeRegistry.markDead(egress)
+            }
+        }
+
+        // 3. Single-hop fallback through best ingress relay
+        val ingress = NodeRegistry.getBestIngress().firstOrNull()
+        if (ingress != null) {
+            val sock = connectSingleHop(targetHost, targetPort, ingress)
+            if (sock != null) {
+                NodeRegistry.markAlive(ingress, 0L)
+                return sock
+            }
+            NodeRegistry.markDead(ingress)
+        }
+
+        // 4. Try any surviving node single-hop
+        for (node in NodeRegistry.getAllNodes()) {
+            if (!NodeRegistry.isAlive(node)) continue
+            val sock = connectSingleHop(targetHost, targetPort, node)
+            if (sock != null) {
+                NodeRegistry.markAlive(node, 0L)
+                return sock
+            }
+            NodeRegistry.markDead(node)
+        }
+
+        // All routes exhausted — killswitch (no direct fallback)
+        Log.w(TAG, "All routes exhausted for $targetHost:$targetPort — returning null (killswitch)")
         return null
     }
 
-    private fun connectToNode(targetHost: String, targetPort: Int): Socket? {
-        val countryNodes = getNodesForRegion(currentRegion)
-
-        // 1. Try healthy regional nodes via high-speed privacy tunnel
-        val healthyCountryNodes = countryNodes.filter { isNodeAlive(it) }.ifEmpty { countryNodes }
-        if (healthyCountryNodes.isNotEmpty()) {
-            val offset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % healthyCountryNodes.size
-            for (k in healthyCountryNodes.indices.take(2)) {
-                val gatewayNode = healthyCountryNodes[(offset + k) % healthyCountryNodes.size]
-                val s = connectSingleHop(targetHost, targetPort, gatewayNode)
-                if (s != null) {
-                    markNodeSuccess(gatewayNode)
-                    return s
-                }
-                markNodeFailed(gatewayNode)
-            }
-        }
-
-        // 2. Zero-Drop Continental Failover: if selected node pool is unreachable, route through continental cluster
-        val continent = getContinentForCountry(currentRegion)
-        if (continent != currentRegion && continent != "AUTO") {
-            val continentalNodes = getNodesForRegion(continent).filter { isNodeAlive(it) }.ifEmpty { getNodesForRegion(continent) }
-            if (continentalNodes.isNotEmpty()) {
-                val cOffset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % continentalNodes.size
-                for (k in continentalNodes.indices.take(2)) {
-                    val node = continentalNodes[(cOffset + k) % continentalNodes.size]
-                    val s = connectSingleHop(targetHost, targetPort, node)
-                    if (s != null) {
-                        markNodeSuccess(node)
-                        return s
-                    }
-                    markNodeFailed(node)
-                }
-            }
-        }
-
-        // 3. Guaranteed Uptime Fallback: Ingress Relay Backbone (Miami, North Bergen live nodes)
-        return connectThroughIngressDirect(targetHost, targetPort)
-    }
-
-    /**
-     * Dual-Hop Oblivious Chaining:
-     * Client -> Ingress Relay (sees Client IP, does NOT see target site)
-     *        -> Egress Gateway (sees Ingress IP, connects to target site)
-     *        -> Target Website
-     * Cryptographically separates user identity from network browsing metadata.
-     */
-    private fun connectSplitTrust(
-        targetHost: String,
-        targetPort: Int,
-        gatewayNode: PrivacyNode
-    ): Socket? {
-        val eligibleRelays = INGRESS_RELAYS.filter { it.host != gatewayNode.host }.ifEmpty { INGRESS_RELAYS }
-        val relayOffset = (roundRobinCounter.getAndIncrement() and 0x7FFFFFFF) % eligibleRelays.size
-
-        val maxRelayAttempts = minOf(2, eligibleRelays.size)
-        for (i in 0 until maxRelayAttempts) {
-            val relay = eligibleRelays[(relayOffset + i) % eligibleRelays.size]
-            var socket: Socket? = null
-            try {
-                socket = Socket()
-                socket.tcpNoDelay = true
-                socket.sendBufferSize = 65536
-                socket.receiveBufferSize = 65536
-                socket.connect(InetSocketAddress(relay.host, relay.port), 3_500)
-                socket.soTimeout = 4_000
-
-                val outStream = socket.getOutputStream()
-                val inStream = socket.getInputStream()
-
-                // Hop 1: SOCKS5 greeting with Ingress Relay
-                outStream.write(byteArrayOf(0x05, 0x01, 0x00))
-                outStream.flush()
-                val relayGreeting = ByteArray(2)
-                readFully(inStream, relayGreeting)
-                if (relayGreeting[0] != 0x05.toByte() || relayGreeting[1] != 0x00.toByte()) {
-                    socket.close()
-                    continue
-                }
-
-                // Hop 1 -> Hop 2: Instruct Ingress Relay to CONNECT to Egress Gateway
-                val gwHostBytes = gatewayNode.host.toByteArray(StandardCharsets.ISO_8859_1)
-                val relayConnectReq = ByteArray(4 + 1 + gwHostBytes.size + 2)
-                relayConnectReq[0] = 0x05
-                relayConnectReq[1] = 0x01 // CONNECT
-                relayConnectReq[2] = 0x00
-                relayConnectReq[3] = 0x03 // DOMAINNAME
-                relayConnectReq[4] = gwHostBytes.size.toByte()
-                System.arraycopy(gwHostBytes, 0, relayConnectReq, 5, gwHostBytes.size)
-                relayConnectReq[relayConnectReq.size - 2] = (gatewayNode.port shr 8).toByte()
-                relayConnectReq[relayConnectReq.size - 1] = (gatewayNode.port and 0xFF).toByte()
-
-                outStream.write(relayConnectReq)
-                outStream.flush()
-                if (!readSocks5Reply(inStream)) {
-                    socket.close()
-                    continue
-                }
-
-                // Chained Tunnel established: Ingress Relay has connected to Egress Gateway.
-                // Hop 2 -> Target: Instruct Egress Gateway to connect to targetHost:targetPort
-                if (gatewayNode.isHttpConnect) {
-                    val connectReq = "CONNECT $targetHost:$targetPort HTTP/1.1\r\nHost: $targetHost:$targetPort\r\nProxy-Connection: Keep-Alive\r\n\r\n"
-                    outStream.write(connectReq.toByteArray(StandardCharsets.ISO_8859_1))
-                    outStream.flush()
-
-                    val headerBuf = ByteArray(1024)
-                    var readCount = 0
-                    while (readCount < headerBuf.size) {
-                        val b = inStream.read()
-                        if (b == -1) break
-                        headerBuf[readCount++] = b.toByte()
-                        if (readCount >= 4 &&
-                            headerBuf[readCount - 4] == '\r'.code.toByte() &&
-                            headerBuf[readCount - 3] == '\n'.code.toByte() &&
-                            headerBuf[readCount - 2] == '\r'.code.toByte() &&
-                            headerBuf[readCount - 1] == '\n'.code.toByte()
-                        ) {
-                            break
-                        }
-                    }
-                    val resp = String(headerBuf, 0, readCount, StandardCharsets.ISO_8859_1)
-                    if (resp.contains("200")) {
-                        return socket
-                    } else {
-                        socket.close()
-                    }
-                } else {
-                    outStream.write(byteArrayOf(0x05, 0x01, 0x00))
-                    outStream.flush()
-                    val gwGreeting = ByteArray(2)
-                    readFully(inStream, gwGreeting)
-                    if (gwGreeting[0] != 0x05.toByte() || gwGreeting[1] != 0x00.toByte()) {
-                        socket.close()
-                        continue
-                    }
-
-                    val targetHostBytes = targetHost.toByteArray(StandardCharsets.ISO_8859_1)
-                    val targetConnectReq = ByteArray(4 + 1 + targetHostBytes.size + 2)
-                    targetConnectReq[0] = 0x05
-                    targetConnectReq[1] = 0x01
-                    targetConnectReq[2] = 0x00
-                    targetConnectReq[3] = 0x03
-                    targetConnectReq[4] = targetHostBytes.size.toByte()
-                    System.arraycopy(targetHostBytes, 0, targetConnectReq, 5, targetHostBytes.size)
-                    targetConnectReq[targetConnectReq.size - 2] = (targetPort shr 8).toByte()
-                    targetConnectReq[targetConnectReq.size - 1] = (targetPort and 0xFF).toByte()
-
-                    outStream.write(targetConnectReq)
-                    outStream.flush()
-                    if (readSocks5Reply(inStream)) {
-                        return socket
-                    } else {
-                        socket.close()
-                    }
-                }
-            } catch (_: Exception) {
-                runCatching { socket?.close() }
-            }
-        }
-        return null
-    }
-
-    private fun connectSingleHop(
-        targetHost: String,
-        targetPort: Int,
-        node: PrivacyNode
-    ): Socket? {
-        var proxySock: Socket? = null
+    // ---------------------------------------------------------------------------
+    // Single-hop SOCKS5/HTTP connect
+    // ---------------------------------------------------------------------------
+    private fun connectSingleHop(targetHost: String, targetPort: Int, node: PrivacyNode): Socket? {
+        var sock: Socket? = null
         try {
-            proxySock = Socket()
-            proxySock.tcpNoDelay = true
-            proxySock.sendBufferSize = 65536
-            proxySock.receiveBufferSize = 65536
-            proxySock.connect(InetSocketAddress(node.host, node.port), 3_500)
-            proxySock.soTimeout = 4_000
+            sock = Socket()
+            sock.tcpNoDelay = true
+            sock.sendBufferSize = 65536
+            sock.receiveBufferSize = 65536
+            sock.connect(InetSocketAddress(node.host, node.port), 3_500)
+            sock.soTimeout = 4_000
 
             if (node.isHttpConnect) {
-                val connectReq = "CONNECT $targetHost:$targetPort HTTP/1.1\r\nHost: $targetHost:$targetPort\r\nProxy-Connection: Keep-Alive\r\n\r\n"
-                proxySock.getOutputStream().write(connectReq.toByteArray(StandardCharsets.ISO_8859_1))
-                proxySock.getOutputStream().flush()
-
-                val headerBuf = ByteArray(1024)
-                var readCount = 0
-                val inStream = proxySock.getInputStream()
-                while (readCount < headerBuf.size) {
-                    val b = inStream.read()
+                val req = "CONNECT $targetHost:$targetPort HTTP/1.1\r\nHost: $targetHost:$targetPort\r\nProxy-Connection: Keep-Alive\r\n\r\n"
+                sock.getOutputStream().write(req.toByteArray(StandardCharsets.ISO_8859_1))
+                sock.getOutputStream().flush()
+                val buf = ByteArray(1024)
+                var n = 0
+                val inp = sock.getInputStream()
+                while (n < buf.size) {
+                    val b = inp.read()
                     if (b == -1) break
-                    headerBuf[readCount++] = b.toByte()
-                    if (readCount >= 4 &&
-                        headerBuf[readCount - 4] == '\r'.code.toByte() &&
-                        headerBuf[readCount - 3] == '\n'.code.toByte() &&
-                        headerBuf[readCount - 2] == '\r'.code.toByte() &&
-                        headerBuf[readCount - 1] == '\n'.code.toByte()
-                    ) {
-                        break
-                    }
+                    buf[n++] = b.toByte()
+                    if (n >= 4 &&
+                        buf[n-4] == '\r'.code.toByte() && buf[n-3] == '\n'.code.toByte() &&
+                        buf[n-2] == '\r'.code.toByte() && buf[n-1] == '\n'.code.toByte()) break
                 }
-                val resp = String(headerBuf, 0, readCount, StandardCharsets.ISO_8859_1)
+                val resp = String(buf, 0, n, StandardCharsets.ISO_8859_1)
                 if (resp.contains("200")) {
-                    return proxySock
-                } else {
-                    proxySock.close()
+                    sock.soTimeout = 30_000
+                    return sock
                 }
+                sock.close()
             } else {
+                val out = sock.getOutputStream()
+                val inp = sock.getInputStream()
                 // SOCKS5 greeting
-                proxySock.getOutputStream().write(byteArrayOf(0x05, 0x01, 0x00))
-                proxySock.getOutputStream().flush()
-                val authResp = ByteArray(2)
-                readFully(proxySock.getInputStream(), authResp)
-                if (authResp[0] != 0x05.toByte() || authResp[1] != 0x00.toByte()) {
-                    proxySock.close()
+                out.write(byteArrayOf(0x05, 0x01, 0x00))
+                out.flush()
+                val auth = ByteArray(2)
+                readFully(inp, auth)
+                if (auth[0] != 0x05.toByte() || auth[1] != 0x00.toByte()) {
+                    sock.close()
                     return null
                 }
-
                 // SOCKS5 CONNECT
                 val hostBytes = targetHost.toByteArray(StandardCharsets.ISO_8859_1)
                 val req = ByteArray(4 + 1 + hostBytes.size + 2)
-                req[0] = 0x05
-                req[1] = 0x01
-                req[2] = 0x00
-                req[3] = 0x03
+                req[0] = 0x05; req[1] = 0x01; req[2] = 0x00; req[3] = 0x03
                 req[4] = hostBytes.size.toByte()
                 System.arraycopy(hostBytes, 0, req, 5, hostBytes.size)
                 req[req.size - 2] = (targetPort shr 8).toByte()
                 req[req.size - 1] = (targetPort and 0xFF).toByte()
-
-                proxySock.getOutputStream().write(req)
-                proxySock.getOutputStream().flush()
-                if (readSocks5Reply(proxySock.getInputStream())) {
-                    return proxySock
-                } else {
-                    proxySock.close()
+                out.write(req)
+                out.flush()
+                if (readSocks5Reply(inp)) {
+                    sock.soTimeout = 30_000
+                    return sock
                 }
+                sock.close()
             }
         } catch (_: Exception) {
-            runCatching { proxySock?.close() }
+            runCatching { sock?.close() }
         }
         return null
     }
 
-    private fun readFully(stream: InputStream, buffer: ByteArray) {
-        var offset = 0
-        while (offset < buffer.size) {
-            val count = stream.read(buffer, offset, buffer.size - offset)
-            if (count < 0) throw java.io.EOFException("Premature EOF reading ${buffer.size} bytes (got $offset)")
-            offset += count
-        }
-    }
-
-    private fun readSocks5Reply(inStream: InputStream): Boolean {
-        val header = ByteArray(4)
-        readFully(inStream, header)
-        if (header[0] != 0x05.toByte() || header[1] != 0x00.toByte()) {
-            return false
-        }
-        when (header[3].toInt()) {
-            0x01 -> { // IPv4: 4 bytes addr + 2 bytes port
-                val buf = ByteArray(6)
-                readFully(inStream, buf)
-            }
-            0x03 -> { // Domain: 1 byte length + length bytes + 2 bytes port
-                val len = inStream.read()
-                if (len < 0) return false
-                val buf = ByteArray(len + 2)
-                readFully(inStream, buf)
-            }
-            0x04 -> { // IPv6: 16 bytes addr + 2 bytes port
-                val buf = ByteArray(18)
-                readFully(inStream, buf)
-            }
-            else -> return false
-        }
-        return true
-    }
-
+    // ---------------------------------------------------------------------------
+    // Bidirectional socket relay
+    // ---------------------------------------------------------------------------
     private fun pipeSockets(s1: Socket, s2: Socket) {
         runCatching {
-            s1.tcpNoDelay = true
-            s2.tcpNoDelay = true
-            s1.soTimeout = 30_000
-            s2.soTimeout = 30_000
-            s1.sendBufferSize = 65536
-            s1.receiveBufferSize = 65536
-            s2.sendBufferSize = 65536
-            s2.receiveBufferSize = 65536
+            s1.tcpNoDelay = true; s2.tcpNoDelay = true
+            s1.soTimeout = 30_000; s2.soTimeout = 30_000
+            s1.sendBufferSize = 65536; s1.receiveBufferSize = 65536
+            s2.sendBufferSize = 65536; s2.receiveBufferSize = 65536
         }
         threadPool.execute {
-            try {
-                transfer(s2.getInputStream(), s1.getOutputStream())
-            } catch (_: Exception) {}
+            try { transfer(s2.getInputStream(), s1.getOutputStream()) } catch (_: Exception) {}
             runCatching { s1.shutdownOutput() }
             runCatching { s2.close() }
             runCatching { s1.close() }
         }
-        try {
-            transfer(s1.getInputStream(), s2.getOutputStream())
-        } catch (_: Exception) {}
+        try { transfer(s1.getInputStream(), s2.getOutputStream()) } catch (_: Exception) {}
         runCatching { s2.shutdownOutput() }
         runCatching { s1.close() }
         runCatching { s2.close() }
@@ -802,26 +380,41 @@ object FokkTunnelEngine {
                 val read = input.read(buffer)
                 if (read < 0) break
                 packetsSeen++
-
-                // Nym-inspired micro-jitter for handshake timing decorrelation.
-                // Applied strictly to the first 2 packets (handshake phase) to decorrelate
-                // connection establishment against ISP timing analysis without throttling throughput.
+                // Nym-inspired micro-jitter on first 2 packets (handshake phase only)
+                // Decorrelates timing fingerprint without impacting throughput
                 if (isProMode && random != null && packetsSeen <= 2) {
-                    val jitterMs = random.nextLong(1, 3)
-                    try {
-                        Thread.sleep(jitterMs)
-                    } catch (_: InterruptedException) {
-                        Thread.currentThread().interrupt()
-                        break
-                    }
+                    try { Thread.sleep(random.nextLong(1, 3)) }
+                    catch (_: InterruptedException) { Thread.currentThread().interrupt(); break }
                 }
-
                 output.write(buffer, 0, read)
-                if (input.available() == 0) {
-                    output.flush()
-                }
+                if (input.available() == 0) output.flush()
             }
             output.flush()
         } catch (_: Exception) {}
+    }
+
+    // ---------------------------------------------------------------------------
+    // SOCKS5 protocol helpers
+    // ---------------------------------------------------------------------------
+    private fun readFully(stream: InputStream, buffer: ByteArray) {
+        var offset = 0
+        while (offset < buffer.size) {
+            val n = stream.read(buffer, offset, buffer.size - offset)
+            if (n < 0) throw java.io.EOFException("Premature EOF (got $offset/${buffer.size})")
+            offset += n
+        }
+    }
+
+    private fun readSocks5Reply(stream: InputStream): Boolean {
+        val header = ByteArray(4)
+        readFully(stream, header)
+        if (header[0] != 0x05.toByte() || header[1] != 0x00.toByte()) return false
+        when (header[3].toInt()) {
+            0x01 -> { val b = ByteArray(6);  readFully(stream, b) }
+            0x03 -> { val l = stream.read(); if (l < 0) return false; val b = ByteArray(l + 2); readFully(stream, b) }
+            0x04 -> { val b = ByteArray(18); readFully(stream, b) }
+            else -> return false
+        }
+        return true
     }
 }

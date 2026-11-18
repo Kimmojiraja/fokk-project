@@ -53,7 +53,14 @@ class FokkMeshVpnService : VpnService() {
         }
 
         val isPro = VpnEngine.isProModeEnabled(this)
-        val localPort = FokkTunnelEngine.start(region, isPro)
+        FokkTunnelEngine.isProMode = isPro
+        FokkTunnelEngine.start(this, region)
+        // Wait up to 2 s for the tunnel to bind a port
+        val deadline = System.currentTimeMillis() + 2_000
+        while (FokkTunnelEngine.localPort <= 0 && System.currentTimeMillis() < deadline) {
+            Thread.sleep(50)
+        }
+        val localPort = FokkTunnelEngine.localPort
         if (localPort <= 0) {
             Log.e(TAG, "Failed to start local Fokk Tunnel Engine")
             stopSelf()
