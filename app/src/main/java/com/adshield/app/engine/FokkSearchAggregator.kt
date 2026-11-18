@@ -210,6 +210,7 @@ object FokkSearchAggregator {
                     val cleanSnippet = cleanHtmlText(rawSnippet)
                     val domain = runCatching { Uri.parse(targetUrl).host }.getOrNull().orEmpty().removePrefix("www.")
 
+                    if (cleanTitle.isNotBlank() && targetUrl.startsWith("http") && domain.isNotBlank()) {
                         val publisherName = when {
                             domain.contains("independent.co.uk", ignoreCase = true) -> "The Independent"
                             domain.contains("thetimes.com", ignoreCase = true) || domain.contains("thetimes.co.uk", ignoreCase = true) -> "The Times"

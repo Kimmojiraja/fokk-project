@@ -8120,6 +8120,26 @@ open class MediaHubActivity : AppCompatActivity() {
             sheetBinding.layoutSummaryBullets.removeAllViews()
             val density = resources.displayMetrics.density
 
+            // Forward declaration for interactive follow-up questions
+            var askAiQuestionFunc: ((String) -> Unit)? = null
+
+            // Mode Switching (0: Summary & TTS, 1: Ask AI, 2: Truth & Bias Audit)
+            fun switchAiMode(mode: Int) {
+                sheetBinding.layoutAiSummarySection.visibility = if (mode == 0) View.VISIBLE else View.GONE
+                sheetBinding.layoutAiChatSection.visibility = if (mode == 1) View.VISIBLE else View.GONE
+                sheetBinding.layoutAiRealityAuditSection.visibility = if (mode == 2) View.VISIBLE else View.GONE
+
+                sheetBinding.btnTabAiSummary.setBackgroundResource(if (mode == 0) R.drawable.bg_ai_tab_selected else 0)
+                sheetBinding.btnTabAiSummary.setTextColor(if (mode == 0) Color.WHITE else Color.parseColor("#94A3B8"))
+
+                sheetBinding.btnTabAiChat.setBackgroundResource(if (mode == 1) R.drawable.bg_ai_tab_selected else 0)
+                sheetBinding.btnTabAiChat.setTextColor(if (mode == 1) Color.WHITE else Color.parseColor("#94A3B8"))
+
+                sheetBinding.layoutAiTabsContainer.visibility = View.VISIBLE
+                sheetBinding.btnTabAiAudit.setBackgroundResource(if (mode == 2) R.drawable.bg_ai_tab_selected else 0)
+                sheetBinding.btnTabAiAudit.setTextColor(if (mode == 2) Color.WHITE else Color.parseColor("#94A3B8"))
+            }
+
             fun renderBulletRow(bullet: String, container: LinearLayout) {
                 val tag = FokkAiEngine.classifyBullet(bullet)
                 val typedVal = android.util.TypedValue()
@@ -8306,23 +8326,6 @@ open class MediaHubActivity : AppCompatActivity() {
                 Toast.makeText(this, "Reading summary aloud (${if (isMale) "Male" else "Female"} voice)...", Toast.LENGTH_SHORT).show()
             }
 
-            // Mode Switching (0: Summary & TTS, 1: Ask AI, 2: Truth & Bias Audit)
-            fun switchAiMode(mode: Int) {
-                sheetBinding.layoutAiSummarySection.visibility = if (mode == 0) View.VISIBLE else View.GONE
-                sheetBinding.layoutAiChatSection.visibility = if (mode == 1) View.VISIBLE else View.GONE
-                sheetBinding.layoutAiRealityAuditSection.visibility = if (mode == 2) View.VISIBLE else View.GONE
-
-                sheetBinding.btnTabAiSummary.setBackgroundResource(if (mode == 0) R.drawable.bg_ai_tab_selected else 0)
-                sheetBinding.btnTabAiSummary.setTextColor(if (mode == 0) Color.WHITE else Color.parseColor("#94A3B8"))
-
-                sheetBinding.btnTabAiChat.setBackgroundResource(if (mode == 1) R.drawable.bg_ai_tab_selected else 0)
-                sheetBinding.btnTabAiChat.setTextColor(if (mode == 1) Color.WHITE else Color.parseColor("#94A3B8"))
-
-                sheetBinding.layoutAiTabsContainer.visibility = View.VISIBLE
-                sheetBinding.btnTabAiAudit.setBackgroundResource(if (mode == 2) R.drawable.bg_ai_tab_selected else 0)
-                sheetBinding.btnTabAiAudit.setTextColor(if (mode == 2) Color.WHITE else Color.parseColor("#94A3B8"))
-            }
-
             sheetBinding.btnTabAiSummary.setOnClickListener { switchAiMode(0) }
             sheetBinding.btnTabAiChat.setOnClickListener { switchAiMode(1) }
             sheetBinding.btnTabAiAudit.setOnClickListener { switchAiMode(2) }
@@ -8428,9 +8431,6 @@ open class MediaHubActivity : AppCompatActivity() {
             for (claim in claimsToDisplay) {
                 renderBulletRow(claim, sheetBinding.layoutAiExtractedClaims)
             }
-
-            // Forward declaration for interactive follow-up questions
-            var askAiQuestionFunc: ((String) -> Unit)? = null
 
             // Interactive Ask AI Chat Assistant (Open-World Unboxed Canvas & Typewriter Stream)
             fun renderChatAnswerCard(
