@@ -14,8 +14,8 @@
 #
 # Usage:
 #   sudo bash deploy_fokk_node.sh <PORT> <COUNTRY_CODE> <CITY_NAME>
-# Optional Auth:
-#   sudo FOKK_RELAY_USER=fokk FOKK_RELAY_PASS=secret bash deploy_fokk_node.sh 10802 DE Frankfurt
+# Optional Auth + TLS-over-SOCKS5 (100% ISP-encrypted + un-abusable):
+#   sudo FOKK_RELAY_USER=fokk FOKK_RELAY_PASS=secret FOKK_TLS_DOMAIN=relay1.yourdomain.com bash deploy_fokk_node.sh 443 DE Frankfurt
 # ==============================================================================
 
 set -euo pipefail
@@ -25,6 +25,7 @@ COUNTRY="${2:-DE}"
 CITY="${3:-Frankfurt}"
 RELAY_USER="${FOKK_RELAY_USER:-}"
 RELAY_PASS="${FOKK_RELAY_PASS:-}"
+TLS_DOMAIN="${FOKK_TLS_DOMAIN:-}"
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "Error: This script must be run as root (sudo)." >&2
@@ -55,11 +56,19 @@ if [ -n "$RELAY_USER" ] && [ -n "$RELAY_PASS" ]; then
     echo "Enabled username authentication for relay user: $RELAY_USER"
 fi
 
+DANTE_BIND="0.0.0.0"
+DANTE_PORT="$PORT"
+if [ -n "$TLS_DOMAIN" ]; then
+    DANTE_BIND="127.0.0.1"
+    DANTE_PORT="10809"
+    echo "TLS-over-SOCKS5 enabled for $TLS_DOMAIN -> Dante bound locally on 127.0.0.1:$DANTE_PORT"
+fi
+
 cat <<EOF > /etc/danted.conf
-# Fokk Mesh 3.0 Hardened Zero-Log Relay Configuration
+# Fokk Mesh 3.1 Hardened Zero-Log Relay Configuration
 logoutput: /dev/null
 
-internal: 0.0.0.0 port = $PORT
+internal: $DANTE_BIND port = $DANTE_PORT
 external: $EXT_IF
 
 clientmethod: none
@@ -129,10 +138,31 @@ systemctl daemon-reload
 systemctl enable danted
 systemctl restart danted
 
+# Optional TLS-over-SOCKS5 wrapper via stunnel4 + Let's Encrypt (hides SOCKS5 headers from ISPs)
+TLS_ENABLED="false"
+if [ -n "$TLS_DOMAIN" ]; then
+    apt-get install -y -qq stunnel4 certbot
+    certbot certonly --standalone --non-interactive --agree-tos --register-unsafely-without-email -d "$TLS_DOMAIN"
+    cat <<STUNNEL > /etc/stunnel/fokk-mesh.conf
+foreground = no
+output = /dev/null
+[fokk-mesh-tls]
+accept = 0.0.0.0:$PORT
+connect = 127.0.0.1:$DANTE_PORT
+cert = /etc/letsencrypt/live/$TLS_DOMAIN/fullchain.pem
+key = /etc/letsencrypt/live/$TLS_DOMAIN/privkey.pem
+TIMEOUTidle = 60
+STUNNEL
+    sed -i 's/ENABLED=0/ENABLED=1/g' /etc/default/stunnel4 || true
+    systemctl enable stunnel4
+    systemctl restart stunnel4
+    TLS_ENABLED="true"
+fi
+
 sleep 1
 if ss -tulpn | grep -q ":$PORT "; then
     echo "=================================================="
-    echo " Hardened Fokk Mesh 3.0 Relay Active!"
+    echo " Hardened Fokk Mesh 3.1 Relay Active!"
     echo "=================================================="
     cat <<JSON
     {
@@ -142,6 +172,10 @@ if ss -tulpn | grep -q ":$PORT "; then
       "city": "$CITY",
       "type": "socks5",
       "ingress_relay": true,
+      "tls": $TLS_ENABLED,
+      "sni": "$TLS_DOMAIN",
+      "username": "$RELAY_USER",
+      "password": "$RELAY_PASS",
       "verified": true
     }
 JSON

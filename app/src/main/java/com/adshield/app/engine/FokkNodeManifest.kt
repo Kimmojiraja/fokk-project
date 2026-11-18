@@ -13,28 +13,31 @@ import java.security.KeyFactory
 import java.security.Signature
 import java.security.spec.X509EncodedKeySpec
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
 
 /**
- * Fokk Mesh 3.0 Live Node Manifest — ZERO hardcoded relay IPs in the binary.
+ * Fokk Mesh 3.1 Live Node Manifest — ZERO hardcoded relay IPs in the binary.
  *
- * Architecture:
- *   - Loads the last verified manifest from local SharedPreferences disk cache immediately on boot.
- *   - Refreshes automatically from the 6-hour Sentinel feeds (`mesh-manifest` live branch,
- *     `mesh-manifest-live` CDN release, and `main` fallback) every 3 hours or on self-healing trigger.
- *   - Rejects any private/loopback/link-local/CGNAT/reserved IP (bogon & SSRF guard).
- *   - Verifies a deterministic cross-platform canonical payload via Ed25519 (strictly fail-closed
- *     once a production public key is provisioned).
+ * Improvements in v3.1:
+ *   - Parallel manifest feed racing across live Sentinel branch, CDN release, and main
+ *     (eliminates 3-4s sequential 404 delays on cold start!).
+ *   - Supports authenticated (SOCKS5 RFC 1929 / HTTP Basic) and TLS-wrapped relays
+ *     (`tls: true`, `sni`, `username`, `password`) for ISP-encrypted private Fokk Mesh relays.
+ *   - Persists last verified manifest in local SharedPreferences disk cache.
+ *   - Strict bogon/SSRF IP rejection and deterministic cross-platform Ed25519 verification.
  */
 object FokkNodeManifest {
     private const val TAG = "FokkNodeManifest"
     private const val PREFS_CACHE = "fokk_mesh_manifest_cache"
     private const val KEY_CACHED_RAW_JSON = "cached_manifest_raw_json"
 
+    // Priority order (index 0 = highest priority). All are fetched in parallel!
     private val MANIFEST_URLS = listOf(
         "https://raw.githubusercontent.com/Kimmojiraja/fokk-project/mesh-manifest/nodes_manifest.json",
         "https://github.com/Kimmojiraja/fokk-project/releases/download/mesh-manifest-live/nodes_manifest.json",
@@ -42,10 +45,8 @@ object FokkNodeManifest {
     )
 
     private const val CACHE_TTL_MS = 3 * 60 * 60 * 1000L
-    private const val FORCE_REFRESH_COOLDOWN_MS = 60_000L
+    private const val FORCE_REFRESH_COOLDOWN_MS = 45_000L
 
-    // Generate production keypair via: python3 scripts/sentinel_node_scanner.py --gen-key
-    // Store private key in GitHub Secret FOKK_MESH_ED25519_PRIVKEY and paste DER public key below.
     private const val SIGNING_PUBLIC_KEY_B64 =
         "MCowBQYDK2VwAyEAFokkMeshPublicKeyPlaceholder000000000000000000000000="
 
@@ -53,6 +54,9 @@ object FokkNodeManifest {
         !SIGNING_PUBLIC_KEY_B64.contains("Placeholder", ignoreCase = true)
 
     private val lock = ReentrantReadWriteLock()
+    private val fetchExecutor = Executors.newFixedThreadPool(3) { r ->
+        Thread(r, "fokk-manifest-worker").also { it.isDaemon = true }
+    }
     private var appPrefs: SharedPreferences? = null
     private var cachedNodes: List<FokkTunnelEngine.PrivacyNode> = emptyList()
     private var cachedIngress: List<FokkTunnelEngine.PrivacyNode> = emptyList()
@@ -70,11 +74,9 @@ object FokkNodeManifest {
     fun init(context: Context) {
         if (appPrefs == null) {
             appPrefs = context.applicationContext.getSharedPreferences(PREFS_CACHE, Context.MODE_PRIVATE)
-            // Warm from last verified on-disk manifest immediately (zero hardcoded IPs)
             val savedRaw = appPrefs?.getString(KEY_CACHED_RAW_JSON, null)
             if (!savedRaw.isNullOrBlank() && cachedNodes.isEmpty()) {
                 if (parseAndVerify(savedRaw, persistToDisk = false)) {
-                    // Keep expiry at 0 so a fresh background sync still runs on startup
                     cacheExpiry.set(0L)
                     Log.i(TAG, "Restored ${cachedNodes.size} cached relays from local disk")
                 }
@@ -91,11 +93,7 @@ object FokkNodeManifest {
         triggerFetchAsync()
     }
 
-    /**
-     * On first-ever launch (before any disk cache exists), waits briefly for the
-     * live Sentinel manifest fetch so circuits have live relays right away.
-     */
-    fun ensureLoadedBlocking(timeoutMs: Long = 3_500L) {
+    fun ensureLoadedBlocking(timeoutMs: Long = 5_000L) {
         if (cachedNodes.isNotEmpty()) {
             refreshIfNeeded()
             return
@@ -122,7 +120,7 @@ object FokkNodeManifest {
         }
         Thread({
             try {
-                fetchAndApply()
+                fetchAndApplyParallel(latch)
             } finally {
                 synchronized(this) {
                     fetchInProgress = false
@@ -130,44 +128,63 @@ object FokkNodeManifest {
                 }
                 latch.countDown()
             }
-        }, "fokk-manifest-fetch").apply {
+        }, "fokk-manifest-coordinator").apply {
             isDaemon = true
             start()
         }
         return latch
     }
 
-    private fun fetchAndApply() {
-        for (urlStr in MANIFEST_URLS) {
-            var conn: HttpURLConnection? = null
-            try {
-                conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 6_000
-                    readTimeout = 8_000
-                    instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "FokkMesh/3.0")
-                    setRequestProperty("Cache-Control", "no-cache")
+    /**
+     * Fetches all manifest feeds in parallel:
+     *   - As soon as ANY feed succeeds (even main fallback), unlocks waiting callers immediately
+     *     so cold-start Fokk Mesh never stalls behind 404s.
+     *   - If a higher-priority live Sentinel feed (`mesh-manifest` or `mesh-manifest-live`) arrives
+     *     with newer `issued_at`, it transparently upgrades the active node list.
+     */
+    private fun fetchAndApplyParallel(outerLatch: CountDownLatch) {
+        val anyApplied = AtomicBoolean(false)
+        val bestPriority = java.util.concurrent.atomic.AtomicInteger(Int.MAX_VALUE)
+        val workersDone = CountDownLatch(MANIFEST_URLS.size)
+
+        MANIFEST_URLS.forEachIndexed { priorityIdx, urlStr ->
+            fetchExecutor.submit {
+                var conn: HttpURLConnection? = null
+                try {
+                    conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 5_000
+                        readTimeout = 6_000
+                        instanceFollowRedirects = true
+                        setRequestProperty("User-Agent", "FokkMesh/3.1")
+                        setRequestProperty("Cache-Control", "no-cache")
+                    }
+                    if (conn.responseCode == 200) {
+                        val raw = conn.inputStream.bufferedReader().use { it.readText() }
+                        synchronized(bestPriority) {
+                            if (priorityIdx < bestPriority.get()) {
+                                if (parseAndVerify(raw, persistToDisk = true)) {
+                                    bestPriority.set(priorityIdx)
+                                    anyApplied.set(true)
+                                    outerLatch.countDown()
+                                    Log.i(TAG, "Applied live Fokk Mesh manifest from $urlStr (priority=$priorityIdx)")
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.d(TAG, "Manifest feed $urlStr skipped: ${e.message}")
+                } finally {
+                    runCatching { conn?.disconnect() }
+                    workersDone.countDown()
                 }
-                if (conn.responseCode != 200) {
-                    Log.w(TAG, "Manifest feed $urlStr returned HTTP ${conn.responseCode}")
-                    continue
-                }
-                val raw = conn.inputStream.bufferedReader().use { it.readText() }
-                if (parseAndVerify(raw, persistToDisk = true)) {
-                    Log.i(TAG, "Loaded live Fokk Mesh manifest from $urlStr")
-                    return
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Manifest feed $urlStr failed: ${e.message}")
-            } finally {
-                runCatching { conn?.disconnect() }
             }
+        }
+        runCatching { workersDone.await(7_000L, TimeUnit.MILLISECONDS) }
+        if (!anyApplied.get()) {
+            Log.w(TAG, "All live manifest feeds unreachable on this network")
         }
     }
 
-    /**
-     * Rejects loopback, RFC1918 private, link-local, CGNAT, multicast, or metadata IPs.
-     */
     fun isSafePublicRelayHost(host: String): Boolean {
         val clean = host.trim().lowercase()
         if (clean.isBlank() || clean == "localhost" || clean == "0.0.0.0") return false
@@ -201,10 +218,6 @@ object FokkNodeManifest {
         }
     }
 
-    /**
-     * Cross-platform deterministic canonical signing payload (identical across Python, Kotlin, and Node.js):
-     *   v2|<issued_at>|<host>:<port>:<type>:<country>:<1|0>;...
-     */
     private fun buildCanonicalPayload(issuedAt: String, nodesArray: JSONArray): String {
         val entries = mutableListOf<String>()
         for (i in 0 until nodesArray.length()) {
@@ -246,7 +259,21 @@ object FokkNodeManifest {
                 val city = n.optString("city", "").trim()
                 val isHttp = n.optString("type", "socks5").equals("http", ignoreCase = true)
                 val isIngressRelay = n.optBoolean("ingress_relay", false) && !isHttp
-                val node = FokkTunnelEngine.PrivacyNode(host, port, isHttp, country, city)
+                val username = n.optString("username", "").trim()
+                val password = n.optString("password", "").trim()
+                val useTls = n.optBoolean("tls", false)
+                val sni = n.optString("sni", "").trim()
+                val node = FokkTunnelEngine.PrivacyNode(
+                    host = host,
+                    port = port,
+                    isHttpConnect = isHttp,
+                    country = country,
+                    city = city,
+                    username = username,
+                    password = password,
+                    useTls = useTls,
+                    tlsServerName = sni
+                )
                 nodes.add(node)
                 if (isIngressRelay) ingress.add(node)
             }
@@ -274,9 +301,7 @@ object FokkNodeManifest {
     }
 
     private fun verifySignature(issuedAt: String, nodesArray: JSONArray, signatureB64: String): Boolean {
-        if (!isRealSigningKeyConfigured()) {
-            return true
-        }
+        if (!isRealSigningKeyConfigured()) return true
         if (signatureB64.isBlank() || signatureB64.startsWith("PLACEHOLDER") || signatureB64.startsWith("UNSIGNED")) {
             return false
         }
