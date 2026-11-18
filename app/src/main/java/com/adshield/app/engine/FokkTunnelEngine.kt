@@ -77,7 +77,25 @@ object FokkTunnelEngine {
         Thread(r, "fokk-tunnel-worker").also { it.isDaemon = true }
     }
 
+    fun init(context: Context) {
+        FokkNodeManifest.refreshIfNeeded()
+    }
+
     fun start(context: Context, region: String = "AUTO") {
+        startInternal(region)
+    }
+
+    fun start(region: String = "AUTO", proMode: Boolean = false): Int {
+        isProMode = proMode
+        startInternal(region)
+        val deadline = System.currentTimeMillis() + 2_000
+        while (localPort <= 0 && System.currentTimeMillis() < deadline) {
+            try { Thread.sleep(50) } catch (_: InterruptedException) { break }
+        }
+        return localPort
+    }
+
+    private fun startInternal(region: String) {
         if (!isRunning.compareAndSet(false, true)) {
             // Already running — just update region
             if (region != currentRegion) {

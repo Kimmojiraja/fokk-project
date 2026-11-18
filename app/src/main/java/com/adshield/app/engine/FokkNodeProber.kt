@@ -59,7 +59,7 @@ object FokkNodeProber {
         Log.d(TAG, "Probing ${nodes.size} nodes...")
         val futures = mutableListOf<Pair<FokkTunnelEngine.PrivacyNode, Future<Long>>>()
         for (node in nodes) {
-            val future = probePool.submit(Callable { probeSingle(node) })
+            val future: Future<Long> = probePool.submit(Callable<Long> { probeSingle(node) })
             futures.add(node to future)
         }
         var alive = 0
