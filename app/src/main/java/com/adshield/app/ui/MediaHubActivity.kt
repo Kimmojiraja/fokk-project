@@ -2115,6 +2115,10 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(activity)
                 val proxyEndpoint = when (activeMode) {
+                    com.adshield.app.engine.VpnEngine.VpnMode.SMART_CLOAK ->
+                        com.adshield.app.engine.FokkTunnelEngine.localPort
+                            .takeIf { it > 0 }
+                            ?.let { "http://127.0.0.1:$it" }
                     com.adshield.app.engine.VpnEngine.VpnMode.FAST,
                     com.adshield.app.engine.VpnEngine.VpnMode.TOR,
                     com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> com.adshield.app.engine.VpnEngine.getFastPrivacyEndpoint()
@@ -2199,6 +2203,10 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(activity)
                 val proxyEndpoint = when (activeMode) {
+                    com.adshield.app.engine.VpnEngine.VpnMode.SMART_CLOAK ->
+                        com.adshield.app.engine.FokkTunnelEngine.localPort
+                            .takeIf { it > 0 }
+                            ?.let { "http://127.0.0.1:$it" }
                     com.adshield.app.engine.VpnEngine.VpnMode.FAST,
                     com.adshield.app.engine.VpnEngine.VpnMode.TOR,
                     com.adshield.app.engine.VpnEngine.VpnMode.RELAY -> com.adshield.app.engine.VpnEngine.getFastPrivacyEndpoint()
