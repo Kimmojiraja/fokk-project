@@ -317,16 +317,12 @@
             android:orientation="horizontal"
             android:paddingHorizontal="14dp">
 
-            <TextView
+            <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:background="@drawable/bg_menu_ai_badge"
-                android:gravity="center"
-                android:text="AI"
-                android:textColor="#FFFFFF"
-                android:textSize="11.5sp"
-                android:textStyle="bold"
-                android:fontFamily="sans-serif-black" />
+                android:src="@drawable/ic_fokk_ai_logo"
+                android:scaleType="fitCenter"
+                android:contentDescription="Fokk AI" />
 
             <LinearLayout
                 android:layout_width="0dp"

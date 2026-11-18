@@ -39,7 +39,17 @@ class FokkMeshVpnService : VpnService() {
             }
             ACTION_START -> {
                 val region = intent?.getStringExtra(EXTRA_REGION) ?: "AUTO"
-                startMesh(region)
+                // Immediate foreground notification to satisfy Android OS FGS deadline safely
+                runCatching {
+                    startForeground(NOTIFICATION_ID, buildNotification(region))
+                }
+                // Establish tunnel asynchronously to prevent blocking the main UI thread
+                Thread({
+                    startMesh(region)
+                }, "FokkMeshStartWorker").apply {
+                    isDaemon = true
+                    start()
+                }
                 return START_STICKY
             }
         }
@@ -52,22 +62,22 @@ class FokkMeshVpnService : VpnService() {
             return
         }
 
-        val isPro = VpnEngine.isProModeEnabled(this)
-        FokkTunnelEngine.isProMode = isPro
-        FokkTunnelEngine.start(this, region)
-        // Wait up to 2 s for the tunnel to bind a port
-        val deadline = System.currentTimeMillis() + 2_000
-        while (FokkTunnelEngine.localPort <= 0 && System.currentTimeMillis() < deadline) {
-            Thread.sleep(50)
-        }
-        val localPort = FokkTunnelEngine.localPort
-        if (localPort <= 0) {
-            Log.e(TAG, "Failed to start local Fokk Tunnel Engine")
-            stopSelf()
-            return
-        }
-
         try {
+            val isPro = VpnEngine.isProModeEnabled(this)
+            FokkTunnelEngine.isProMode = isPro
+            FokkTunnelEngine.start(this, region)
+            // Wait up to 2 s for the tunnel to bind a port
+            val deadline = System.currentTimeMillis() + 2_000
+            while (FokkTunnelEngine.localPort <= 0 && System.currentTimeMillis() < deadline) {
+                Thread.sleep(50)
+            }
+            val localPort = FokkTunnelEngine.localPort
+            if (localPort <= 0) {
+                Log.e(TAG, "Failed to start local Fokk Tunnel Engine")
+                disconnectMesh()
+                return
+            }
+
             val builder = Builder()
                 .setSession("Fokk Mesh")
                 .setMtu(1500)
@@ -90,7 +100,7 @@ class FokkMeshVpnService : VpnService() {
             val pfd = builder.establish()
             if (pfd == null) {
                 Log.e(TAG, "Failed to establish VPN interface")
-                stopSelf()
+                disconnectMesh()
                 return
             }
 
@@ -98,14 +108,8 @@ class FokkMeshVpnService : VpnService() {
             isRunning.set(true)
             isServiceRunning = true
 
-            // Start foreground with persistent notification
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                startForeground(
-                    NOTIFICATION_ID,
-                    buildNotification(region),
-                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED
-                )
-            } else {
+            // Ensure foreground notification reflects active state safely
+            runCatching {
                 startForeground(NOTIFICATION_ID, buildNotification(region))
             }
 
@@ -196,17 +200,19 @@ class FokkMeshVpnService : VpnService() {
         runCatching { vpnInterface?.close() }
         vpnInterface = null
 
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        runCatching { stopForeground(STOP_FOREGROUND_REMOVE) }
+        runCatching { stopSelf() }
 
         // Inform VpnEngine & UI
-        VpnEngine.onDeviceMeshStopped(this)
+        runCatching { VpnEngine.onDeviceMeshStopped(this) }
 
         // Broadcast to Activity to update UI instantly
-        sendBroadcast(Intent(ACTION_MESH_STATE_CHANGED).apply {
-            setPackage(packageName)
-            putExtra("is_connected", false)
-        })
+        runCatching {
+            sendBroadcast(Intent(ACTION_MESH_STATE_CHANGED).apply {
+                setPackage(packageName)
+                putExtra("is_connected", false)
+            })
+        }
 
         Log.i(TAG, "Fokk Mesh device-wide VPN stopped")
     }
@@ -234,22 +240,28 @@ class FokkMeshVpnService : VpnService() {
             private set
 
         fun start(context: Context, region: String = "AUTO") {
-            val intent = Intent(context, FokkMeshVpnService::class.java).apply {
-                action = ACTION_START
-                putExtra(EXTRA_REGION, region)
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+            runCatching {
+                val appContext = context.applicationContext
+                val intent = Intent(appContext, FokkMeshVpnService::class.java).apply {
+                    action = ACTION_START
+                    putExtra(EXTRA_REGION, region)
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    appContext.startForegroundService(intent)
+                } else {
+                    appContext.startService(intent)
+                }
             }
         }
 
         fun stop(context: Context) {
-            val intent = Intent(context, FokkMeshVpnService::class.java).apply {
-                action = ACTION_DISCONNECT
+            runCatching {
+                val appContext = context.applicationContext
+                val intent = Intent(appContext, FokkMeshVpnService::class.java).apply {
+                    action = ACTION_DISCONNECT
+                }
+                appContext.startService(intent)
             }
-            context.startService(intent)
         }
     }
 }

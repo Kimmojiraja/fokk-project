@@ -390,11 +390,12 @@
 
     window.triggerFokkSummarizer = function() {
         try {
+            const existing = document.getElementById('__fokk_summary_modal');
+            if (existing) existing.remove();
+
             const summary = generatePageSummary();
             if (window.FokkShieldBridge && typeof window.FokkShieldBridge.showAiSummaryData === 'function') {
                 window.FokkShieldBridge.showAiSummaryData(JSON.stringify(summary));
-            } else {
-                renderInPageSummaryModal(summary);
             }
         } catch (err) {
             const fallback = {
@@ -417,76 +418,7 @@
             };
             if (window.FokkShieldBridge && typeof window.FokkShieldBridge.showAiSummaryData === 'function') {
                 window.FokkShieldBridge.showAiSummaryData(JSON.stringify(fallback));
-            } else {
-                renderInPageSummaryModal(fallback);
             }
         }
     };
-
-    function renderInPageSummaryModal(data) {
-        let existing = document.getElementById('__fokk_summary_modal');
-        if (existing) existing.remove();
-
-        const modal = document.createElement('div');
-        modal.id = '__fokk_summary_modal';
-        modal.style.cssText = `
-            position: fixed; inset: 0; background: rgba(0,0,0,0.78); backdrop-filter: blur(16px);
-            z-index: 1000000; display: flex; align-items: flex-end; justify-content: center;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        `;
-
-        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-
-        modal.innerHTML = `
-            <div style="background: #0E121B; border: 1px solid rgba(0,229,255,0.28); border-radius: 24px 24px 0 0; width: 100%; max-width: 620px; padding: 24px; max-height: 88vh; overflow-y: auto; color: #FFFFFF; box-shadow: 0 -12px 48px rgba(0,0,0,0.75);">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="background: rgba(0,229,255,0.15); color: #00E5FF; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 800; border: 1px solid rgba(0,229,255,0.35); letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 5px;">
-                            <svg width="12" height="12" viewBox="0 0 100 100" fill="currentColor"><path d="M25.6,78.0L13.2,78.0L14.4,75.8L27.6,50.6L39.9,30.6L52.0,14.1L55.7,10.0L55.8,41.5L55.0,43.3L53.4,44.2L41.6,44.3L37.9,51.5L55.2,51.6L55.3,57.7L54.0,60.9L51.9,62.5L50.3,62.9L33.3,62.9L25.8,77.7Z"/><path d="M89.0,74.8L58.8,74.8L58.3,10.0Z"/><path d="M49.9,90.0L20.9,90.0L19.0,89.7L16.2,88.6L14.4,87.4L11.1,83.9L8.0,80.2L38.9,80.2L41.7,79.7L46.3,77.9L48.9,77.4L92.0,77.4L86.4,83.2L82.0,86.9L77.3,89.4L74.8,89.9L50.0,89.9Z"/></svg>
-                            <span>FOKK SUMMARY</span>
-                        </span>
-                        <span style="font-size: 11.5px; color: #94A3B8;">${data.readingTime} &bull; ${data.source || data.sourceHost}</span>
-                    </div>
-                    <button onclick="document.getElementById('__fokk_summary_modal').remove()" style="background: rgba(255,255,255,0.08); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; font-size: 14px; cursor: pointer;">✕</button>
-                </div>
-
-                ${data.leadImage ? `
-                    <div style="margin-bottom: 16px; border-radius: 14px; overflow: hidden; max-height: 220px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center;">
-                        <img src="${data.leadImage}" alt="" style="max-height: 220px; width: 100%; object-fit: cover;" onerror="this.parentElement.style.display='none'" />
-                    </div>
-                ` : ''}
-
-                <h3 style="color: #FFF; font-size: 17px; font-weight: 800; margin-bottom: 14px; line-height: 1.4;">${data.title || 'Executive Brief'}</h3>
-
-                <!-- Executive Paragraph -->
-                <div style="background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.18); border-radius: 14px; padding: 14px; margin-bottom: 18px; line-height: 1.6; font-size: 13.5px; color: #E2E8F0;">
-                    <span style="font-size: 10.5px; font-weight: 800; color: #00E5FF; letter-spacing: 0.8px; text-transform: uppercase; display: block; margin-bottom: 6px;">Executive Brief</span>
-                    <span>${data.executiveSummary}</span>
-                </div>
-
-                <!-- Key Takeaways -->
-                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
-                    <span style="font-size: 11px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">Key Takeaways</span>
-                    ${data.bullets.map(b => `
-                        <div style="display: flex; gap: 10px; font-size: 13px; line-height: 1.5; background: rgba(255,255,255,0.03); padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
-                            <span style="color: #00E5FF; font-weight: bold; font-size: 15px; line-height: 1;">•</span>
-                            <span style="color: #F1F5F9;">${b}</span>
-                        </div>
-                    `).join('')}
-                </div>
-
-                ${data.metrics.length > 0 ? `
-                    <div style="margin-bottom: 16px;">
-                        <span style="font-size: 10.5px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 8px;">Key Figures &amp; Data Points</span>
-                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                            ${data.metrics.map(m => `<span style="background: rgba(0,229,255,0.08); color: #00E5FF; border: 1px solid rgba(0,229,255,0.22); padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700;">${m}</span>`).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-
-                <button onclick="navigator.clipboard.writeText(${JSON.stringify((data.executiveSummary ? data.executiveSummary + '\n\n' : '') + data.bullets.join('\n\n'))}); this.innerText='Summary Copied!';" style="width: 100%; background: linear-gradient(135deg, #00E5FF, #3B82F6); border: none; border-radius: 12px; padding: 12px; color: #000; font-weight: 800; font-size: 13px; cursor: pointer; transition: transform 0.15s ease;">Copy Fokk Summary</button>
-            </div>
-        `;
-        document.body.appendChild(modal);
-    }
 })();
