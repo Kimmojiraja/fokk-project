@@ -8322,7 +8322,7 @@ open class MediaHubActivity : AppCompatActivity() {
             val initialEval = FokkAiEngine.evaluateCredibility(
                 host = sourceHost,
                 title = title,
-                content = explicitSummary.ifBlank { lastAiPageContext },
+                context = explicitSummary.ifBlank { lastAiPageContext },
                 sources = emptyList()
             )
             var activeScore = initialEval.score
