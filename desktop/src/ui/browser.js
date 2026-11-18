@@ -3070,40 +3070,85 @@ function getVpnRouteKey(status) {
     return `${status.state || ''}|${status.activeMode || ''}|${status.customConfig || ''}|${status.connectedAt || ''}|${Boolean(status.killSwitch)}`;
 }
 
+const meshMainView = document.getElementById('meshMainView');
+const meshLocationView = document.getElementById('meshLocationView');
+const btnMeshClose = document.getElementById('btnMeshClose');
+const btnMeshLocationBack = document.getElementById('btnMeshLocationBack');
+const cardMeshLocationSelector = document.getElementById('cardMeshLocationSelector');
+const meshSelectedLocBadge = document.getElementById('meshSelectedLocBadge');
+const textMeshSelectedLocation = document.getElementById('textMeshSelectedLocation');
+const textMeshLocationSub = document.getElementById('textMeshLocationSub');
+const textMeshProtocolValue = document.getElementById('textMeshProtocolValue');
+const btnMeshProStart = document.getElementById('btnMeshProStart');
+
+const MESH_CHECK_SVG = `<svg class="mesh-loc-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+const MESH_GLOBE_SVG = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>`;
+
+function showMeshView(view) {
+    const isLoc = view === 'locations';
+    if (meshMainView) meshMainView.classList.toggle('hidden', isLoc);
+    if (meshLocationView) meshLocationView.classList.toggle('hidden', !isLoc);
+}
+
 function renderProtocolPicker(locations, activeMode) {
     if (!vpnProtocolPicker || !Array.isArray(locations)) return;
-    vpnProtocolPicker.innerHTML = locations.map(loc => {
-        const isActive = loc.id === activeMode;
-        return `
-            <div class="vpn-proto-card ${isActive ? 'active' : ''}" data-mode="${loc.id}">
-                <div class="vpn-proto-icon-box" style="background: ${loc.color}15; border: 1px solid ${loc.color}30;">
-                    ${loc.iconSvg || ''}
-                </div>
-                <div class="vpn-proto-body">
-                    <div class="vpn-proto-name-row">
-                        <span class="vpn-proto-name">${loc.name}</span>
-                        <span class="vpn-proto-badge" style="background: ${loc.color}20; color: ${loc.color}; border: 1px solid ${loc.color}40;">${loc.badge || 'PRO'}</span>
-                    </div>
-                    <div class="vpn-proto-desc">${loc.description || loc.protocol}</div>
-                </div>
-                <div class="vpn-proto-radio">
-                    <span class="vpn-proto-radio-dot"></span>
-                </div>
-            </div>
-        `;
-    }).join('');
 
-    // Wire clicks on each protocol card
-    vpnProtocolPicker.querySelectorAll('.vpn-proto-card').forEach(card => {
-        card.addEventListener('click', async () => {
-            const modeId = card.getAttribute('data-mode');
+    const autoLoc = locations.find(l => l.id === 'relay_auto');
+    const countries = locations.filter(l => l.isCountry);
+    const clustersAndAdv = locations.filter(l => ['relay_eu', 'relay_am', 'relay_as', 'tor', 'custom'].includes(l.id));
+
+    const makeRow = (loc, pillText, isFree) => {
+        const isActive = loc.id === activeMode;
+        const iconContent = loc.countryCode
+            ? `<span>${loc.countryCode}</span>`
+            : (loc.iconSvg || MESH_GLOBE_SVG);
+        return `
+            <button type="button" class="mesh-loc-row ${isActive ? 'active' : ''}" data-mode="${loc.id}">
+                <div class="mesh-loc-row-icon">${iconContent}</div>
+                <div class="mesh-loc-row-body">
+                    <div class="mesh-loc-row-title-line">
+                        <span class="mesh-loc-row-title">${loc.name}</span>
+                        ${pillText ? `<span class="mesh-loc-row-pill ${isFree ? 'free' : ''}">${pillText}</span>` : ''}
+                    </div>
+                    <div class="mesh-loc-row-sub">${loc.description || loc.protocol || ''}</div>
+                </div>
+                ${MESH_CHECK_SVG}
+            </button>
+        `;
+    };
+
+    let html = '';
+    if (autoLoc) {
+        html += `<div class="mesh-loc-section-label">Optimal Routing (Free)</div>`;
+        html += makeRow({
+            ...autoLoc,
+            name: 'Optimal location (Automatic)',
+            description: 'Lowest latency routing across nearest privacy nodes'
+        }, 'FREE', true);
+    }
+
+    if (countries.length > 0) {
+        html += `<div class="mesh-loc-section-label">Verified Privacy Countries</div>`;
+        html += countries.map(c => makeRow(c, c.countryCode, false)).join('');
+    }
+
+    if (clustersAndAdv.length > 0) {
+        html += `<div class="mesh-loc-section-label">Regional Clusters &amp; Advanced</div>`;
+        html += clustersAndAdv.map(c => makeRow(c, c.badge, false)).join('');
+    }
+
+    vpnProtocolPicker.innerHTML = html;
+
+    vpnProtocolPicker.querySelectorAll('.mesh-loc-row').forEach(row => {
+        row.addEventListener('click', async () => {
+            const modeId = row.getAttribute('data-mode');
             if (!modeId) return;
 
-            vpnProtocolPicker.querySelectorAll('.vpn-proto-card').forEach(c => c.classList.remove('active'));
-            card.classList.add('active');
+            vpnProtocolPicker.querySelectorAll('.mesh-loc-row').forEach(r => r.classList.remove('active'));
+            row.classList.add('active');
 
+            const isCustom = modeId === 'custom';
             if (vpnCustomConfigWrap) {
-                const isCustom = modeId === 'custom';
                 vpnCustomConfigWrap.classList.toggle('hidden', !isCustom);
                 if (isCustom && vpnCustomInput) {
                     setTimeout(() => vpnCustomInput.focus(), 60);
@@ -3112,13 +3157,10 @@ function renderProtocolPicker(locations, activeMode) {
 
             try {
                 await ipcRenderer.invoke('fokk-vpn-set-mode', modeId);
-                if (modeId.startsWith('relay_')) {
-                    const label = card.querySelector('.vpn-proto-name')?.textContent || 'Fokk Mesh';
-                    showToast(`${label} selected. Tap power to connect.`);
-                } else if (modeId === 'tor') {
-                    showToast('Tor Onion Network selected. Tap power to connect.');
-                } else {
-                    showToast('Custom proxy selected. Enter a reachable endpoint.');
+                const updated = ipcRenderer.sendSync('fokk-vpn-get-status');
+                if (updated) updateVpnUI(updated);
+                if (!isCustom) {
+                    showMeshView('main');
                 }
             } catch (_) {}
         });
@@ -3155,59 +3197,69 @@ function updateVpnUI(status) {
         vpnStatusPill.textContent = isConn ? 'Protected' : isConnecting ? 'Connecting...' : isErr ? 'Unavailable' : 'Disconnected';
     }
 
-    // 3. Power Button & Radar Ring
+    // 3. Power Button & Radar Ring (Keep mesh-* classes intact!)
     if (btnVpnPower) {
-        btnVpnPower.className = 'vpn-power-btn ' + state;
+        btnVpnPower.className = 'vpn-power-btn mesh-power-btn ' + state;
     }
     if (vpnRadarRing) {
-        vpnRadarRing.className = 'vpn-radar-ring ' + state;
+        vpnRadarRing.className = 'vpn-radar-ring mesh-radar-ring ' + state;
     }
     if (vpnPowerLabel) {
         if (isErr && status.errorMessage) {
-            let errorHtml = `<span style="color:#F87171;font-size:11px;display:block;text-align:center;line-height:1.4;margin-bottom:6px;">${status.errorMessage}</span>`;
-            if (status.activeMode === 'custom' && (!status.customConfig || !status.customConfig.trim())) {
-                errorHtml += `<button id="btnFocusCustomInput" style="background:#10B981;color:#000;border:none;border-radius:6px;padding:4px 10px;font-size:10.5px;font-weight:700;cursor:pointer;margin-top:2px;">Paste Proxy Below</button>`;
-            }
-            vpnPowerLabel.innerHTML = errorHtml;
-
-            const btnFocus = document.getElementById('btnFocusCustomInput');
-            if (btnFocus) {
-                btnFocus.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (vpnCustomInput) vpnCustomInput.focus();
-                });
-            }
+            vpnPowerLabel.innerHTML = `<span style="color:#F87171;font-size:12px;display:block;line-height:1.35;">${status.errorMessage}</span>`;
         } else {
-            vpnPowerLabel.textContent = isConn ? 'Protected' : isConnecting ? 'Probing Mesh Relays...' : 'Disconnected';
+            vpnPowerLabel.textContent = isConn ? 'Protected' : isConnecting ? 'Connecting...' : 'Disconnected';
         }
     }
     if (vpnPowerSub) {
         vpnPowerSub.textContent = isConn
-            ? (status.activeMeshNode ? `Routed via ${status.virtualCountry}` : 'Browser route active')
+            ? (status.activeMeshNode ? `Your browsing is secured · ${status.virtualCountry}` : 'Your browsing is secured')
             : isConnecting
-            ? 'Selecting fastest verified Fokk Mesh relay...'
+            ? 'Probing fastest Fokk Mesh relay...'
             : 'Your real IP is visible';
+    }
+
+    // 4. Opera-style Location Selector Card
+    const loc = status.location || {};
+    if (textMeshSelectedLocation) {
+        textMeshSelectedLocation.textContent = loc.name || 'Optimal location';
+    }
+    if (textMeshLocationSub) {
+        if (isConn && status.virtualCountry && status.virtualCountry !== 'Local Direct') {
+            textMeshLocationSub.textContent = `${status.virtualCountry}${status.ping ? ` · ${status.ping} ms` : ''}`;
+        } else {
+            textMeshLocationSub.textContent = loc.description || 'Virtual location · Automatic';
+        }
+    }
+    if (meshSelectedLocBadge) {
+        if (loc.countryCode) {
+            meshSelectedLocBadge.innerHTML = `<span>${loc.countryCode}</span>`;
+        } else {
+            meshSelectedLocBadge.innerHTML = loc.iconSvg || MESH_GLOBE_SVG;
+        }
+    }
+    if (textMeshProtocolValue) {
+        textMeshProtocolValue.textContent = loc.protocol || 'Auto (High-Speed Edge SOCKS5)';
     }
 
     const meshBadge = document.getElementById('vpnMeshNodeBadge');
     if (meshBadge && status.meshNodeCount) {
-        meshBadge.textContent = `${status.meshNodeCount} Relays`;
+        meshBadge.textContent = `${status.meshNodeCount} Nodes`;
     }
 
-    // 4. Metrics
+    // 5. Telemetry Strip
     if (vpnMetricIp) {
-        vpnMetricIp.textContent = verifiedExitIp || status.virtualIp || (isConn ? 'Route active' : 'Direct connection (IP not masked)');
-        vpnMetricIp.className = 'metric-val ' + ((verifiedExitIp && browserExitDiffersFromDirect) || (isConn && status.activeMeshNode) ? 'masked' : isConn || isConnecting ? 'connecting' : 'unmasked');
+        vpnMetricIp.textContent = verifiedExitIp || (isConn ? (status.virtualIp || 'Protected') : 'Direct');
+        vpnMetricIp.className = 'metric-val mesh-tele-val ' + ((verifiedExitIp && browserExitDiffersFromDirect) || (isConn && status.activeMeshNode) ? 'masked' : isConn || isConnecting ? 'connecting' : 'unmasked');
     }
-    if (vpnMetricLocation) vpnMetricLocation.textContent = status.virtualCountry || status.location?.region || 'Local Direct';
-    if (vpnMetricProtocol) vpnMetricProtocol.textContent = status.location?.protocol || 'Browser proxy';
+    if (vpnMetricLocation) vpnMetricLocation.textContent = status.virtualCountry || loc.region || 'Local Direct';
+    if (vpnMetricProtocol) vpnMetricProtocol.textContent = loc.protocol || 'Fokk Mesh';
     if (vpnMetricPing) vpnMetricPing.textContent = status.ping ? status.ping + ' ms' : '—';
 
-    // 5. Active Protocol Card Selection
+    // 6. Active Location Selection in Picker
     if (vpnProtocolPicker && status.activeMode) {
-        vpnProtocolPicker.querySelectorAll('.vpn-proto-card').forEach(card => {
-            const matches = card.getAttribute('data-mode') === status.activeMode;
-            card.classList.toggle('active', matches);
+        vpnProtocolPicker.querySelectorAll('.mesh-loc-row').forEach(row => {
+            row.classList.toggle('active', row.getAttribute('data-mode') === status.activeMode);
         });
     }
 
@@ -3218,7 +3270,7 @@ function updateVpnUI(status) {
         vpnCustomInput.value = status.customConfig;
     }
 
-    // 6. Kill Switch
+    // 7. Kill Switch
     if (vpnKillSwitchCheck && typeof status.killSwitch === 'boolean') {
         vpnKillSwitchCheck.checked = status.killSwitch;
     }
@@ -3232,13 +3284,37 @@ function initVpnUI() {
         locations = ipcRenderer.sendSync('fokk-vpn-get-locations');
     } catch (_) {}
 
-    // Populate Luxury Protocol Picker Cards (ZERO EMOJIS)
     if (Array.isArray(locations) && locations.length > 0) {
-        renderProtocolPicker(locations, initialStatus ? initialStatus.activeMode : 'tor');
+        renderProtocolPicker(locations, initialStatus ? initialStatus.activeMode : 'relay_auto');
     }
 
     if (initialStatus) {
         updateVpnUI(initialStatus);
+    }
+
+    if (cardMeshLocationSelector) {
+        cardMeshLocationSelector.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showMeshView('locations');
+        });
+    }
+    if (btnMeshLocationBack) {
+        btnMeshLocationBack.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showMeshView('main');
+        });
+    }
+    if (btnMeshClose) {
+        btnMeshClose.addEventListener('click', () => {
+            if (vpnPopover) vpnPopover.classList.add('hidden');
+            if (btnVpnToggle) btnVpnToggle.classList.remove('active');
+        });
+    }
+    if (btnMeshProStart) {
+        btnMeshProStart.addEventListener('click', () => {
+            if (vpnPopover) vpnPopover.classList.add('hidden');
+            if (typeof openFeatureHub === 'function') openFeatureHub('fundraising');
+        });
     }
 
     // Toggle Popover Visibility
@@ -3248,8 +3324,11 @@ function initVpnUI() {
             const willOpen = vpnPopover.classList.contains('hidden');
             vpnPopover.classList.toggle('hidden');
             btnVpnToggle.classList.toggle('active', willOpen);
+            if (willOpen) showMeshView('main');
             if (desktopBrowserMenu) desktopBrowserMenu.classList.add('hidden');
             if (omniboxEngineDropdown) omniboxEngineDropdown.classList.add('hidden');
+            if (fokkAiDrawer) fokkAiDrawer.classList.add('hidden');
+            if (btnFokkAiToolbar) btnFokkAiToolbar.classList.remove('active');
         });
     }
 
@@ -3273,19 +3352,19 @@ function initVpnUI() {
                 }
             }
 
-            if (vpnPowerLabel) vpnPowerLabel.textContent = 'Routing...';
-            if (vpnRadarRing) vpnRadarRing.className = 'vpn-radar-ring connecting';
+            if (vpnPowerLabel) vpnPowerLabel.textContent = 'Connecting...';
+            if (vpnRadarRing) vpnRadarRing.className = 'vpn-radar-ring mesh-radar-ring connecting';
             try {
                 const res = await ipcRenderer.invoke('fokk-vpn-toggle');
                 const newStatus = (res && res.status) ? res.status : ipcRenderer.sendSync('fokk-vpn-get-status');
                 if (newStatus) {
                     updateVpnUI(newStatus);
                     if (newStatus.state === 'connected') {
-                        showToast(`Browser route configured: ${newStatus.virtualCountry || 'selected endpoint'}. Verify its exit IP.`);
+                        showToast(`Fokk Mesh protected via ${newStatus.virtualCountry || 'Optimal location'}${newStatus.ping ? ` (${newStatus.ping} ms)` : ''}`);
                     } else if (newStatus.state === 'error' && newStatus.errorMessage) {
                         showToast(newStatus.errorMessage);
                     } else {
-                        showToast('Browser route disconnected. Browser traffic is direct.');
+                        showToast('Fokk Mesh disconnected.');
                     }
                 }
             } catch (err) {

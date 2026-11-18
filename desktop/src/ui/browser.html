@@ -421,105 +421,151 @@
         </div>
     </div>
 
-    <!-- 3b. Browser privacy routing popover -->
-    <div id="vpnPopover" class="vpn-popover hidden">
-        <div class="vpn-popover-header">
-            <div class="vpn-header-left">
-                <div class="vpn-brand-icon">
-                    <svg class="vpn-quantum-glyph" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 2L3.5 7v10L12 22l8.5-5V7L12 2z" stroke="currentColor" stroke-width="1.9"/>
-                        <circle cx="12" cy="12" r="4.8" stroke="currentColor" stroke-width="1.6" stroke-dasharray="7 2.5"/>
-                        <circle cx="12" cy="12" r="2.2" fill="currentColor"/>
-                        <path d="M12 2v3.5M12 18.5v3.5M3.5 7l3 1.8M17.5 15.2l3 1.8M3.5 17l3-1.8M17.5 8.8l3-1.8" stroke="currentColor" stroke-width="1.4" opacity="0.75"/>
-                    </svg>
-                </div>
-                <div>
-                    <div class="vpn-title">Fokk Mesh</div>
-                    <div class="vpn-subtitle">Multi-region privacy routing</div>
-                </div>
-            </div>
-            <span class="vpn-status-pill disconnected" id="vpnStatusPill">Disconnected</span>
-        </div>
-
-        <div class="vpn-power-section">
-            <div class="vpn-power-chassis">
-                <div class="vpn-radar-ring" id="vpnRadarRing"></div>
-                <button class="vpn-power-btn" id="btnVpnPower" title="Toggle browser route">
-                    <svg class="vpn-power-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
-                        <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
-                        <line x1="12" y1="2" x2="12" y2="12"/>
-                    </svg>
+    <!-- 3b. Fokk Mesh Gateway Popover (100% Visual Parity with Mobile sheet_vpn_gateway.xml) -->
+    <div id="vpnPopover" class="vpn-popover fokk-mesh-popover hidden">
+        <!-- MAIN VIEW: Fokk Mesh Gateway -->
+        <div id="meshMainView" class="mesh-view">
+            <!-- Top Bar: Close, Centered "Fokk Mesh", Info -->
+            <div class="mesh-topbar">
+                <button id="btnMeshClose" class="mesh-icon-btn" type="button" title="Close Fokk Mesh">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 </button>
+                <div class="mesh-topbar-title">Fokk Mesh</div>
+                <span class="vpn-status-pill disconnected" id="vpnStatusPill">Disconnected</span>
             </div>
-            <div class="vpn-power-info">
-                <div class="vpn-power-label" id="vpnPowerLabel">Tap to Connect</div>
-                <div class="vpn-power-sub" id="vpnPowerSub">Choose a browser route</div>
+
+            <!-- Hero Area: World Map Silhouette + Circular Fokk Relay Power Button -->
+            <div class="mesh-hero">
+                <svg class="mesh-world-map" viewBox="0 0 360 160" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+                    <path fill="#1E293B" fill-opacity="0.55" d="M35,25 Q45,20 65,22 Q85,24 95,35 Q105,48 95,62 Q85,75 75,70 Q60,65 50,55 Q35,45 35,25 Z"/>
+                    <path fill="#1E293B" fill-opacity="0.48" d="M98,18 Q115,15 125,25 Q120,38 105,35 Q95,30 98,18 Z"/>
+                    <path fill="#1E293B" fill-opacity="0.55" d="M78,82 Q95,85 105,98 Q112,115 102,135 Q92,150 85,145 Q78,135 75,115 Q72,98 78,82 Z"/>
+                    <path fill="#1E293B" fill-opacity="0.55" d="M165,25 Q185,22 195,32 Q200,45 185,52 Q172,55 162,45 Q158,35 165,25 Z"/>
+                    <path fill="#1E293B" fill-opacity="0.48" d="M152,28 Q158,25 162,32 Q158,38 152,35 Z"/>
+                    <path fill="#1E293B" fill-opacity="0.55" d="M165,60 Q192,58 205,75 Q212,95 200,120 Q188,138 178,135 Q168,125 162,105 Q155,85 165,60 Z"/>
+                    <path fill="#1E293B" fill-opacity="0.55" d="M205,25 Q245,18 290,28 Q315,45 305,70 Q285,85 260,80 Q240,75 225,62 Q210,50 205,25 Z"/>
+                    <path fill="#1E293B" fill-opacity="0.48" d="M245,82 Q260,80 270,95 Q265,108 250,105 Q240,95 245,82 Z"/>
+                    <path fill="#1E293B" fill-opacity="0.55" d="M275,112 Q305,108 318,125 Q312,142 295,145 Q278,142 272,128 Q270,118 275,112 Z"/>
+                    <path fill="#1E293B" fill-opacity="0.42" d="M310,88 Q318,85 322,95 Q318,102 312,98 Z"/>
+                    <path fill="#1E293B" fill-opacity="0.42" d="M325,130 Q332,128 335,138 Q330,145 325,140 Z"/>
+                </svg>
+
+                <div class="mesh-hero-center">
+                    <div class="mesh-power-ring-wrap">
+                        <div class="vpn-radar-ring mesh-radar-ring" id="vpnRadarRing"></div>
+                        <button class="vpn-power-btn mesh-power-btn" id="btnVpnPower" title="Toggle Fokk Mesh">
+                            <!-- Exact Mobile ic_fokk_relay Shield + S-Bridge Icon -->
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                                <path d="M12,2.5L4.5,5.8v5.8c0,5 3.2,9.6 7.5,10.9c4.3,-1.3 7.5,-5.9 7.5,-10.9V5.8L12,2.5z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                <circle cx="9" cy="7.7" r="1.8" fill="currentColor"/>
+                                <circle cx="15" cy="13.7" r="1.8" fill="currentColor"/>
+                                <path d="M9,7.7 C11.8,7.7 12.2,13.7 15,13.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="mesh-status-title" id="vpnPowerLabel">Disconnected</div>
+                    <div class="mesh-status-sub" id="vpnPowerSub">Your real IP is visible</div>
+                </div>
             </div>
+
+            <!-- Location Selector Card (Exact Mobile Opera-Style Selector) -->
+            <button id="cardMeshLocationSelector" class="mesh-location-card" type="button">
+                <div class="mesh-loc-badge" id="meshSelectedLocBadge">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+                </div>
+                <div class="mesh-loc-text">
+                    <div class="mesh-loc-name" id="textMeshSelectedLocation">Optimal location</div>
+                    <div class="mesh-loc-sub" id="textMeshLocationSub">Virtual location · Automatic</div>
+                </div>
+                <svg class="mesh-loc-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+
+            <!-- Compact Live Telemetry Strip -->
+            <div class="mesh-telemetry-strip">
+                <div class="mesh-tele-item">
+                    <span class="mesh-tele-label">Exit IP</span>
+                    <span class="metric-val unmasked mesh-tele-val" id="vpnMetricIp">Direct</span>
+                </div>
+                <div class="mesh-tele-divider"></div>
+                <div class="mesh-tele-item">
+                    <span class="mesh-tele-label">Ping</span>
+                    <span class="metric-val highlight mesh-tele-val" id="vpnMetricPing">—</span>
+                </div>
+                <div class="mesh-tele-divider"></div>
+                <div class="mesh-tele-item">
+                    <span class="mesh-tele-label">Relays</span>
+                    <span class="mesh-tele-val" id="vpnMeshNodeBadge">16 Nodes</span>
+                </div>
+                <span id="vpnMetricLocation" class="hidden"></span>
+                <span id="vpnMetricProtocol" class="hidden"></span>
+            </div>
+
+            <div class="mesh-divider"></div>
+
+            <!-- Settings Rows matching Mobile -->
+            <div class="mesh-setting-row">
+                <div class="mesh-setting-text">
+                    <div class="mesh-setting-title">Fail-closed routing</div>
+                    <div class="mesh-setting-sub">Stop browser requests while the mesh relay is unavailable</div>
+                </div>
+                <label class="vpn-switch">
+                    <input type="checkbox" id="vpnKillSwitchCheck" checked>
+                    <span class="vpn-slider"></span>
+                </label>
+            </div>
+
+            <div class="mesh-setting-row" id="rowMeshProtocolInfo">
+                <div class="mesh-setting-text">
+                    <div class="mesh-setting-title">Mesh protocol</div>
+                    <div class="mesh-setting-sub" id="textMeshProtocolValue">Auto (High-Speed Edge SOCKS5)</div>
+                </div>
+                <span class="mesh-badge-tag">Edge</span>
+            </div>
+
+            <!-- Protect Your Privacy: Mobile Gradient Pro Card -->
+            <div class="mesh-pro-card" id="cardMeshProBanner">
+                <div class="mesh-pro-left">
+                    <div class="mesh-pro-title">Protect your privacy</div>
+                    <div class="mesh-pro-sub">Unlock Fokk Mesh Pro for dedicated global relays and anti-DPI defense</div>
+                    <button id="btnMeshProStart" class="mesh-pro-btn" type="button">Get started</button>
+                </div>
+                <div class="mesh-pro-icon-box">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+            </div>
+
+            <!-- Verify Browser Exit IP Button (Exact Mobile Style) -->
+            <button id="btnVpnVerifyExit" class="mesh-verify-btn" type="button">Verify Browser Exit IP</button>
         </div>
 
-        <div class="vpn-metrics-card">
-            <div class="vpn-metric-row">
-                <span class="metric-label">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                    Browser exit IP
-                </span>
-                <span class="metric-val unmasked" id="vpnMetricIp">Direct connection (IP not masked)</span>
+        <!-- LOCATION PICKER VIEW (100% Visual Parity with Mobile sheet_vpn_location_picker.xml) -->
+        <div id="meshLocationView" class="mesh-view hidden">
+            <div class="mesh-loc-picker-header">
+                <button id="btnMeshLocationBack" class="mesh-icon-btn" type="button" title="Back to Fokk Mesh">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                </button>
+                <div class="mesh-loc-picker-titles">
+                    <div class="mesh-loc-picker-title">Fokk Privacy Mesh</div>
+                    <div class="mesh-loc-picker-sub">Regional Oblivious Mesh · Zero-Drop Speed</div>
+                </div>
             </div>
-            <div class="vpn-metric-row">
-                <span class="metric-label">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                    Location
-                </span>
-                <span class="metric-val" id="vpnMetricLocation">Local Direct</span>
-            </div>
-            <div class="vpn-metric-row">
-                <span class="metric-label">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
-                    Protocol
-                </span>
-                <span class="metric-val" id="vpnMetricProtocol">Browser proxy</span>
-            </div>
-            <div class="vpn-metric-row">
-                <span class="metric-label">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                    Ping Latency
-                </span>
-                <span class="metric-val highlight" id="vpnMetricPing">—</span>
-            </div>
-        </div>
 
-        <button id="btnVpnVerifyExit" class="btn-save-custom-vpn" type="button">Verify IP from active browser tab</button>
+            <div class="mesh-loc-picker-scroll">
+                <div id="vpnProtocolPicker" class="mesh-loc-list">
+                    <!-- Populated dynamically: Optimal (FREE), Verified Privacy Countries, Clusters, Tor, Custom -->
+                </div>
 
-        <div class="vpn-location-section">
-            <div class="vpn-section-header-row">
-                <span class="vpn-section-label">Mesh Location &amp; Protocol</span>
-                <span class="vpn-section-badge" id="vpnMeshNodeBadge">Fokk Mesh</span>
+                <div id="vpnCustomConfigWrap" class="vpn-custom-wrap hidden">
+                    <div class="vpn-custom-header">
+                        <label class="vpn-section-label" for="vpnCustomInput">Custom SOCKS5 / HTTP proxy</label>
+                    </div>
+                    <textarea id="vpnCustomInput" class="vpn-custom-textarea" placeholder="Enter a running proxy, e.g. socks5://proxy.example:1080"></textarea>
+                    <div class="vpn-custom-footer">
+                        <span class="vpn-custom-tip">Enter host:port or socks5://host:port for your private server.</span>
+                        <button id="btnSaveCustomVpn" class="btn-save-custom-vpn" type="button">Save &amp; Apply</button>
+                    </div>
+                </div>
             </div>
-            <div class="vpn-protocol-picker" id="vpnProtocolPicker">
-                <!-- Available browser routing modes -->
-            </div>
-        </div>
-
-        <div id="vpnCustomConfigWrap" class="vpn-custom-wrap hidden">
-            <div class="vpn-custom-header">
-                <label class="vpn-section-label" for="vpnCustomInput">Custom SOCKS5 / HTTP proxy</label>
-            </div>
-            <textarea id="vpnCustomInput" class="vpn-custom-textarea" placeholder="Enter a running proxy, e.g. socks5://proxy.example:1080"></textarea>
-            <div class="vpn-custom-footer">
-                <span class="vpn-custom-tip">Custom mode connects to a proxy you provide. Choose Tor Network to start Fokk’s bundled Tor route.</span>
-                <button id="btnSaveCustomVpn" class="btn-save-custom-vpn">Save & Apply</button>
-            </div>
-        </div>
-
-        <div class="vpn-footer-toggle">
-            <div class="vpn-toggle-text">
-                <span class="vpn-toggle-name">Fail-closed routing</span>
-                <span class="vpn-toggle-sub">Stop browser requests while the route is unavailable</span>
-            </div>
-            <label class="vpn-switch">
-                <input type="checkbox" id="vpnKillSwitchCheck" checked>
-                <span class="vpn-slider"></span>
-            </label>
         </div>
     </div>
 

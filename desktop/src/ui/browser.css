@@ -3614,3 +3614,484 @@ body.theme-light .vpn-footer-toggle {
     font-size: 10.5px;
     color: #526075;
 }
+
+/* ==========================================================================
+   Fokk Mesh Gateway Popover (100% Visual Parity with Mobile sheet_vpn_gateway)
+   ========================================================================== */
+.vpn-popover.fokk-mesh-popover {
+    width: 380px !important;
+    max-width: 94vw;
+    max-height: calc(100vh - 104px);
+    background: #0B0F19 !important;
+    border: 1px solid #1C2536 !important;
+    border-radius: 18px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.72) !important;
+}
+.vpn-popover.fokk-mesh-popover.hidden {
+    display: none !important;
+}
+
+.mesh-view {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 106px);
+    overflow-y: auto;
+    padding: 14px 18px 18px;
+}
+.mesh-view.hidden {
+    display: none !important;
+}
+.mesh-view::-webkit-scrollbar,
+.mesh-loc-picker-scroll::-webkit-scrollbar {
+    width: 5px;
+}
+.mesh-view::-webkit-scrollbar-thumb,
+.mesh-loc-picker-scroll::-webkit-scrollbar-thumb {
+    background: #1E293B;
+    border-radius: 3px;
+}
+
+.mesh-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.mesh-topbar-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #F8FAFC;
+    letter-spacing: -0.01em;
+}
+.mesh-icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    border: none;
+    background: transparent;
+    color: #94A3B8;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.mesh-icon-btn:hover {
+    background: #161F30;
+    color: #F8FAFC;
+}
+
+.mesh-hero {
+    position: relative;
+    height: 176px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 4px;
+    overflow: hidden;
+}
+.mesh-world-map {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+.mesh-hero-center {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+.mesh-power-ring-wrap {
+    position: relative;
+    width: 88px;
+    height: 88px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.mesh-radar-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: #1E293B;
+    transition: all 0.25s ease;
+}
+.mesh-radar-ring.connected {
+    background: rgba(16, 185, 129, 0.20);
+    box-shadow: 0 0 28px rgba(16, 185, 129, 0.35);
+}
+.mesh-radar-ring.connecting {
+    background: rgba(56, 189, 248, 0.22);
+    animation: meshPulse 1.2s ease-in-out infinite;
+}
+.mesh-radar-ring.error {
+    background: rgba(248, 113, 113, 0.2);
+}
+@keyframes meshPulse {
+    0%, 100% { transform: scale(0.95); opacity: 0.7; }
+    50% { transform: scale(1.06); opacity: 1; }
+}
+.mesh-power-btn {
+    position: relative;
+    z-index: 3;
+    width: 68px !important;
+    height: 68px !important;
+    border-radius: 50% !important;
+    border: 2px solid #263348 !important;
+    background: #0F172A !important;
+    color: #94A3B8 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.mesh-power-btn:hover {
+    border-color: #38BDF8 !important;
+    color: #F8FAFC !important;
+}
+.mesh-power-btn.connected {
+    background: #064E3B !important;
+    border-color: #34D399 !important;
+    color: #34D399 !important;
+}
+.mesh-power-btn.connecting {
+    border-color: #38BDF8 !important;
+    color: #38BDF8 !important;
+}
+.mesh-power-btn.error {
+    border-color: #F87171 !important;
+    color: #F87171 !important;
+}
+.mesh-status-title {
+    margin-top: 10px;
+    font-size: 16.5px;
+    font-weight: 700;
+    color: #F8FAFC;
+}
+.mesh-status-sub {
+    margin-top: 2px;
+    font-size: 12.5px;
+    color: #94A3B8;
+}
+
+.mesh-location-card {
+    margin-top: 12px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #131B2B;
+    border: 1px solid #222F46;
+    border-radius: 14px;
+    padding: 12px 14px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s;
+}
+.mesh-location-card:hover {
+    background: #172136;
+    border-color: #334566;
+}
+.mesh-loc-badge {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: #1E293B;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #38BDF8;
+    font-size: 12px;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+.mesh-loc-text {
+    flex: 1;
+    min-width: 0;
+}
+.mesh-loc-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #F8FAFC;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mesh-loc-sub {
+    margin-top: 2px;
+    font-size: 11.5px;
+    color: #94A3B8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mesh-loc-chevron {
+    color: #64748B;
+    flex-shrink: 0;
+}
+
+.mesh-telemetry-strip {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #0E1422;
+    border: 1px solid #1A2438;
+    border-radius: 12px;
+    padding: 9px 12px;
+    gap: 8px;
+}
+.mesh-tele-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+.mesh-tele-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748B;
+}
+.mesh-tele-val {
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #E2E8F0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mesh-tele-val.masked { color: #34D399; }
+.mesh-tele-val.connecting { color: #38BDF8; }
+.mesh-tele-val.unmasked { color: #94A3B8; }
+.mesh-tele-divider {
+    width: 1px;
+    height: 24px;
+    background: #1C263B;
+}
+
+.mesh-divider {
+    height: 1px;
+    background: #1B2436;
+    margin: 14px 0 6px;
+}
+
+.mesh-setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 2px;
+}
+.mesh-setting-text {
+    flex: 1;
+    min-width: 0;
+}
+.mesh-setting-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #F8FAFC;
+}
+.mesh-setting-sub {
+    margin-top: 2px;
+    font-size: 11.5px;
+    color: #64748B;
+    line-height: 1.35;
+}
+.mesh-badge-tag {
+    padding: 3px 9px;
+    border-radius: 12px;
+    background: #161F32;
+    border: 1px solid #24334F;
+    color: #94A3B8;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.mesh-pro-card {
+    margin-top: 10px;
+    border-radius: 15px;
+    padding: 15px 16px;
+    background: linear-gradient(135deg, #4338CA 0%, #2563EB 60%, #0EA5E9 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.mesh-pro-left {
+    flex: 1;
+}
+.mesh-pro-title {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: #FFFFFF;
+}
+.mesh-pro-sub {
+    margin-top: 3px;
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: #E0E7FF;
+}
+.mesh-pro-btn {
+    margin-top: 10px;
+    height: 30px;
+    padding: 0 14px;
+    border-radius: 15px;
+    border: none;
+    background: #FFFFFF;
+    color: #4338CA;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.mesh-pro-btn:hover {
+    background: #F1F5F9;
+}
+.mesh-pro-icon-box {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(30, 27, 75, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.mesh-verify-btn {
+    margin-top: 12px;
+    width: 100%;
+    height: 38px;
+    border-radius: 11px;
+    background: #131B2B;
+    border: 1px solid #24344D;
+    color: #00E5FF;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+.mesh-verify-btn:hover {
+    background: #182338;
+    border-color: #38BDF8;
+}
+
+/* Location Picker View */
+.mesh-loc-picker-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #1A2438;
+    margin-bottom: 10px;
+}
+.mesh-loc-picker-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #F8FAFC;
+}
+.mesh-loc-picker-sub {
+    margin-top: 1px;
+    font-size: 11.5px;
+    color: #38BDF8;
+}
+.mesh-loc-picker-scroll {
+    overflow-y: auto;
+    max-height: 460px;
+    padding-right: 2px;
+}
+.mesh-loc-section-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #64748B;
+    margin: 12px 2px 6px;
+    text-transform: uppercase;
+}
+.mesh-loc-section-label:first-child {
+    margin-top: 2px;
+}
+.mesh-loc-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 8px;
+    border: none;
+    border-bottom: 1px solid #141C2D;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    border-radius: 10px;
+    transition: background 0.12s;
+}
+.mesh-loc-row:hover {
+    background: #131B2B;
+}
+.mesh-loc-row.active {
+    background: rgba(56, 189, 248, 0.08);
+}
+.mesh-loc-row-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: #161F31;
+    border: 1px solid #24324A;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #E2E8F0;
+    font-size: 11px;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+.mesh-loc-row-body {
+    flex: 1;
+    min-width: 0;
+}
+.mesh-loc-row-title-line {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+.mesh-loc-row-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #F8FAFC;
+}
+.mesh-loc-row-pill {
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: #131B2B;
+    border: 1px solid #233047;
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #38BDF8;
+}
+.mesh-loc-row-pill.free {
+    color: #34D399;
+    border-color: rgba(52, 211, 153, 0.3);
+}
+.mesh-loc-row-sub {
+    margin-top: 2px;
+    font-size: 11.5px;
+    color: #94A3B8;
+}
+.mesh-loc-check {
+    color: #38BDF8;
+    opacity: 0;
+    flex-shrink: 0;
+}
+.mesh-loc-row.active .mesh-loc-check {
+    opacity: 1;
+}

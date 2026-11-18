@@ -84,6 +84,37 @@ const PRESET_LOCATIONS = {
     }
 };
 
+const MESH_COUNTRIES = [
+    { code: 'US', name: 'United States', city: 'Miami / North Bergen', region: 'Americas' },
+    { code: 'DE', name: 'Germany', city: 'Frankfurt / Falkenstein', region: 'Europe' },
+    { code: 'GB', name: 'United Kingdom', city: 'London', region: 'Europe' },
+    { code: 'NL', name: 'Netherlands', city: 'Amsterdam', region: 'Europe' },
+    { code: 'FR', name: 'France', city: 'Paris', region: 'Europe' },
+    { code: 'SE', name: 'Sweden', city: 'Stockholm', region: 'Europe' },
+    { code: 'CA', name: 'Canada', city: 'Montreal', region: 'Americas' },
+    { code: 'SG', name: 'Singapore', city: 'Singapore', region: 'Asia-Pacific' },
+    { code: 'JP', name: 'Japan', city: 'Tokyo', region: 'Asia-Pacific' },
+    { code: 'HK', name: 'Hong Kong', city: 'Hong Kong', region: 'Asia-Pacific' },
+    { code: 'IN', name: 'India', city: 'Mumbai', region: 'Asia-Pacific' },
+    { code: 'KR', name: 'South Korea', city: 'Suwon', region: 'Asia-Pacific' }
+];
+
+for (const c of MESH_COUNTRIES) {
+    PRESET_LOCATIONS[`country_${c.code}`] = {
+        id: `country_${c.code}`,
+        name: c.name,
+        badge: c.code,
+        countryCode: c.code,
+        city: c.city,
+        protocol: 'Fokk Mesh SOCKS5',
+        description: `${c.city} · ${c.region}`,
+        region: `${c.city}, ${c.name}`,
+        meshRegion: c.code,
+        color: '#38BDF8',
+        isCountry: true
+    };
+}
+
 // Certified Fokk Mesh nodes (parity with Android NodeRegistry.kt & nodes_manifest.json)
 const BUILTIN_MESH_NODES = [
     { host: '45.61.188.134',   port: 44499, type: 'socks5', country: 'US', city: 'Miami' },
@@ -324,6 +355,9 @@ class VpnEngine extends EventEmitter {
             id: loc.id,
             name: loc.name,
             badge: loc.badge,
+            countryCode: loc.countryCode || '',
+            city: loc.city || '',
+            isCountry: !!loc.isCountry,
             color: loc.color,
             description: loc.description,
             iconSvg: loc.iconSvg,
@@ -629,7 +663,7 @@ class VpnEngine extends EventEmitter {
             if (this.killSwitch) {
                 await this.applyProxyRules('127.0.0.1:9');
             }
-            const isMeshRelay = this.activeMode.startsWith('relay_');
+            const isMeshRelay = this.activeMode.startsWith('relay_') || this.activeMode.startsWith('country_');
             const isTorMode = this.activeMode === 'tor';
             this.activeMeshNode = null;
             let proxyRules = '';
