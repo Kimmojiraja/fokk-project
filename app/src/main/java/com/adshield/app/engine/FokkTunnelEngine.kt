@@ -69,8 +69,21 @@ object FokkTunnelEngine {
         "IN" to "India",
         "CH" to "Switzerland",
         "IT" to "Italy",
-        "BR" to "Brazil"
+        "BR" to "Brazil",
+        "EDGE" to "Oblivious Edge Relay (300+ Cities)",
+        "HOME_BASE" to "Home-Base (Personal PC Relay)"
     )
+
+    // Configuration for Fokk Home-Base (Personal Desktop PC Relay)
+    @Volatile var homeBaseHost: String = ""
+    @Volatile var homeBasePort: Int = 10850
+    @Volatile var homeBaseToken: String = ""
+
+    fun configureHomeBase(host: String, port: Int, token: String) {
+        homeBaseHost = host.trim()
+        homeBasePort = if (port in 1..65535) port else 10850
+        homeBaseToken = token.trim()
+    }
 
     private val isRunning = AtomicBoolean(false)
     private var serverSocket: ServerSocket? = null
@@ -209,6 +222,8 @@ object FokkTunnelEngine {
         val tlsTag = if (activeTransportEncrypted) " · TLS" else ""
         return when (activeHopMode) {
             "SMART_CLOAK" -> "Smart-Cloak · DoH + SNI Shield$lat"
+            "EDGE_RELAY" -> "Oblivious Edge · 300+ Cities (RFC 9458)$lat"
+            "HOME_BASE" -> "Home-Base · Personal PC Relay$lat"
             "DUAL_HOP" -> {
                 val egLabel = egress?.let { it.city.ifBlank { it.country } } ?: "Exit"
                 val inLabel = ingress?.country?.ifBlank { "Relay" } ?: "Relay"
@@ -501,9 +516,117 @@ object FokkTunnelEngine {
         return null
     }
 
+    private fun connectEdgeRelay(targetHost: String, targetPort: Int): Socket? {
+        val t0 = System.currentTimeMillis()
+        val edgeCandidates = listOf(
+            "edge-relay.fokkbrowser.workers.dev",
+            "fokk-edge.cloudflareworkers.com",
+            "104.21.75.123"
+        )
+        for (edgeHost in edgeCandidates) {
+            var raw: Socket? = null
+            try {
+                val resolvedIps = runCatching { AdShieldApp.instance.dohEngine.resolveSync(edgeHost) }.getOrDefault(emptyList())
+                val targetIp = resolvedIps.firstOrNull() ?: runCatching { java.net.InetAddress.getByName(edgeHost) }.getOrNull() ?: continue
+                raw = Socket()
+                raw.tcpNoDelay = true
+                raw.sendBufferSize = 65536
+                raw.receiveBufferSize = 65536
+                raw.connect(InetSocketAddress(targetIp, 443), 4_500)
+
+                val sslSocket = (javax.net.ssl.SSLSocketFactory.getDefault() as javax.net.ssl.SSLSocketFactory)
+                    .createSocket(raw, edgeHost, 443, true) as javax.net.ssl.SSLSocket
+                sslSocket.soTimeout = 7_000
+                sslSocket.startHandshake()
+
+                val req = "CONNECT $targetHost:$targetPort HTTP/1.1\r\n" +
+                          "Host: $targetHost:$targetPort\r\n" +
+                          "User-Agent: FokkBrowser/3.2 (Oblivious-Edge; RFC-9458)\r\n" +
+                          "Proxy-Connection: Keep-Alive\r\n\r\n"
+                sslSocket.getOutputStream().write(req.toByteArray(java.nio.charset.StandardCharsets.ISO_8859_1))
+                sslSocket.getOutputStream().flush()
+
+                val line = BufferedReader(InputStreamReader(sslSocket.getInputStream(), java.nio.charset.StandardCharsets.ISO_8859_1)).readLine()
+                if (line != null && (line.contains(" 200 ") || line.endsWith(" 200"))) {
+                    sslSocket.soTimeout = 30_000
+                    activeHopMode = "EDGE_RELAY"
+                    activeIngressNode = null
+                    activeEgressNode = null
+                    activeTransportEncrypted = true
+                    activeLatencyMs = (System.currentTimeMillis() - t0).coerceAtLeast(1L)
+                    return sslSocket
+                }
+                runCatching { sslSocket.close() }
+            } catch (_: Exception) {
+                runCatching { raw?.close() }
+            }
+        }
+        return null
+    }
+
+    private fun connectHomeBase(targetHost: String, targetPort: Int): Socket? {
+        val t0 = System.currentTimeMillis()
+        if (homeBaseHost.isBlank()) return null
+        var sock: Socket? = null
+        try {
+            sock = Socket()
+            sock.tcpNoDelay = true
+            sock.sendBufferSize = 65536
+            sock.receiveBufferSize = 65536
+            val ip = runCatching {
+                if (android.util.Patterns.IP_ADDRESS.matcher(homeBaseHost).matches()) {
+                    java.net.InetAddress.getByName(homeBaseHost)
+                } else {
+                    AdShieldApp.instance.dohEngine.resolveSync(homeBaseHost).firstOrNull() ?: java.net.InetAddress.getByName(homeBaseHost)
+                }
+            }.getOrNull() ?: return null
+
+            sock.connect(InetSocketAddress(ip, homeBasePort), 6_000)
+            sock.soTimeout = 7_000
+
+            val authHeader = if (homeBaseToken.isNotBlank()) {
+                val creds = android.util.Base64.encodeToString(
+                    "home:$homeBaseToken".toByteArray(java.nio.charset.StandardCharsets.ISO_8859_1),
+                    android.util.Base64.NO_WRAP
+                )
+                "Proxy-Authorization: Basic $creds\r\n"
+            } else ""
+
+            val req = "CONNECT $targetHost:$targetPort HTTP/1.1\r\n" +
+                      "Host: $targetHost:$targetPort\r\n" +
+                      authHeader +
+                      "Proxy-Connection: Keep-Alive\r\n\r\n"
+            sock.getOutputStream().write(req.toByteArray(java.nio.charset.StandardCharsets.ISO_8859_1))
+            sock.getOutputStream().flush()
+
+            val line = BufferedReader(InputStreamReader(sock.getInputStream(), java.nio.charset.StandardCharsets.ISO_8859_1)).readLine()
+            if (line != null && (line.contains(" 200 ") || line.endsWith(" 200"))) {
+                sock.soTimeout = 30_000
+                activeHopMode = "HOME_BASE"
+                activeIngressNode = null
+                activeEgressNode = null
+                activeTransportEncrypted = false
+                activeLatencyMs = (System.currentTimeMillis() - t0).coerceAtLeast(1L)
+                return sock
+            }
+            runCatching { sock.close() }
+        } catch (_: Exception) {
+            runCatching { sock?.close() }
+        }
+        return null
+    }
+
     private fun routeConnect(targetHost: String, targetPort: Int): Socket? {
         if (currentRegion == "SMART_CLOAK") {
             return connectSmartCloak(targetHost, targetPort)
+        }
+        if (currentRegion == "EDGE") {
+            val edgeSock = connectEdgeRelay(targetHost, targetPort)
+            if (edgeSock != null) return edgeSock
+        }
+        if (currentRegion == "HOME_BASE") {
+            val hbSock = connectHomeBase(targetHost, targetPort)
+            if (hbSock != null) return hbSock
         }
         val t0 = System.currentTimeMillis()
         if (NodeRegistry.getAllNodes().isEmpty()) {

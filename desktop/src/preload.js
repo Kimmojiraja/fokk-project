@@ -210,6 +210,12 @@ if (isInternalPage) {
     setVpnCustomConfig: async (config) => {
         return await ipcRenderer.invoke('fokk-vpn-set-custom', config);
     },
+    getHomeBaseStatus: async () => {
+        return await ipcRenderer.invoke('fokk-homebase-status');
+    },
+    toggleHomeBase: async () => {
+        return await ipcRenderer.invoke('fokk-homebase-toggle');
+    },
     onVpnStatusChanged: (cb) => {
         ipcRenderer.on('fokk-vpn-status-changed', (event, data) => cb(data));
     },

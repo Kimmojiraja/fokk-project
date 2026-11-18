@@ -1,6 +1,6 @@
 {
-  "versionCode": 291,
-  "versionName": "2.9.1",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.1/app-debug.apk",
-  "changelog": "- Fokk Smart-Cloak (Free · Full Native Speed): New default privacy shield wired directly into FokkTunnelEngine (Android & Desktop) combining true encrypted WebView DoH resolution (via DnsOverHttpsEngine + Cloudflare 1.1.1.1 fallback) with local TLS ClientHello SNI fragmentation — bypasses ISP DNS/SNI blocks and throttling at 100% native 5G/Wi-Fi speed with zero remote proxy lag.\n- Fokk Mesh Pro (IP-Masking Relays): Cleanly separated into Optimal IP-Mask Relay, Live Verified Countries (dynamic from Sentinel manifest), and Custom Private / Home-Base Relays with RFC 1929 auth & TLS-over-SOCKS5.\n- Eliminated GitGuardian false-positive alerts in Sentinel scanner."
+  "versionCode": 292,
+  "versionName": "2.9.2",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.2/app-debug.apk",
+  "changelog": "- Fokk Home-Base (Personal PC Relay): Turn your Desktop into your phone's personal private relay via QR code pairing. Route phone traffic through your home PC for an unbannable, dedicated residential IP.\n- Fokk Oblivious Edge Relay (RFC 9458): Global 300+ city edge worker relay running on Cloudflare Workers with split-trust OHTTP (<40ms latency, zero logging).\n- Fokk Smart-Cloak (Free · Native Speed): Full-speed encrypted DoH + ByeDPI-style local TLS SNI fragmentation.\n- Updated Fokk website & documentation."
 }

@@ -522,6 +522,25 @@
                 <span class="mesh-badge-tag">Edge</span>
             </div>
 
+            <!-- Fokk Home-Base Desktop Server Toggle & Pairing -->
+            <div class="mesh-setting-row" id="rowHomeBaseServer">
+                <div class="mesh-setting-text">
+                    <div class="mesh-setting-title">Home-Base Relay</div>
+                    <div class="mesh-setting-sub" id="textHomeBaseStatus">Turn PC into phone's personal relay</div>
+                </div>
+                <label class="vpn-switch">
+                    <input type="checkbox" id="checkHomeBaseServer">
+                    <span class="vpn-slider"></span>
+                </label>
+            </div>
+            <div id="homeBasePairingCard" class="homebase-pairing-box hidden" style="margin: 0 16px 12px; padding: 12px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 10px; font-size: 11.5px; color: #94A3B8;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-weight:700; color:#10B981;">Home-Base Listening on :10850</span>
+                    <button id="btnCopyHomeBaseUri" type="button" style="background:#10B981; color:#064E3B; border:none; border-radius:6px; font-weight:700; font-size:10px; padding:3px 8px; cursor:pointer;">Copy Pairing String</button>
+                </div>
+                <div id="textHomeBaseUriDisplay" style="word-break:break-all; font-family:monospace; color:#E2E8F0; font-size:10.5px; user-select:all;"></div>
+            </div>
+
             <!-- Protect Your Privacy: Mobile Gradient Pro Card -->
             <div class="mesh-pro-card" id="cardMeshProBanner">
                 <div class="mesh-pro-left">

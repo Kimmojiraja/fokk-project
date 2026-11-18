@@ -3402,6 +3402,51 @@ function initVpnUI() {
         });
     }
 
+    // Home-Base Server Toggle
+    const checkHomeBase = document.getElementById('checkHomeBaseServer');
+    const homeBaseCard = document.getElementById('homeBasePairingCard');
+    const homeBaseUriDisplay = document.getElementById('textHomeBaseUriDisplay');
+    const btnCopyHomeBase = document.getElementById('btnCopyHomeBaseUri');
+    const textHomeBaseStatus = document.getElementById('textHomeBaseStatus');
+
+    async function syncHomeBaseUI() {
+        if (!checkHomeBase) return;
+        try {
+            const hb = await ipcRenderer.invoke('fokk-homebase-status');
+            checkHomeBase.checked = hb.isRunning;
+            if (hb.isRunning) {
+                homeBaseCard?.classList.remove('hidden');
+                if (homeBaseUriDisplay) homeBaseUriDisplay.textContent = hb.pairingUrl;
+                if (textHomeBaseStatus) textHomeBaseStatus.textContent = `Active (${hb.lanIp}:${hb.port})`;
+            } else {
+                homeBaseCard?.classList.add('hidden');
+                if (textHomeBaseStatus) textHomeBaseStatus.textContent = "Turn PC into phone's personal relay";
+            }
+        } catch (_) {}
+    }
+    syncHomeBaseUI();
+
+    if (checkHomeBase) {
+        checkHomeBase.addEventListener('change', async () => {
+            try {
+                const res = await ipcRenderer.invoke('fokk-homebase-toggle');
+                syncHomeBaseUI();
+                showToast(res.isRunning ? 'Home-Base Relay Active' : 'Home-Base Stopped');
+            } catch (_) {
+                showToast('Failed to toggle Home-Base');
+            }
+        });
+    }
+
+    if (btnCopyHomeBase) {
+        btnCopyHomeBase.addEventListener('click', () => {
+            const uri = homeBaseUriDisplay?.textContent || '';
+            if (uri) {
+                navigator.clipboard.writeText(uri).then(() => showToast('Pairing string copied!'));
+            }
+        });
+    }
+
     // Listen to real-time status broadcasts from Main process
     ipcRenderer.on('fokk-vpn-status-changed', (event, status) => {
         updateVpnUI(status);

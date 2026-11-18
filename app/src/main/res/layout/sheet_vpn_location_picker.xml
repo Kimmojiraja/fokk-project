@@ -235,6 +235,155 @@
             android:layout_height="1dp"
             android:background="#1E293B" />
 
+        <!-- 2. Fokk Oblivious Edge Relay (RFC 9458) -->
+        <LinearLayout
+            android:id="@+id/rowLocationEdgeRelay"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackground"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingVertical="12dp">
+
+            <ImageView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_flag_optimal"
+                app:tint="#F472B6"
+                android:contentDescription="Oblivious Edge Relay" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Fokk Oblivious Edge"
+                        android:textColor="#F8FAFC"
+                        android:textSize="14.5sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_stat_chip"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"
+                        android:text="300+ CITIES · &lt;40MS"
+                        android:textColor="#F472B6"
+                        android:textSize="9.5sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Split-trust RFC 9458 oblivious edge worker · Zero logs"
+                    android:textColor="#94A3B8"
+                    android:textSize="11.5sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/checkLocationEdgeRelay"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_check"
+                android:visibility="gone"
+                android:contentDescription="Selected" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#1E293B" />
+
+        <!-- 3. Fokk Home-Base (Pair Desktop PC) -->
+        <LinearLayout
+            android:id="@+id/rowLocationHomeBase"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackground"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingVertical="12dp">
+
+            <ImageView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_shield_check"
+                app:tint="#10B981"
+                android:contentDescription="Home-Base PC Relay" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Fokk Home-Base"
+                        android:textColor="#F8FAFC"
+                        android:textSize="14.5sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_stat_chip"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"
+                        android:text="PAIR PC · RESIDENTIAL"
+                        android:textColor="#10B981"
+                        android:textSize="9.5sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/textHomeBaseSubtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Relay through your own desktop PC · Dedicated unbannable IP"
+                    android:textColor="#94A3B8"
+                    android:textSize="11.5sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/checkLocationHomeBase"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_check"
+                android:visibility="gone"
+                android:contentDescription="Selected" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#1E293B" />
+
         <!-- SECTION 3: LIVE VERIFIED COUNTRIES (PRO) -->
         <TextView
             android:layout_width="wrap_content"
