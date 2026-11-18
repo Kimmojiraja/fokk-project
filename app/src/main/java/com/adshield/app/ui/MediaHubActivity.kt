@@ -7967,10 +7967,17 @@ open class MediaHubActivity : AppCompatActivity() {
 
             val cleanHost = sourceHost.lowercase(java.util.Locale.ROOT).removePrefix("www.")
             val publisherName = when {
+                cleanHost.contains("independent.co.uk") -> "The Independent"
+                cleanHost.contains("thetimes.com") || cleanHost.contains("thetimes.co.uk") -> "The Times"
+                cleanHost.contains("lbc.co.uk") -> "LBC"
+                cleanHost.contains("telegraph.co.uk") -> "The Telegraph"
+                cleanHost.contains("skysports.com") -> "Sky Sports"
+                cleanHost.contains("sky.com") || cleanHost.contains("news.sky.com") -> "Sky News"
+                cleanHost.contains("dailymail.co.uk") -> "Daily Mail"
                 cleanHost.contains("npr.org") -> "NPR"
                 cleanHost.contains("ndtv.com") -> "NDTV"
                 cleanHost.contains("theverge.com") -> "The Verge"
-                cleanHost.contains("bbc.com") || cleanHost.contains("bbc.co.uk") -> "BBC"
+                cleanHost.contains("bbc.com") || cleanHost.contains("bbc.co.uk") -> "BBC News"
                 cleanHost.contains("reuters.com") -> "Reuters"
                 cleanHost.contains("apnews.com") -> "Associated Press"
                 cleanHost.contains("cnn.com") -> "CNN"
@@ -7985,7 +7992,14 @@ open class MediaHubActivity : AppCompatActivity() {
                 cleanHost.contains("wikipedia.org") -> "Wikipedia"
                 else -> {
                     val parts = cleanHost.split('.')
-                    if (parts.size >= 2) parts[parts.size - 2].replaceFirstChar { it.uppercase() } else cleanHost
+                    val secondLevelTlds = setOf("co", "com", "org", "gov", "net", "ac", "edu", "ne")
+                    if (parts.size >= 3 && secondLevelTlds.contains(parts[parts.size - 2].lowercase())) {
+                        parts[parts.size - 3].replaceFirstChar { it.uppercase() }
+                    } else if (parts.size >= 2) {
+                        parts[parts.size - 2].replaceFirstChar { it.uppercase() }
+                    } else {
+                        cleanHost
+                    }
                 }
             }
 
@@ -8106,19 +8120,40 @@ open class MediaHubActivity : AppCompatActivity() {
             sheetBinding.layoutSummaryBullets.removeAllViews()
             val density = resources.displayMetrics.density
 
+            // Forward declaration for interactive follow-up questions
+            var askAiQuestionFunc: ((String) -> Unit)? = null
+
+            // Mode Switching (0: Summary & TTS, 1: Ask AI, 2: Truth & Bias Audit)
+            fun switchAiMode(mode: Int) {
+                sheetBinding.layoutAiSummarySection.visibility = if (mode == 0) View.VISIBLE else View.GONE
+                sheetBinding.layoutAiChatSection.visibility = if (mode == 1) View.VISIBLE else View.GONE
+                sheetBinding.layoutAiRealityAuditSection.visibility = if (mode == 2) View.VISIBLE else View.GONE
+
+                sheetBinding.btnTabAiSummary.setBackgroundResource(if (mode == 0) R.drawable.bg_ai_tab_selected else 0)
+                sheetBinding.btnTabAiSummary.setTextColor(if (mode == 0) Color.WHITE else Color.parseColor("#94A3B8"))
+
+                sheetBinding.btnTabAiChat.setBackgroundResource(if (mode == 1) R.drawable.bg_ai_tab_selected else 0)
+                sheetBinding.btnTabAiChat.setTextColor(if (mode == 1) Color.WHITE else Color.parseColor("#94A3B8"))
+
+                sheetBinding.layoutAiTabsContainer.visibility = View.VISIBLE
+                sheetBinding.btnTabAiAudit.setBackgroundResource(if (mode == 2) R.drawable.bg_ai_tab_selected else 0)
+                sheetBinding.btnTabAiAudit.setTextColor(if (mode == 2) Color.WHITE else Color.parseColor("#94A3B8"))
+            }
+
             fun renderBulletRow(bullet: String, container: LinearLayout) {
                 val tag = FokkAiEngine.classifyBullet(bullet)
+                val typedVal = android.util.TypedValue()
+                theme.resolveAttribute(android.R.attr.selectableItemBackground, typedVal, true)
+
                 val row = LinearLayout(this@MediaHubActivity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.TOP
-                    setPadding((8 * density).toInt(), (6 * density).toInt(), (8 * density).toInt(), (6 * density).toInt())
+                    setPadding((4 * density).toInt(), (8 * density).toInt(), (4 * density).toInt(), (8 * density).toInt())
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        bottomMargin = (6 * density).toInt()
-                    }
-                    background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_stat_chip)
+                    )
+                    setBackgroundResource(typedVal.resourceId)
                     isClickable = true
                     isFocusable = true
                     setOnClickListener {
@@ -8130,36 +8165,50 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 val tagTv = TextView(this@MediaHubActivity).apply {
                     text = tag
-                    textSize = 9.5f
+                    textSize = 9f
                     setTypeface(null, Typeface.BOLD)
+                    letterSpacing = 0.06f
                     val (bgCol, txtCol) = when (tag) {
-                        "FACT" -> Pair("#1E293B", "#38BDF8")
-                        "OPINION" -> Pair("#281B34", "#C084FC")
-                        else -> Pair("#292524", "#FBBF24")
+                        "FACT" -> Pair("#0D2818", "#34D399")
+                        "OPINION" -> Pair("#1E1B4B", "#C084FC")
+                        else -> Pair("#261C05", "#FBBF24")
                     }
                     setTextColor(Color.parseColor(txtCol))
-                    setBackgroundColor(Color.parseColor(bgCol))
+                    val tagDrawable = android.graphics.drawable.GradientDrawable().apply {
+                        cornerRadius = 4 * density
+                        setColor(Color.parseColor(bgCol))
+                    }
+                    background = tagDrawable
                     setPadding((6 * density).toInt(), (2 * density).toInt(), (6 * density).toInt(), (2 * density).toInt())
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                     ).apply {
-                        marginEnd = (8 * density).toInt()
+                        marginEnd = (10 * density).toInt()
                         topMargin = (2 * density).toInt()
                     }
                 }
 
                 val textTv = TextView(this@MediaHubActivity).apply {
                     text = bullet
-                    setTextColor(getColor(R.color.text_primary))
+                    setTextColor(Color.parseColor("#F1F5F9"))
                     textSize = 13.5f
-                    setLineSpacing(0f, 1.35f)
+                    setLineSpacing(3 * density, 1f)
                     layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                 }
 
                 row.addView(tagTv)
                 row.addView(textTv)
                 container.addView(row)
+
+                val divider = View(this@MediaHubActivity).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        (1 * density).toInt().coerceAtLeast(1)
+                    )
+                    setBackgroundColor(Color.parseColor("#111A28"))
+                }
+                container.addView(divider)
             }
 
             for (i in startBulletIndex until bulletsCount) {
@@ -8199,47 +8248,56 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 for (i in 0 until questionsArray.length()) {
                     val q = questionsArray.getString(i)
+                    if (q.contains("club announcement", ignoreCase = true) ||
+                        q.contains("contract length", ignoreCase = true) ||
+                        q.contains("wages", ignoreCase = true)) continue
+
                     fullText.append("• Deep-Dive Question: ").append(q).append("\n\n")
 
                     val card = LinearLayout(this).apply {
                         orientation = LinearLayout.HORIZONTAL
-                        background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_stat_chip)
-                        setPadding((12 * density).toInt(), (10 * density).toInt(), (12 * density).toInt(), (10 * density).toInt())
+                        gravity = Gravity.CENTER_VERTICAL
+                        background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_engine_capsule)
+                        setPadding((12 * density).toInt(), (8 * density).toInt(), (12 * density).toInt(), (8 * density).toInt())
                         layoutParams = LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.WRAP_CONTENT
                         ).apply {
-                            bottomMargin = (8 * density).toInt()
+                            bottomMargin = (6 * density).toInt()
                         }
                         isClickable = true
                         isFocusable = true
                         setOnClickListener {
-                            sheetDialog.dismiss()
-                            val cleanTitle = title.trim().replace(Regex("\\s+[-|•].*$"), "")
-                            val contextualQuery = if (cleanTitle.isNotBlank()) "$cleanTitle: $q" else q
-                            val searchUrl = currentSearchEngine.searchUrl + Uri.encode(contextualQuery)
-                            addNewTab(searchUrl, isPrivate = activeTab?.isPrivate == true)
-                            Toast.makeText(this@MediaHubActivity, "Exploring: $contextualQuery", Toast.LENGTH_SHORT).show()
+                            switchAiMode(1)
+                            askAiQuestionFunc?.invoke(q)
                         }
                     }
 
                     val spark = TextView(this).apply {
                         text = "• "
-                        setTextColor(getColor(R.color.fokk_cyan))
-                        textSize = 14f
+                        setTextColor(Color.parseColor("#38BDF8"))
+                        textSize = 13f
                         typeface = android.graphics.Typeface.DEFAULT_BOLD
                     }
 
                     val qTv = TextView(this).apply {
                         text = q
-                        setTextColor(getColor(R.color.fokk_cyan))
-                        textSize = 13f
-                        setLineSpacing(0f, 1.3f)
+                        setTextColor(Color.parseColor("#F1F5F9"))
+                        textSize = 12.5f
+                        setLineSpacing(2 * density, 1f)
                         layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                    }
+
+                    val arrow = TextView(this).apply {
+                        text = ">"
+                        setTextColor(Color.parseColor("#64748B"))
+                        textSize = 12f
+                        setPadding((6 * density).toInt(), 0, 0, 0)
                     }
 
                     card.addView(spark)
                     card.addView(qTv)
+                    card.addView(arrow)
                     sheetBinding.layoutFollowUpQuestions.addView(card)
                 }
             } else {
@@ -8268,22 +8326,6 @@ open class MediaHubActivity : AppCompatActivity() {
                 Toast.makeText(this, "Reading summary aloud (${if (isMale) "Male" else "Female"} voice)...", Toast.LENGTH_SHORT).show()
             }
 
-            // Mode Switching (0: Summary & TTS, 1: Ask AI, 2: Truth & Bias Audit)
-            fun switchAiMode(mode: Int) {
-                sheetBinding.layoutAiSummarySection.visibility = if (mode == 0) View.VISIBLE else View.GONE
-                sheetBinding.layoutAiChatSection.visibility = if (mode == 1) View.VISIBLE else View.GONE
-                sheetBinding.layoutAiRealityAuditSection.visibility = if (mode == 2) View.VISIBLE else View.GONE
-
-                sheetBinding.btnTabAiSummary.setBackgroundResource(if (mode == 0) R.drawable.bg_ai_tab_selected else 0)
-                sheetBinding.btnTabAiSummary.setTextColor(if (mode == 0) Color.WHITE else Color.parseColor("#94A3B8"))
-
-                sheetBinding.btnTabAiChat.setBackgroundResource(if (mode == 1) R.drawable.bg_ai_tab_selected else 0)
-                sheetBinding.btnTabAiChat.setTextColor(if (mode == 1) Color.WHITE else Color.parseColor("#94A3B8"))
-
-                sheetBinding.btnTabAiAudit.setBackgroundResource(if (mode == 2) R.drawable.bg_ai_tab_selected else 0)
-                sheetBinding.btnTabAiAudit.setTextColor(if (mode == 2) Color.WHITE else Color.parseColor("#94A3B8"))
-            }
-
             sheetBinding.btnTabAiSummary.setOnClickListener { switchAiMode(0) }
             sheetBinding.btnTabAiChat.setOnClickListener { switchAiMode(1) }
             sheetBinding.btnTabAiAudit.setOnClickListener { switchAiMode(2) }
@@ -8291,18 +8333,14 @@ open class MediaHubActivity : AppCompatActivity() {
             // Auto-collapse / hide top tabs on downward scroll and restore on upward scroll
             val onScrollCollapseTabs: (Int, Int) -> Unit = { scrollY, oldScrollY ->
                 val dy = scrollY - oldScrollY
-                if (dy > 12 && scrollY > 40) {
-                    sheetBinding.layoutAiTabsContainer.animate()
-                        .translationY(-sheetBinding.layoutAiTabsContainer.height.toFloat() - (10 * density))
-                        .alpha(0f)
-                        .setDuration(160)
-                        .start()
-                } else if (dy < -8 || scrollY <= 10) {
-                    sheetBinding.layoutAiTabsContainer.animate()
-                        .translationY(0f)
-                        .alpha(1f)
-                        .setDuration(160)
-                        .start()
+                if (dy > 16 && scrollY > 40) {
+                    if (sheetBinding.layoutAiTabsContainer.visibility != View.GONE) {
+                        sheetBinding.layoutAiTabsContainer.visibility = View.GONE
+                    }
+                } else if (dy < -12 || scrollY <= 10) {
+                    if (sheetBinding.layoutAiTabsContainer.visibility != View.VISIBLE) {
+                        sheetBinding.layoutAiTabsContainer.visibility = View.VISIBLE
+                    }
                 }
             }
 
@@ -8393,9 +8431,6 @@ open class MediaHubActivity : AppCompatActivity() {
             for (claim in claimsToDisplay) {
                 renderBulletRow(claim, sheetBinding.layoutAiExtractedClaims)
             }
-
-            // Forward declaration for interactive follow-up questions
-            var askAiQuestionFunc: ((String) -> Unit)? = null
 
             // Interactive Ask AI Chat Assistant (Open-World Unboxed Canvas & Typewriter Stream)
             fun renderChatAnswerCard(
@@ -8488,8 +8523,8 @@ open class MediaHubActivity : AppCompatActivity() {
                         setTextColor(Color.parseColor("#94A3B8"))
                         textSize = 11f
                         setTypeface(null, Typeface.BOLD)
-                        background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_stat_chip)
-                        setPadding((10 * density).toInt(), (4 * density).toInt(), (10 * density).toInt(), (4 * density).toInt())
+                        background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_engine_capsule)
+                        setPadding((12 * density).toInt(), (5 * density).toInt(), (12 * density).toInt(), (5 * density).toInt())
                         layoutParams = LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.WRAP_CONTENT,
                             ViewGroup.LayoutParams.WRAP_CONTENT
@@ -8685,10 +8720,15 @@ open class MediaHubActivity : AppCompatActivity() {
                 container.addView(verifiedWithContainer)
                 container.addView(followUpsContainer)
 
-                // 7. Typewriter Streaming Text Animation
-                val words = answer.split(" ")
+                // 7. Typewriter Streaming Text Animation (Clean synthesized answer)
+                val cleanAnswerText = answer
+                    .replace(Regex("(?is)###\\s*CORROBORATING SOURCES.*?(?=###|$)"), "")
+                    .replace(Regex("(?m)^\\d+\\.\\s*\\*\\*.*?\\*\\*\\s*\\(.*?\\)\\s*\\[.*?\\]\\s*$"), "")
+                    .replace(Regex("(?m)^\\s*Reported by.*?$"), "")
+                    .trim()
+                val words = cleanAnswerText.split(" ")
                 if (words.size <= 3) {
-                    aTv.text = formatMarkdownToSpanned(answer)
+                    aTv.text = formatMarkdownToSpanned(cleanAnswerText)
                     actionRow.visibility = View.VISIBLE
                     if (allSources.isNotEmpty()) verifiedWithContainer.visibility = View.VISIBLE
                     if (followUps.isNotEmpty()) followUpsContainer.visibility = View.VISIBLE
