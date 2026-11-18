@@ -643,7 +643,27 @@ class VpnEngine extends EventEmitter {
         const ingressPool = (allAlive.length > 0 ? allAlive : this.manifestNodes)
             .filter(n => n.type === 'socks5' && (n.ingress_relay || n.supports_dual_hop));
 
-        // Tier 1: Dual-Hop if we have a verified dual-hop ingress distinct from egress
+        // Tier 1: Sticky Fastest-Relay Fast-Path (1 direct socket per asset once elected; zero 3x socket flood!)
+        if (this.stickyBestNode &&
+            this.stickyRegion === this.meshRegion &&
+            Date.now() - (this.stickyUpdatedAt || 0) < 90_000 &&
+            this.isNodeAlive(this.stickyBestNode)
+        ) {
+            try {
+                const t0 = Date.now();
+                const sock = await openSingleHopSocket(this.stickyBestNode, targetHost, targetPort, 6000);
+                this.activeHopMode = 'SINGLE_HOP';
+                this.activeIngressNode = null;
+                this.activeMeshNode = this.stickyBestNode;
+                this.ping = Math.max(1, Date.now() - t0);
+                return sock;
+            } catch (_) {
+                this.markNodeDead(this.stickyBestNode, 45_000);
+                this.stickyBestNode = null;
+            }
+        }
+
+        // Tier 2: Dual-Hop if we have a verified dual-hop ingress distinct from egress
         if (egressList.length > 0 && ingressPool.length > 0) {
             const egress = egressList[0];
             const ingress = ingressPool.find(i => i.host !== egress.host);
@@ -662,9 +682,12 @@ class VpnEngine extends EventEmitter {
             }
         }
 
-        // Tier 2: Happy-Eyeballs parallel race across top 3 surviving verified relays
+        // Tier 3: Happy-Eyeballs parallel race across top 3 surviving verified relays -> elect sticky winner
         try {
             const win = await this.raceSingleHopDesktop(egressList.slice(0, 3), targetHost, targetPort);
+            this.stickyBestNode = win.node;
+            this.stickyRegion = this.meshRegion;
+            this.stickyUpdatedAt = Date.now();
             this.activeHopMode = 'SINGLE_HOP';
             this.activeIngressNode = null;
             this.activeMeshNode = win.node;
@@ -818,21 +841,39 @@ class VpnEngine extends EventEmitter {
     }
 
     getLocations() {
-        return Object.values(PRESET_LOCATIONS).map(loc => ({
-            id: loc.id,
-            name: loc.name,
-            badge: loc.badge,
-            countryCode: loc.countryCode || '',
-            city: loc.city || '',
-            isCountry: !!loc.isCountry,
-            color: loc.color,
-            description: loc.description,
-            iconSvg: loc.iconSvg,
-            protocol: loc.protocol,
-            region: loc.region,
-            setupTip: loc.setupTip,
-            isSelected: loc.id === this.activeMode
-        }));
+        const liveCountries = new Set(this.manifestNodes.map(n => n.country).filter(Boolean));
+        const hasLiveManifest = liveCountries.size > 0;
+        return Object.values(PRESET_LOCATIONS)
+            .filter(loc => {
+                if (!hasLiveManifest) return true;
+                if (loc.isCountry) return liveCountries.has(loc.countryCode);
+                if (loc.id === 'relay_eu') return [...liveCountries].some(c => EU_COUNTRIES.has(c));
+                if (loc.id === 'relay_am') return [...liveCountries].some(c => AM_COUNTRIES.has(c));
+                if (loc.id === 'relay_as') return [...liveCountries].some(c => AS_COUNTRIES.has(c));
+                return true;
+            })
+            .map(loc => {
+                const count = loc.isCountry
+                    ? this.manifestNodes.filter(n => n.country === loc.countryCode).length
+                    : this.manifestNodes.length;
+                return {
+                    id: loc.id,
+                    name: loc.name,
+                    badge: loc.badge,
+                    countryCode: loc.countryCode || '',
+                    city: loc.city || '',
+                    isCountry: !!loc.isCountry,
+                    color: loc.color,
+                    description: loc.isCountry && count > 0
+                        ? `${loc.city} · ${count} live ${count === 1 ? 'relay' : 'relays'}`
+                        : loc.description,
+                    iconSvg: loc.iconSvg,
+                    protocol: loc.protocol,
+                    region: loc.region,
+                    setupTip: loc.setupTip,
+                    isSelected: loc.id === this.activeMode
+                };
+            });
     }
 
     getStatus() {

@@ -1,6 +1,6 @@
 {
-  "versionCode": 289,
-  "versionName": "2.8.9",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.8.9/app-debug.apk",
-  "changelog": "- Fixed Fokk Mesh Offline Bug (v3.1): Bound local tunnel ServerSocket immediately (<2ms), switched manifest loading to parallel racing across all live feeds (no sequential 404 cold-start stalls), raised global mobile timeouts (5.5s-6s), and added Happy-Eyeballs parallel relay racing so pages load fast from any region.\n- Live Verified Relay Manifest: Pruned 9 dead/refused relays and verified 8 live relays + 4 true 2-hop ingress chains.\n- Authenticated & ISP-Encrypted Relay Support: Added full SOCKS5 RFC 1929 username/password auth, HTTP Basic auth, and TLS-over-SOCKS5 (strict HTTPS SNI verification) across Android, Desktop, Sentinel scanner, and deploy_fokk_node.sh (stunnel4 + Let's Encrypt).\n- CI Release Promotion Fix: Automatically promotes prereleases to Latest on main with 3-attempt retry on transient GitHub API errors."
+  "versionCode": 290,
+  "versionName": "2.9.0",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.0/app-debug.apk",
+  "changelog": "- Fixed Other Apps Losing Internet: Disabled the experimental 0.0.0.0/0 device-wide TUN until native Layer-3 tun2socks is bundled so leaving Fokk Browser never disrupts WhatsApp, banking, YouTube, or other apps.\n- Live-Only Dynamic Location Picker (Android & Desktop): Removed hardcoded dead countries; location picker now dynamically shows only live verified relays from the 6-hour Sentinel manifest with real cities, relay counts, and measured ping.\n- Faster Fokk Mesh Browsing: Added a 90s Sticky Fastest-Relay fast-path (eliminating 3x parallel socket flooding per webpage asset) and doubled pre-warmed 2-hop circuit pool from 2 to 4.\n- Legal & Compliance Hardening: Purged residential ISP relays (Korea Telecom, RCN) and added automated Layer-7 ASN residential-ISP filtering in Sentinel; zero hardcoded IPs in binaries; RFC 1929 auth + TLS-over-SOCKS5 ready for self-hosted relays."
 }

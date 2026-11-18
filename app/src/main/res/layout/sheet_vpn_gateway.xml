@@ -230,7 +230,7 @@
                 app:buttonTint="#00E5FF" />
         </LinearLayout>
 
-        <!-- Setting: Fokk Mesh for entire device -->
+        <!-- Setting: Fokk Mesh for entire device (hidden until native Layer-3 tun2socks is bundled) -->
         <LinearLayout
             android:id="@+id/rowEntireDevice"
             android:layout_width="match_parent"
@@ -241,6 +241,7 @@
             android:focusable="true"
             android:gravity="center_vertical"
             android:orientation="horizontal"
+            android:visibility="gone"
             android:paddingVertical="10dp">
 
             <LinearLayout

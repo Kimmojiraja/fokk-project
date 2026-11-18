@@ -93,6 +93,12 @@ object FokkTunnelEngine {
         private set
     val totalRequestsTunneled = AtomicLong(0L)
 
+    // Sticky fastest-relay cache (avoids flooding 3 sockets per asset once fastest relay is elected)
+    @Volatile private var stickyBestNode: PrivacyNode? = null
+    @Volatile private var stickyRegion: String = ""
+    @Volatile private var stickyUpdatedAt: Long = 0L
+    private const val STICKY_TTL_MS = 90_000L
+
     private val threadPool = Executors.newCachedThreadPool { r ->
         Thread(r, "fokk-tunnel-worker").also { it.isDaemon = true }
     }
@@ -120,6 +126,8 @@ object FokkTunnelEngine {
         if (!isRunning.compareAndSet(false, true)) {
             if (region != currentRegion) {
                 currentRegion = region
+                stickyBestNode = null
+                stickyRegion = ""
                 activeHopMode = "CONNECTING"
                 activeIngressNode = null
                 activeEgressNode = null
@@ -128,6 +136,8 @@ object FokkTunnelEngine {
             return
         }
         currentRegion = region
+        stickyBestNode = null
+        stickyRegion = ""
         activeHopMode = "CONNECTING"
         activeIngressNode = null
         activeEgressNode = null
@@ -172,6 +182,8 @@ object FokkTunnelEngine {
         activeEgressNode = null
         activeLatencyMs = 0L
         activeTransportEncrypted = false
+        stickyBestNode = null
+        stickyRegion = ""
         FokkCircuitManager.stop()
         FokkNodeProber.stop()
         Log.i(TAG, "Fokk Mesh tunnel stopped")
@@ -456,7 +468,7 @@ object FokkTunnelEngine {
             FokkNodeManifest.ensureLoadedBlocking(4_500L)
         }
 
-        // Tier 1: Pre-warmed 2-hop circuit (instant if available)
+        // Tier 1: Pre-warmed 2-hop circuit (instant 0ms acquire when warm)
         val pooled = FokkCircuitManager.acquireCircuit()
         if (pooled != null) {
             val sock = FokkCircuitManager.connectCircuitTo(pooled, targetHost, targetPort)
@@ -472,7 +484,29 @@ object FokkTunnelEngine {
             NodeRegistry.markDead(pooled.egress, 45_000L)
         }
 
-        // Tier 2: Happy-Eyeballs parallel race across top 3 region relays (fast first-byte!)
+        // Tier 2: Sticky Fastest-Relay Fast-Path (1 direct socket — no 3x socket flood per asset!)
+        val sticky = stickyBestNode
+        if (sticky != null &&
+            stickyRegion == currentRegion &&
+            System.currentTimeMillis() - stickyUpdatedAt < STICKY_TTL_MS &&
+            NodeRegistry.isAlive(sticky)
+        ) {
+            val sock = connectSingleHop(targetHost, targetPort, sticky)
+            if (sock != null) {
+                val elapsed = (System.currentTimeMillis() - t0).coerceAtLeast(1L)
+                NodeRegistry.markAlive(sticky, elapsed)
+                activeHopMode = "SINGLE_HOP"
+                activeIngressNode = null
+                activeEgressNode = sticky
+                activeTransportEncrypted = sticky.useTls
+                activeLatencyMs = elapsed
+                return sock
+            }
+            stickyBestNode = null
+            NodeRegistry.markDead(sticky, 45_000L)
+        }
+
+        // Tier 3: Happy-Eyeballs parallel race across top 3 region relays to elect new sticky fastest relay
         val regionCandidates = NodeRegistry.getNodesForRegion(currentRegion)
             .filter { FokkNodeManifest.isSafePublicRelayHost(it.host) }
         val firstWave = regionCandidates.take(3)
@@ -481,6 +515,9 @@ object FokkTunnelEngine {
             val (node, sock) = race1
             val elapsed = (System.currentTimeMillis() - t0).coerceAtLeast(1L)
             NodeRegistry.markAlive(node, elapsed)
+            stickyBestNode = node
+            stickyRegion = currentRegion
+            stickyUpdatedAt = System.currentTimeMillis()
             activeHopMode = "SINGLE_HOP"
             activeIngressNode = null
             activeEgressNode = node
@@ -489,7 +526,7 @@ object FokkTunnelEngine {
             return sock
         }
 
-        // Tier 3: Second wave race across any remaining global relays
+        // Tier 4: Second wave race across any remaining global relays
         val triedKeys = firstWave.map { "${it.host}:${it.port}" }.toSet()
         val globalCandidates = (regionCandidates.drop(3) + NodeRegistry.getAllNodes())
             .distinctBy { "${it.host}:${it.port}" }
@@ -500,6 +537,9 @@ object FokkTunnelEngine {
             val (node, sock) = race2
             val elapsed = (System.currentTimeMillis() - t0).coerceAtLeast(1L)
             NodeRegistry.markAlive(node, elapsed)
+            stickyBestNode = node
+            stickyRegion = currentRegion
+            stickyUpdatedAt = System.currentTimeMillis()
             activeHopMode = "SINGLE_HOP"
             activeIngressNode = null
             activeEgressNode = node

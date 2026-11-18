@@ -7472,26 +7472,33 @@ open class MediaHubActivity : AppCompatActivity() {
             val code: String,
             val name: String,
             val subtitle: String,
-            val flagRes: Int
+            val flagRes: Int,
+            val bestLatencyMs: Long
         )
 
-        val countries = listOf(
-            MeshCountryItem("US", "United States", "Miami & North Bergen • Dual-Hop Ingress", com.adshield.app.R.drawable.ic_flag_us),
-            MeshCountryItem("GB", "United Kingdom", "London • Oblivious dual-hop backbone", com.adshield.app.R.drawable.ic_flag_gb),
-            MeshCountryItem("DE", "Germany", "Frankfurt & Falkenstein • Low-latency core", com.adshield.app.R.drawable.ic_flag_de),
-            MeshCountryItem("CA", "Canada", "Montreal • North America privacy relay", com.adshield.app.R.drawable.ic_flag_ca),
-            MeshCountryItem("NL", "Netherlands", "Amsterdam • High-throughput privacy cluster", com.adshield.app.R.drawable.ic_flag_nl),
-            MeshCountryItem("FR", "France", "Paris • European oblivious gateway", com.adshield.app.R.drawable.ic_flag_fr),
-            MeshCountryItem("SE", "Sweden", "Stockholm • Strict privacy jurisdiction", com.adshield.app.R.drawable.ic_flag_se),
-            MeshCountryItem("SG", "Singapore", "Singapore • Asia-Pacific high-speed hub", com.adshield.app.R.drawable.ic_flag_sg),
-            MeshCountryItem("IN", "India", "Mumbai • South Asia low-latency node", com.adshield.app.R.drawable.ic_flag_in),
-            MeshCountryItem("JP", "Japan", "Tokyo • East Asia oblivious gateway", com.adshield.app.R.drawable.ic_flag_jp),
-            MeshCountryItem("KR", "South Korea", "Suwon • Low-latency Pacific node", com.adshield.app.R.drawable.ic_flag_kr),
-            MeshCountryItem("HK", "Hong Kong", "Hong Kong • East Asia fast transit", com.adshield.app.R.drawable.ic_flag_hk),
-            MeshCountryItem("CH", "Switzerland", "Zurich • Alpine privacy routing", com.adshield.app.R.drawable.ic_flag_ch),
-            MeshCountryItem("IT", "Italy", "Milan • Southern Europe relay", com.adshield.app.R.drawable.ic_flag_it),
-            MeshCountryItem("BR", "Brazil", "Sao Paulo • South America privacy cluster", com.adshield.app.R.drawable.ic_flag_br)
-        )
+        // Build location list strictly from LIVE verified Sentinel manifest relays (zero dead/fake countries!)
+        val liveManifestNodes = com.adshield.app.engine.FokkNodeManifest.getNodes()
+        val groupedByCountry = liveManifestNodes
+            .filter { it.country.isNotBlank() }
+            .groupBy { it.country.uppercase(Locale.ROOT) }
+
+        val countries = groupedByCountry.entries.map { (code, nodes) ->
+            val cities = nodes.mapNotNull { it.city.takeIf { c -> c.isNotBlank() } }.distinct().take(2).joinToString(" & ")
+            val bestLat = nodes.map { com.adshield.app.engine.NodeRegistry.getLatency(it) }.minOrNull() ?: Long.MAX_VALUE
+            val hasDualHop = nodes.any { !it.isHttpConnect }
+            val parts = mutableListOf<String>()
+            if (cities.isNotBlank()) parts.add(cities)
+            parts.add(if (nodes.size == 1) "1 live relay" else "${nodes.size} live relays")
+            if (bestLat in 1L..15_000L) parts.add("~${bestLat}ms")
+            else if (hasDualHop) parts.add("Verified")
+            MeshCountryItem(
+                code = code,
+                name = com.adshield.app.engine.VpnEngine.getRegionDisplayName(code),
+                subtitle = parts.joinToString(" · "),
+                flagRes = com.adshield.app.engine.VpnEngine.getRegionFlagRes(code),
+                bestLatencyMs = bestLat
+            )
+        }.sortedBy { it.bestLatencyMs }
 
         fun select(code: String) {
             val isPro = com.adshield.app.engine.VpnEngine.isProModeEnabled(this)

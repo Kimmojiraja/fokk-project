@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 object FokkCircuitManager {
     private const val TAG = "FokkCircuitManager"
-    private const val TARGET_POOL_SIZE = 2
+    private const val TARGET_POOL_SIZE = 4
     private const val MAX_IDLE_POOL_AGE_MS = 25_000L
     private const val BUILD_CONNECT_TIMEOUT_MS = 5_500
     private const val BUILD_IO_TIMEOUT_MS = 6_000

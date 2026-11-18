@@ -31,25 +31,15 @@ object VpnEngine {
     const val KEY_ENTIRE_DEVICE = "vpn_entire_device"
 
     fun isEntireDeviceEnabled(context: Context): Boolean {
-        val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
-        return prefs.getBoolean(KEY_ENTIRE_DEVICE, false)
+        // Device-wide 0.0.0.0/0 TUN is disabled until native Layer-3 tun2socks is bundled,
+        // preventing non-HTTP apps (WhatsApp, banking, games, VoIP) from losing connectivity.
+        return false
     }
 
     fun setEntireDeviceEnabled(context: Context, enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_ENTIRE_DEVICE, enabled).apply()
-        val mode = getActiveMode(context)
-        if (mode != VpnMode.OFF) {
-            if (enabled) {
-                val region = if (mode == VpnMode.CUSTOM) {
-                    val saved = getCustomProxy(context)
-                    if (saved in FokkTunnelEngine.REGION_NODES.keys) saved else "AM"
-                } else "AUTO"
-                FokkMeshVpnService.start(context, region)
-            } else {
-                FokkMeshVpnService.stop(context)
-            }
-        }
+        prefs.edit().putBoolean(KEY_ENTIRE_DEVICE, false).apply()
+        runCatching { FokkMeshVpnService.stop(context) }
     }
 
     fun onDeviceMeshStopped(context: Context) {
