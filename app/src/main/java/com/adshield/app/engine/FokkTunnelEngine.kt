@@ -319,7 +319,8 @@ object FokkTunnelEngine {
     private val threadPool = Executors.newCachedThreadPool()
     private var serverSocket: ServerSocket? = null
     @Volatile
-    private var localPort: Int = 0
+    var localPort: Int = 0
+        private set
     private val isRunning = AtomicBoolean(false)
 
     @Volatile
@@ -553,8 +554,8 @@ object FokkTunnelEngine {
                 socket.tcpNoDelay = true
                 socket.sendBufferSize = 65536
                 socket.receiveBufferSize = 65536
-                socket.connect(InetSocketAddress(relay.host, relay.port), 650)
-                socket.soTimeout = 1_200
+                socket.connect(InetSocketAddress(relay.host, relay.port), 3_500)
+                socket.soTimeout = 4_000
 
                 val outStream = socket.getOutputStream()
                 val inStream = socket.getInputStream()
@@ -663,8 +664,8 @@ object FokkTunnelEngine {
             proxySock.tcpNoDelay = true
             proxySock.sendBufferSize = 65536
             proxySock.receiveBufferSize = 65536
-            proxySock.connect(InetSocketAddress(node.host, node.port), 650)
-            proxySock.soTimeout = 1_200
+            proxySock.connect(InetSocketAddress(node.host, node.port), 3_500)
+            proxySock.soTimeout = 4_000
 
             if (node.isHttpConnect) {
                 val connectReq = "CONNECT $targetHost:$targetPort HTTP/1.1\r\nHost: $targetHost:$targetPort\r\nProxy-Connection: Keep-Alive\r\n\r\n"
@@ -793,7 +794,7 @@ object FokkTunnelEngine {
     }
 
     private fun transfer(input: InputStream, output: OutputStream) {
-        val buffer = ByteArray(32768)
+        val buffer = ByteArray(65536)
         val random = if (isProMode) java.util.concurrent.ThreadLocalRandom.current() else null
         var packetsSeen = 0
         try {

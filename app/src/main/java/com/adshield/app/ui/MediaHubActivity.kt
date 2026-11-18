@@ -24,6 +24,9 @@ import android.content.ComponentCallbacks2
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.net.VpnService
 import android.content.SharedPreferences
 import android.content.pm.ShortcutManager
 import androidx.core.content.pm.ShortcutInfoCompat
@@ -509,6 +512,26 @@ open class MediaHubActivity : AppCompatActivity() {
         if (AdShieldApp.instance.blocklistEngine.isDomainBlocked(host)) return true
         if (AdShieldApp.instance.dohEngine.isKnownBlockedHost(host)) return true
         return AdShieldApp.instance.dohEngine.isHostBlocked(host)
+    }
+
+    private var onVpnPermissionResult: ((Boolean) -> Unit)? = null
+    private val vpnPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val granted = (result.resultCode == Activity.RESULT_OK)
+        onVpnPermissionResult?.invoke(granted)
+        onVpnPermissionResult = null
+    }
+
+    private var vpnSheetRefreshCallback: (() -> Unit)? = null
+
+    private val meshStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            runOnUiThread {
+                updateVpnIndicatorUi()
+                vpnSheetRefreshCallback?.invoke()
+            }
+        }
     }
 
     private val wallpaperPickerLauncher = registerForActivityResult(
@@ -1312,6 +1335,17 @@ open class MediaHubActivity : AppCompatActivity() {
         }
         handleOpenAction(intent)
 
+        val meshFilter = IntentFilter(com.adshield.app.engine.FokkMeshVpnService.ACTION_MESH_STATE_CHANGED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(meshStateReceiver, meshFilter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(meshStateReceiver, meshFilter)
+        }
+
+        if (intent?.getBooleanExtra("open_vpn_sheet", false) == true) {
+            mainHandler.postDelayed({ showVpnModeSelector() }, 500L)
+        }
+
         if (!isIsolatedPrivateProfile) {
             AppUpdateManager.checkForUpdates(this, manualCheck = false)
             mainHandler.postDelayed({
@@ -1328,6 +1362,9 @@ open class MediaHubActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (intent?.getBooleanExtra("open_vpn_sheet", false) == true) {
+            mainHandler.postDelayed({ showVpnModeSelector() }, 250L)
+        }
         if (intent?.getBooleanExtra("EXTRA_OPEN_AI_SUMMARY", false) == true) {
             val summaryJson = intent.getStringExtra("EXTRA_AI_SUMMARY_JSON") ?: lastGeneratedSummaryJson
             if (!summaryJson.isNullOrBlank()) {
@@ -6720,7 +6757,7 @@ open class MediaHubActivity : AppCompatActivity() {
         b.btnVpnInfo.setOnClickListener {
             AlertDialog.Builder(this)
                 .setTitle("About Fokk Mesh Architecture")
-                .setMessage("Fokk Mesh is an in-browser privacy mesh that protects in-app browsing traffic.\n\n• Oblivious Mesh Routing: Web requests are routed through separate oblivious hops designed to dissociate your client IP from destination hostnames.\n\n• Nym Mixnet Timing Obfuscation: In Pro mode, packet timing jitter introduces micro-delays during connection handshakes to resist DPI traffic analysis and ISP fingerprinting.\n\n• Ephemeral In-Memory Processing: Operates under a strict zero-log operational policy with ephemeral in-memory processing. Note: Fokk Mesh secures in-browser traffic only; system-wide background apps are not routed through the mesh.")
+                .setMessage("Fokk Mesh is an oblivious privacy mesh that secures your connections with zero logs.\n\n• Oblivious Mesh Routing: Traffic is routed through separate oblivious hops designed to dissociate your client IP from destination hostnames.\n\n• Device-Wide Mesh: Enable 'Fokk Mesh for entire device' to route all system apps through the encrypted privacy mesh.\n\n• Nym Mixnet Timing Obfuscation: In Pro mode, packet timing jitter introduces micro-delays during connection handshakes to resist DPI traffic analysis and ISP fingerprinting.\n\n• Ephemeral In-Memory Processing: Operates under a strict zero-log operational policy with ephemeral in-memory processing.")
                 .setPositiveButton("Got it", null)
                 .show()
         }
@@ -6733,18 +6770,47 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
 
+        fun setupEntireDeviceSwitch() {
+            b.switchEntireDevice.setOnCheckedChangeListener { _, isChecked ->
+                if (isChecked) {
+                    val prepareIntent = VpnService.prepare(this)
+                    if (prepareIntent != null) {
+                        onVpnPermissionResult = { granted ->
+                            if (granted) {
+                                com.adshield.app.engine.VpnEngine.setEntireDeviceEnabled(this, true)
+                                refreshUi()
+                            } else {
+                                b.switchEntireDevice.setOnCheckedChangeListener(null)
+                                b.switchEntireDevice.isChecked = false
+                                setupEntireDeviceSwitch()
+                                Toast.makeText(this, "VPN permission required for device-wide Fokk Mesh", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        vpnPermissionLauncher.launch(prepareIntent)
+                    } else {
+                        com.adshield.app.engine.VpnEngine.setEntireDeviceEnabled(this, true)
+                        refreshUi()
+                    }
+                } else {
+                    com.adshield.app.engine.VpnEngine.setEntireDeviceEnabled(this, false)
+                    refreshUi()
+                }
+            }
+        }
+
         refreshUi = {
             val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
             val isConnected = activeMode != com.adshield.app.engine.VpnEngine.VpnMode.OFF
             val customSaved = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
+            val entireDeviceActive = com.adshield.app.engine.VpnEngine.isEntireDeviceEnabled(this)
 
             if (isConnected) {
                 b.textVpnPowerLabel.text = "Protected"
                 b.textVpnPowerLabel.setTextColor(android.graphics.Color.parseColor("#10B981"))
-                b.textVpnPowerSub.text = "Oblivious Split-Trust active"
+                b.textVpnPowerSub.text = if (entireDeviceActive) "Entire device routing active" else "Oblivious Split-Trust active"
                 b.vpnRadarRing.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#10B981"))
                 b.btnVpnPower.imageTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#10B981"))
-                b.textVpnStatusPill.text = "IN-BROWSER MESH ACTIVE"
+                b.textVpnStatusPill.text = if (entireDeviceActive) "DEVICE-WIDE MESH ACTIVE" else "IN-BROWSER MESH ACTIVE"
                 b.textVpnStatusPill.setTextColor(android.graphics.Color.parseColor("#10B981"))
                 b.textVpnExitIp.text = "Oblivious Tunnel Active"
                 b.textVpnExitIp.setTextColor(android.graphics.Color.parseColor("#10B981"))
@@ -6769,6 +6835,11 @@ open class MediaHubActivity : AppCompatActivity() {
             b.textLocationSub.text = if (isConnected) "Oblivious Exit Gateway • Protected" else "Virtual location"
 
             b.checkPrivateTabsOnly.isChecked = com.adshield.app.engine.VpnEngine.isPrivateOnlyEnabled(this)
+
+            b.switchEntireDevice.setOnCheckedChangeListener(null)
+            b.switchEntireDevice.isChecked = entireDeviceActive
+            setupEntireDeviceSwitch()
+
             b.switchBypassSearch.isChecked = com.adshield.app.engine.VpnEngine.isBypassSearchEnabled(this)
 
             val isPro = com.adshield.app.engine.VpnEngine.isProModeEnabled(this)
@@ -6785,6 +6856,9 @@ open class MediaHubActivity : AppCompatActivity() {
             b.layoutOrbotHelper.visibility = View.GONE
         }
 
+        vpnSheetRefreshCallback = { refreshUi() }
+        sheetDialog.setOnDismissListener { vpnSheetRefreshCallback = null }
+
         refreshUi()
 
         b.btnVpnPower.setOnClickListener {
@@ -6792,11 +6866,27 @@ open class MediaHubActivity : AppCompatActivity() {
             if (current != com.adshield.app.engine.VpnEngine.VpnMode.OFF) {
                 switchMode(com.adshield.app.engine.VpnEngine.VpnMode.OFF)
             } else {
-                val custom = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
-                if (custom.isNotBlank()) {
-                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, custom)
+                val entireDevice = com.adshield.app.engine.VpnEngine.isEntireDeviceEnabled(this)
+                val prepareIntent = if (entireDevice) VpnService.prepare(this) else null
+                val doConnect = {
+                    val custom = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
+                    if (custom.isNotBlank()) {
+                        switchMode(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, custom)
+                    } else {
+                        switchMode(com.adshield.app.engine.VpnEngine.VpnMode.FAST)
+                    }
+                }
+                if (prepareIntent != null) {
+                    onVpnPermissionResult = { granted ->
+                        if (granted) {
+                            doConnect()
+                        } else {
+                            Toast.makeText(this, "VPN permission required for device-wide Fokk Mesh", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    vpnPermissionLauncher.launch(prepareIntent)
                 } else {
-                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.FAST)
+                    doConnect()
                 }
             }
         }
@@ -6816,6 +6906,10 @@ open class MediaHubActivity : AppCompatActivity() {
         }
         b.rowPrivateTabsOnly.setOnClickListener {
             b.checkPrivateTabsOnly.isChecked = !b.checkPrivateTabsOnly.isChecked
+        }
+
+        b.rowEntireDevice.setOnClickListener {
+            b.switchEntireDevice.isChecked = !b.switchEntireDevice.isChecked
         }
 
         b.switchBypassSearch.setOnCheckedChangeListener { _, isChecked ->
@@ -9706,6 +9800,7 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        runCatching { unregisterReceiver(meshStateReceiver) }
         backgroundMediaKeepAlive?.let(mainHandler::removeCallbacks)
         backgroundMediaKeepAlive = null
         stopPlaybackRunnable?.let(mainHandler::removeCallbacks)

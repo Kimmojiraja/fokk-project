@@ -28,6 +28,38 @@ object VpnEngine {
     const val KEY_BYPASS_SEARCH = "vpn_bypass_search"
     const val KEY_PRIVATE_ONLY = "vpn_private_only"
     const val KEY_PRO_MODE = "vpn_pro_mode"
+    const val KEY_ENTIRE_DEVICE = "vpn_entire_device"
+
+    fun isEntireDeviceEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_ENTIRE_DEVICE, false)
+    }
+
+    fun setEntireDeviceEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ENTIRE_DEVICE, enabled).apply()
+        val mode = getActiveMode(context)
+        if (mode != VpnMode.OFF) {
+            if (enabled) {
+                val region = if (mode == VpnMode.CUSTOM) {
+                    val saved = getCustomProxy(context)
+                    if (saved in FokkTunnelEngine.REGION_NODES.keys) saved else "AM"
+                } else "AUTO"
+                FokkMeshVpnService.start(context, region)
+            } else {
+                FokkMeshVpnService.stop(context)
+            }
+        }
+    }
+
+    fun onDeviceMeshStopped(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_VPN_MODE, VpnMode.OFF.id).apply()
+        runCatching { FokkTunnelEngine.stop() }
+        runCatching {
+            ProxyController.getInstance().clearProxyOverride(executor) {}
+        }
+    }
 
     fun isBypassSearchEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
@@ -411,6 +443,7 @@ object VpnEngine {
 
         if (mode == VpnMode.OFF) {
             runCatching { FokkTunnelEngine.stop() }
+            runCatching { FokkMeshVpnService.stop(context) }
             try {
                 ProxyController.getInstance().clearProxyOverride(executor) {
                     runCatching {
@@ -496,6 +529,17 @@ object VpnEngine {
                             editor.putString(KEY_CUSTOM_PROXY, customProxy)
                         }
                         editor.apply()
+
+                        if (isEntireDeviceEnabled(context)) {
+                            val activeRegion = if (mode == VpnMode.CUSTOM) {
+                                val saved = customProxy ?: getCustomProxy(context)
+                                if (saved in FokkTunnelEngine.REGION_NODES.keys) saved else "AM"
+                            } else "AUTO"
+                            FokkMeshVpnService.start(context, activeRegion)
+                        } else {
+                            FokkMeshVpnService.stop(context)
+                        }
+
                         onComplete?.invoke(true, routeDesc)
                     }
                 } catch (e: Throwable) {
@@ -521,6 +565,8 @@ object VpnEngine {
             } else if (mode == VpnMode.CUSTOM) {
                 val savedProxy = getCustomProxy(context)
                 applyVpnMode(context, mode, savedProxy.ifBlank { "AM" })
+            } else {
+                FokkMeshVpnService.stop(context)
             }
         } catch (t: Throwable) {
             Log.e("VpnEngine", "Error restoring saved VPN state", t)
