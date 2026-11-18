@@ -3,6 +3,7 @@ package com.adshield.app.engine
 import android.content.Context
 import android.util.Base64
 import android.util.Log
+import com.adshield.app.AdShieldApp
 import java.io.EOFException
 import java.io.InputStream
 import java.io.OutputStream
@@ -128,17 +129,25 @@ object FokkTunnelEngine {
                 currentRegion = region
                 stickyBestNode = null
                 stickyRegion = ""
-                activeHopMode = "CONNECTING"
                 activeIngressNode = null
                 activeEgressNode = null
-                FokkCircuitManager.setRegion(region)
+                if (region == "SMART_CLOAK") {
+                    activeHopMode = "SMART_CLOAK"
+                    FokkCircuitManager.stop()
+                    FokkNodeProber.stop()
+                } else {
+                    activeHopMode = "CONNECTING"
+                    FokkNodeManifest.refreshIfNeeded()
+                    FokkNodeProber.start()
+                    FokkCircuitManager.start(region)
+                }
             }
             return
         }
         currentRegion = region
         stickyBestNode = null
         stickyRegion = ""
-        activeHopMode = "CONNECTING"
+        activeHopMode = if (region == "SMART_CLOAK") "SMART_CLOAK" else "CONNECTING"
         activeIngressNode = null
         activeEgressNode = null
         activeTransportEncrypted = false
@@ -150,7 +159,7 @@ object FokkTunnelEngine {
                 srv.reuseAddress = true
                 serverSocket = srv
                 localPort = srv.localPort
-                Log.i(TAG, "Fokk Mesh 3.1 tunnel listening on 127.0.0.1:$localPort region=$region")
+                Log.i(TAG, "Fokk Mesh 3.2 tunnel listening on 127.0.0.1:$localPort region=$region")
                 while (isRunning.get()) {
                     try {
                         val client = srv.accept()
@@ -166,10 +175,12 @@ object FokkTunnelEngine {
             }
         }
 
-        // 2. Kick off non-blocking parallel manifest refresh, protocol prober, and circuit pre-warmer
-        FokkNodeManifest.refreshIfNeeded()
-        FokkNodeProber.start()
-        FokkCircuitManager.start(region)
+        // 2. Only run relay prober & 2-hop circuit pool when in Fokk Mesh Pro relay mode (saves battery in Smart-Cloak!)
+        if (region != "SMART_CLOAK") {
+            FokkNodeManifest.refreshIfNeeded()
+            FokkNodeProber.start()
+            FokkCircuitManager.start(region)
+        }
     }
 
     fun stop() {
@@ -197,6 +208,7 @@ object FokkTunnelEngine {
         val lat = if (activeLatencyMs > 0) " · ${activeLatencyMs}ms" else ""
         val tlsTag = if (activeTransportEncrypted) " · TLS" else ""
         return when (activeHopMode) {
+            "SMART_CLOAK" -> "Smart-Cloak · DoH + SNI Shield$lat"
             "DUAL_HOP" -> {
                 val egLabel = egress?.let { it.city.ifBlank { it.country } } ?: "Exit"
                 val inLabel = ingress?.country?.ifBlank { "Relay" } ?: "Relay"
@@ -386,7 +398,7 @@ object FokkTunnelEngine {
                 upstream = connectedSocket
                 clientOut.write("HTTP/1.1 200 Connection Established\r\n\r\n".toByteArray(StandardCharsets.ISO_8859_1))
                 clientOut.flush()
-                pipeSockets(client, connectedSocket)
+                pipeSockets(client, connectedSocket, cloakSni = (currentRegion == "SMART_CLOAK"))
             } else {
                 val parsedUri = runCatching { URI(target) }.getOrNull()
                 val hostHeader = requestText.lineSequence()
@@ -462,7 +474,37 @@ object FokkTunnelEngine {
      *   3. Global fallback race across remaining relays if region relays failed.
      *   4. Strictly fail-closed (null -> 407) + self-healing manifest refresh.
      */
+    private fun connectSmartCloak(targetHost: String, targetPort: Int): Socket? {
+        val t0 = System.currentTimeMillis()
+        val addresses = runCatching { AdShieldApp.instance.dohEngine.resolveSync(targetHost) }.getOrDefault(emptyList())
+        if (addresses.isEmpty()) return null
+
+        for (addr in addresses.take(3)) {
+            var sock: Socket? = null
+            try {
+                sock = Socket()
+                sock.tcpNoDelay = true
+                sock.sendBufferSize = 65536
+                sock.receiveBufferSize = 65536
+                sock.connect(InetSocketAddress(addr, targetPort), 5_000)
+                sock.soTimeout = 30_000
+                activeHopMode = "SMART_CLOAK"
+                activeIngressNode = null
+                activeEgressNode = null
+                activeTransportEncrypted = true
+                activeLatencyMs = (System.currentTimeMillis() - t0).coerceAtLeast(1L)
+                return sock
+            } catch (_: Exception) {
+                runCatching { sock?.close() }
+            }
+        }
+        return null
+    }
+
     private fun routeConnect(targetHost: String, targetPort: Int): Socket? {
+        if (currentRegion == "SMART_CLOAK") {
+            return connectSmartCloak(targetHost, targetPort)
+        }
         val t0 = System.currentTimeMillis()
         if (NodeRegistry.getAllNodes().isEmpty()) {
             FokkNodeManifest.ensureLoadedBlocking(4_500L)
@@ -628,7 +670,7 @@ object FokkTunnelEngine {
         return null
     }
 
-    private fun pipeSockets(s1: Socket, s2: Socket) {
+    private fun pipeSockets(s1: Socket, s2: Socket, cloakSni: Boolean = false) {
         runCatching {
             s1.tcpNoDelay = true; s2.tcpNoDelay = true
             s1.soTimeout = 30_000; s2.soTimeout = 30_000
@@ -636,26 +678,39 @@ object FokkTunnelEngine {
             s2.sendBufferSize = 65536; s2.receiveBufferSize = 65536
         }
         threadPool.execute {
-            try { transfer(s2.getInputStream(), s1.getOutputStream()) } catch (_: Exception) {}
+            try { transfer(s2.getInputStream(), s1.getOutputStream(), cloakSni = false) } catch (_: Exception) {}
             runCatching { s1.shutdownOutput() }
             runCatching { s2.close() }
             runCatching { s1.close() }
         }
-        try { transfer(s1.getInputStream(), s2.getOutputStream()) } catch (_: Exception) {}
+        try { transfer(s1.getInputStream(), s2.getOutputStream(), cloakSni = cloakSni) } catch (_: Exception) {}
         runCatching { s2.shutdownOutput() }
         runCatching { s1.close() }
         runCatching { s2.close() }
     }
 
-    private fun transfer(input: InputStream, output: OutputStream) {
+    private fun transfer(input: InputStream, output: OutputStream, cloakSni: Boolean = false) {
         val buffer = ByteArray(65536)
-        val random = if (isProMode) java.util.concurrent.ThreadLocalRandom.current() else null
+        val random = if (isProMode && !cloakSni) java.util.concurrent.ThreadLocalRandom.current() else null
         var packetsSeen = 0
         try {
             while (true) {
                 val read = input.read(buffer)
                 if (read < 0) break
                 packetsSeen++
+
+                // Fokk Smart-Cloak: fragment the initial TLS ClientHello (0x16 0x03) across two TCP segments
+                // so ISP DPI/SNI middleboxes cannot inspect or throttle the SNI hostname, at 0ms extra lag!
+                if (cloakSni && packetsSeen == 1 && read > 6 &&
+                    buffer[0] == 0x16.toByte() && buffer[1] == 0x03.toByte()
+                ) {
+                    output.write(buffer, 0, 2)
+                    output.flush()
+                    output.write(buffer, 2, read - 2)
+                    output.flush()
+                    continue
+                }
+
                 if (isProMode && random != null && packetsSeen <= 2) {
                     try { Thread.sleep(random.nextLong(1, 3)) }
                     catch (_: InterruptedException) { Thread.currentThread().interrupt(); break }

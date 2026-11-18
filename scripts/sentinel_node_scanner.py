@@ -154,8 +154,9 @@ def _read_exact(sock: socket.socket, n: int) -> bytes:
     return buf
 
 
-def _socks5_handshake(sock: socket.socket, username: str = "", password: str = "") -> bool:
-    has_auth = bool(username and password)
+def _socks5_handshake(sock: socket.socket, auth: tuple = ("", "")) -> bool:
+    u_str, p_str = auth
+    has_auth = bool(u_str and p_str)
     sock.sendall(b"\x05\x02\x00\x02" if has_auth else b"\x05\x01\x00")
     resp = _read_exact(sock, 2)
     if resp[0] != 0x05:
@@ -163,16 +164,16 @@ def _socks5_handshake(sock: socket.socket, username: str = "", password: str = "
     if resp[1] == 0x00:
         return True
     if resp[1] == 0x02 and has_auth:
-        u = username.encode("utf-8")
-        p = password.encode("utf-8")
+        u = u_str.encode("utf-8")
+        p = p_str.encode("utf-8")
         sock.sendall(b"\x01" + bytes([len(u)]) + u + bytes([len(p)]) + p)
         auth_resp = _read_exact(sock, 2)
         return auth_resp[0] == 0x01 and auth_resp[1] == 0x00
     return False
 
 
-def _socks5_connect(sock: socket.socket, host: str, port: int, do_greeting: bool = True, username: str = "", password: str = "") -> bool:
-    if do_greeting and not _socks5_handshake(sock, username, password):
+def _socks5_connect(sock: socket.socket, host: str, port: int, do_greeting: bool = True, auth: tuple = ("", "")) -> bool:
+    if do_greeting and not _socks5_handshake(sock, auth):
         return False
     host_bytes = host.encode("ascii")
     req = b"\x05\x01\x00\x03" + bytes([len(host_bytes)]) + host_bytes + struct.pack(">H", port)
@@ -193,10 +194,11 @@ def _socks5_connect(sock: socket.socket, host: str, port: int, do_greeting: bool
     return True
 
 
-def _http_connect(sock: socket.socket, host: str, port: int, username: str = "", password: str = "") -> bool:
+def _http_connect(sock: socket.socket, host: str, port: int, auth: tuple = ("", "")) -> bool:
+    u_str, p_str = auth
     auth_hdr = ""
-    if username and password:
-        tok = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode("ascii")
+    if u_str and p_str:
+        tok = base64.b64encode(f"{u_str}:{p_str}".encode("utf-8")).decode("ascii")
         auth_hdr = f"Proxy-Authorization: Basic {tok}\r\n"
     req = f"CONNECT {host}:{port} HTTP/1.1\r\nHost: {host}:{port}\r\n{auth_hdr}Proxy-Connection: Keep-Alive\r\n\r\n"
     sock.sendall(req.encode("ascii"))
@@ -230,16 +232,15 @@ def _https_get_via_relay(node: dict, target_host: str, target_path: str) -> tupl
     Returns (latency_ms, body_text, error_reason).
     """
     proto = node.get("type", "socks5")
-    user = str(node.get("username", "")).strip()
-    pwd = str(node.get("password", "")).strip()
+    node_auth = (str(node.get("username", "")).strip(), str(node.get("password", "")).strip())
     t0 = time.time()
     raw = None
     try:
         raw = _open_relay_transport(node)
         ok = (
-            _socks5_connect(raw, target_host, 443, do_greeting=True, username=user, password=pwd)
+            _socks5_connect(raw, target_host, 443, do_greeting=True, auth=node_auth)
             if proto == "socks5"
-            else _http_connect(raw, target_host, 443, username=user, password=pwd)
+            else _http_connect(raw, target_host, 443, auth=node_auth)
         )
         if not ok:
             return None, "", "PROXY_CONNECT_REJECT"
@@ -344,19 +345,17 @@ def test_dual_hop_chain(ingress: dict, egress: dict) -> bool:
     try:
         raw = _open_relay_transport(ingress)
         raw.settimeout(8.0)
-        in_u = str(ingress.get("username", "")).strip()
-        in_p = str(ingress.get("password", "")).strip()
-        eg_u = str(egress.get("username", "")).strip()
-        eg_p = str(egress.get("password", "")).strip()
+        in_auth = (str(ingress.get("username", "")).strip(), str(ingress.get("password", "")).strip())
+        eg_auth = (str(egress.get("username", "")).strip(), str(egress.get("password", "")).strip())
         # Hop 1: Ingress -> Egress
-        if not _socks5_connect(raw, egress["host"], int(egress["port"]), do_greeting=True, username=in_u, password=in_p):
+        if not _socks5_connect(raw, egress["host"], int(egress["port"]), do_greeting=True, auth=in_auth):
             return False
         # Hop 2: Egress -> api.ipify.org:443
         if egress.get("type", "socks5") == "http":
-            if not _http_connect(raw, "api.ipify.org", 443, username=eg_u, password=eg_p):
+            if not _http_connect(raw, "api.ipify.org", 443, auth=eg_auth):
                 return False
         else:
-            if not _socks5_connect(raw, "api.ipify.org", 443, do_greeting=True, username=eg_u, password=eg_p):
+            if not _socks5_connect(raw, "api.ipify.org", 443, do_greeting=True, auth=eg_auth):
                 return False
         # Strict TLS through the full 2-hop circuit
         tls = ssl_ctx.wrap_socket(raw, server_hostname="api.ipify.org")

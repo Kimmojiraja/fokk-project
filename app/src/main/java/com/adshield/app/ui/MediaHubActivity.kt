@@ -7100,38 +7100,47 @@ open class MediaHubActivity : AppCompatActivity() {
             val entireDeviceActive = com.adshield.app.engine.VpnEngine.isEntireDeviceEnabled(this)
 
             if (isConnected) {
+                val isSmartCloak = activeMode == com.adshield.app.engine.VpnEngine.VpnMode.SMART_CLOAK
                 val liveSummary = com.adshield.app.engine.FokkTunnelEngine.getLiveStatusSummary()
                 val aliveNodes = com.adshield.app.engine.FokkNodeProber.lastAliveCount
                 val totalNodes = com.adshield.app.engine.FokkNodeProber.lastTotalCount
-                b.textVpnPowerLabel.text = "Protected"
+                b.textVpnPowerLabel.text = if (isSmartCloak) "Smart-Cloak Active" else "Mesh Pro Protected"
                 b.textVpnPowerLabel.setTextColor(android.graphics.Color.parseColor("#10B981"))
-                b.textVpnPowerSub.text = if (entireDeviceActive) "Device-wide Fokk Mesh · $liveSummary" else liveSummary
+                b.textVpnPowerSub.text = liveSummary
                 b.vpnRadarRing.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#10B981"))
                 b.btnVpnPower.imageTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#10B981"))
-                b.textVpnStatusPill.text = if (entireDeviceActive) "DEVICE-WIDE MESH ACTIVE" else "FOKK MESH ACTIVE"
+                b.textVpnStatusPill.text = if (isSmartCloak) "SMART-CLOAK · FULL SPEED" else "FOKK MESH PRO ACTIVE"
                 b.textVpnStatusPill.setTextColor(android.graphics.Color.parseColor("#10B981"))
-                val nodeStat = if (totalNodes > 0) " ($aliveNodes/$totalNodes live)" else ""
+                val nodeStat = if (!isSmartCloak && totalNodes > 0) " ($aliveNodes/$totalNodes live)" else ""
                 b.textVpnExitIp.text = "$liveSummary$nodeStat"
                 b.textVpnExitIp.setTextColor(android.graphics.Color.parseColor("#10B981"))
             } else {
                 b.textVpnPowerLabel.text = "Disconnected"
                 b.textVpnPowerLabel.setTextColor(android.graphics.Color.parseColor("#F8FAFC"))
-                b.textVpnPowerSub.text = "Your real IP is visible"
+                b.textVpnPowerSub.text = "Tap to activate Fokk Smart-Cloak"
                 b.vpnRadarRing.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#1E293B"))
                 b.btnVpnPower.imageTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#94A3B8"))
                 b.textVpnStatusPill.text = "DIRECT CONNECTION"
                 b.textVpnStatusPill.setTextColor(android.graphics.Color.parseColor("#F43F5E"))
-                b.textVpnExitIp.text = "Direct (Real IP Exposed)"
+                b.textVpnExitIp.text = "Direct (System DNS)"
                 b.textVpnExitIp.setTextColor(android.graphics.Color.parseColor("#F43F5E"))
             }
 
-            val activeRegionCode = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM) customSaved else "AUTO"
+            val activeRegionCode = when (activeMode) {
+                com.adshield.app.engine.VpnEngine.VpnMode.SMART_CLOAK -> "SMART_CLOAK"
+                com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> customSaved
+                else -> "AUTO"
+            }
             val locationLabel = com.adshield.app.engine.VpnEngine.getRegionDisplayName(activeRegionCode)
             val flagRes = com.adshield.app.engine.VpnEngine.getRegionFlagRes(activeRegionCode)
 
             b.textSelectedLocation.text = locationLabel
             b.imgSelectedLocationFlag.setImageResource(flagRes)
-            b.textLocationSub.text = if (isConnected) "Oblivious Exit Gateway • Protected" else "Virtual location"
+            b.textLocationSub.text = when {
+                !isConnected -> "Tap to switch Smart-Cloak / Mesh Pro"
+                activeMode == com.adshield.app.engine.VpnEngine.VpnMode.SMART_CLOAK -> "Encrypted DoH + TLS SNI Shield · Full Speed"
+                else -> "IP-Masking Exit Gateway · Protected"
+            }
 
             b.checkPrivateTabsOnly.isChecked = com.adshield.app.engine.VpnEngine.isPrivateOnlyEnabled(this)
 
@@ -7143,12 +7152,13 @@ open class MediaHubActivity : AppCompatActivity() {
 
             val isPro = com.adshield.app.engine.VpnEngine.isProModeEnabled(this)
             b.textVpnProtocol.text = when (activeMode) {
-                com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "Direct (Unencrypted)"
+                com.adshield.app.engine.VpnEngine.VpnMode.OFF -> "Direct"
+                com.adshield.app.engine.VpnEngine.VpnMode.SMART_CLOAK -> "Fokk Smart-Cloak (DoH + SNI)"
                 com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM -> if (isPro) "Fokk Mesh Pro ($locationLabel)" else "Fokk Mesh ($locationLabel)"
-                else -> if (isPro) "Fokk Mesh Pro (Multi-Hop)" else "Fokk Mesh (Auto)"
+                else -> if (isPro) "Fokk Mesh Pro (Dual-Hop)" else "Fokk Mesh (Auto)"
             }
 
-            b.radioModeTor.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.FAST || activeMode == com.adshield.app.engine.VpnEngine.VpnMode.TOR || activeMode == com.adshield.app.engine.VpnEngine.VpnMode.RELAY)
+            b.radioModeTor.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.SMART_CLOAK || activeMode == com.adshield.app.engine.VpnEngine.VpnMode.FAST || activeMode == com.adshield.app.engine.VpnEngine.VpnMode.TOR || activeMode == com.adshield.app.engine.VpnEngine.VpnMode.RELAY)
             b.radioModeRelay.isChecked = false
             b.radioModeCustom.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM)
             b.radioModeOff.isChecked = (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.OFF)
@@ -7165,37 +7175,24 @@ open class MediaHubActivity : AppCompatActivity() {
             if (current != com.adshield.app.engine.VpnEngine.VpnMode.OFF) {
                 switchMode(com.adshield.app.engine.VpnEngine.VpnMode.OFF)
             } else {
-                val entireDevice = com.adshield.app.engine.VpnEngine.isEntireDeviceEnabled(this)
-                val prepareIntent = if (entireDevice) VpnService.prepare(this) else null
-                val doConnect = {
-                    val custom = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
-                    if (custom.isNotBlank()) {
-                        switchMode(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, custom)
-                    } else {
-                        switchMode(com.adshield.app.engine.VpnEngine.VpnMode.FAST)
-                    }
-                }
-                if (prepareIntent != null) {
-                    onVpnPermissionResult = { granted ->
-                        if (granted) {
-                            doConnect()
-                        } else {
-                            Toast.makeText(this, "VPN permission required for device-wide Fokk Mesh", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                    vpnPermissionLauncher.launch(prepareIntent)
+                // Default Free instant-connect = Fokk Smart-Cloak (full native speed, DoH + TLS SNI bypass)
+                // If user explicitly saved a Pro country/private relay, reconnect to that cleanly
+                val custom = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
+                val isPro = com.adshield.app.engine.VpnEngine.isProModeEnabled(this)
+                if (isPro && custom.isNotBlank()) {
+                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, custom)
                 } else {
-                    doConnect()
+                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.SMART_CLOAK)
                 }
             }
         }
 
         b.cardLocationSelector.setOnClickListener {
             showDedicatedRegionOrCustomDialog { selection ->
-                if (selection == "AUTO") {
-                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.FAST)
-                } else {
-                    switchMode(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, selection)
+                when (selection) {
+                    "SMART_CLOAK" -> switchMode(com.adshield.app.engine.VpnEngine.VpnMode.SMART_CLOAK)
+                    "AUTO" -> switchMode(com.adshield.app.engine.VpnEngine.VpnMode.FAST)
+                    else -> switchMode(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, selection)
                 }
             }
         }
@@ -7266,10 +7263,10 @@ open class MediaHubActivity : AppCompatActivity() {
         b.btnSelectProCountry.setOnClickListener {
             sheetDialog.dismiss()
             showDedicatedRegionOrCustomDialog { selection ->
-                if (selection == "AUTO") {
-                    applyVpnModeWithFeedback(com.adshield.app.engine.VpnEngine.VpnMode.FAST)
-                } else {
-                    applyVpnModeWithFeedback(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, selection)
+                when (selection) {
+                    "SMART_CLOAK" -> applyVpnModeWithFeedback(com.adshield.app.engine.VpnEngine.VpnMode.SMART_CLOAK)
+                    "AUTO" -> applyVpnModeWithFeedback(com.adshield.app.engine.VpnEngine.VpnMode.FAST)
+                    else -> applyVpnModeWithFeedback(com.adshield.app.engine.VpnEngine.VpnMode.CUSTOM, selection)
                 }
             }
         }
@@ -7466,7 +7463,11 @@ open class MediaHubActivity : AppCompatActivity() {
 
         val currentSaved = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
         val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
-        val activeCode = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.FAST) "AUTO" else currentSaved
+        val activeCode = when (activeMode) {
+            com.adshield.app.engine.VpnEngine.VpnMode.SMART_CLOAK -> "SMART_CLOAK"
+            com.adshield.app.engine.VpnEngine.VpnMode.FAST -> "AUTO"
+            else -> currentSaved
+        }
 
         data class MeshCountryItem(
             val code: String,
@@ -7502,10 +7503,10 @@ open class MediaHubActivity : AppCompatActivity() {
 
         fun select(code: String) {
             val isPro = com.adshield.app.engine.VpnEngine.isProModeEnabled(this)
-            if (code != "AUTO" && !isPro) {
+            if (code != "SMART_CLOAK" && code != "AUTO" && !isPro) {
                 sheetDialog.dismiss()
                 showVpnProDialog()
-                Toast.makeText(this, "Dedicated Country routing is a Fokk Pro feature. Optimal Location is free.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Dedicated Country routing is a Fokk Mesh Pro feature. Smart-Cloak is free.", Toast.LENGTH_LONG).show()
                 return
             }
             sheetDialog.dismiss()
@@ -7513,6 +7514,7 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         b.btnCloseLocationSheet.setOnClickListener { sheetDialog.dismiss() }
+        b.rowLocationSmartCloak.setOnClickListener { select("SMART_CLOAK") }
         b.rowLocationAuto.setOnClickListener { select("AUTO") }
 
         val countryCheckViews = mutableMapOf<String, View>()
@@ -7529,6 +7531,7 @@ open class MediaHubActivity : AppCompatActivity() {
             b.countryLocationsContainer.addView(itemBinding.root)
         }
 
+        b.checkLocationSmartCloak.visibility = View.GONE
         b.checkLocationAuto.visibility = View.GONE
         b.checkLocationCustom.visibility = View.GONE
         countryCheckViews.values.forEach { it.visibility = View.GONE }
@@ -7540,7 +7543,9 @@ open class MediaHubActivity : AppCompatActivity() {
             else -> activeCode
         }
 
-        if (normalizedActiveCode == "AUTO" || normalizedActiveCode.isBlank()) {
+        if (normalizedActiveCode == "SMART_CLOAK" || normalizedActiveCode.isBlank()) {
+            b.checkLocationSmartCloak.visibility = View.VISIBLE
+        } else if (normalizedActiveCode == "AUTO") {
             b.checkLocationAuto.visibility = View.VISIBLE
         } else if (normalizedActiveCode in countryCheckViews) {
             countryCheckViews[normalizedActiveCode]?.visibility = View.VISIBLE
