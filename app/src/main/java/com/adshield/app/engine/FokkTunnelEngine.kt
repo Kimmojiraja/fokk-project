@@ -4,8 +4,10 @@ import android.content.Context
 import android.util.Base64
 import android.util.Log
 import com.adshield.app.AdShieldApp
+import java.io.BufferedReader
 import java.io.EOFException
 import java.io.InputStream
+import java.io.InputStreamReader
 import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.ServerSocket
