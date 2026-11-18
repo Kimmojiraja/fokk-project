@@ -15,33 +15,45 @@
         android:layout_marginBottom="12dp"
         android:background="#2B3648" />
 
-    <!-- History Header -->
-    <RelativeLayout
+    <!-- Mode Switcher Tabs and Clear Action -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
         android:layout_marginBottom="12dp">
 
         <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentStart="true"
-            android:layout_centerVertical="true"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <ImageView
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:src="@drawable/ic_clock"
-                app:tint="@color/fokk_cyan" />
+            android:id="@+id/layoutHistoryTabs"
+            android:layout_width="0dp"
+            android:layout_height="34dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_stat_chip"
+            android:orientation="horizontal"
+            android:padding="2dp">
 
             <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
+                android:id="@+id/btnTabBrowsingHistory"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/bg_engine_capsule"
+                android:gravity="center"
                 android:text="Browsing History"
-                android:textColor="@color/text_primary"
-                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:textSize="11.5sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/btnTabAiHistory"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:gravity="center"
+                android:text="Fokk AI Checks"
+                android:textColor="@color/text_secondary"
+                android:textSize="11.5sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -50,12 +62,15 @@
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:text="Clear History"
+            android:layout_marginStart="8dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:text="Clear"
             android:textColor="@color/youtube_red"
             android:textSize="11.5sp" />
-    </RelativeLayout>
+    </LinearLayout>
 
     <!-- Search History Field -->
     <LinearLayout

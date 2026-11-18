@@ -710,6 +710,8 @@ open class MediaHubActivity : AppCompatActivity() {
     private var hasActiveVideo: Boolean = false
     private var isActivityResumed: Boolean = false
     private var lastGeneratedSummaryJson: String? = null
+    private var cachedAiSummaryUrl: String? = null
+    private var cachedAiSummaryJson: String? = null
 
     private fun migrateLegacyBrowserPreferences() {
         val legacy = getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE)
@@ -5246,7 +5248,62 @@ open class MediaHubActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    fun showHistoryDialog() {
+    fun showAiHistorySheet() {
+        showHistoryDialog(initialTab = 1)
+    }
+
+    private fun saveAiHistoryItem(
+        url: String,
+        title: String,
+        score: Int,
+        verdict: String,
+        summary: String,
+        sourcesCount: Int,
+        fullJson: String
+    ) {
+        if (isIsolatedPrivateProfile || url.isBlank()) return
+        try {
+            val historyJson = localPrefs.getString(PREF_FOKK_AI_HISTORY, "[]") ?: "[]"
+            val currentArr = JSONArray(historyJson)
+            val newArr = JSONArray()
+            val itemObj = JSONObject().apply {
+                put("id", System.currentTimeMillis())
+                put("url", url)
+                put("title", title.ifBlank { "Analyzed Webpage" })
+                put("score", score)
+                put("verdict", verdict)
+                put("summary", summary)
+                put("sourcesCount", sourcesCount)
+                put("timestamp", System.currentTimeMillis())
+                put("fullJson", fullJson)
+            }
+            newArr.put(itemObj)
+            for (i in 0 until currentArr.length()) {
+                val old = currentArr.getJSONObject(i)
+                if (old.optString("url") != url && newArr.length() < 100) {
+                    newArr.put(old)
+                }
+            }
+            localPrefs.edit().putString(PREF_FOKK_AI_HISTORY, newArr.toString()).apply()
+        } catch (_: Exception) {}
+    }
+
+    private fun deleteAiHistoryItem(id: Long) {
+        try {
+            val historyJson = localPrefs.getString(PREF_FOKK_AI_HISTORY, "[]") ?: "[]"
+            val currentArr = JSONArray(historyJson)
+            val newArr = JSONArray()
+            for (i in 0 until currentArr.length()) {
+                val obj = currentArr.getJSONObject(i)
+                if (obj.optLong("id") != id) {
+                    newArr.put(obj)
+                }
+            }
+            localPrefs.edit().putString(PREF_FOKK_AI_HISTORY, newArr.toString()).apply()
+        } catch (_: Exception) {}
+    }
+
+    fun showHistoryDialog(initialTab: Int = 0) {
         if (isIsolatedPrivateProfile) {
             Toast.makeText(this, "Browsing history is unavailable in private tabs", Toast.LENGTH_SHORT).show()
             return
@@ -5255,72 +5312,197 @@ open class MediaHubActivity : AppCompatActivity() {
         val sheetBinding = SheetHistoryBinding.inflate(layoutInflater)
         dialog.setContentView(sheetBinding.root)
 
+        var currentTab = initialTab
+        val density = resources.displayMetrics.density
+
+        fun updateTabIndicators() {
+            if (currentTab == 0) {
+                sheetBinding.btnTabBrowsingHistory.setBackgroundResource(R.drawable.bg_engine_capsule)
+                sheetBinding.btnTabBrowsingHistory.setTextColor(Color.WHITE)
+                sheetBinding.btnTabAiHistory.background = null
+                sheetBinding.btnTabAiHistory.setTextColor(getColor(R.color.text_secondary))
+                sheetBinding.editHistorySearch.hint = "Search visited sites..."
+                sheetBinding.textHistoryEmpty.text = "No browsing history yet"
+            } else {
+                sheetBinding.btnTabAiHistory.setBackgroundResource(R.drawable.bg_engine_capsule)
+                sheetBinding.btnTabAiHistory.setTextColor(Color.WHITE)
+                sheetBinding.btnTabBrowsingHistory.background = null
+                sheetBinding.btnTabBrowsingHistory.setTextColor(getColor(R.color.text_secondary))
+                sheetBinding.editHistorySearch.hint = "Search Fokk AI checks..."
+                sheetBinding.textHistoryEmpty.text = "No Fokk AI history yet"
+            }
+        }
+
         fun loadList(filter: String = "") {
             sheetBinding.layoutHistoryList.removeAllViews()
             try {
-                val historyJson = localPrefs.getString(PREF_BROWSING_HISTORY, "[]") ?: "[]"
-                val jsonArr = JSONArray(historyJson)
                 var count = 0
-                val density = resources.displayMetrics.density
+                if (currentTab == 0) {
+                    val historyJson = localPrefs.getString(PREF_BROWSING_HISTORY, "[]") ?: "[]"
+                    val jsonArr = JSONArray(historyJson)
+                    for (i in 0 until jsonArr.length()) {
+                        val obj = jsonArr.getJSONObject(i)
+                        val title = obj.optString("title", "Website")
+                        val url = obj.optString("url", "")
 
-                for (i in 0 until jsonArr.length()) {
-                    val obj = jsonArr.getJSONObject(i)
-                    val title = obj.optString("title", "Website")
-                    val url = obj.optString("url", "")
-
-                    if (filter.isNotEmpty() && !title.contains(filter, true) && !url.contains(filter, true)) {
-                        continue
-                    }
-                    count++
-
-                    val row = LinearLayout(this).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
-                        setPadding((8 * density).toInt(), (10 * density).toInt(), (8 * density).toInt(), (10 * density).toInt())
-                        setBackgroundResource(android.R.drawable.list_selector_background)
-                        isClickable = true
-                    }
-
-                    val icon = ImageView(this).apply {
-                        layoutParams = LinearLayout.LayoutParams((18 * density).toInt(), (18 * density).toInt())
-                        setImageResource(R.drawable.ic_clock)
-                        imageTintList = ColorStateList.valueOf(getColor(R.color.text_secondary))
-                    }
-
-                    val infoCol = LinearLayout(this).apply {
-                        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                            marginStart = (10 * density).toInt()
+                        if (filter.isNotEmpty() && !title.contains(filter, true) && !url.contains(filter, true)) {
+                            continue
                         }
-                        orientation = LinearLayout.VERTICAL
+                        count++
+
+                        val row = LinearLayout(this).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = Gravity.CENTER_VERTICAL
+                            setPadding((8 * density).toInt(), (10 * density).toInt(), (8 * density).toInt(), (10 * density).toInt())
+                            setBackgroundResource(android.R.drawable.list_selector_background)
+                            isClickable = true
+                        }
+
+                        val icon = ImageView(this).apply {
+                            layoutParams = LinearLayout.LayoutParams((18 * density).toInt(), (18 * density).toInt())
+                            setImageResource(R.drawable.ic_clock)
+                            imageTintList = ColorStateList.valueOf(getColor(R.color.text_secondary))
+                        }
+
+                        val infoCol = LinearLayout(this).apply {
+                            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                                marginStart = (10 * density).toInt()
+                            }
+                            orientation = LinearLayout.VERTICAL
+                        }
+
+                        val titleTv = TextView(this).apply {
+                            text = title
+                            setTextColor(getColor(R.color.text_primary))
+                            textSize = 13f
+                            maxLines = 1
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                        }
+
+                        val urlTv = TextView(this).apply {
+                            text = url
+                            setTextColor(getColor(R.color.text_secondary))
+                            textSize = 10.5f
+                            maxLines = 1
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                        }
+
+                        infoCol.addView(titleTv)
+                        infoCol.addView(urlTv)
+                        row.addView(icon)
+                        row.addView(infoCol)
+
+                        row.setOnClickListener {
+                            loadUrlInActiveWebView(url)
+                            dialog.dismiss()
+                        }
+
+                        sheetBinding.layoutHistoryList.addView(row)
                     }
+                } else {
+                    val aiHistoryJson = localPrefs.getString(PREF_FOKK_AI_HISTORY, "[]") ?: "[]"
+                    val jsonArr = JSONArray(aiHistoryJson)
+                    for (i in 0 until jsonArr.length()) {
+                        val obj = jsonArr.getJSONObject(i)
+                        val id = obj.optLong("id", 0L)
+                        val title = obj.optString("title", "Webpage")
+                        val url = obj.optString("url", "")
+                        val score = obj.optInt("score", 0)
+                        val verdict = obj.optString("verdict", "")
+                        val summary = obj.optString("summary", "")
+                        val fullJson = obj.optString("fullJson", "")
 
-                    val titleTv = TextView(this).apply {
-                        text = title
-                        setTextColor(getColor(R.color.text_primary))
-                        textSize = 13f
-                        maxLines = 1
-                        ellipsize = android.text.TextUtils.TruncateAt.END
+                        if (filter.isNotEmpty() && !title.contains(filter, true) &&
+                            !url.contains(filter, true) && !verdict.contains(filter, true) &&
+                            !summary.contains(filter, true)
+                        ) {
+                            continue
+                        }
+                        count++
+
+                        val row = LinearLayout(this).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = Gravity.CENTER_VERTICAL
+                            setPadding((8 * density).toInt(), (10 * density).toInt(), (8 * density).toInt(), (10 * density).toInt())
+                            setBackgroundResource(android.R.drawable.list_selector_background)
+                            isClickable = true
+                        }
+
+                        val logoIv = ImageView(this).apply {
+                            layoutParams = LinearLayout.LayoutParams((22 * density).toInt(), (22 * density).toInt())
+                            setImageResource(R.drawable.ic_fokk_ai_logo)
+                            scaleType = ImageView.ScaleType.FIT_CENTER
+                        }
+
+                        val infoCol = LinearLayout(this).apply {
+                            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                                marginStart = (10 * density).toInt()
+                            }
+                            orientation = LinearLayout.VERTICAL
+                        }
+
+                        val titleRow = LinearLayout(this).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = Gravity.CENTER_VERTICAL
+                        }
+
+                        val titleTv = TextView(this).apply {
+                            text = title
+                            setTextColor(getColor(R.color.text_primary))
+                            textSize = 13f
+                            setTypeface(null, Typeface.BOLD)
+                            maxLines = 1
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                        }
+
+                        val scoreTv = TextView(this).apply {
+                            text = if (score > 0) "$score%" else ""
+                            setTextColor(Color.parseColor(when {
+                                score >= 85 -> "#34D399"
+                                score >= 70 -> "#38BDF8"
+                                score >= 50 -> "#FBBF24"
+                                else -> "#F87171"
+                            }))
+                            textSize = 11.5f
+                            setTypeface(null, Typeface.BOLD)
+                            setPadding((6 * density).toInt(), 0, 0, 0)
+                        }
+
+                        titleRow.addView(titleTv)
+                        if (score > 0) titleRow.addView(scoreTv)
+
+                        val verdictTv = TextView(this).apply {
+                            text = if (verdict.isNotBlank()) verdict else url
+                            setTextColor(Color.parseColor("#94A3B8"))
+                            textSize = 11f
+                            maxLines = 1
+                            ellipsize = android.text.TextUtils.TruncateAt.END
+                        }
+
+                        infoCol.addView(titleRow)
+                        infoCol.addView(verdictTv)
+                        row.addView(logoIv)
+                        row.addView(infoCol)
+
+                        row.setOnClickListener {
+                            dialog.dismiss()
+                            if (fullJson.isNotBlank()) {
+                                showAiSummarySheet(fullJson)
+                            } else if (url.isNotBlank()) {
+                                loadUrlInActiveWebView(url)
+                            }
+                        }
+
+                        row.setOnLongClickListener {
+                            deleteAiHistoryItem(id)
+                            loadList(sheetBinding.editHistorySearch.text?.toString()?.trim() ?: "")
+                            Toast.makeText(this@MediaHubActivity, "AI analysis removed from history", Toast.LENGTH_SHORT).show()
+                            true
+                        }
+
+                        sheetBinding.layoutHistoryList.addView(row)
                     }
-
-                    val urlTv = TextView(this).apply {
-                        text = url
-                        setTextColor(getColor(R.color.text_secondary))
-                        textSize = 10.5f
-                        maxLines = 1
-                        ellipsize = android.text.TextUtils.TruncateAt.END
-                    }
-
-                    infoCol.addView(titleTv)
-                    infoCol.addView(urlTv)
-                    row.addView(icon)
-                    row.addView(infoCol)
-
-                    row.setOnClickListener {
-                        loadUrlInActiveWebView(url)
-                        dialog.dismiss()
-                    }
-
-                    sheetBinding.layoutHistoryList.addView(row)
                 }
 
                 sheetBinding.textHistoryEmpty.visibility = if (count == 0) View.VISIBLE else View.GONE
@@ -5329,7 +5511,24 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
 
+        updateTabIndicators()
         loadList()
+
+        sheetBinding.btnTabBrowsingHistory.setOnClickListener {
+            if (currentTab != 0) {
+                currentTab = 0
+                updateTabIndicators()
+                loadList(sheetBinding.editHistorySearch.text?.toString()?.trim() ?: "")
+            }
+        }
+
+        sheetBinding.btnTabAiHistory.setOnClickListener {
+            if (currentTab != 1) {
+                currentTab = 1
+                updateTabIndicators()
+                loadList(sheetBinding.editHistorySearch.text?.toString()?.trim() ?: "")
+            }
+        }
 
         sheetBinding.editHistorySearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -5340,9 +5539,15 @@ open class MediaHubActivity : AppCompatActivity() {
         })
 
         sheetBinding.btnClearHistory.setOnClickListener {
-            localPrefs.edit().remove(PREF_BROWSING_HISTORY).apply()
-            loadList()
-            Toast.makeText(this, "Browsing history cleared", Toast.LENGTH_SHORT).show()
+            if (currentTab == 0) {
+                localPrefs.edit().remove(PREF_BROWSING_HISTORY).apply()
+                loadList()
+                Toast.makeText(this, "Browsing history cleared", Toast.LENGTH_SHORT).show()
+            } else {
+                localPrefs.edit().remove(PREF_FOKK_AI_HISTORY).apply()
+                loadList()
+                Toast.makeText(this, "Fokk AI history cleared", Toast.LENGTH_SHORT).show()
+            }
         }
 
         dialog.show()
@@ -7901,16 +8106,11 @@ open class MediaHubActivity : AppCompatActivity() {
             sheetBinding.layoutSummaryBullets.removeAllViews()
             val density = resources.displayMetrics.density
 
-            for (i in startBulletIndex until bulletsCount) {
-                val rawBullet = bulletsArray.getString(i)
-                val bullet = stripEmojis(rawBullet)
-                    .replace(Regex("""^[\s•*–—\-\d.)\]]+"""), "")
-                    .trim()
-                if (bullet.length < 5) continue
-                fullText.append("• ").append(bullet).append("\n\n")
-
-                val row = LinearLayout(this).apply {
+            fun renderBulletRow(bullet: String, container: LinearLayout) {
+                val tag = FokkAiEngine.classifyBullet(bullet)
+                val row = LinearLayout(this@MediaHubActivity).apply {
                     orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.TOP
                     setPadding((8 * density).toInt(), (6 * density).toInt(), (8 * density).toInt(), (6 * density).toInt())
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -7918,26 +8118,58 @@ open class MediaHubActivity : AppCompatActivity() {
                     ).apply {
                         bottomMargin = (6 * density).toInt()
                     }
+                    background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_stat_chip)
+                    isClickable = true
+                    isFocusable = true
+                    setOnClickListener {
+                        val escaped = bullet.replace("\"", "\\\"").replace("'", "\\'")
+                        activeWebView?.evaluateJavascript("window.highlightPageSentence && window.highlightPageSentence(\"$escaped\");", null)
+                        Toast.makeText(this@MediaHubActivity, "Highlighting cited passage on page...", Toast.LENGTH_SHORT).show()
+                    }
                 }
 
-                val dot = TextView(this).apply {
-                    text = "• "
-                    setTextColor(getColor(R.color.fokk_cyan))
-                    textSize = 15f
-                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                val tagTv = TextView(this@MediaHubActivity).apply {
+                    text = tag
+                    textSize = 9.5f
+                    setTypeface(null, Typeface.BOLD)
+                    val (bgCol, txtCol) = when (tag) {
+                        "FACT" -> Pair("#1E293B", "#38BDF8")
+                        "OPINION" -> Pair("#281B34", "#C084FC")
+                        else -> Pair("#292524", "#FBBF24")
+                    }
+                    setTextColor(Color.parseColor(txtCol))
+                    setBackgroundColor(Color.parseColor(bgCol))
+                    setPadding((6 * density).toInt(), (2 * density).toInt(), (6 * density).toInt(), (2 * density).toInt())
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        marginEnd = (8 * density).toInt()
+                        topMargin = (2 * density).toInt()
+                    }
                 }
 
-                val textTv = TextView(this).apply {
+                val textTv = TextView(this@MediaHubActivity).apply {
                     text = bullet
                     setTextColor(getColor(R.color.text_primary))
-                    textSize = 14f
+                    textSize = 13.5f
                     setLineSpacing(0f, 1.35f)
                     layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                 }
 
-                row.addView(dot)
+                row.addView(tagTv)
                 row.addView(textTv)
-                sheetBinding.layoutSummaryBullets.addView(row)
+                container.addView(row)
+            }
+
+            for (i in startBulletIndex until bulletsCount) {
+                val rawBullet = bulletsArray.getString(i)
+                val bullet = stripEmojis(rawBullet)
+                    .replace(Regex("""^[\s•*–—\-\d.)\]]+"""), "")
+                    .trim()
+                if (bullet.length < 5) continue
+                fullText.append("• ").append(bullet).append("\n\n")
+                renderBulletRow(bullet, sheetBinding.layoutSummaryBullets)
             }
 
             if (metricsArray.length() > 0) {
@@ -8019,6 +8251,10 @@ open class MediaHubActivity : AppCompatActivity() {
                 sheetDialog.dismiss()
             }
 
+            sheetBinding.btnAiHistory.setOnClickListener {
+                showAiHistorySheet()
+            }
+
             sheetBinding.btnCopySummary.setOnClickListener {
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("Fokk Summary", fullText.toString().trim()))
@@ -8083,20 +8319,57 @@ open class MediaHubActivity : AppCompatActivity() {
             switchAiMode(initialTab)
 
             // Dynamic Truth & Bias Audit Baseline Initialization
-            val hostDisplay = sourceHost.ifBlank { "Canonical Web Source" }
-            val initialScore = if (sourceHost.isNotBlank()) 85 else 78
-            val initialVerdict = "Independent Analytical Assessment"
-            val initialColor = "#38BDF8"
+            val initialEval = FokkAiEngine.evaluateCredibility(
+                host = sourceHost,
+                title = title,
+                content = explicitSummary.ifBlank { lastAiPageContext },
+                sources = emptyList()
+            )
+            var activeScore = initialEval.score
+            var activeVerdict = initialEval.verdict
+            val initialColor = when {
+                activeScore >= 85 -> "#34D399"
+                activeScore >= 70 -> "#38BDF8"
+                activeScore >= 50 -> "#FBBF24"
+                else -> "#F87171"
+            }
             val initialBias = "Neutral / Fact-Focused"
-            val initialL1 = "Verified canonical origin ($hostDisplay). Direct secure transport session with zero detected phishing anomalies."
-            val initialL2 = "Objective informational stance. Fact-focused reporting structure with low sensationalism."
-            val initialL3 = "${maxOf(1, bulletsCount * 3)} analytical passages extracted directly from current web session."
+            val initialL1 = initialEval.layer1
+            val initialL2 = initialEval.layer2
+            val initialL3 = initialEval.layer3
 
-            sheetBinding.textAiCredibilityScore.text = "$initialScore% $initialVerdict"
+            sheetBinding.textSummaryTrustVerdict.text = activeVerdict
+            sheetBinding.textSummaryTrustScore.text = "$activeScore%"
+            sheetBinding.textSummaryTrustReason.text = initialEval.reason
+            sheetBinding.textSummaryTrustVerdict.setTextColor(Color.parseColor(initialColor))
+            sheetBinding.textSummaryTrustScore.setTextColor(Color.parseColor(initialColor))
+
+            if (initialEval.isAggregator || initialEval.originalSource.isNotBlank()) {
+                val orig = initialEval.originalSource.ifBlank { "Primary Reporting" }
+                val agg = initialEval.aggregatorSource.ifBlank { sourceHost }
+                val flow = "$orig -> $agg -> Active Session"
+                sheetBinding.layoutSummarySourceChain.visibility = View.VISIBLE
+                sheetBinding.textSummarySourceChainFlow.text = flow
+                sheetBinding.layoutAuditSourceChain.visibility = View.VISIBLE
+                sheetBinding.textAuditSourceChainFlow.text = flow
+            } else {
+                sheetBinding.layoutSummarySourceChain.visibility = View.GONE
+                sheetBinding.layoutAuditSourceChain.visibility = View.GONE
+            }
+
+            if (initialEval.whatsMissing.isNotBlank()) {
+                sheetBinding.layoutSummaryWhatsMissing.visibility = View.VISIBLE
+                sheetBinding.textSummaryWhatsMissing.text = initialEval.whatsMissing
+            } else {
+                sheetBinding.layoutSummaryWhatsMissing.visibility = View.GONE
+            }
+
+            sheetBinding.textAiCredibilityScore.text = "$activeScore% $activeVerdict"
             sheetBinding.textAiCredibilityScore.setTextColor(Color.parseColor(initialColor))
-            sheetBinding.progressCredibilityScore.progress = initialScore
+            sheetBinding.progressCredibilityScore.progress = activeScore
             sheetBinding.progressCredibilityScore.progressTintList =
                 android.content.res.ColorStateList.valueOf(Color.parseColor(initialColor))
+            sheetBinding.textAiCredibilityReason.text = initialEval.reason
             sheetBinding.textAiBiasRating.text = initialBias
             sheetBinding.textAiSourceReputation.text = initialL1
             sheetBinding.textAiBiasAnalysis.text = initialL2
@@ -8118,35 +8391,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 claimsToDisplay.add("Zero unverifiable claims detected on page.")
             }
             for (claim in claimsToDisplay) {
-                val claimRow = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.TOP
-                    setPadding(0, (6 * density).toInt(), 0, (8 * density).toInt())
-                    layoutParams = LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        bottomMargin = (6 * density).toInt()
-                    }
-                }
-                val checkIv = ImageView(this).apply {
-                    setImageResource(R.drawable.ic_shield_check)
-                    setColorFilter(Color.parseColor("#34D399"))
-                    layoutParams = LinearLayout.LayoutParams((18 * density).toInt(), (18 * density).toInt()).apply {
-                        topMargin = (2 * density).toInt()
-                        marginEnd = (10 * density).toInt()
-                    }
-                }
-                val claimTv = TextView(this).apply {
-                    text = claim
-                    setTextColor(Color.parseColor("#F1F5F9"))
-                    textSize = 13.5f
-                    setLineSpacing(3 * density, 1f)
-                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                }
-                claimRow.addView(checkIv)
-                claimRow.addView(claimTv)
-                sheetBinding.layoutAiExtractedClaims.addView(claimRow)
+                renderBulletRow(claim, sheetBinding.layoutAiExtractedClaims)
             }
 
             // Forward declaration for interactive follow-up questions
@@ -8198,8 +8443,14 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 val auditScoreTv = TextView(this@MediaHubActivity).apply {
                     val count = searchSources.size + (if (sourceHost.isNotBlank()) 1 else 0)
-                    text = if (count > 0) " · 94% VERIFIED CONSENSUS (" + count + " SOURCES)" else " · TRUTH ENGINE AUDIT"
-                    setTextColor(Color.parseColor("#34D399"))
+                    text = if (count > 0) " · $activeScore% $activeVerdict (" + count + " SOURCES)" else " · $activeScore% $activeVerdict"
+                    val scoreColor = when {
+                        activeScore >= 85 -> "#34D399"
+                        activeScore >= 70 -> "#38BDF8"
+                        activeScore >= 50 -> "#FBBF24"
+                        else -> "#F87171"
+                    }
+                    setTextColor(Color.parseColor(scoreColor))
                     textSize = 10.5f
                     setTypeface(null, Typeface.BOLD)
                 }
@@ -8731,6 +8982,8 @@ open class MediaHubActivity : AppCompatActivity() {
                     }
 
                     if (analysis.credibilityScore > 0) {
+                        activeScore = analysis.credibilityScore
+                        activeVerdict = analysis.credibilityVerdict
                         val scoreColor = when {
                             analysis.credibilityScore >= 85 -> "#34D399"
                             analysis.credibilityScore >= 70 -> "#38BDF8"
@@ -8742,6 +8995,34 @@ open class MediaHubActivity : AppCompatActivity() {
                         sheetBinding.progressCredibilityScore.progress = analysis.credibilityScore
                         sheetBinding.progressCredibilityScore.progressTintList =
                             android.content.res.ColorStateList.valueOf(Color.parseColor(scoreColor))
+
+                        sheetBinding.textSummaryTrustVerdict.text = analysis.credibilityVerdict
+                        sheetBinding.textSummaryTrustScore.text = "${analysis.credibilityScore}%"
+                        sheetBinding.textSummaryTrustVerdict.setTextColor(Color.parseColor(scoreColor))
+                        sheetBinding.textSummaryTrustScore.setTextColor(Color.parseColor(scoreColor))
+                    }
+
+                    if (analysis.credibilityReason.isNotBlank()) {
+                        sheetBinding.textAiCredibilityReason.text = analysis.credibilityReason
+                        sheetBinding.textSummaryTrustReason.text = analysis.credibilityReason
+                    }
+
+                    if (analysis.isAggregator || analysis.originalSource.isNotBlank()) {
+                        val orig = analysis.originalSource.ifBlank { "Primary Reporting" }
+                        val agg = analysis.aggregatorSource.ifBlank { sourceHost }
+                        val flow = "$orig -> $agg -> Active Session"
+                        sheetBinding.layoutSummarySourceChain.visibility = View.VISIBLE
+                        sheetBinding.textSummarySourceChainFlow.text = flow
+                        sheetBinding.layoutAuditSourceChain.visibility = View.VISIBLE
+                        sheetBinding.textAuditSourceChainFlow.text = flow
+                    } else {
+                        sheetBinding.layoutSummarySourceChain.visibility = View.GONE
+                        sheetBinding.layoutAuditSourceChain.visibility = View.GONE
+                    }
+
+                    if (analysis.whatsMissing.isNotBlank()) {
+                        sheetBinding.layoutSummaryWhatsMissing.visibility = View.VISIBLE
+                        sheetBinding.textSummaryWhatsMissing.text = analysis.whatsMissing
                     }
 
                     if (analysis.biasTone.isNotBlank()) {
@@ -8760,33 +9041,14 @@ open class MediaHubActivity : AppCompatActivity() {
                     if (analysis.verifiedClaims.isNotEmpty()) {
                         sheetBinding.layoutAiExtractedClaims.removeAllViews()
                         for (claim in analysis.verifiedClaims) {
-                            val claimRow = LinearLayout(this@MediaHubActivity).apply {
-                                orientation = LinearLayout.HORIZONTAL
-                                gravity = Gravity.TOP
-                                setPadding(0, (6 * density).toInt(), 0, (8 * density).toInt())
-                                layoutParams = LinearLayout.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.WRAP_CONTENT
-                                ).apply { bottomMargin = (6 * density).toInt() }
-                            }
-                            val checkIv = ImageView(this@MediaHubActivity).apply {
-                                setImageResource(R.drawable.ic_shield_check)
-                                setColorFilter(Color.parseColor("#34D399"))
-                                layoutParams = LinearLayout.LayoutParams((18 * density).toInt(), (18 * density).toInt()).apply {
-                                    topMargin = (2 * density).toInt()
-                                    marginEnd = (10 * density).toInt()
-                                }
-                            }
-                            val claimTv = TextView(this@MediaHubActivity).apply {
-                                text = claim
-                                setTextColor(Color.parseColor("#F1F5F9"))
-                                textSize = 13.5f
-                                setLineSpacing(3 * density, 1f)
-                                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                            }
-                            claimRow.addView(checkIv)
-                            claimRow.addView(claimTv)
-                            sheetBinding.layoutAiExtractedClaims.addView(claimRow)
+                            renderBulletRow(claim, sheetBinding.layoutAiExtractedClaims)
+                        }
+                    }
+
+                    if (analysis.keyEvidencePoints.isNotEmpty()) {
+                        sheetBinding.layoutSummaryBullets.removeAllViews()
+                        for (point in analysis.keyEvidencePoints) {
+                            renderBulletRow(point, sheetBinding.layoutSummaryBullets)
                         }
                     }
 
@@ -8833,6 +9095,28 @@ open class MediaHubActivity : AppCompatActivity() {
                             sheetBinding.layoutFollowUpQuestions.addView(card)
                         }
                     }
+
+                    // Cache and persist in Fokk AI History
+                    cachedAiSummaryUrl = activeUrl
+                    val updatedJson = JSONObject(summaryJson).apply {
+                        put("executiveSummary", analysis.executiveBrief)
+                        put("credibilityScore", analysis.credibilityScore)
+                        put("credibilityVerdict", analysis.credibilityVerdict)
+                        put("credibilityReason", analysis.credibilityReason)
+                        put("bullets", JSONArray(analysis.keyEvidencePoints))
+                        put("verifiedClaims", JSONArray(analysis.verifiedClaims))
+                        put("followUpQuestions", JSONArray(analysis.followUpQuestions))
+                    }
+                    cachedAiSummaryJson = updatedJson.toString()
+                    saveAiHistoryItem(
+                        url = activeUrl,
+                        title = title,
+                        score = analysis.credibilityScore,
+                        verdict = analysis.credibilityVerdict,
+                        summary = analysis.executiveBrief,
+                        sourcesCount = sources.size,
+                        fullJson = cachedAiSummaryJson!!
+                    )
                 }
             }
         } catch (e: Exception) {
@@ -9035,61 +9319,15 @@ open class MediaHubActivity : AppCompatActivity() {
         query: String,
         searchSources: List<BrowserSearchResult> = emptyList()
     ): String {
-        val ctx = lastAiPageContext
-        val sb = StringBuilder()
-
-        sb.append("### FORENSIC VERDICT: VERIFIED RECORD\n")
-        sb.append("Analysis confidence: 94% Forensic Consensus based on on-device DOM verification and multi-source corroboration.\n\n")
-
-        if (searchSources.isNotEmpty()) {
-            sb.append("### ACCREDITED WEB SOURCES\n")
-            for ((idx, s) in searchSources.withIndex()) {
-                sb.append("${idx + 1}. **${s.title}** (${s.domain})\n")
-                if (s.snippet.isNotBlank()) {
-                    sb.append("   ${s.snippet}\n")
-                }
-            }
-            sb.append("\n")
+        val corroborated = searchSources.map {
+            com.adshield.app.engine.CorroboratedSource(
+                title = it.title,
+                url = it.url,
+                domain = it.domain,
+                snippet = it.snippet
+            )
         }
-
-        if (ctx.isNotBlank()) {
-            val qLower = query.lowercase(java.util.Locale.ROOT)
-            val sentences = ctx.split(Regex("[.!?]\\s+")).map { it.trim() }.filter { it.length > 20 }.take(100)
-            val statSentences = sentences.filter { s ->
-                Regex("\\d+%|\\$\\d+|\\b\\d+(?:,\\d{3})*(?:\\.\\d+)?\\s*(?:billion|million|trillion|percent|users|shares|times|people|k|m|b)?\\b", RegexOption.IGNORE_CASE).containsMatchIn(s)
-            }
-            val words = qLower.split(Regex("\\W+")).filter { it.length > 3 }
-            val scored = sentences.map { s ->
-                val hits = words.count { s.lowercase(java.util.Locale.ROOT).contains(it) }
-                Pair(s, hits)
-            }.sortedByDescending { it.second }
-
-            val relevant = scored.filter { it.second > 0 }.map { it.first }.take(4)
-            val leadSentences = if (relevant.isNotEmpty()) relevant else sentences.take(3)
-
-            sb.append("### EXECUTIVE SUMMARY\n")
-            sb.append(leadSentences.firstOrNull() ?: "Factual reporting detected.").append(".\n\n")
-
-            sb.append("### KEY EVIDENCE & TAKEAWAYS\n")
-            val bullets = if (leadSentences.size > 1) leadSentences.drop(1) else sentences.take(3)
-            for ((idx, b) in bullets.withIndex()) {
-                val cleanB = stripEmojis(b).replace(Regex("^[\\s•*–—\\-\\d.)\\]]+"), "").trimEnd('.')
-                sb.append("${idx + 1}. ").append(cleanB).append(".\n")
-            }
-
-            if (statSentences.isNotEmpty()) {
-                sb.append("\n### DOCUMENTED FIGURES & METRICS\n")
-                for (stat in statSentences.take(3)) {
-                    val cleanStat = stripEmojis(stat).replace(Regex("^[\\s•*–—\\-\\d.)\\]]+"), "").trimEnd('.')
-                    sb.append("• ").append(cleanStat).append(".\n")
-                }
-            }
-        } else if (searchSources.isEmpty()) {
-            sb.append("### EXECUTIVE SUMMARY\n")
-            sb.append("Fokk AI is actively ready. Enter any topic or navigate to an article to initiate real-time truth auditing, DOM context extraction, and multi-source forensic verification.")
-        }
-
-        return sb.toString().trim()
+        return FokkAiEngine.buildOfflineForensicSynthesis(query, lastAiPageContext, corroborated)
     }
 
     fun showSavedSummariesDialog() {
@@ -9390,33 +9628,53 @@ open class MediaHubActivity : AppCompatActivity() {
             return
         }
 
-        // Extract full editorial or social post text for LLM context (including Twitter/X & SPAs)
+        // Instant re-opening if already summarized for this exact URL
+        if (url == cachedAiSummaryUrl && !cachedAiSummaryJson.isNullOrBlank()) {
+            showAiSummarySheet(cachedAiSummaryJson!!, initialTab)
+            return
+        }
+
+        // Extract full editorial or focal tweet text for LLM context (sanitized)
         val contextExtractJs = """
             (function() {
                 try {
-                    // 1. Social media and SPA selectors (Twitter/X, Threads, Reddit, Instagram)
-                    var tweetNodes = Array.from(document.querySelectorAll('[data-testid="tweetText"], [data-testid="post-content"], [data-testid="tweet"], div[lang], [role="article"] p, [role="article"] div'));
-                    var socialTexts = tweetNodes.map(function(el) { return (el.innerText || '').replace(/\s+/g, ' ').trim(); })
-                        .filter(function(t) { return t.length > 20 && !t.includes('{'); });
-                    if (socialTexts.length > 0) {
-                        return Array.from(new Set(socialTexts)).slice(0, 30).join('\n\n').substring(0, 12000);
+                    var host = (window.location.hostname || '').replace(/^www\./i, '').toLowerCase();
+
+                    // 1. Focal Tweet on Twitter/X: Strictly ignore reply threads and engagement counters
+                    if (host === 'x.com' || host === 'twitter.com') {
+                        var focal = document.querySelector('article[data-testid="tweet"]');
+                        if (focal) {
+                            var nodes = Array.from(focal.querySelectorAll('[data-testid="tweetText"]'));
+                            var texts = nodes.map(function(el) { return (el.innerText || '').replace(/\s+/g, ' ').trim(); })
+                                .filter(function(t) {
+                                    return t.length > 10 &&
+                                           !/\b\d{1,2}:\d{2}\s+(?:AM|PM)\b/i.test(t) &&
+                                           !/\b\d+K?\s+Views\b/i.test(t) &&
+                                           !/^@\w+$/.test(t);
+                                });
+                            if (texts.length > 0) return texts.join('\n\n');
+                        }
                     }
 
                     // 2. Standard editorial containers
                     var containers = document.querySelectorAll('article,[role="main"],main,.article-body,.post-content,.entry-content,[itemprop="articleBody"]');
                     var root = null;
                     for (var i = 0; i < containers.length; i++) {
-                        if (containers[i].querySelectorAll('p, div').length >= 2) { root = containers[i]; break; }
+                        if (containers[i].querySelectorAll('p').length >= 2) { root = containers[i]; break; }
                     }
                     if (!root) root = document.body;
-                    var paras = Array.from(root.querySelectorAll('p, blockquote, h1, h2, h3, li'))
+                    var paras = Array.from(root.querySelectorAll('p, blockquote'))
                         .map(function(el) { return (el.innerText || '').replace(/\s+/g, ' ').trim(); })
-                        .filter(function(t) { return t.length > 25 && !t.includes('{') && !/^(sign in|subscribe|cookie|terms|privacy|follow us)/i.test(t); });
+                        .filter(function(t) {
+                            return t.length > 25 && !t.includes('{') &&
+                                   !/^(sign in|subscribe|cookie|terms|privacy|follow us|all rights reserved)/i.test(t) &&
+                                   !/\b\d{1,2}:\d{2}\s+(?:AM|PM)\b/i.test(t);
+                        });
                     if (paras.length > 0) {
                         return paras.slice(0, 80).join('\n\n').substring(0, 12000);
                     }
 
-                    // 3. Fallback: clean body innerText
+                    // 3. Fallback: clean body innerText without scraping junk
                     var bodyText = (document.body ? document.body.innerText || '' : '').replace(/\s+/g, ' ').trim();
                     return bodyText.substring(0, 8000);
                 } catch(e) { return ''; }
@@ -9443,7 +9701,7 @@ open class MediaHubActivity : AppCompatActivity() {
                             var desc = document.querySelector('meta[name="description"]')?.content || '';
                             var paras = Array.from(document.querySelectorAll('[data-testid="tweetText"], p, blockquote, article'))
                                 .map(function(el) { return (el.innerText || '').trim(); })
-                                .filter(function(txt) { return txt.length > 20 && !txt.includes('{'); });
+                                .filter(function(txt) { return txt.length > 20 && !txt.includes('{') && !/\b\d+K?\s+Views\b/i.test(txt); });
                             var topP = paras.slice(0, 4);
                             if (topP.length === 0) topP = ['Content extracted directly from webpage.'];
                             var exec = desc || topP[0];
@@ -9455,8 +9713,8 @@ open class MediaHubActivity : AppCompatActivity() {
                                 executiveSummary: exec,
                                 summary: exec,
                                 bullets: topP,
-                                metrics: [paras.length + ' passages analyzed', 'Truth Engine'],
-                                followUpQuestions: ['What are the key implications of this topic?'],
+                                metrics: [],
+                                followUpQuestions: ['Has an official statement or announcement been confirmed?'],
                                 readingTime: Math.max(1, Math.round(paras.join(' ').split(/\s+/).length / 200)) + ' min read',
                                 wordCount: paras.join(' ').split(/\s+/).length
                             };
@@ -9847,6 +10105,8 @@ open class MediaHubActivity : AppCompatActivity() {
             activeWebView?.goBack()
         } else if (isIsolatedPrivateProfile) {
             closePrivateBrowser()
+        } else if (tabs.size > 1) {
+            closeTab(activeTabIndex)
         } else {
             val currentUrl = activeTab?.url.orEmpty()
             val isPrivateTab = activeTab?.isPrivate == true
@@ -10492,6 +10752,7 @@ open class MediaHubActivity : AppCompatActivity() {
         private const val PREF_CUSTOM_JS = "custom_userscript"
         private const val PREF_CUSTOM_CSS = "custom_usercss"
         private const val PREF_BROWSING_HISTORY = "key_browsing_history_v2"
+        private const val PREF_FOKK_AI_HISTORY = "key_fokk_ai_history_v1"
         private const val PREF_SESSION_TABS = "key_session_tabs_v1"
         private const val PREF_SESSION_ACTIVE_TAB = "key_session_active_tab_v1"
         private const val MAX_RESTORED_TABS = 12
@@ -10518,6 +10779,7 @@ open class MediaHubActivity : AppCompatActivity() {
         private const val PREF_DECOY_PIN = "fokk_decoy_pin"
         private val LOCAL_BROWSER_DATA_KEYS = setOf(
             PREF_BROWSING_HISTORY,
+            PREF_FOKK_AI_HISTORY,
             PREF_SESSION_TABS,
             PREF_SESSION_ACTIVE_TAB,
             PREF_SHIELD_DISABLED_SITES,

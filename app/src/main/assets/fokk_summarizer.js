@@ -114,9 +114,81 @@
         return null;
     }
 
-    // High-Precision Editorial Content Extractor
-    // Strips out all navigation junk, skip-links, breadcrumbs, social widgets, and boilerplate
+    // Helper to detect and reject engagement counters, social noise, and scraping junk
+    function isScrapingJunk(text) {
+        if (!text || text.length < 15) return true;
+        // Timestamp + engagement counts like "1:04 PM · 28.9K Views 5 22 113 2 Relevant View quotes"
+        if (/\b\d{1,2}:\d{2}\s+(?:AM|PM)\b/i.test(text) && /\b(?:Views|Quotes|Reposts|Likes)\b/i.test(text)) return true;
+        if (/\b\d+(?:\.\d+)?[KM]?\s+Views\b/i.test(text)) return true;
+        if (/\bRelevant View quotes\b/i.test(text)) return true;
+        // Social handles and follow prompts
+        if (/^@\w+\s*$/i.test(text)) return true;
+        if (/^(?:subscribe|follow @|sign in to|log in to|create account|view quotes)/i.test(text)) return true;
+        if (/^\d+\s+\d+\s+\d+\s+\d+/.test(text)) return true; // standalone metric row
+        return false;
+    }
+
+    // Page Type Classification
+    function detectPageType() {
+        const host = window.location.hostname.replace(/^www\./i, '').toLowerCase();
+        if (host === 'x.com' || host === 'twitter.com') return 'twitter';
+        if (host.includes('reddit.com')) return 'reddit';
+        if (host.includes('youtube.com') || host === 'youtu.be') return 'youtube';
+        if (document.querySelector('article, [itemprop="articleBody"], .article-body, .story-body')) return 'news';
+        return 'generic';
+    }
+
+    // High-Precision Platform-Aware Content Extractor
     function extractCleanEditorialParagraphs() {
+        const pageType = detectPageType();
+
+        // 1. Adapter: Twitter / X.com (Focal tweet only, strictly excluding replies, feed, and metrics)
+        if (pageType === 'twitter') {
+            const focalTweet = document.querySelector('article[data-testid="tweet"]');
+            if (focalTweet) {
+                const tweetTexts = Array.from(focalTweet.querySelectorAll('[data-testid="tweetText"]'))
+                    .map(el => (el.innerText || '').replace(/\s+/g, ' ').trim())
+                    .filter(t => t.length > 10 && !isScrapingJunk(t));
+                if (tweetTexts.length > 0) {
+                    return tweetTexts;
+                }
+            }
+        }
+
+        // 2. Adapter: Reddit (Submission title and post text, strictly excluding comment trees)
+        if (pageType === 'reddit') {
+            const titleElem = document.querySelector('h1');
+            const postBodyElem = document.querySelector('[data-test-id="post-content"], shreddit-post [slot="text-body"], .post-body, .entry .usertext-body');
+            const paragraphs = [];
+            if (titleElem && titleElem.innerText) {
+                paragraphs.push(titleElem.innerText.trim());
+            }
+            if (postBodyElem) {
+                const pList = Array.from(postBodyElem.querySelectorAll('p'))
+                    .map(el => (el.innerText || '').replace(/\s+/g, ' ').trim())
+                    .filter(t => t.length > 15 && !isScrapingJunk(t));
+                if (pList.length > 0) paragraphs.push(...pList);
+                else if (postBodyElem.innerText) paragraphs.push(postBodyElem.innerText.trim());
+            }
+            if (paragraphs.length > 0) return paragraphs;
+        }
+
+        // 3. Adapter: YouTube (Video title, channel name, and description excerpt)
+        if (pageType === 'youtube') {
+            const ytTitle = document.querySelector('h1.ytd-video-primary-info-renderer, #title h1, meta[name="title"]')?.content ||
+                            document.querySelector('h1')?.innerText || '';
+            const ytChannel = document.querySelector('#channel-name, ytd-channel-name a, meta[itemprop="name"]')?.content ||
+                              document.querySelector('#channel-name a')?.innerText || '';
+            const ytDesc = document.querySelector('#description-inline-expander, ytd-text-inline-expander, meta[name="description"]')?.content ||
+                           document.querySelector('#description')?.innerText || '';
+            const ytLines = [];
+            if (ytTitle.trim()) ytLines.push(ytTitle.trim());
+            if (ytChannel.trim()) ytLines.push(`Channel: ${ytChannel.trim()}`);
+            if (ytDesc.trim()) ytLines.push(ytDesc.trim().slice(0, 800));
+            if (ytLines.length > 0) return ytLines;
+        }
+
+        // 4. Adapter: Standard News Article & Editorial Container
         const blacklistSelector = [
             'header', 'footer', 'nav', 'aside',
             '[role="navigation"]', '[role="banner"]', '[role="search"]', '[role="complementary"]',
@@ -128,7 +200,6 @@
             '[aria-hidden="true"]', 'script', 'style', 'noscript'
         ].join(', ');
 
-        // 1. Locate primary editorial container
         const candidateContainers = document.querySelectorAll(
             'article, [role="main"], main, .article-body, .story-body, .post-content, .entry-content, [itemprop="articleBody"], #main-content, #content'
         );
@@ -147,12 +218,10 @@
             rootContainer = document.body;
         }
 
-        // 2. Query paragraphs strictly inside editorial context
         const rawParagraphElements = rootContainer.querySelectorAll('p, blockquote');
         const paragraphs = [];
 
         rawParagraphElements.forEach(p => {
-            // Must NOT be inside blacklisted navigation/boilerplate
             try {
                 if (p.closest(blacklistSelector)) return;
             } catch (_) {}
@@ -161,15 +230,14 @@
             if (aria.includes('breadcrumb') || aria.includes('share') || aria.includes('social') || aria.includes('cookie')) return;
 
             const text = (p.innerText || '').replace(/\s+/g, ' ').trim();
-            if (text.length < 35) return; // Too short to be informative editorial body
+            if (text.length < 25) return;
+            if (isScrapingJunk(text)) return;
 
-            // Discard link rolls and navigation lists (link text exceeds 35% of total text)
             const links = p.querySelectorAll('a');
             let linkCharCount = 0;
             links.forEach(a => { linkCharCount += (a.innerText || '').length; });
             if (linkCharCount / text.length > 0.35) return;
 
-            // Discard common web boilerplates
             if (/^(sign in|subscribe|log in|cookie|all rights reserved|terms of use|privacy policy|share this|follow us on|read more:|photo by|getty images|advertisement)/i.test(text)) {
                 return;
             }
@@ -183,23 +251,16 @@
     // Contextual Curiosity Questions Generator
     function generateCuriosityQuestions(title, text, topEntities) {
         const questions = [];
-        if (topEntities.length > 0) {
-            questions.push(`What are the broader strategic implications of ${topEntities[0]} in this development?`);
-        }
-        if (/\b(?:AI|tech|model|software|data|google|microsoft|apple|nvidia|meta)\b/i.test(text)) {
-            questions.push(`How does this development influence the future trajectory of the technology ecosystem?`);
-        } else if (/\b(?:economy|market|inflation|stocks|shares|crypto|price|growth|revenue|budget|tax)\b/i.test(text)) {
-            questions.push(`What are the key financial and market implications moving forward?`);
-        } else if (/\b(?:health|disease|medical|doctor|treatment|hospital|patient|cure|spine)\b/i.test(text)) {
-            questions.push(`How does this compare to current clinical practices and medical consensus?`);
+        const primarySubject = topEntities.length > 0 ? topEntities[0] : (title.split(/[-|:]/)[0].trim());
+
+        if (primarySubject && primarySubject.length > 2) {
+            questions.push(`Has an official statement or club announcement been confirmed for ${primarySubject}?`);
+            questions.push(`What are the reported terms, agreement details, or timeline regarding ${primarySubject}?`);
         } else {
-            questions.push(`What are the primary factors driving these observed outcomes?`);
+            questions.push(`Has an official announcement been published by the primary authority?`);
+            questions.push(`What are the key terms or documented details of this report?`);
         }
-        if (topEntities.length > 1) {
-            questions.push(`How do the findings regarding ${topEntities[1]} connect to historical developments?`);
-        } else {
-            questions.push(`What primary documentation or official announcements corroborate these assertions?`);
-        }
+        questions.push(`How do other major independent newsrooms verify this development?`);
         return questions.slice(0, 3);
     }
 
@@ -218,6 +279,7 @@
                 const clean = s.replace(/\s+/g, ' ').trim();
                 if (clean.length >= 25 && clean.length <= 360 &&
                     !clean.includes('{') && !clean.includes('function(') &&
+                    !isScrapingJunk(clean) &&
                     !/^(sign in|subscribe|cookies|terms|privacy|copyright|all rights reserved|click here|follow us)/i.test(clean)) {
                     rawSentences.push(clean);
                 }
@@ -233,6 +295,7 @@
                     const clean = s.replace(/\s+/g, ' ').trim();
                     if (clean.length >= 35 && clean.length <= 300 &&
                         !clean.includes('{') && !clean.includes('}') &&
+                        !isScrapingJunk(clean) &&
                         !/^(sign in|subscribe|cookies|terms|privacy|copyright|all rights reserved)/i.test(clean)) {
                         rawSentences.push(clean);
                     }
@@ -359,12 +422,11 @@
         // Key Insights & Analysis bullets (distinct takeaways)
         const bullets = selected.map(item => cleanSentenceItem(item.sentence)).filter(b => b.length > 10);
 
-        // Extract Key Figures & Metrics
+        // Extract Key Figures & Metrics (Real numerical facts only)
         const metricRegex = /(?:\$\d+(?:\.\d+)?\s*(?:billion|million|trillion|k|m|b)?|\d+(?:\.\d+)?%|\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b|\b20\d{2}\b)/gi;
         const matches = fullArticleText.match(metricRegex) || [];
         const uniqueMetrics = Array.from(new Set(matches)).slice(0, 5);
         const evidenceMetrics = [
-            `${cleanParagraphs.length} editorial passages`,
             provenance.published ? `Published ${provenance.published}` : '',
             provenance.author ? 'Byline detected' : ''
         ].filter(Boolean);
@@ -376,6 +438,7 @@
             source: sourceMeta.source,
             sourceHost: sourceMeta.sourceHost,
             favicon: sourceMeta.favicon,
+            pageType: detectPageType(),
             executiveSummary: executiveSummary,
             summary: executiveSummary, // backward compatibility
             bullets: bullets,
@@ -386,6 +449,50 @@
             wordCount: totalWords,
             provenance: provenance
         };
+    };
+
+    // In-page sentence locator and high-precision neon pulse highlighter
+    window.highlightPageSentence = function(queryText) {
+        if (!queryText || typeof queryText !== 'string' || queryText.length < 5) return;
+        try {
+            const cleanQuery = queryText.replace(/^[•*\-\d.\s]+/, '').trim().toLowerCase();
+            const searchTerms = cleanQuery.split(/\s+/).filter(t => t.length > 3).slice(0, 6);
+            if (searchTerms.length === 0) return;
+
+            const elements = Array.from(document.querySelectorAll('p, blockquote, [data-testid="tweetText"], h1, h2, h3, li'));
+            let bestElem = null;
+            let bestScore = 0;
+
+            for (const el of elements) {
+                const txt = (el.innerText || '').toLowerCase();
+                if (!txt) continue;
+                let hits = 0;
+                for (const term of searchTerms) {
+                    if (txt.includes(term)) hits++;
+                }
+                if (hits > bestScore) {
+                    bestScore = hits;
+                    bestElem = el;
+                }
+            }
+
+            if (bestElem && bestScore >= Math.min(2, searchTerms.length)) {
+                bestElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const origTransition = bestElem.style.transition;
+                const origBg = bestElem.style.backgroundColor;
+                const origOutline = bestElem.style.outline;
+                bestElem.style.transition = 'all 0.3s ease';
+                bestElem.style.backgroundColor = 'rgba(0, 229, 255, 0.22)';
+                bestElem.style.outline = '2px solid #00E5FF';
+                bestElem.style.borderRadius = '4px';
+
+                setTimeout(function() {
+                    bestElem.style.backgroundColor = origBg;
+                    bestElem.style.outline = origOutline;
+                    bestElem.style.transition = origTransition;
+                }, 2600);
+            }
+        } catch (_) {}
     };
 
     window.triggerFokkSummarizer = function() {
