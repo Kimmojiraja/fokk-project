@@ -164,8 +164,8 @@ data class AiChatTurn(
     val answer: String,
     val sources: List<BrowserSearchResult>,
     val followUps: List<String>,
-    val pageSourceHost: String,
-    val pageSourceUrl: String
+    val pageSourceHost: String = "",
+    val pageSourceUrl: String = ""
 )
 
 data class AiChatSession(
@@ -9356,7 +9356,9 @@ open class MediaHubActivity : AppCompatActivity() {
                             question = cleanQuery,
                             answer = answer,
                             sources = searchSources,
-                            followUps = followUps
+                            followUps = followUps,
+                            pageSourceHost = sourceHost,
+                            pageSourceUrl = activeUrl
                         )
                     )
 
