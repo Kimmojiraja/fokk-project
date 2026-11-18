@@ -85,6 +85,59 @@ object VpnEngine {
         prefs.edit().putBoolean(KEY_PRIVATE_ONLY, enabled).apply()
     }
 
+    /**
+     * Enforces "Private Tabs Only" mode whenever the user switches tabs.
+     * When enabled and Fokk Mesh is active:
+     *   - Private tabs route through FokkTunnelEngine (127.0.0.1:<localPort>).
+     *   - Standard tabs temporarily bypass the proxy override without stopping the tunnel.
+     */
+    fun syncProxyForTabPrivacy(context: Context, isPrivateTab: Boolean) {
+        if (!isSupported()) return
+        val mode = getActiveMode(context)
+        if (mode == VpnMode.OFF) return
+        if (!isPrivateOnlyEnabled(context)) return
+
+        executor.execute {
+            try {
+                if (isPrivateTab) {
+                    val port = FokkTunnelEngine.localPort
+                    if (port > 0) {
+                        val builder = ProxyConfig.Builder()
+                            .addProxyRule("http://127.0.0.1:$port", ProxyConfig.MATCH_ALL_SCHEMES)
+                            .addBypassRule("<local>")
+                            .addBypassRule("localhost")
+                            .addBypassRule("127.0.0.1")
+                        if (isBypassSearchEnabled(context)) {
+                            builder.addBypassRule("*.google.com")
+                            builder.addBypassRule("*.bing.com")
+                            builder.addBypassRule("*.duckduckgo.com")
+                            builder.addBypassRule("*.ecosia.org")
+                            builder.addBypassRule("*.startpage.com")
+                        }
+                        ProxyController.getInstance().setProxyOverride(builder.build(), executor) {}
+                    }
+                } else {
+                    ProxyController.getInstance().clearProxyOverride(executor) {}
+                }
+            } catch (t: Throwable) {
+                Log.w("VpnEngine", "syncProxyForTabPrivacy error: ${t.message}")
+            }
+        }
+    }
+
+    /**
+     * Returns an HTTP Proxy pointing to the local Fokk Mesh tunnel when active,
+     * so background HttpURLConnection calls can route through Fokk Mesh with zero IP leak.
+     */
+    fun getActiveMeshProxy(): java.net.Proxy {
+        val port = FokkTunnelEngine.localPort
+        return if (FokkTunnelEngine.isTunnelRunning() && port > 0) {
+            java.net.Proxy(java.net.Proxy.Type.HTTP, InetSocketAddress("127.0.0.1", port))
+        } else {
+            java.net.Proxy.NO_PROXY
+        }
+    }
+
     fun isProModeEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
         return prefs.getBoolean(KEY_PRO_MODE, false)
@@ -202,7 +255,7 @@ object VpnEngine {
     // ---------------------------------------------------------------------------
     fun getFastPrivacyEndpoint(region: String? = null): String {
         val nodes = NodeRegistry.getNodesForRegion(region ?: "AUTO")
-        val best = nodes.firstOrNull() ?: NodeRegistry.BUILTIN_INGRESS.first()
+        val best = nodes.firstOrNull() ?: return ""
         val scheme = if (best.isHttpConnect) "http" else "socks5"
         return "$scheme://${best.host}:${best.port}"
     }

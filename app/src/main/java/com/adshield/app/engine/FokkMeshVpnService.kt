@@ -16,14 +16,29 @@ import com.adshield.app.R
 import com.adshield.app.ui.MediaHubActivity
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.nio.ByteBuffer
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * Fokk Mesh 3.0 Device-Wide Service (Android 10+ HTTP/HTTPS Mesh + Real UDP/53 DNS Forwarder).
+ *
+ * Fixes from v2.x:
+ *   - Guards Android <10 (API <29) where setHttpProxy is unavailable so it never blackholes the device.
+ *   - Replaces the previous no-op packet drop loop with a real IPv4 UDP/53 DNS forwarder using
+ *     protect()ed sockets so system/app DNS queries resolve cleanly while HTTP/HTTPS traffic
+ *     routes through FokkTunnelEngine (127.0.0.1:<localPort>).
+ */
 class FokkMeshVpnService : VpnService() {
 
     private var vpnInterface: ParcelFileDescriptor? = null
     private val isRunning = AtomicBoolean(false)
     private var tunnelThread: Thread? = null
+    private val dnsExecutor = Executors.newFixedThreadPool(4) { r ->
+        Thread(r, "fokk-mesh-dns").also { it.isDaemon = true }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -39,11 +54,9 @@ class FokkMeshVpnService : VpnService() {
             }
             ACTION_START -> {
                 val region = intent?.getStringExtra(EXTRA_REGION) ?: "AUTO"
-                // Immediate foreground notification to satisfy Android OS FGS deadline safely
                 runCatching {
                     startForeground(NOTIFICATION_ID, buildNotification(region))
                 }
-                // Establish tunnel asynchronously to prevent blocking the main UI thread
                 Thread({
                     startMesh(region)
                 }, "FokkMeshStartWorker").apply {
@@ -57,6 +70,12 @@ class FokkMeshVpnService : VpnService() {
     }
 
     private fun startMesh(region: String) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            Log.w(TAG, "Device-wide HTTP/HTTPS Fokk Mesh requires Android 10+ (API 29)")
+            disconnectMesh()
+            return
+        }
+
         if (isRunning.get() && vpnInterface != null) {
             updateNotification(region)
             return
@@ -66,7 +85,6 @@ class FokkMeshVpnService : VpnService() {
             val isPro = VpnEngine.isProModeEnabled(this)
             FokkTunnelEngine.isProMode = isPro
             FokkTunnelEngine.start(this, region)
-            // Wait up to 2 s for the tunnel to bind a port
             val deadline = System.currentTimeMillis() + 2_000
             while (FokkTunnelEngine.localPort <= 0 && System.currentTimeMillis() < deadline) {
                 Thread.sleep(50)
@@ -85,21 +103,19 @@ class FokkMeshVpnService : VpnService() {
                 .addRoute("0.0.0.0", 0)
                 .addDnsServer("1.1.1.1")
                 .addDnsServer("8.8.8.8")
+                .setMetered(false)
 
-            // Prevent routing loopback: exclude Fokk Browser's own outgoing tunnel sockets
+            // Prevent routing loopback for Fokk Browser's own relay sockets
             runCatching {
                 builder.addDisallowedApplication(packageName)
             }
 
-            // Route Android 10+ system-wide HTTP/HTTPS proxy
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                builder.setHttpProxy(ProxyInfo.buildDirectProxy("127.0.0.1", localPort))
-            }
+            // Route Android 10+ system-wide HTTP/HTTPS traffic through FokkTunnelEngine
+            builder.setHttpProxy(ProxyInfo.buildDirectProxy("127.0.0.1", localPort))
 
-            // Establish the virtual TUN interface
             val pfd = builder.establish()
             if (pfd == null) {
-                Log.e(TAG, "Failed to establish VPN interface")
+                Log.e(TAG, "Failed to establish Fokk Mesh interface")
                 disconnectMesh()
                 return
             }
@@ -108,33 +124,58 @@ class FokkMeshVpnService : VpnService() {
             isRunning.set(true)
             isServiceRunning = true
 
-            // Ensure foreground notification reflects active state safely
             runCatching {
                 startForeground(NOTIFICATION_ID, buildNotification(region))
             }
 
-            // Start background packet pump for DNS and interface traffic
             startPacketPump(pfd)
-
-            Log.i(TAG, "Fokk Mesh device-wide VPN successfully active [Region: $region, Port: $localPort]")
+            Log.i(TAG, "Fokk Mesh device-wide service active [Region: $region, Port: $localPort]")
         } catch (e: Exception) {
-            Log.e(TAG, "Error establishing Fokk Mesh VPN", e)
+            Log.e(TAG, "Error establishing Fokk Mesh device-wide service", e)
             disconnectMesh()
         }
     }
 
+    /**
+     * Reads IPv4 packets from TUN and forwards UDP/53 DNS queries through protected
+     * sockets so system DNS resolves cleanly instead of blackholing.
+     */
     private fun startPacketPump(pfd: ParcelFileDescriptor) {
+        val outLock = Any()
         tunnelThread = Thread({
             val inStream = FileInputStream(pfd.fileDescriptor)
             val outStream = FileOutputStream(pfd.fileDescriptor)
-            val buffer = ByteBuffer.allocate(32768)
+            val buffer = ByteArray(32768)
 
             try {
                 while (isRunning.get()) {
-                    val read = inStream.read(buffer.array())
+                    val read = inStream.read(buffer)
                     if (read <= 0) {
                         Thread.sleep(10)
                         continue
+                    }
+                    // Check IPv4 (version == 4) and UDP (protocol == 17)
+                    val version = (buffer[0].toInt() ushr 4) and 0x0F
+                    if (version != 4 || read < 28) continue
+                    val ihl = (buffer[0].toInt() and 0x0F) * 4
+                    if (ihl < 20 || read < ihl + 8) continue
+                    val protocol = buffer[9].toInt() and 0xFF
+                    if (protocol != 17) continue
+
+                    val dstPort = ((buffer[ihl + 2].toInt() and 0xFF) shl 8) or (buffer[ihl + 3].toInt() and 0xFF)
+                    if (dstPort != 53) continue
+
+                    val srcPort = ((buffer[ihl].toInt() and 0xFF) shl 8) or (buffer[ihl + 1].toInt() and 0xFF)
+                    val udpLen = ((buffer[ihl + 4].toInt() and 0xFF) shl 8) or (buffer[ihl + 5].toInt() and 0xFF)
+                    val payloadLen = udpLen - 8
+                    if (payloadLen <= 0 || ihl + 8 + payloadLen > read) continue
+
+                    val srcIp = buffer.copyOfRange(12, 16)
+                    val dstIp = buffer.copyOfRange(16, 20)
+                    val dnsQuery = buffer.copyOfRange(ihl + 8, ihl + 8 + payloadLen)
+
+                    dnsExecutor.submit {
+                        forwardDnsQuery(dnsQuery, srcIp, dstIp, srcPort, dstPort, outStream, outLock)
                     }
                 }
             } catch (_: Exception) {
@@ -142,10 +183,95 @@ class FokkMeshVpnService : VpnService() {
                 runCatching { inStream.close() }
                 runCatching { outStream.close() }
             }
-        }, "FokkMeshTunPump").apply {
+        }, "FokkMeshTunDnsPump").apply {
             isDaemon = true
             start()
         }
+    }
+
+    private fun forwardDnsQuery(
+        dnsQuery: ByteArray,
+        clientIp: ByteArray,
+        dnsServerIp: ByteArray,
+        clientPort: Int,
+        serverPort: Int,
+        outStream: FileOutputStream,
+        outLock: Any
+    ) {
+        var sock: DatagramSocket? = null
+        try {
+            sock = DatagramSocket()
+            if (!protect(sock)) {
+                sock.close()
+                return
+            }
+            sock.soTimeout = 3_000
+            val targetAddr = InetAddress.getByAddress(dnsServerIp)
+            sock.send(DatagramPacket(dnsQuery, dnsQuery.size, targetAddr, serverPort))
+
+            val respBuf = ByteArray(2048)
+            val respPacket = DatagramPacket(respBuf, respBuf.size)
+            sock.receive(respPacket)
+            val dnsRespLen = respPacket.length
+            if (dnsRespLen <= 0 || !isRunning.get()) return
+
+            // Build IPv4 (20B) + UDP (8B) + DNS response packet
+            val totalLen = 20 + 8 + dnsRespLen
+            val pkt = ByteArray(totalLen)
+            pkt[0] = 0x45.toByte()                          // IPv4, IHL=5 (20 bytes)
+            pkt[1] = 0x00                                   // DSCP/ECN
+            pkt[2] = ((totalLen ushr 8) and 0xFF).toByte()
+            pkt[3] = (totalLen and 0xFF).toByte()
+            pkt[4] = 0x00; pkt[5] = 0x01                    // ID
+            pkt[6] = 0x40; pkt[7] = 0x00                    // DF
+            pkt[8] = 64.toByte()                            // TTL
+            pkt[9] = 17.toByte()                            // UDP
+            // Src = dnsServerIp, Dst = clientIp
+            System.arraycopy(dnsServerIp, 0, pkt, 12, 4)
+            System.arraycopy(clientIp, 0, pkt, 16, 4)
+
+            // IPv4 header checksum
+            val checksum = computeIpv4Checksum(pkt, 0, 20)
+            pkt[10] = ((checksum ushr 8) and 0xFF).toByte()
+            pkt[11] = (checksum and 0xFF).toByte()
+
+            // UDP header
+            val udpTotal = 8 + dnsRespLen
+            pkt[20] = ((serverPort ushr 8) and 0xFF).toByte()
+            pkt[21] = (serverPort and 0xFF).toByte()
+            pkt[22] = ((clientPort ushr 8) and 0xFF).toByte()
+            pkt[23] = (clientPort and 0xFF).toByte()
+            pkt[24] = ((udpTotal ushr 8) and 0xFF).toByte()
+            pkt[25] = (udpTotal and 0xFF).toByte()
+            pkt[26] = 0x00; pkt[27] = 0x00                  // Optional in IPv4 UDP
+
+            System.arraycopy(respBuf, 0, pkt, 28, dnsRespLen)
+
+            synchronized(outLock) {
+                if (isRunning.get()) {
+                    outStream.write(pkt)
+                }
+            }
+        } catch (_: Exception) {
+        } finally {
+            runCatching { sock?.close() }
+        }
+    }
+
+    private fun computeIpv4Checksum(buf: ByteArray, offset: Int, length: Int): Int {
+        var sum = 0
+        var i = offset
+        while (i < offset + length) {
+            if (i != offset + 10) {
+                val word = ((buf[i].toInt() and 0xFF) shl 8) or (buf[i + 1].toInt() and 0xFF)
+                sum += word
+                if ((sum and 0xFFFF0000.toInt()) != 0) {
+                    sum = (sum and 0xFFFF) + (sum ushr 16)
+                }
+            }
+            i += 2
+        }
+        return sum.inv() and 0xFFFF
     }
 
     private fun updateNotification(region: String) {
@@ -156,7 +282,6 @@ class FokkMeshVpnService : VpnService() {
     private fun buildNotification(region: String): Notification {
         val regionLabel = VpnEngine.getRegionDisplayName(region)
 
-        // Tap notification to open Fokk Browser
         val openIntent = Intent(this, MediaHubActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("open_vpn_sheet", true)
@@ -168,7 +293,6 @@ class FokkMeshVpnService : VpnService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Disconnect action intent
         val disconnectIntent = Intent(this, FokkMeshVpnService::class.java).apply {
             action = ACTION_DISCONNECT
         }
@@ -181,8 +305,8 @@ class FokkMeshVpnService : VpnService() {
 
         return NotificationCompat.Builder(this, AdShieldApp.CHANNEL_ID_VPN)
             .setSmallIcon(R.drawable.ic_shield_check)
-            .setContentTitle("Fokk Mesh Active • $regionLabel")
-            .setContentText("All device traffic is encrypted via dual-hop oblivious mesh")
+            .setContentTitle("Fokk Mesh Active · $regionLabel")
+            .setContentText("Device HTTP/HTTPS routed via Fokk Mesh with live DNS protection")
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(openPending)
@@ -203,10 +327,8 @@ class FokkMeshVpnService : VpnService() {
         runCatching { stopForeground(STOP_FOREGROUND_REMOVE) }
         runCatching { stopSelf() }
 
-        // Inform VpnEngine & UI
         runCatching { VpnEngine.onDeviceMeshStopped(this) }
 
-        // Broadcast to Activity to update UI instantly
         runCatching {
             sendBroadcast(Intent(ACTION_MESH_STATE_CHANGED).apply {
                 setPackage(packageName)
@@ -214,11 +336,12 @@ class FokkMeshVpnService : VpnService() {
             })
         }
 
-        Log.i(TAG, "Fokk Mesh device-wide VPN stopped")
+        Log.i(TAG, "Fokk Mesh device-wide service stopped")
     }
 
     override fun onDestroy() {
         disconnectMesh()
+        runCatching { dnsExecutor.shutdownNow() }
         super.onDestroy()
     }
 
