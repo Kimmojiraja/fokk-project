@@ -242,7 +242,7 @@
             const aria = (p.getAttribute('aria-label') || '').toLowerCase();
             if (aria.includes('breadcrumb') || aria.includes('share') || aria.includes('social') || aria.includes('cookie')) return;
 
-            const text = (p.innerText || '').replace(/\s+/g, ' ').trim();
+            const text = fixDropCaps((p.innerText || '').replace(/\s+/g, ' ').trim());
             if (text.length < 25) return;
             if (isScrapingJunk(text)) return;
 
@@ -261,19 +261,25 @@
         return paragraphs;
     }
 
-    // Contextual Curiosity Questions Generator
+    // Fix newspaper drop-cap artifacts like "W hen" -> "When"
+    function fixDropCaps(str) {
+        if (!str) return '';
+        return str.replace(/\b([B-HJ-Z])\s+([a-z]{2,})\b/g, '$1$2');
+    }
+
+    // Contextual Curiosity Questions Generator (domain-agnostic)
     function generateCuriosityQuestions(title, text, topEntities) {
         const questions = [];
-        const primarySubject = topEntities.length > 0 ? topEntities[0] : (title.split(/[-|:]/)[0].trim());
+        const primarySubject = topEntities.length > 0 ? topEntities[0] : '';
 
         if (primarySubject && primarySubject.length > 2) {
-            questions.push(`Has an official statement or club announcement been confirmed for ${primarySubject}?`);
-            questions.push(`What are the reported terms, agreement details, or timeline regarding ${primarySubject}?`);
+            questions.push(`What are the key takeaways about ${primarySubject}?`);
+            questions.push(`What evidence or official data backs the claims about ${primarySubject}?`);
         } else {
-            questions.push(`Has an official announcement been published by the primary authority?`);
-            questions.push(`What are the key terms or documented details of this report?`);
+            questions.push(`What are the main takeaways from this article?`);
+            questions.push(`What evidence supports the main claims here?`);
         }
-        questions.push(`How do other major independent newsrooms verify this development?`);
+        questions.push(`What context or opposing viewpoints might be missing?`);
         return questions.slice(0, 3);
     }
 
@@ -417,32 +423,41 @@
                 .trim();
         }
 
-        // Synthesize Executive Brief (Cohesive 1-2 sentence narrative)
+        // Synthesize Executive Brief (Clean, natural 1-2 sentence lead)
         let executiveSummary = "";
         if (selected.length > 0) {
-            const lead = cleanSentenceItem(selected[0].sentence);
-            const second = selected.length > 1 ? cleanSentenceItem(selected[1].sentence) : '';
+            const lead = fixDropCaps(cleanSentenceItem(selected[0].sentence));
+            const second = selected.length > 1 ? fixDropCaps(cleanSentenceItem(selected[1].sentence)) : '';
             if (second && !second.toLowerCase().includes(lead.slice(0, 25).toLowerCase())) {
-                const secondClean = second.charAt(0).toLowerCase() + second.slice(1);
-                executiveSummary = `${lead} Furthermore, ${secondClean}`;
+                const leadPunct = /[.!?]$/.test(lead) ? lead : `${lead}.`;
+                executiveSummary = `${leadPunct} ${second}`;
             } else {
                 executiveSummary = lead;
             }
         } else {
-            executiveSummary = cleanSentenceItem(rawSentences[0]);
+            executiveSummary = fixDropCaps(cleanSentenceItem(rawSentences[0]));
         }
 
         // Key Insights & Analysis bullets (distinct takeaways)
-        const bullets = selected.map(item => cleanSentenceItem(item.sentence)).filter(b => b.length > 10);
+        const bullets = selected.map(item => fixDropCaps(cleanSentenceItem(item.sentence))).filter(b => b.length > 10);
 
-        // Extract Key Figures & Metrics (Real numerical facts only)
-        const metricRegex = /(?:\$\d+(?:\.\d+)?\s*(?:billion|million|trillion|k|m|b)?|\d+(?:\.\d+)?%|\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b|\b20\d{2}\b)/gi;
-        const matches = fullArticleText.match(metricRegex) || [];
-        const uniqueMetrics = Array.from(new Set(matches)).slice(0, 5);
-        const evidenceMetrics = [
-            provenance.published ? `Published ${provenance.published}` : '',
-            provenance.author ? 'Byline detected' : ''
-        ].filter(Boolean);
+        // Extract Contextual Key Figures ("VALUE :: Short Label" - never contextless bare years)
+        const contextualMetrics = [];
+        const seenMetricVals = new Set();
+        const ctxRegex = /([£$€]\s?\d+(?:[.,]\d+)?\s?(?:billion|million|trillion|bn|mn|m|k|b)?|\d+(?:\.\d+)?%|\b\d+(?:,\d{3})+\b)\s+([a-zA-Z][a-zA-Z\s\-]{3,36})/g;
+        let mMatch;
+        while ((mMatch = ctxRegex.exec(fullArticleText)) !== null && contextualMetrics.length < 4) {
+            const val = mMatch[1].trim();
+            const key = val.toLowerCase();
+            if (seenMetricVals.has(key)) continue;
+            const rawPhrase = mMatch[2].split(/[,.;:()—–]|\b(?:and|but|which|that|while|from|in)\b/i)[0].trim();
+            const words = rawPhrase.split(/\s+/).filter(Boolean).slice(0, 4);
+            if (words.length >= 2) {
+                const label = words.join(' ');
+                seenMetricVals.add(key);
+                contextualMetrics.push(`${val} :: ${label.charAt(0).toUpperCase() + label.slice(1)}`);
+            }
+        }
 
         const followUpQuestions = generateCuriosityQuestions(title, fullArticleText, topEntities);
 
@@ -455,11 +470,13 @@
             executiveSummary: executiveSummary,
             summary: executiveSummary, // backward compatibility
             bullets: bullets,
-            metrics: Array.from(new Set([...uniqueMetrics, ...evidenceMetrics])),
+            metrics: contextualMetrics,
             followUpQuestions: followUpQuestions,
             leadImage: leadImage,
             readingTime: readingTime,
             wordCount: totalWords,
+            author: provenance.author || '',
+            published: provenance.published || '',
             provenance: provenance
         };
     };

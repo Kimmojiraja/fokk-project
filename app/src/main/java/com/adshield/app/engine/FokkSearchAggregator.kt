@@ -6,8 +6,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
@@ -28,30 +26,129 @@ data class CorroboratedSource(
 
 /**
  * High-reliability multi-source web intelligence aggregator for Fokk AI.
- * Fetches and cross-corroborates information from Google News RSS,
- * DuckDuckGo HTML search, Wikipedia encyclopedic archives, and Wikidata factual entities.
+ * Fetches, filters, ranks, and cross-corroborates information from Google News RSS,
+ * DuckDuckGo HTML search, Wikipedia encyclopedic archives, and Wikidata entities.
  */
 object FokkSearchAggregator {
 
-    private const val USER_AGENT = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+    private const val USER_AGENT = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
     private const val CONNECT_TIMEOUT_MS = 3500
-    private const val READ_TIMEOUT_MS = 4000
+    private const val READ_TIMEOUT_MS = 4500
+
+    private val BLOCKED_DOMAINS = setOf(
+        "wn.com", "article.wn.com", "powerpopradio.com", "whopostedwhat.com",
+        "pressreader.com", "pinterest.com", "quora.com", "brainly.com",
+        "brainly.in", "chegg.com", "scribd.com", "slideshare.net",
+        "ebay.com", "amazon.com", "aliexpress.com", "walmart.com",
+        "etsy.com", "tiktok.com", "facebook.com", "instagram.com",
+        "linkedin.com", "youtube.com", "youtu.be", "fixthecourt.com",
+        "duckduckgo.com", "bing.com", "google.com", "msn.com"
+    )
+
+    private val REPUTABLE_DOMAINS = setOf(
+        "reuters.com", "apnews.com", "bbc.com", "bbc.co.uk", "theguardian.com",
+        "nytimes.com", "washingtonpost.com", "ft.com", "economist.com",
+        "bloomberg.com", "wsj.com", "sky.com", "news.sky.com", "skysports.com",
+        "thetimes.com", "thetimes.co.uk", "independent.co.uk", "telegraph.co.uk",
+        "npr.org", "pbs.org", "cnn.com", "abcnews.go.com", "cbsnews.com",
+        "nbcnews.com", "politico.com", "politico.eu", "axios.com", "forbes.com",
+        "theverge.com", "techcrunch.com", "arstechnica.com", "wired.com",
+        "nature.com", "science.org", "thelancet.com", "who.int", "un.org",
+        "theathletic.com", "espn.com", "aljazeeera.com", "aljazeera.com",
+        "dw.com", "france24.com", "thestandard.co.uk", "lbc.co.uk",
+        "thehindu.com", "indianexpress.com", "ndtv.com", "en.wikipedia.org"
+    )
+
+    private val QUERY_STOP_WORDS = setOf(
+        "what", "this", "that", "about", "news", "page", "article", "post",
+        "posted", "who", "where", "when", "why", "how", "tell", "explain",
+        "summary", "summarize", "latest", "video", "from", "with", "into",
+        "does", "have", "been", "were", "they", "their", "there", "here",
+        "just", "more", "some", "also", "very", "much", "make", "made",
+        "said", "says", "over", "after", "before", "under", "between"
+    )
+
+    fun isBlockedDomain(domain: String): Boolean {
+        val d = domain.lowercase(Locale.ROOT).removePrefix("www.")
+        if (d.isBlank()) return true
+        return BLOCKED_DOMAINS.any { blocked -> d == blocked || d.endsWith(".$blocked") }
+    }
+
+    fun isReputableDomain(domain: String): Boolean {
+        val d = domain.lowercase(Locale.ROOT).removePrefix("www.")
+        if (d.endsWith(".gov") || d.endsWith(".gov.uk") || d.endsWith(".edu") || d.endsWith(".ac.uk")) return true
+        return REPUTABLE_DOMAINS.any { rep -> d == rep || d.endsWith(".$rep") }
+    }
+
+    fun cleanPublisherName(domain: String): String {
+        val d = domain.lowercase(Locale.ROOT).removePrefix("www.")
+        return when {
+            d.contains("independent.co.uk") -> "The Independent"
+            d.contains("thetimes.com") || d.contains("thetimes.co.uk") -> "The Times"
+            d.contains("thestandard.co.uk") -> "The Standard"
+            d.contains("theguardian.com") -> "The Guardian"
+            d.contains("skysports.com") -> "Sky Sports"
+            d.contains("sky.com") -> "Sky News"
+            d.contains("bbc.com") || d.contains("bbc.co.uk") -> "BBC News"
+            d.contains("nytimes.com") -> "NY Times"
+            d.contains("washingtonpost.com") -> "Washington Post"
+            d.contains("reuters.com") -> "Reuters"
+            d.contains("apnews.com") -> "AP News"
+            d.contains("bloomberg.com") -> "Bloomberg"
+            d.contains("ft.com") -> "Financial Times"
+            d.contains("economist.com") -> "The Economist"
+            d.contains("wsj.com") -> "Wall Street Journal"
+            d.contains("theathletic.com") -> "The Athletic"
+            d.contains("telegraph.co.uk") -> "The Telegraph"
+            d.contains("lbc.co.uk") -> "LBC"
+            d.contains("npr.org") -> "NPR"
+            d.contains("cnn.com") -> "CNN"
+            d.contains("politico.") -> "Politico"
+            d.contains("theverge.com") -> "The Verge"
+            d.contains("techcrunch.com") -> "TechCrunch"
+            d.contains("arstechnica.com") -> "Ars Technica"
+            d.contains("wikipedia.org") -> "Wikipedia"
+            d.contains("wikidata.org") -> "Wikidata"
+            d.contains("yahoo.com") -> "Yahoo News"
+            else -> {
+                val parts = d.split(".")
+                val secondLevel = setOf("co", "com", "org", "gov", "net", "ac", "edu")
+                val root = if (parts.size >= 3 && secondLevel.contains(parts[parts.size - 2])) {
+                    parts[parts.size - 3]
+                } else if (parts.size >= 2) {
+                    parts[parts.size - 2]
+                } else {
+                    d
+                }
+                root.replaceFirstChar { it.uppercase() }
+            }
+        }
+    }
 
     /**
-     * Aggregates intelligence across all sources in parallel.
+     * Aggregates intelligence across all sources in parallel, filtering out spam
+     * and irrelevant hits while ranking reputable sources first.
      */
     suspend fun aggregate(
         query: String,
         pageTitle: String = "",
         pageHost: String = "",
-        maxResults: Int = 8
+        maxResults: Int = 6
     ): List<CorroboratedSource> = withContext(Dispatchers.IO) {
         val cleanQuery = query.trim()
         if (cleanQuery.isBlank()) return@withContext emptyList()
 
+        // Extract meaningful topic keywords for strict relevance filtering
+        val anchorText = if (pageTitle.isNotBlank()) "$pageTitle $cleanQuery" else cleanQuery
+        val topicKeywords = anchorText.lowercase(Locale.ROOT)
+            .split(Regex("[^a-z0-9]+"))
+            .filter { it.length >= 4 && !QUERY_STOP_WORDS.contains(it) }
+            .distinct()
+            .take(12)
+
         coroutineScope {
-            val newsDeferred = async { fetchGoogleNews(cleanQuery, max = 3) }
-            val ddgDeferred = async { fetchDuckDuckGoHtml(cleanQuery, max = 4) }
+            val newsDeferred = async { fetchGoogleNews(cleanQuery, max = 5) }
+            val ddgDeferred = async { fetchDuckDuckGoHtml(cleanQuery, max = 6) }
             val wikiDeferred = async { fetchWikipedia(cleanQuery, max = 2) }
             val wikidataDeferred = async { fetchWikidata(cleanQuery, max = 1) }
 
@@ -60,51 +157,66 @@ object FokkSearchAggregator {
             val wikiResults = runCatching { wikiDeferred.await() }.getOrDefault(emptyList())
             val wikidataResults = runCatching { wikidataDeferred.await() }.getOrDefault(emptyList())
 
-            val combined = mutableListOf<CorroboratedSource>()
+            val candidates = mutableListOf<Pair<CorroboratedSource, Int>>()
             val seenUrls = mutableSetOf<String>()
             val seenDomains = mutableSetOf<String>()
-
-            // Normalize page host
             val normalizedPageHost = pageHost.lowercase(Locale.ROOT).removePrefix("www.")
 
-            fun addSource(src: CorroboratedSource) {
+            fun evaluateAndAdd(src: CorroboratedSource, baseScore: Int, strictRelevance: Boolean) {
                 val normUrl = src.url.trim().lowercase(Locale.ROOT)
                 val normDomain = src.domain.trim().lowercase(Locale.ROOT).removePrefix("www.")
                 if (normUrl.isBlank() || seenUrls.contains(normUrl)) return
                 if (normDomain == normalizedPageHost && normalizedPageHost.isNotBlank()) return
+                if (isBlockedDomain(normDomain)) return
+                if (seenDomains.contains(normDomain)) return
+
+                val haystack = "${src.title} ${src.snippet}".lowercase(Locale.ROOT)
+                val keywordHits = topicKeywords.count { kw -> haystack.contains(kw) }
+
+                if (strictRelevance && topicKeywords.isNotEmpty()) {
+                    val minHits = if (topicKeywords.size >= 4) 2 else 1
+                    if (keywordHits < minHits) return
+                }
+
+                var score = baseScore + (keywordHits * 10)
+                if (isReputableDomain(normDomain)) score += 35
+                if (src.sourceType == "NEWS") score += 20
 
                 seenUrls.add(normUrl)
                 seenDomains.add(normDomain)
-                combined.add(src)
+                candidates.add(Pair(src, score))
             }
 
-            // Prioritize fresh news reports and live web journalism over encyclopedic entries
-            newsResults.forEach { addSource(it) }
-            ddgResults.forEach { addSource(it) }
+            newsResults.forEach { evaluateAndAdd(it, baseScore = 40, strictRelevance = true) }
+            ddgResults.forEach { evaluateAndAdd(it, baseScore = 20, strictRelevance = true) }
 
-            // Only include encyclopedic results if their title directly matches key named entities from the query
-            val queryKeywords = cleanQuery.lowercase(Locale.ROOT)
-                .split(Regex("\\W+"))
-                .filter { it.length >= 4 && !it.matches(Regex("^(what|this|about|news|page|article|transfer|latest|video)$")) }
-
-            wikiResults.filter { w ->
+            // Only include Wikipedia/Wikidata when title closely matches key query terms
+            wikiResults.forEach { w ->
                 val titleLower = w.title.lowercase(Locale.ROOT)
-                queryKeywords.any { kw -> titleLower.contains(kw) }
-            }.forEach { addSource(it) }
-
-            wikidataResults.filter { wd ->
+                val titleHits = topicKeywords.count { kw -> titleLower.contains(kw) }
+                if (titleHits >= 1) {
+                    evaluateAndAdd(w, baseScore = 15, strictRelevance = false)
+                }
+            }
+            wikidataResults.forEach { wd ->
                 val titleLower = wd.title.lowercase(Locale.ROOT)
-                queryKeywords.any { kw -> titleLower.contains(kw) }
-            }.forEach { addSource(it) }
+                val titleHits = topicKeywords.count { kw -> titleLower.contains(kw) }
+                if (titleHits >= 1) {
+                    evaluateAndAdd(wd, baseScore = 10, strictRelevance = false)
+                }
+            }
 
-            combined.take(maxResults)
+            candidates
+                .sortedByDescending { it.second }
+                .map { it.first }
+                .take(maxResults)
         }
     }
 
     /**
      * Fetches real-time headlines from Google News RSS feed.
      */
-    fun fetchGoogleNews(query: String, max: Int = 3): List<CorroboratedSource> {
+    fun fetchGoogleNews(query: String, max: Int = 4): List<CorroboratedSource> {
         val results = mutableListOf<CorroboratedSource>()
         try {
             val encodedQuery = Uri.encode(query)
@@ -129,28 +241,34 @@ object FokkSearchAggregator {
                     val rawLink = linkRegex.find(itemContent)?.groupValues?.get(1).orEmpty()
                     val pubDate = pubDateRegex.find(itemContent)?.groupValues?.get(1).orEmpty()
                     val sourceMatch = sourceRegex.find(itemContent)
-                    val sourceName = sourceMatch?.groupValues?.get(2).orEmpty().ifBlank {
-                        val host = runCatching { Uri.parse(rawLink).host }.getOrNull().orEmpty()
-                        host.removePrefix("www.")
+
+                    val domain = runCatching {
+                        sourceMatch?.groupValues?.get(1)?.let { Uri.parse(it).host }
+                    }.getOrNull()?.ifBlank { null }
+                        ?: runCatching { Uri.parse(rawLink).host }.getOrNull()
+                        ?: "news.google.com"
+
+                    val cleanDomain = domain.removePrefix("www.")
+                    if (isBlockedDomain(cleanDomain)) continue
+
+                    val sourceName = cleanHtmlText(sourceMatch?.groupValues?.get(2).orEmpty()).ifBlank {
+                        cleanPublisherName(cleanDomain)
                     }
 
                     val cleanTitle = cleanHtmlText(rawTitle)
                     if (cleanTitle.isNotBlank() && rawLink.isNotBlank()) {
-                        // Extract publisher domain
-                        val domain = runCatching {
-                            sourceMatch?.groupValues?.get(1)?.let { Uri.parse(it).host }
-                        }.getOrNull()?.ifBlank { null }
-                            ?: runCatching { Uri.parse(rawLink).host }.getOrNull()
-                            ?: "news.google.com"
-
                         val formattedDate = pubDate.take(16).trim()
-                        val snippet = if (sourceName.isNotBlank()) "Reported by $sourceName" else "Google News dispatch"
+                        val snippet = if (formattedDate.isNotBlank()) {
+                            "$sourceName ($formattedDate)"
+                        } else {
+                            sourceName
+                        }
 
                         results.add(
                             CorroboratedSource(
                                 title = cleanTitle,
                                 url = rawLink,
-                                domain = domain.removePrefix("www."),
+                                domain = cleanDomain,
                                 snippet = snippet,
                                 sourceType = "NEWS",
                                 timestamp = formattedDate
@@ -165,9 +283,9 @@ object FokkSearchAggregator {
     }
 
     /**
-     * Scrapes web results from DuckDuckGo HTML version.
+     * Scrapes web results from DuckDuckGo HTML version with spam filtering.
      */
-    fun fetchDuckDuckGoHtml(query: String, max: Int = 4): List<CorroboratedSource> {
+    fun fetchDuckDuckGoHtml(query: String, max: Int = 5): List<CorroboratedSource> {
         val results = mutableListOf<CorroboratedSource>()
         try {
             val encodedQuery = Uri.encode(query)
@@ -183,7 +301,6 @@ object FokkSearchAggregator {
             if (conn.responseCode == HttpURLConnection.HTTP_OK) {
                 val html = conn.inputStream.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
 
-                // Parse result blocks
                 val resultBlockRegex = Regex("""<div[^>]*class="[^"]*web-result[^"]*"[^>]*>(.*?)</div>\s*</div>""", RegexOption.DOT_MATCHES_ALL)
                 val titleLinkRegex = Regex("""<h2[^>]*class="[^"]*result__title[^"]*"[^>]*>\s*<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>""", RegexOption.DOT_MATCHES_ALL)
                 val snippetRegex = Regex("""<a[^>]*class="[^"]*result__snippet[^"]*"[^>]*>(.*?)</a>""", RegexOption.DOT_MATCHES_ALL)
@@ -196,7 +313,6 @@ object FokkSearchAggregator {
                     val rawTitle = titleLinkMatch.groupValues[2]
                     val rawSnippet = snippetRegex.find(blockHtml)?.groupValues?.get(1).orEmpty()
 
-                    // Extract actual destination URL from DDG redirect wrapper: /l/?uddg=https%3A%2F%2F...
                     val targetUrl = if (rawHref.contains("uddg=")) {
                         val parsed = Uri.parse(if (rawHref.startsWith("http")) rawHref else "https:$rawHref")
                         parsed.getQueryParameter("uddg") ?: rawHref
@@ -210,35 +326,15 @@ object FokkSearchAggregator {
                     val cleanSnippet = cleanHtmlText(rawSnippet)
                     val domain = runCatching { Uri.parse(targetUrl).host }.getOrNull().orEmpty().removePrefix("www.")
 
-                    if (cleanTitle.isNotBlank() && targetUrl.startsWith("http") && domain.isNotBlank()) {
-                        val publisherName = when {
-                            domain.contains("independent.co.uk", ignoreCase = true) -> "The Independent"
-                            domain.contains("thetimes.com", ignoreCase = true) || domain.contains("thetimes.co.uk", ignoreCase = true) -> "The Times"
-                            domain.contains("thestandard.co.uk", ignoreCase = true) -> "The Standard"
-                            domain.contains("theguardian.com", ignoreCase = true) -> "The Guardian"
-                            domain.contains("skysports.com", ignoreCase = true) -> "Sky Sports"
-                            domain.contains("sky.com", ignoreCase = true) || domain.contains("news.sky.com", ignoreCase = true) -> "Sky News"
-                            domain.contains("bbc.com", ignoreCase = true) || domain.contains("bbc.co.uk", ignoreCase = true) -> "BBC News"
-                            domain.contains("yahoo.com", ignoreCase = true) -> "Yahoo"
-                            domain.contains("theathletic.com", ignoreCase = true) -> "The Athletic"
-                            domain.contains("reuters.com", ignoreCase = true) -> "Reuters"
-                            domain.contains("lbc.co.uk", ignoreCase = true) -> "LBC"
-                            domain.contains("telegraph.co.uk", ignoreCase = true) -> "The Telegraph"
-                            else -> domain.split(".").firstOrNull()?.replaceFirstChar { it.uppercase() } ?: domain
-                        }
-                        val formattedSnippet = if (cleanSnippet.isNotBlank()) {
-                            "Reported by $publisherName: $cleanSnippet"
-                        } else {
-                            "Reported by $publisherName"
-                        }
-
+                    if (cleanTitle.isNotBlank() && targetUrl.startsWith("http") && domain.isNotBlank() && !isBlockedDomain(domain)) {
+                        val sourceType = if (isReputableDomain(domain) && !domain.contains("wikipedia")) "NEWS" else "WEB"
                         results.add(
                             CorroboratedSource(
                                 title = cleanTitle,
                                 url = targetUrl,
                                 domain = domain,
-                                snippet = formattedSnippet,
-                                sourceType = "WEB"
+                                snippet = cleanSnippet,
+                                sourceType = sourceType
                             )
                         )
                         if (results.size >= max) break

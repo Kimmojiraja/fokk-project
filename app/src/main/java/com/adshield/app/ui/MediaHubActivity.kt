@@ -146,6 +146,8 @@ import java.util.concurrent.atomic.AtomicLong
 import com.adshield.app.engine.FokkAiEngine
 import com.adshield.app.engine.FokkSearchAggregator
 import com.adshield.app.engine.CorroboratedSource
+import com.adshield.app.engine.KeyMetric
+import android.speech.tts.UtteranceProgressListener
 
 data class BrowserSearchResult(
     val title: String,
@@ -243,6 +245,9 @@ open class MediaHubActivity : AppCompatActivity() {
     private var pendingAiSummaryInitialTab: Int = 0
     private var activeAiSummarySheetDialog: BottomSheetDialog? = null
     private var textToSpeech: TextToSpeech? = null
+    private var isTtsReady = false
+    private var pendingTtsText: String? = null
+    private var ttsStateCallback: ((Boolean) -> Unit)? = null
     var lastPaywallUrl = ""
     var isDualDeckMode = false
     private var secondaryTabIndex = -1
@@ -7883,12 +7888,15 @@ open class MediaHubActivity : AppCompatActivity() {
     fun showAiSummarySheet(summaryJson: String, initialTab: Int = 0) {
         try {
             val json = JSONObject(summaryJson)
-            val title = json.optString("title", "Article Summary")
+            val title = json.optString("title", "Article Summary").trim()
             val source = json.optString("source", "").ifBlank { json.optString("sourceHost", "") }
             val sourceHost = json.optString("sourceHost", "")
             val favicon = json.optString("favicon", "")
             val readingTime = json.optString("readingTime", "3 min read")
             val wordCount = json.optInt("wordCount", 0)
+            val provenanceObj = json.optJSONObject("provenance")
+            val pageAuthor = json.optString("author", provenanceObj?.optString("author", "").orEmpty()).trim()
+            val pagePublished = json.optString("published", provenanceObj?.optString("published", "").orEmpty()).trim()
             val bulletsArray = json.optJSONArray("bullets") ?: JSONArray()
             val metricsArray = json.optJSONArray("metrics") ?: JSONArray()
             val questionsArray = json.optJSONArray("followUpQuestions") ?: json.optJSONArray("questions") ?: JSONArray()
@@ -7908,32 +7916,74 @@ open class MediaHubActivity : AppCompatActivity() {
 
             val sheetDialog = BottomSheetDialog(this)
             activeAiSummarySheetDialog = sheetDialog
-            sheetDialog.setOnDismissListener {
-                if (activeAiSummarySheetDialog === sheetDialog) {
-                    activeAiSummarySheetDialog = null
-                    aiVoiceInputCallback = null
-                }
-            }
+            val activeStreamHandlers = mutableListOf<Pair<Handler, Runnable>>()
+            var isTtsPlaying = false
+
             val sheetBinding = SheetAiSummaryBinding.inflate(layoutInflater)
             sheetDialog.setContentView(sheetBinding.root)
             sheetDialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+
+            val density = resources.displayMetrics.density
+
+            // Proper keyboard & system navigation bar insets (prevents bottom clipping and composer overlap)
             ViewCompat.setOnApplyWindowInsetsListener(sheetBinding.root) { _, insets ->
                 val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-                sheetBinding.layoutAiChatSection.setPadding(0, 0, 0, imeBottom)
+                val navBottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
+                val bottomPad = maxOf(imeBottom, navBottom)
+                sheetBinding.layoutAiComposerDock.setPadding(
+                    (16 * density).toInt(),
+                    (8 * density).toInt(),
+                    (16 * density).toInt(),
+                    (10 * density).toInt() + bottomPad
+                )
+                sheetBinding.layoutSummaryInnerContent.setPadding(
+                    (18 * density).toInt(),
+                    (14 * density).toInt(),
+                    (18 * density).toInt(),
+                    (32 * density).toInt() + navBottom
+                )
+                sheetBinding.layoutAuditInnerContent.setPadding(
+                    (18 * density).toInt(),
+                    (14 * density).toInt(),
+                    (18 * density).toInt(),
+                    (32 * density).toInt() + navBottom
+                )
                 insets
             }
+
             sheetDialog.setOnShowListener {
                 val bsView = sheetDialog.findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet)
                 if (bsView != null) {
+                    bsView.setBackgroundColor(Color.parseColor("#06080D"))
                     val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(bsView)
                     bsView.layoutParams.height = android.view.ViewGroup.LayoutParams.MATCH_PARENT
                     behavior.peekHeight = android.view.WindowManager.LayoutParams.MATCH_PARENT
                     behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
                     behavior.skipCollapsed = true
+                    // Disable sheet drag-intercept so NestedScrollViews scroll at silky 120fps with zero stutter
+                    behavior.isDraggable = false
                 }
             }
 
-            // Lead Image (Desktop Parity)
+            sheetDialog.setOnDismissListener {
+                activeStreamHandlers.forEach { (h, r) -> h.removeCallbacks(r) }
+                activeStreamHandlers.clear()
+                if (isTtsPlaying) {
+                    stopTextToSpeech()
+                    isTtsPlaying = false
+                }
+                ttsStateCallback = null
+                if (activeAiSummarySheetDialog === sheetDialog) {
+                    activeAiSummarySheetDialog = null
+                    aiVoiceInputCallback = null
+                }
+            }
+
+            sheetBinding.viewAiDragHandle.setOnClickListener {
+                sheetDialog.dismiss()
+            }
+
+            // Lead Image
             if (leadImage.isNotBlank() && (leadImage.startsWith("http://") || leadImage.startsWith("https://"))) {
                 sheetBinding.layoutLeadImageCard.visibility = View.VISIBLE
                 Thread {
@@ -7945,7 +7995,7 @@ open class MediaHubActivity : AppCompatActivity() {
                         conn.connect()
                         val bitmap = BitmapFactory.decodeStream(conn.inputStream)
                         runOnUiThread {
-                            if (bitmap != null) {
+                            if (bitmap != null && sheetDialog.isShowing) {
                                 sheetBinding.imgAiSummaryLead.setImageBitmap(bitmap)
                             } else {
                                 sheetBinding.layoutLeadImageCard.visibility = View.GONE
@@ -7962,45 +8012,15 @@ open class MediaHubActivity : AppCompatActivity() {
             }
 
             sheetBinding.textSummaryTitle.text = title
-            val metaText = if (wordCount > 0) "$readingTime • $wordCount words • Fokk AI Truth Engine" else "$readingTime • Fokk AI Truth Engine • TrustMeBro Architecture"
-            sheetBinding.textSummaryMeta.text = metaText
+            val metaParts = mutableListOf<String>()
+            if (readingTime.isNotBlank()) metaParts.add(readingTime)
+            if (wordCount > 0) metaParts.add("%,d words".format(Locale.US, wordCount))
+            sheetBinding.textSummaryMeta.text = metaParts.joinToString(" · ")
 
-            val cleanHost = sourceHost.lowercase(java.util.Locale.ROOT).removePrefix("www.")
-            val publisherName = when {
-                cleanHost.contains("independent.co.uk") -> "The Independent"
-                cleanHost.contains("thetimes.com") || cleanHost.contains("thetimes.co.uk") -> "The Times"
-                cleanHost.contains("lbc.co.uk") -> "LBC"
-                cleanHost.contains("telegraph.co.uk") -> "The Telegraph"
-                cleanHost.contains("skysports.com") -> "Sky Sports"
-                cleanHost.contains("sky.com") || cleanHost.contains("news.sky.com") -> "Sky News"
-                cleanHost.contains("dailymail.co.uk") -> "Daily Mail"
-                cleanHost.contains("npr.org") -> "NPR"
-                cleanHost.contains("ndtv.com") -> "NDTV"
-                cleanHost.contains("theverge.com") -> "The Verge"
-                cleanHost.contains("bbc.com") || cleanHost.contains("bbc.co.uk") -> "BBC News"
-                cleanHost.contains("reuters.com") -> "Reuters"
-                cleanHost.contains("apnews.com") -> "Associated Press"
-                cleanHost.contains("cnn.com") -> "CNN"
-                cleanHost.contains("nytimes.com") -> "The New York Times"
-                cleanHost.contains("washingtonpost.com") -> "The Washington Post"
-                cleanHost.contains("theguardian.com") -> "The Guardian"
-                cleanHost.contains("wsj.com") -> "Wall Street Journal"
-                cleanHost.contains("bloomberg.com") -> "Bloomberg"
-                cleanHost.contains("techcrunch.com") -> "TechCrunch"
-                cleanHost.contains("x.com") || cleanHost.contains("twitter.com") -> "X (Twitter)"
-                cleanHost.contains("reddit.com") -> "Reddit"
-                cleanHost.contains("wikipedia.org") -> "Wikipedia"
-                else -> {
-                    val parts = cleanHost.split('.')
-                    val secondLevelTlds = setOf("co", "com", "org", "gov", "net", "ac", "edu", "ne")
-                    if (parts.size >= 3 && secondLevelTlds.contains(parts[parts.size - 2].lowercase())) {
-                        parts[parts.size - 3].replaceFirstChar { it.uppercase() }
-                    } else if (parts.size >= 2) {
-                        parts[parts.size - 2].replaceFirstChar { it.uppercase() }
-                    } else {
-                        cleanHost
-                    }
-                }
+            val publisherName = if (sourceHost.isNotBlank()) {
+                FokkSearchAggregator.cleanPublisherName(sourceHost)
+            } else {
+                source.ifBlank { "Web" }
             }
 
             sheetBinding.layoutSourceBadge.visibility = View.VISIBLE
@@ -8016,21 +8036,76 @@ open class MediaHubActivity : AppCompatActivity() {
                         val bmp = BitmapFactory.decodeStream(conn.inputStream)
                         if (bmp != null) {
                             runOnUiThread {
-                                sheetBinding.imgSourceFavicon.clearColorFilter()
-                                sheetBinding.imgSourceFavicon.setImageBitmap(bmp)
+                                if (sheetDialog.isShowing) {
+                                    sheetBinding.imgSourceFavicon.clearColorFilter()
+                                    sheetBinding.imgSourceFavicon.setImageBitmap(bmp)
+                                }
                             }
                         }
                     } catch (_: Exception) {}
                 }.start()
             }
 
-            // Save / Bookmark button logic
+            // Live mutable summary state so Copy, Read Aloud, and Save always use the latest AI synthesis
+            var currentExecutiveSummary = FokkAiEngine.cleanDropCaps(
+                stripEmojis(explicitSummary).replace(Regex("""^[\s•*–—\-\d.)\]]+"""), "").trim()
+            )
+            var currentBullets = mutableListOf<String>().apply {
+                for (i in 0 until bulletsArray.length()) {
+                    val b = FokkAiEngine.cleanDropCaps(
+                        stripEmojis(bulletsArray.getString(i))
+                            .replace(Regex("""^[\s•*–—\-\d.)\]]+"""), "")
+                            .trim()
+                    )
+                    if (b.length >= 8) add(b)
+                }
+            }
+            var currentMetrics = mutableListOf<KeyMetric>().apply {
+                for (i in 0 until metricsArray.length()) {
+                    val raw = metricsArray.getString(i).trim()
+                    if (raw.contains("::")) {
+                        val parts = raw.split("::", limit = 2)
+                        val v = parts[0].trim()
+                        val l = parts[1].trim()
+                        if (v.isNotBlank() && l.isNotBlank()) add(KeyMetric(v, l))
+                    }
+                }
+            }
+            var currentQuestions = mutableListOf<String>().apply {
+                for (i in 0 until questionsArray.length()) {
+                    val q = stripEmojis(questionsArray.getString(i)).trim()
+                    if (q.length > 8 &&
+                        !q.contains("club announcement", ignoreCase = true) &&
+                        !q.contains("contract length", ignoreCase = true) &&
+                        !q.contains("wages", ignoreCase = true)
+                    ) {
+                        add(q)
+                    }
+                }
+            }
+
+            fun buildReadableBriefText(): String {
+                val sb = StringBuilder()
+                if (title.isNotBlank()) sb.append(title).append("\n\n")
+                if (currentExecutiveSummary.isNotBlank()) {
+                    sb.append(currentExecutiveSummary).append("\n\n")
+                }
+                if (currentBullets.isNotEmpty()) {
+                    sb.append("Key Takeaways:\n")
+                    currentBullets.forEach { b ->
+                        sb.append("- ").append(b.replace("**", "")).append("\n")
+                    }
+                }
+                return sb.toString().trim()
+            }
+
+            // Save / Bookmark button
             var isSaved = savedSummariesStore.isSaved(activeUrl)
             val updateSaveBtnUi = {
                 if (isSaved) {
-                    sheetBinding.btnSaveSummary.setColorFilter(getColor(R.color.fokk_cyan))
+                    sheetBinding.btnSaveSummary.setColorFilter(Color.parseColor("#38BDF8"))
                 } else {
-                    sheetBinding.btnSaveSummary.setColorFilter(getColor(R.color.text_secondary))
+                    sheetBinding.btnSaveSummary.setColorFilter(Color.parseColor("#94A3B8"))
                 }
             }
             updateSaveBtnUi()
@@ -8041,106 +8116,79 @@ open class MediaHubActivity : AppCompatActivity() {
                     if (existing != null) savedSummariesStore.delete(existing.id)
                     isSaved = false
                     updateSaveBtnUi()
-                    Toast.makeText(this, "Summary removed from Saved Summaries", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Removed from Saved Summaries", Toast.LENGTH_SHORT).show()
                 } else {
-                    val bulletsList = mutableListOf<String>()
-                    for (i in 0 until bulletsArray.length()) bulletsList.add(bulletsArray.getString(i))
-                    val metricsList = mutableListOf<String>()
-                    for (i in 0 until metricsArray.length()) metricsList.add(metricsArray.getString(i))
-                    val qList = mutableListOf<String>()
-                    for (i in 0 until questionsArray.length()) qList.add(questionsArray.getString(i))
                     val item = SavedSummary(
                         url = activeUrl,
                         title = title,
-                        source = source,
+                        source = publisherName,
                         sourceHost = sourceHost,
                         favicon = favicon,
                         readingTime = readingTime,
                         wordCount = wordCount,
-                        executiveSummary = explicitSummary,
-                        bullets = bulletsList,
-                        metrics = metricsList,
+                        executiveSummary = currentExecutiveSummary,
+                        bullets = currentBullets.toList(),
+                        metrics = currentMetrics.map { "${it.value} :: ${it.label}" },
                         leadImage = leadImage,
-                        questions = qList
+                        questions = currentQuestions.toList()
                     )
                     savedSummariesStore.save(item)
                     isSaved = true
                     updateSaveBtnUi()
-                    Toast.makeText(this, "Summary saved to Saved Summaries archive", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Saved to Summaries", Toast.LENGTH_SHORT).show()
                 }
             }
 
+            // TTS Voice & Play/Stop State
             var isMale = prefs.getBoolean("pref_tts_male_voice", true)
             val updateVoiceBtn = {
                 sheetBinding.btnTtsVoiceToggle.text = if (isMale) "Voice: Male" else "Voice: Female"
             }
+            val updateTtsPlaybackUi: (Boolean) -> Unit = { playing ->
+                isTtsPlaying = playing
+                sheetBinding.btnListenSummary.text = if (playing) "Stop" else "Listen"
+                sheetBinding.textTtsStatus.text = if (playing) "Playing..." else "Ready"
+                sheetBinding.textTtsStatus.setTextColor(
+                    Color.parseColor(if (playing) "#38BDF8" else "#64748B")
+                )
+            }
             updateVoiceBtn()
+            updateTtsPlaybackUi(false)
+            ttsStateCallback = { playing ->
+                if (sheetDialog.isShowing) updateTtsPlaybackUi(playing)
+            }
 
             sheetBinding.btnTtsVoiceToggle.setOnClickListener {
                 isMale = !isMale
                 prefs.edit().putBoolean("pref_tts_male_voice", isMale).apply()
                 updateVoiceBtn()
                 configureTtsVoice(isMale)
-                Toast.makeText(this, if (isMale) "Male Voice Selected" else "Female Voice Selected", Toast.LENGTH_SHORT).show()
-            }
-
-            val fullText = StringBuilder()
-            val bulletsCount = bulletsArray.length()
-
-            // Executive Summary Paragraph
-            val rawExec = if (explicitSummary.isNotBlank()) {
-                explicitSummary
-            } else if (bulletsCount > 0) {
-                val firstB = bulletsArray.getString(0)
-                if (bulletsCount > 1 && firstB.length < 90) {
-                    firstB + " " + bulletsArray.getString(1)
-                } else {
-                    firstB
+                if (isTtsPlaying) {
+                    startTextToSpeech(buildReadableBriefText())
                 }
-            } else {
-                ""
-            }
-            val execSummary = stripEmojis(rawExec)
-                .replace(Regex("""^[\s•*–—\-\d.)\]]+"""), "")
-                .replace("Furthermore, • ", "Furthermore, ")
-                .trim()
-
-            if (execSummary.isNotBlank()) {
-                sheetBinding.textAiExecutiveHeader.visibility = View.VISIBLE
-                sheetBinding.textAiExecutiveSummary.visibility = View.VISIBLE
-                sheetBinding.textAiExecutiveSummary.text = execSummary
-                fullText.append("Executive Summary: ").append(execSummary).append("\n\n")
             }
 
-            // Key Insights Section
-            val startBulletIndex = if (explicitSummary.isBlank() && execSummary.isNotBlank()) {
-                if (bulletsCount > 1 && bulletsArray.getString(0).length < 90) 2 else 1
-            } else 0
-
-            sheetBinding.layoutSummaryBullets.removeAllViews()
-            val density = resources.displayMetrics.density
-
-            // Forward declaration for interactive follow-up questions
+            // Forward reference for interactive Ask AI
             var askAiQuestionFunc: ((String) -> Unit)? = null
 
-            // Mode Switching (0: Summary & TTS, 1: Ask AI, 2: Truth & Bias Audit)
+            // Clean 3-tab switching (Summary / Ask AI / Truth & Bias)
             fun switchAiMode(mode: Int) {
                 sheetBinding.layoutAiSummarySection.visibility = if (mode == 0) View.VISIBLE else View.GONE
                 sheetBinding.layoutAiChatSection.visibility = if (mode == 1) View.VISIBLE else View.GONE
                 sheetBinding.layoutAiRealityAuditSection.visibility = if (mode == 2) View.VISIBLE else View.GONE
 
                 sheetBinding.btnTabAiSummary.setBackgroundResource(if (mode == 0) R.drawable.bg_ai_tab_selected else 0)
-                sheetBinding.btnTabAiSummary.setTextColor(if (mode == 0) Color.WHITE else Color.parseColor("#94A3B8"))
+                sheetBinding.btnTabAiSummary.setTextColor(Color.parseColor(if (mode == 0) "#FFFFFF" else "#8B95A5"))
 
                 sheetBinding.btnTabAiChat.setBackgroundResource(if (mode == 1) R.drawable.bg_ai_tab_selected else 0)
-                sheetBinding.btnTabAiChat.setTextColor(if (mode == 1) Color.WHITE else Color.parseColor("#94A3B8"))
+                sheetBinding.btnTabAiChat.setTextColor(Color.parseColor(if (mode == 1) "#FFFFFF" else "#8B95A5"))
 
-                sheetBinding.layoutAiTabsContainer.visibility = View.VISIBLE
                 sheetBinding.btnTabAiAudit.setBackgroundResource(if (mode == 2) R.drawable.bg_ai_tab_selected else 0)
-                sheetBinding.btnTabAiAudit.setTextColor(if (mode == 2) Color.WHITE else Color.parseColor("#94A3B8"))
+                sheetBinding.btnTabAiAudit.setTextColor(Color.parseColor(if (mode == 2) "#FFFFFF" else "#8B95A5"))
             }
 
-            fun renderBulletRow(bullet: String, container: LinearLayout) {
+            // Render clean takeaway / claim row with subtle micro-tag and markdown bold support
+            fun renderBulletRow(bullet: String, container: LinearLayout, showDivider: Boolean = true) {
                 val tag = FokkAiEngine.classifyBullet(bullet)
                 val typedVal = android.util.TypedValue()
                 theme.resolveAttribute(android.R.attr.selectableItemBackground, typedVal, true)
@@ -8148,7 +8196,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 val row = LinearLayout(this@MediaHubActivity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.TOP
-                    setPadding((4 * density).toInt(), (8 * density).toInt(), (4 * density).toInt(), (8 * density).toInt())
+                    setPadding((2 * density).toInt(), (10 * density).toInt(), (2 * density).toInt(), (10 * density).toInt())
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
@@ -8157,29 +8205,29 @@ open class MediaHubActivity : AppCompatActivity() {
                     isClickable = true
                     isFocusable = true
                     setOnClickListener {
-                        val escaped = bullet.replace("\"", "\\\"").replace("'", "\\'")
+                        val plain = bullet.replace("**", "")
+                        val escaped = plain.replace("\\", "\\\\").replace("\"", "\\\"").replace("'", "\\'")
                         activeWebView?.evaluateJavascript("window.highlightPageSentence && window.highlightPageSentence(\"$escaped\");", null)
-                        Toast.makeText(this@MediaHubActivity, "Highlighting cited passage on page...", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MediaHubActivity, "Highlighted passage on page", Toast.LENGTH_SHORT).show()
                     }
                 }
 
+                val (tagLabel, bgCol, txtCol) = when (tag) {
+                    "FACT" -> Triple("Fact", "#0C261B", "#34D399")
+                    "OPINION" -> Triple("Opinion", "#1D1736", "#A78BFA")
+                    else -> Triple("Claim", "#251C09", "#FBBF24")
+                }
+
                 val tagTv = TextView(this@MediaHubActivity).apply {
-                    text = tag
-                    textSize = 9f
+                    text = tagLabel
+                    textSize = 10f
                     setTypeface(null, Typeface.BOLD)
-                    letterSpacing = 0.06f
-                    val (bgCol, txtCol) = when (tag) {
-                        "FACT" -> Pair("#0D2818", "#34D399")
-                        "OPINION" -> Pair("#1E1B4B", "#C084FC")
-                        else -> Pair("#261C05", "#FBBF24")
-                    }
                     setTextColor(Color.parseColor(txtCol))
-                    val tagDrawable = android.graphics.drawable.GradientDrawable().apply {
-                        cornerRadius = 4 * density
+                    background = android.graphics.drawable.GradientDrawable().apply {
+                        cornerRadius = 6 * density
                         setColor(Color.parseColor(bgCol))
                     }
-                    background = tagDrawable
-                    setPadding((6 * density).toInt(), (2 * density).toInt(), (6 * density).toInt(), (2 * density).toInt())
+                    setPadding((7 * density).toInt(), (2.5f * density).toInt(), (7 * density).toInt(), (2.5f * density).toInt())
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
@@ -8190,10 +8238,10 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
 
                 val textTv = TextView(this@MediaHubActivity).apply {
-                    text = bullet
-                    setTextColor(Color.parseColor("#F1F5F9"))
-                    textSize = 13.5f
-                    setLineSpacing(3 * density, 1f)
+                    text = formatMarkdownToSpanned(bullet)
+                    setTextColor(Color.parseColor("#E2E8F0"))
+                    textSize = 14f
+                    setLineSpacing(4 * density, 1f)
                     layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                 }
 
@@ -8201,253 +8249,323 @@ open class MediaHubActivity : AppCompatActivity() {
                 row.addView(textTv)
                 container.addView(row)
 
-                val divider = View(this@MediaHubActivity).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        (1 * density).toInt().coerceAtLeast(1)
-                    )
-                    setBackgroundColor(Color.parseColor("#111A28"))
-                }
-                container.addView(divider)
-            }
-
-            for (i in startBulletIndex until bulletsCount) {
-                val rawBullet = bulletsArray.getString(i)
-                val bullet = stripEmojis(rawBullet)
-                    .replace(Regex("""^[\s•*–—\-\d.)\]]+"""), "")
-                    .trim()
-                if (bullet.length < 5) continue
-                fullText.append("• ").append(bullet).append("\n\n")
-                renderBulletRow(bullet, sheetBinding.layoutSummaryBullets)
-            }
-
-            if (metricsArray.length() > 0) {
-                sheetBinding.textMetricsLabel.visibility = View.VISIBLE
-                sheetBinding.chipGroupMetrics.visibility = View.VISIBLE
-                sheetBinding.chipGroupMetrics.removeAllViews()
-
-                for (i in 0 until metricsArray.length()) {
-                    val metric = metricsArray.getString(i)
-                    val chip = Chip(this).apply {
-                        text = metric
-                        setTextColor(getColor(R.color.fokk_cyan))
-                        setChipBackgroundColorResource(R.color.surface_dark)
-                        chipStrokeColor = ColorStateList.valueOf(getColor(R.color.fokk_cyan))
-                        chipStrokeWidth = 1 * density
-                        textSize = 11.5f
+                if (showDivider) {
+                    val divider = View(this@MediaHubActivity).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            (1 * density).toInt().coerceAtLeast(1)
+                        )
+                        setBackgroundColor(Color.parseColor("#111827"))
                     }
-                    sheetBinding.chipGroupMetrics.addView(chip)
+                    container.addView(divider)
                 }
             }
 
-            // Deep-Dive Curiosity Questions (Desktop Parity)
-            if (questionsArray.length() > 0) {
-                sheetBinding.textQuestionsLabel.visibility = View.VISIBLE
-                sheetBinding.layoutFollowUpQuestions.visibility = View.VISIBLE
-                sheetBinding.layoutFollowUpQuestions.removeAllViews()
+            // Render clean 2-column contextual Key Numbers grid (replaces old cyan chip cards)
+            fun renderKeyMetrics(metrics: List<KeyMetric>) {
+                sheetBinding.layoutKeyMetricsGrid.removeAllViews()
+                val valid = metrics.filter { it.value.isNotBlank() && it.label.isNotBlank() }.take(4)
+                if (valid.isEmpty()) {
+                    sheetBinding.textMetricsLabel.visibility = View.GONE
+                    sheetBinding.layoutKeyMetricsGrid.visibility = View.GONE
+                    return
+                }
 
-                for (i in 0 until questionsArray.length()) {
-                    val q = questionsArray.getString(i)
-                    if (q.contains("club announcement", ignoreCase = true) ||
-                        q.contains("contract length", ignoreCase = true) ||
-                        q.contains("wages", ignoreCase = true)) continue
+                sheetBinding.textMetricsLabel.visibility = View.VISIBLE
+                sheetBinding.layoutKeyMetricsGrid.visibility = View.VISIBLE
 
-                    fullText.append("• Deep-Dive Question: ").append(q).append("\n\n")
-
-                    val card = LinearLayout(this).apply {
+                val rows = valid.chunked(2)
+                rows.forEachIndexed { rowIdx, pair ->
+                    val rowLayout = LinearLayout(this@MediaHubActivity).apply {
                         orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
-                        background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_engine_capsule)
-                        setPadding((12 * density).toInt(), (8 * density).toInt(), (12 * density).toInt(), (8 * density).toInt())
                         layoutParams = LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.WRAP_CONTENT
                         ).apply {
-                            bottomMargin = (6 * density).toInt()
-                        }
-                        isClickable = true
-                        isFocusable = true
-                        setOnClickListener {
-                            switchAiMode(1)
-                            askAiQuestionFunc?.invoke(q)
+                            if (rowIdx < rows.size - 1) bottomMargin = (8 * density).toInt()
                         }
                     }
 
-                    val spark = TextView(this).apply {
-                        text = "• "
-                        setTextColor(Color.parseColor("#38BDF8"))
-                        textSize = 13f
-                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    pair.forEachIndexed { colIdx, metric ->
+                        val card = LinearLayout(this@MediaHubActivity).apply {
+                            orientation = LinearLayout.VERTICAL
+                            background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_ai_card)
+                            setPadding((14 * density).toInt(), (12 * density).toInt(), (14 * density).toInt(), (12 * density).toInt())
+                            layoutParams = LinearLayout.LayoutParams(
+                                0,
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                1f
+                            ).apply {
+                                if (colIdx == 0 && pair.size > 1) marginEnd = (4 * density).toInt()
+                                if (colIdx == 1) marginStart = (4 * density).toInt()
+                            }
+                        }
+
+                        val valueTv = TextView(this@MediaHubActivity).apply {
+                            text = metric.value
+                            setTextColor(Color.parseColor("#F8FAFC"))
+                            textSize = 17.5f
+                            setTypeface(null, Typeface.BOLD)
+                            maxLines = 1
+                            ellipsize = TextUtils.TruncateAt.END
+                        }
+
+                        val labelTv = TextView(this@MediaHubActivity).apply {
+                            text = metric.label
+                            setTextColor(Color.parseColor("#94A3B8"))
+                            textSize = 12f
+                            maxLines = 2
+                            ellipsize = TextUtils.TruncateAt.END
+                            setLineSpacing(2 * density, 1f)
+                            layoutParams = LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT
+                            ).apply { topMargin = (3 * density).toInt() }
+                        }
+
+                        card.addView(valueTv)
+                        card.addView(labelTv)
+                        rowLayout.addView(card)
                     }
 
-                    val qTv = TextView(this).apply {
-                        text = q
-                        setTextColor(Color.parseColor("#F1F5F9"))
-                        textSize = 12.5f
-                        setLineSpacing(2 * density, 1f)
-                        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                    // Keep half-row aligned cleanly when odd number of metrics
+                    if (pair.size == 1 && rows.size > 1) {
+                        val spacer = View(this@MediaHubActivity).apply {
+                            layoutParams = LinearLayout.LayoutParams(0, 1, 1f).apply {
+                                marginStart = (4 * density).toInt()
+                            }
+                        }
+                        rowLayout.addView(spacer)
                     }
 
-                    val arrow = TextView(this).apply {
-                        text = ">"
-                        setTextColor(Color.parseColor("#64748B"))
-                        textSize = 12f
-                        setPadding((6 * density).toInt(), 0, 0, 0)
-                    }
-
-                    card.addView(spark)
-                    card.addView(qTv)
-                    card.addView(arrow)
-                    sheetBinding.layoutFollowUpQuestions.addView(card)
+                    sheetBinding.layoutKeyMetricsGrid.addView(rowLayout)
                 }
-            } else {
-                sheetBinding.textQuestionsLabel.visibility = View.GONE
-                sheetBinding.layoutFollowUpQuestions.visibility = View.GONE
             }
 
-            sheetBinding.btnCloseSummary.setOnClickListener {
-                sheetDialog.dismiss()
+            // Unified clean tap-to-ask prompt card renderer
+            fun renderPromptCard(question: String, container: LinearLayout, switchToChat: Boolean) {
+                val card = LinearLayout(this@MediaHubActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_ai_card)
+                    setPadding((14 * density).toInt(), (12 * density).toInt(), (12 * density).toInt(), (12 * density).toInt())
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply { bottomMargin = (8 * density).toInt() }
+                    isClickable = true
+                    isFocusable = true
+                    setOnClickListener {
+                        if (switchToChat) switchAiMode(1)
+                        askAiQuestionFunc?.invoke(question)
+                    }
+                }
+
+                val qTv = TextView(this@MediaHubActivity).apply {
+                    text = question
+                    setTextColor(Color.parseColor("#E2E8F0"))
+                    textSize = 13.5f
+                    setLineSpacing(2 * density, 1f)
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                }
+
+                val chevronTv = TextView(this@MediaHubActivity).apply {
+                    text = "›"
+                    setTextColor(Color.parseColor("#64748B"))
+                    textSize = 18f
+                    setPadding((10 * density).toInt(), 0, (2 * density).toInt(), 0)
+                }
+
+                card.addView(qTv)
+                card.addView(chevronTv)
+                container.addView(card)
             }
 
-            sheetBinding.btnAiHistory.setOnClickListener {
-                showAiHistorySheet()
+            fun renderFollowUpSection(questions: List<String>) {
+                sheetBinding.layoutFollowUpQuestions.removeAllViews()
+                if (questions.isEmpty()) {
+                    sheetBinding.textQuestionsLabel.visibility = View.GONE
+                    sheetBinding.layoutFollowUpQuestions.visibility = View.GONE
+                    return
+                }
+                sheetBinding.textQuestionsLabel.visibility = View.VISIBLE
+                sheetBinding.layoutFollowUpQuestions.visibility = View.VISIBLE
+                questions.take(3).forEach { q ->
+                    renderPromptCard(q, sheetBinding.layoutFollowUpQuestions, switchToChat = true)
+                }
             }
+
+            // Initial immediate render from on-device extraction
+            if (currentExecutiveSummary.isNotBlank()) {
+                sheetBinding.textAiExecutiveHeader.visibility = View.VISIBLE
+                sheetBinding.textAiExecutiveSummary.visibility = View.VISIBLE
+                sheetBinding.textAiExecutiveSummary.text = formatMarkdownToSpanned(currentExecutiveSummary)
+            }
+
+            sheetBinding.layoutSummaryBullets.removeAllViews()
+            currentBullets.forEachIndexed { idx, bullet ->
+                renderBulletRow(bullet, sheetBinding.layoutSummaryBullets, showDivider = idx < currentBullets.size - 1)
+            }
+
+            renderKeyMetrics(currentMetrics)
+            renderFollowUpSection(currentQuestions)
+
+            // Populate Ask AI Welcome Quick Prompts
+            sheetBinding.layoutChatQuickPrompts.removeAllViews()
+            val quickStarters = listOf(
+                "Summarize this page in 3 concise bullet points",
+                "Who published this and what is the main takeaway?",
+                "Fact-check the key claims and note any missing context"
+            )
+            quickStarters.forEach { starter ->
+                renderPromptCard(starter, sheetBinding.layoutChatQuickPrompts, switchToChat = false)
+            }
+
+            // Button Listeners
+            sheetBinding.btnCloseSummary.setOnClickListener { sheetDialog.dismiss() }
+            sheetBinding.btnAiHistory.setOnClickListener { showAiHistorySheet() }
+            sheetBinding.btnSummaryTrustPill.setOnClickListener { switchAiMode(2) }
 
             sheetBinding.btnCopySummary.setOnClickListener {
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("Fokk Summary", fullText.toString().trim()))
-                Toast.makeText(this, "Summary copied to clipboard", Toast.LENGTH_SHORT).show()
-                sheetDialog.dismiss()
+                clipboard.setPrimaryClip(ClipData.newPlainText("Fokk AI Summary", buildReadableBriefText()))
+                Toast.makeText(this, "Summary copied", Toast.LENGTH_SHORT).show()
             }
 
             sheetBinding.btnListenSummary.setOnClickListener {
-                configureTtsVoice(isMale)
-                startTextToSpeech(fullText.toString().trim())
-                Toast.makeText(this, "Reading summary aloud (${if (isMale) "Male" else "Female"} voice)...", Toast.LENGTH_SHORT).show()
+                if (isTtsPlaying) {
+                    stopTextToSpeech()
+                } else {
+                    val textToSpeak = buildReadableBriefText()
+                    if (textToSpeak.isNotBlank()) {
+                        startTextToSpeech(textToSpeak)
+                    }
+                }
             }
 
             sheetBinding.btnTabAiSummary.setOnClickListener { switchAiMode(0) }
             sheetBinding.btnTabAiChat.setOnClickListener { switchAiMode(1) }
             sheetBinding.btnTabAiAudit.setOnClickListener { switchAiMode(2) }
 
-            // Auto-collapse / hide top tabs on downward scroll and restore on upward scroll
-            val onScrollCollapseTabs: (Int, Int) -> Unit = { scrollY, oldScrollY ->
-                val dy = scrollY - oldScrollY
-                if (dy > 16 && scrollY > 40) {
-                    if (sheetBinding.layoutAiTabsContainer.visibility != View.GONE) {
-                        sheetBinding.layoutAiTabsContainer.visibility = View.GONE
-                    }
-                } else if (dy < -12 || scrollY <= 10) {
-                    if (sheetBinding.layoutAiTabsContainer.visibility != View.VISIBLE) {
-                        sheetBinding.layoutAiTabsContainer.visibility = View.VISIBLE
+            switchAiMode(initialTab)
+
+            // Baseline Truth & Bias Initialization
+            fun applyCredibilityUi(
+                score: Int,
+                verdict: String,
+                reason: String,
+                bias: String,
+                l1: String,
+                l2: String,
+                l3: String,
+                isAggregator: Boolean,
+                originalSource: String,
+                aggregatorSource: String,
+                whatsMissing: String
+            ) {
+                val scoreColor = when {
+                    score >= 82 -> "#34D399"
+                    score >= 68 -> "#38BDF8"
+                    score >= 50 -> "#FBBF24"
+                    else -> "#F87171"
+                }
+                val parsedColor = Color.parseColor(scoreColor)
+
+                sheetBinding.textSummaryTrustVerdict.text = verdict
+                sheetBinding.textSummaryTrustScore.text = "$score%"
+                sheetBinding.textSummaryTrustVerdict.setTextColor(parsedColor)
+                sheetBinding.textSummaryTrustScore.setTextColor(parsedColor)
+                sheetBinding.imgSummaryTrustIcon.setColorFilter(parsedColor)
+
+                sheetBinding.textAiCredibilityScore.text = "$score% · $verdict"
+                sheetBinding.textAiCredibilityScore.setTextColor(parsedColor)
+                sheetBinding.progressCredibilityScore.progress = score
+                sheetBinding.progressCredibilityScore.progressTintList = ColorStateList.valueOf(parsedColor)
+                sheetBinding.textAiCredibilityReason.text = reason
+                sheetBinding.textAiBiasRating.text = bias
+                sheetBinding.textAiSourceReputation.text = l1
+                sheetBinding.textAiBiasAnalysis.text = l2
+                sheetBinding.textAiEvidenceDensity.text = l3
+
+                if (isAggregator && originalSource.isNotBlank()) {
+                    val agg = aggregatorSource.ifBlank { publisherName }
+                    sheetBinding.layoutAuditSourceChain.visibility = View.VISIBLE
+                    sheetBinding.textAuditSourceChainFlow.text = "$originalSource → $agg"
+                } else if (originalSource.isNotBlank() && !originalSource.equals(publisherName, ignoreCase = true)) {
+                    sheetBinding.layoutAuditSourceChain.visibility = View.VISIBLE
+                    sheetBinding.textAuditSourceChainFlow.text = "$originalSource → $publisherName"
+                } else {
+                    sheetBinding.layoutAuditSourceChain.visibility = View.GONE
+                }
+
+                if (whatsMissing.isNotBlank()) {
+                    sheetBinding.layoutSummaryWhatsMissing.visibility = View.VISIBLE
+                    sheetBinding.textSummaryWhatsMissing.text = whatsMissing
+                } else {
+                    sheetBinding.layoutSummaryWhatsMissing.visibility = View.GONE
+                }
+            }
+
+            val initialEval = FokkAiEngine.evaluateCredibility(
+                host = sourceHost,
+                title = title,
+                context = currentExecutiveSummary.ifBlank { lastAiPageContext },
+                sources = emptyList()
+            )
+            applyCredibilityUi(
+                score = initialEval.score,
+                verdict = initialEval.verdict,
+                reason = initialEval.reason,
+                bias = "Objective Reporting",
+                l1 = initialEval.layer1,
+                l2 = initialEval.layer2,
+                l3 = initialEval.layer3,
+                isAggregator = initialEval.isAggregator,
+                originalSource = initialEval.originalSource,
+                aggregatorSource = initialEval.aggregatorSource,
+                whatsMissing = initialEval.whatsMissing
+            )
+
+            // Populate initial Claims Breakdown
+            sheetBinding.layoutAiExtractedClaims.removeAllViews()
+            val initialClaims = currentBullets.take(4).ifEmpty {
+                if (currentExecutiveSummary.isNotBlank()) listOf(currentExecutiveSummary) else emptyList()
+            }
+            initialClaims.forEachIndexed { idx, claim ->
+                renderBulletRow(claim, sheetBinding.layoutAiExtractedClaims, showDivider = idx < initialClaims.size - 1)
+            }
+
+            // Multi-turn Conversation History for Ask AI
+            val chatHistory = mutableListOf<Pair<String, String>>()
+
+            // Helper: smooth scroll Ask AI only if user hasn't scrolled far up
+            fun scrollChatToBottomIfNearEnd() {
+                sheetBinding.scrollAiChatResponses.post {
+                    val sv = sheetBinding.scrollAiChatResponses
+                    val child = sv.getChildAt(0) ?: return@post
+                    val distanceFromBottom = child.bottom - (sv.scrollY + sv.height)
+                    if (distanceFromBottom < (220 * density).toInt()) {
+                        sv.smoothScrollTo(0, child.bottom)
                     }
                 }
             }
 
-            sheetBinding.layoutAiSummarySection.setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
-                onScrollCollapseTabs(scrollY, oldScrollY)
-            }
-            sheetBinding.layoutAiRealityAuditSection.setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
-                onScrollCollapseTabs(scrollY, oldScrollY)
-            }
-            sheetBinding.scrollAiChatResponses.setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
-                onScrollCollapseTabs(scrollY, oldScrollY)
-            }
-
-            switchAiMode(initialTab)
-
-            // Dynamic Truth & Bias Audit Baseline Initialization
-            val initialEval = FokkAiEngine.evaluateCredibility(
-                host = sourceHost,
-                title = title,
-                context = explicitSummary.ifBlank { lastAiPageContext },
-                sources = emptyList()
-            )
-            var activeScore = initialEval.score
-            var activeVerdict = initialEval.verdict
-            val initialColor = when {
-                activeScore >= 85 -> "#34D399"
-                activeScore >= 70 -> "#38BDF8"
-                activeScore >= 50 -> "#FBBF24"
-                else -> "#F87171"
-            }
-            val initialBias = "Neutral / Fact-Focused"
-            val initialL1 = initialEval.layer1
-            val initialL2 = initialEval.layer2
-            val initialL3 = initialEval.layer3
-
-            sheetBinding.textSummaryTrustVerdict.text = activeVerdict
-            sheetBinding.textSummaryTrustScore.text = "$activeScore%"
-            sheetBinding.textSummaryTrustReason.text = initialEval.reason
-            sheetBinding.textSummaryTrustVerdict.setTextColor(Color.parseColor(initialColor))
-            sheetBinding.textSummaryTrustScore.setTextColor(Color.parseColor(initialColor))
-
-            if (initialEval.isAggregator || initialEval.originalSource.isNotBlank()) {
-                val orig = initialEval.originalSource.ifBlank { "Primary Reporting" }
-                val agg = initialEval.aggregatorSource.ifBlank { sourceHost }
-                val flow = "$orig -> $agg -> Active Session"
-                sheetBinding.layoutSummarySourceChain.visibility = View.VISIBLE
-                sheetBinding.textSummarySourceChainFlow.text = flow
-                sheetBinding.layoutAuditSourceChain.visibility = View.VISIBLE
-                sheetBinding.textAuditSourceChainFlow.text = flow
-            } else {
-                sheetBinding.layoutSummarySourceChain.visibility = View.GONE
-                sheetBinding.layoutAuditSourceChain.visibility = View.GONE
-            }
-
-            if (initialEval.whatsMissing.isNotBlank()) {
-                sheetBinding.layoutSummaryWhatsMissing.visibility = View.VISIBLE
-                sheetBinding.textSummaryWhatsMissing.text = initialEval.whatsMissing
-            } else {
-                sheetBinding.layoutSummaryWhatsMissing.visibility = View.GONE
-            }
-
-            sheetBinding.textAiCredibilityScore.text = "$activeScore% $activeVerdict"
-            sheetBinding.textAiCredibilityScore.setTextColor(Color.parseColor(initialColor))
-            sheetBinding.progressCredibilityScore.progress = activeScore
-            sheetBinding.progressCredibilityScore.progressTintList =
-                android.content.res.ColorStateList.valueOf(Color.parseColor(initialColor))
-            sheetBinding.textAiCredibilityReason.text = initialEval.reason
-            sheetBinding.textAiBiasRating.text = initialBias
-            sheetBinding.textAiSourceReputation.text = initialL1
-            sheetBinding.textAiBiasAnalysis.text = initialL2
-            sheetBinding.textAiEvidenceDensity.text = initialL3
-
-            // Unboxed Key Verifiable Factual Claims
-            sheetBinding.layoutAiExtractedClaims.removeAllViews()
-            val claimsToDisplay = mutableListOf<String>()
-            for (i in 0 until minOf(4, bulletsArray.length())) {
-                val raw = bulletsArray.getString(i)
-                val clean = stripEmojis(raw).replace(Regex("""^[\s•*–—\-\d.)\]]+"""), "").trim()
-                if (clean.length > 5) claimsToDisplay.add(clean)
-            }
-            if (claimsToDisplay.isEmpty() && explicitSummary.isNotBlank()) {
-                val clean = stripEmojis(explicitSummary).replace(Regex("""^[\s•*–—\-\d.)\]]+"""), "").trim()
-                if (clean.length > 5) claimsToDisplay.add(clean)
-            }
-            if (claimsToDisplay.isEmpty()) {
-                claimsToDisplay.add("Zero unverifiable claims detected on page.")
-            }
-            for (claim in claimsToDisplay) {
-                renderBulletRow(claim, sheetBinding.layoutAiExtractedClaims)
-            }
-
-            // Interactive Ask AI Chat Assistant (Open-World Unboxed Canvas & Typewriter Stream)
+            // Clean, Uncluttered Ask AI Response Renderer (Logo + "Fokk AI" only, zero percentage/verdict spam)
             fun renderChatAnswerCard(
                 container: LinearLayout,
                 question: String,
                 answer: String,
-                sourceHost: String,
-                sourceUrl: String,
+                pageSourceHost: String,
+                pageSourceUrl: String,
                 searchSources: List<BrowserSearchResult> = emptyList(),
                 followUps: List<String> = emptyList()
             ) {
-                // Remove thinking indicator while keeping user question header
-                if (container.childCount > 1) {
-                    container.removeViewAt(1)
+                // Remove thinking indicator while keeping user question bubble
+                while (container.childCount > 1) {
+                    container.removeViewAt(container.childCount - 1)
                 }
 
-                // 1. AI Header Row (Unboxed)
+                // 1. Minimal Clean Header: Fokk AI logo + "Fokk AI" (no score, no verdict, no source count)
                 val aiHeaderRow = LinearLayout(this@MediaHubActivity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
@@ -8455,76 +8573,68 @@ open class MediaHubActivity : AppCompatActivity() {
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                     ).apply {
-                        topMargin = (4 * density).toInt()
-                        bottomMargin = (6 * density).toInt()
+                        topMargin = (6 * density).toInt()
+                        bottomMargin = (8 * density).toInt()
                     }
                 }
 
-                val aiSparkle = ImageView(this@MediaHubActivity).apply {
+                val aiLogo = ImageView(this@MediaHubActivity).apply {
                     setImageResource(R.drawable.ic_fokk_ai_logo)
                     layoutParams = LinearLayout.LayoutParams((18 * density).toInt(), (18 * density).toInt()).apply {
                         marginEnd = (8 * density).toInt()
                     }
-                    scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                    scaleType = ImageView.ScaleType.FIT_CENTER
                 }
 
                 val aiTitleTv = TextView(this@MediaHubActivity).apply {
-                    text = "FOKK AI"
-                    setTextColor(Color.parseColor("#00E5FF"))
-                    textSize = 11.5f
-                    setTypeface(null, Typeface.BOLD)
-                    letterSpacing = 0.08f
-                }
-
-                val auditScoreTv = TextView(this@MediaHubActivity).apply {
-                    val count = searchSources.size + (if (sourceHost.isNotBlank()) 1 else 0)
-                    text = if (count > 0) " · $activeScore% $activeVerdict (" + count + " SOURCES)" else " · $activeScore% $activeVerdict"
-                    val scoreColor = when {
-                        activeScore >= 85 -> "#34D399"
-                        activeScore >= 70 -> "#38BDF8"
-                        activeScore >= 50 -> "#FBBF24"
-                        else -> "#F87171"
-                    }
-                    setTextColor(Color.parseColor(scoreColor))
-                    textSize = 10.5f
+                    text = "Fokk AI"
+                    setTextColor(Color.parseColor("#F8FAFC"))
+                    textSize = 13.5f
                     setTypeface(null, Typeface.BOLD)
                 }
 
-                aiHeaderRow.addView(aiSparkle)
+                aiHeaderRow.addView(aiLogo)
                 aiHeaderRow.addView(aiTitleTv)
-                aiHeaderRow.addView(auditScoreTv)
                 container.addView(aiHeaderRow)
 
-                // 2. Unboxed Answer TextView (Typewriter Animated)
+                // 2. Crisp Answer TextView
                 val aTv = TextView(this@MediaHubActivity).apply {
-                    setTextColor(Color.parseColor("#F1F5F9"))
-                    textSize = 14f
-                    setLineSpacing(4 * density, 1f)
+                    setTextColor(Color.parseColor("#E2E8F0"))
+                    textSize = 14.5f
+                    setLineSpacing(5 * density, 1f)
+                    setTextIsSelectable(true)
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply { bottomMargin = (8 * density).toInt() }
+                    ).apply { bottomMargin = (10 * density).toInt() }
                 }
                 container.addView(aTv)
 
-                // 3. Action Row: Copy, Read Aloud, Explore (Unboxed)
+                val cleanAnswerText = FokkAiEngine.cleanDropCaps(
+                    stripEmojis(answer)
+                        .replace(Regex("""(?is)###\s*CORROBORATING SOURCES.*?(?=###|$)"""), "")
+                        .replace(Regex("""(?m)^\d+\.\s*\*\*.*?\*\*\s*\(.*?\)\s*\[.*?\]\s*$"""), "")
+                        .trim()
+                )
+
+                // 3. Minimal Action Row: Copy, Listen, Web Search
                 val actionRow = LinearLayout(this@MediaHubActivity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     visibility = View.GONE
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply { topMargin = (4 * density).toInt() }
+                    ).apply { topMargin = (2 * density).toInt() }
                 }
 
                 fun makeActionChip(label: String, onClick: () -> Unit): TextView {
                     return TextView(this@MediaHubActivity).apply {
                         text = label
                         setTextColor(Color.parseColor("#94A3B8"))
-                        textSize = 11f
+                        textSize = 11.5f
                         setTypeface(null, Typeface.BOLD)
-                        background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_engine_capsule)
-                        setPadding((12 * density).toInt(), (5 * density).toInt(), (12 * density).toInt(), (5 * density).toInt())
+                        background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_ai_pill)
+                        setPadding((12 * density).toInt(), (6 * density).toInt(), (12 * density).toInt(), (6 * density).toInt())
                         layoutParams = LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.WRAP_CONTENT,
                             ViewGroup.LayoutParams.WRAP_CONTENT
@@ -8535,31 +8645,26 @@ open class MediaHubActivity : AppCompatActivity() {
                     }
                 }
 
-                val copyBtn = makeActionChip("Copy") {
+                actionRow.addView(makeActionChip("Copy") {
                     val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("Fokk AI Answer", answer))
-                    Toast.makeText(this@MediaHubActivity, "Answer copied to clipboard", Toast.LENGTH_SHORT).show()
-                }
+                    clipboard.setPrimaryClip(ClipData.newPlainText("Fokk AI Answer", cleanAnswerText))
+                    Toast.makeText(this@MediaHubActivity, "Copied", Toast.LENGTH_SHORT).show()
+                })
 
-                val ttsBtn = makeActionChip("Read Aloud") {
-                    startTextToSpeech(answer)
-                    Toast.makeText(this@MediaHubActivity, "Reading answer aloud...", Toast.LENGTH_SHORT).show()
-                }
+                actionRow.addView(makeActionChip("Listen") {
+                    startTextToSpeech(cleanAnswerText)
+                })
 
-                val exploreBtn = makeActionChip("Explore") {
+                actionRow.addView(makeActionChip("Web Search") {
                     sheetDialog.dismiss()
                     val searchUrl = currentSearchEngine.searchUrl + Uri.encode(question)
                     addNewTab(searchUrl, isPrivate = activeTab?.isPrivate == true)
-                }
-
-                actionRow.addView(copyBtn)
-                actionRow.addView(ttsBtn)
-                actionRow.addView(exploreBtn)
+                })
 
                 container.addView(actionRow)
 
-                // 4. VERIFIED WITH: Horizontal scroll of all verified sources
-                val verifiedWithContainer = LinearLayout(this@MediaHubActivity).apply {
+                // 4. Clean Sources Row (only quality domains)
+                val sourcesContainer = LinearLayout(this@MediaHubActivity).apply {
                     orientation = LinearLayout.VERTICAL
                     visibility = View.GONE
                     layoutParams = LinearLayout.LayoutParams(
@@ -8568,50 +8673,46 @@ open class MediaHubActivity : AppCompatActivity() {
                     ).apply { topMargin = (12 * density).toInt() }
                 }
 
-                val verifiedLabel = TextView(this@MediaHubActivity).apply {
-                    text = "VERIFIED WITH:"
+                val sourcesLabel = TextView(this@MediaHubActivity).apply {
+                    text = "Sources"
                     setTextColor(Color.parseColor("#64748B"))
-                    textSize = 10.5f
+                    textSize = 11.5f
                     setTypeface(null, Typeface.BOLD)
-                    letterSpacing = 0.08f
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                     ).apply { bottomMargin = (6 * density).toInt() }
                 }
-                verifiedWithContainer.addView(verifiedLabel)
+                sourcesContainer.addView(sourcesLabel)
 
-                val verifiedScrollView = HorizontalScrollView(this@MediaHubActivity).apply {
+                val sourcesScroll = HorizontalScrollView(this@MediaHubActivity).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply { bottomMargin = (8 * density).toInt() }
+                    ).apply { bottomMargin = (4 * density).toInt() }
                     isHorizontalScrollBarEnabled = false
+                    overScrollMode = View.OVER_SCROLL_NEVER
                 }
 
-                val verifiedWithRow = LinearLayout(this@MediaHubActivity).apply {
+                val sourcesRow = LinearLayout(this@MediaHubActivity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
-                    layoutParams = LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
                 }
-                verifiedScrollView.addView(verifiedWithRow)
-                verifiedWithContainer.addView(verifiedScrollView)
+                sourcesScroll.addView(sourcesRow)
+                sourcesContainer.addView(sourcesScroll)
 
                 val allSources = mutableListOf<BrowserSearchResult>()
-                if (sourceHost.isNotBlank() && sourceUrl.isNotBlank()) {
-                    allSources.add(BrowserSearchResult(title.ifBlank { sourceHost }, sourceUrl, sourceHost, ""))
+                if (pageSourceHost.isNotBlank() && pageSourceUrl.isNotBlank()) {
+                    allSources.add(BrowserSearchResult(title.ifBlank { pageSourceHost }, pageSourceUrl, pageSourceHost, ""))
                 }
-                allSources.addAll(searchSources.filter { it.url != sourceUrl && it.url.isNotBlank() })
+                allSources.addAll(searchSources.filter { it.url != pageSourceUrl && it.url.isNotBlank() })
 
-                for (s in allSources) {
+                for (s in allSources.take(5)) {
                     val pill = LinearLayout(this@MediaHubActivity).apply {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.CENTER_VERTICAL
-                        background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_engine_capsule)
-                        setPadding((8 * density).toInt(), (5 * density).toInt(), (10 * density).toInt(), (5 * density).toInt())
+                        background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_ai_pill)
+                        setPadding((10 * density).toInt(), (6 * density).toInt(), (12 * density).toInt(), (6 * density).toInt())
                         layoutParams = LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.WRAP_CONTENT,
                             ViewGroup.LayoutParams.WRAP_CONTENT
@@ -8625,10 +8726,10 @@ open class MediaHubActivity : AppCompatActivity() {
                     }
                     val pillFavicon = ImageView(this@MediaHubActivity).apply {
                         layoutParams = LinearLayout.LayoutParams((14 * density).toInt(), (14 * density).toInt()).apply {
-                            marginEnd = (5 * density).toInt()
+                            marginEnd = (6 * density).toInt()
                         }
                         setImageResource(R.drawable.ic_world)
-                        setColorFilter(Color.parseColor("#38BDF8"))
+                        setColorFilter(Color.parseColor("#64748B"))
                     }
                     val pillDomain = s.domain.ifBlank { s.url }.removePrefix("www.")
                     if (pillDomain.isNotBlank()) {
@@ -8639,176 +8740,160 @@ open class MediaHubActivity : AppCompatActivity() {
                                 conn.connectTimeout = 3000
                                 conn.readTimeout = 3000
                                 val bmp = BitmapFactory.decodeStream(conn.inputStream)
-                                if (bmp != null) runOnUiThread { pillFavicon.clearColorFilter(); pillFavicon.setImageBitmap(bmp) }
+                                if (bmp != null) runOnUiThread {
+                                    if (sheetDialog.isShowing) {
+                                        pillFavicon.clearColorFilter()
+                                        pillFavicon.setImageBitmap(bmp)
+                                    }
+                                }
                             } catch (_: Exception) {}
                         }.start()
                     }
                     val pillTv = TextView(this@MediaHubActivity).apply {
-                        text = pillDomain.split(".").firstOrNull()?.replaceFirstChar { it.uppercase() } ?: pillDomain
-                        setTextColor(Color.parseColor("#E2E8F0"))
+                        text = FokkSearchAggregator.cleanPublisherName(pillDomain)
+                        setTextColor(Color.parseColor("#CBD5E1"))
                         textSize = 11.5f
                         setTypeface(null, Typeface.BOLD)
                     }
                     pill.addView(pillFavicon)
                     pill.addView(pillTv)
-                    verifiedWithRow.addView(pill)
+                    sourcesRow.addView(pill)
                 }
 
-                // 6. SUGGESTED FOLLOW-UPS (Image 6 style)
+                // 5. Clean Follow-Up Questions
                 val followUpsContainer = LinearLayout(this@MediaHubActivity).apply {
                     orientation = LinearLayout.VERTICAL
                     visibility = View.GONE
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply { topMargin = (10 * density).toInt() }
+                    ).apply { topMargin = (12 * density).toInt() }
                 }
 
-                if (followUps.isNotEmpty()) {
+                val cleanFollowUps = followUps.map { stripEmojis(it).trim() }.filter { it.length > 6 }.take(2)
+                if (cleanFollowUps.isNotEmpty()) {
                     val followUpsLabel = TextView(this@MediaHubActivity).apply {
-                        text = "SUGGESTED FOLLOW-UPS:"
+                        text = "Related"
                         setTextColor(Color.parseColor("#64748B"))
-                        textSize = 10.5f
+                        textSize = 11.5f
                         setTypeface(null, Typeface.BOLD)
-                        letterSpacing = 0.08f
                         layoutParams = LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.WRAP_CONTENT
-                        ).apply { bottomMargin = (8 * density).toInt() }
+                        ).apply { bottomMargin = (6 * density).toInt() }
                     }
                     followUpsContainer.addView(followUpsLabel)
-
-                    for (fq in followUps) {
-                        val fqCard = LinearLayout(this@MediaHubActivity).apply {
-                            orientation = LinearLayout.HORIZONTAL
-                            gravity = Gravity.CENTER_VERTICAL
-                            background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_engine_capsule)
-                            setPadding((14 * density).toInt(), (12 * density).toInt(), (10 * density).toInt(), (12 * density).toInt())
-                            layoutParams = LinearLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.WRAP_CONTENT
-                            ).apply { bottomMargin = (8 * density).toInt() }
-                            isClickable = true
-                            isFocusable = true
-                            setOnClickListener {
-                                sheetBinding.editAiUserQuestion.setText(fq)
-                                askAiQuestionFunc?.invoke(fq)
-                            }
-                        }
-                        val fqTv = TextView(this@MediaHubActivity).apply {
-                            text = fq
-                            setTextColor(Color.parseColor("#F1F5F9"))
-                            textSize = 13.5f
-                            setLineSpacing(2 * density, 1f)
-                            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                        }
-                        val arrowTv = TextView(this@MediaHubActivity).apply {
-                            text = ">"
-                            setTextColor(Color.parseColor("#64748B"))
-                            textSize = 14f
-                            layoutParams = LinearLayout.LayoutParams(
-                                ViewGroup.LayoutParams.WRAP_CONTENT,
-                                ViewGroup.LayoutParams.WRAP_CONTENT
-                            ).apply { marginStart = (8 * density).toInt() }
-                        }
-                        fqCard.addView(fqTv)
-                        fqCard.addView(arrowTv)
-                        followUpsContainer.addView(fqCard)
+                    cleanFollowUps.forEach { fq ->
+                        renderPromptCard(fq, followUpsContainer, switchToChat = false)
                     }
                 }
 
-                container.addView(verifiedWithContainer)
+                container.addView(sourcesContainer)
                 container.addView(followUpsContainer)
 
-                // 7. Typewriter Streaming Text Animation (Clean synthesized answer)
-                val cleanAnswerText = answer
-                    .replace(Regex("(?is)###\\s*CORROBORATING SOURCES.*?(?=###|$)"), "")
-                    .replace(Regex("(?m)^\\d+\\.\\s*\\*\\*.*?\\*\\*\\s*\\(.*?\\)\\s*\\[.*?\\]\\s*$"), "")
-                    .replace(Regex("(?m)^\\s*Reported by.*?$"), "")
-                    .trim()
+                // Subtle separator between turns
+                val turnDivider = View(this@MediaHubActivity).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        (1 * density).toInt().coerceAtLeast(1)
+                    ).apply { topMargin = (14 * density).toInt() }
+                    setBackgroundColor(Color.parseColor("#111827"))
+                }
+                container.addView(turnDivider)
+
+                // 6. Smooth Non-Intrusive Text Reveal (never steals focus or fights manual scroll)
                 val words = cleanAnswerText.split(" ")
-                if (words.size <= 3) {
+                if (words.size <= 8) {
                     aTv.text = formatMarkdownToSpanned(cleanAnswerText)
                     actionRow.visibility = View.VISIBLE
-                    if (allSources.isNotEmpty()) verifiedWithContainer.visibility = View.VISIBLE
-                    if (followUps.isNotEmpty()) followUpsContainer.visibility = View.VISIBLE
+                    if (allSources.isNotEmpty()) sourcesContainer.visibility = View.VISIBLE
+                    if (cleanFollowUps.isNotEmpty()) followUpsContainer.visibility = View.VISIBLE
+                    scrollChatToBottomIfNearEnd()
                 } else {
                     var currentWordIndex = 0
                     val streamedBuilder = StringBuilder()
-                    val streamStep = maxOf(1, words.size / 40)
+                    val streamStep = maxOf(2, words.size / 26)
                     val streamHandler = Handler(Looper.getMainLooper())
-                    val streamRunnable = object : Runnable {
-                        override fun run() {
-                            val nextWordIndex = minOf(currentWordIndex + streamStep, words.size)
-                            for (w in currentWordIndex until nextWordIndex) {
-                                if (streamedBuilder.isNotEmpty()) streamedBuilder.append(" ")
-                                streamedBuilder.append(words[w])
-                            }
-                            currentWordIndex = nextWordIndex
-                            val isDone = currentWordIndex >= words.size
-                            val cursorText = if (!isDone) streamedBuilder.toString() + " \u258C" else streamedBuilder.toString()
-                            aTv.text = formatMarkdownToSpanned(cursorText)
+                    lateinit var streamRunnable: Runnable
+                    streamRunnable = Runnable {
+                        if (!sheetDialog.isShowing) return@Runnable
+                        val nextWordIndex = minOf(currentWordIndex + streamStep, words.size)
+                        for (w in currentWordIndex until nextWordIndex) {
+                            if (streamedBuilder.isNotEmpty()) streamedBuilder.append(" ")
+                            streamedBuilder.append(words[w])
+                        }
+                        currentWordIndex = nextWordIndex
+                        val isDone = currentWordIndex >= words.size
+                        aTv.text = formatMarkdownToSpanned(streamedBuilder.toString())
 
-                            sheetBinding.scrollAiChatResponses.post {
-                                sheetBinding.scrollAiChatResponses.fullScroll(View.FOCUS_DOWN)
-                            }
-
-                            if (!isDone) {
-                                streamHandler.postDelayed(this, 25L)
-                            } else {
-                                aTv.text = formatMarkdownToSpanned(answer)
-                                actionRow.visibility = View.VISIBLE
-                                if (allSources.isNotEmpty()) verifiedWithContainer.visibility = View.VISIBLE
-                                if (followUps.isNotEmpty()) followUpsContainer.visibility = View.VISIBLE
-                            }
+                        if (!isDone) {
+                            scrollChatToBottomIfNearEnd()
+                            streamHandler.postDelayed(streamRunnable, 22L)
+                        } else {
+                            aTv.text = formatMarkdownToSpanned(cleanAnswerText)
+                            actionRow.visibility = View.VISIBLE
+                            if (allSources.isNotEmpty()) sourcesContainer.visibility = View.VISIBLE
+                            if (cleanFollowUps.isNotEmpty()) followUpsContainer.visibility = View.VISIBLE
+                            scrollChatToBottomIfNearEnd()
                         }
                     }
+                    activeStreamHandlers.add(Pair(streamHandler, streamRunnable))
                     streamHandler.post(streamRunnable)
                 }
             }
 
             fun askAiQuestion(query: String) {
-                if (query.isBlank()) return
+                val cleanQuery = query.trim()
+                if (cleanQuery.isBlank()) return
                 sheetBinding.editAiUserQuestion.text?.clear()
+                sheetBinding.layoutChatEmptyState.visibility = View.GONE
+
+                // Hide soft keyboard cleanly so answer is visible
+                try {
+                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    imm.hideSoftInputFromWindow(sheetBinding.editAiUserQuestion.windowToken, 0)
+                } catch (_: Exception) {}
 
                 if (!checkAndIncrementAiQuota()) {
                     showAiQuotaExceededDialog()
                     return
                 }
 
-                val thinkingContainer = LinearLayout(this@MediaHubActivity).apply {
+                val turnContainer = LinearLayout(this@MediaHubActivity).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding(0, (6 * density).toInt(), 0, (14 * density).toInt())
+                    setPadding(0, (6 * density).toInt(), 0, (10 * density).toInt())
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply { bottomMargin = (12 * density).toInt() }
+                    )
                 }
 
+                // Right-aligned user question bubble
                 val qRow = LinearLayout(this@MediaHubActivity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.END or Gravity.CENTER_VERTICAL
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply { bottomMargin = (8 * density).toInt() }
+                    ).apply { bottomMargin = (10 * density).toInt() }
                 }
 
                 val qPill = TextView(this@MediaHubActivity).apply {
-                    text = query
-                    setTextColor(Color.parseColor("#FFFFFF"))
-                    textSize = 13.5f
-                    setTypeface(null, Typeface.BOLD)
-                    background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_stat_chip)
-                    setPadding((14 * density).toInt(), (8 * density).toInt(), (14 * density).toInt(), (8 * density).toInt())
+                    text = cleanQuery
+                    setTextColor(Color.parseColor("#F8FAFC"))
+                    textSize = 14f
+                    background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_ai_user_bubble)
+                    setPadding((14 * density).toInt(), (10 * density).toInt(), (14 * density).toInt(), (10 * density).toInt())
+                    maxWidth = (resources.displayMetrics.widthPixels * 0.80f).toInt()
                 }
                 qRow.addView(qPill)
-                thinkingContainer.addView(qRow)
+                turnContainer.addView(qRow)
 
+                // Clean thinking indicator
                 val thinkingRow = LinearLayout(this@MediaHubActivity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
-                    setPadding((4 * density).toInt(), (4 * density).toInt(), 0, 0)
+                    setPadding(0, (4 * density).toInt(), 0, (8 * density).toInt())
                 }
 
                 val thinkingLogo = ImageView(this@MediaHubActivity).apply {
@@ -8820,43 +8905,52 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
 
                 val thinkingTv = TextView(this@MediaHubActivity).apply {
-                    text = "Fokk AI is analyzing context..."
-                    setTextColor(Color.parseColor("#38BDF8"))
-                    textSize = 13f
-                    setTypeface(null, Typeface.BOLD)
+                    text = "Thinking..."
+                    setTextColor(Color.parseColor("#94A3B8"))
+                    textSize = 13.5f
                 }
 
                 thinkingRow.addView(thinkingLogo)
                 thinkingRow.addView(thinkingTv)
-                thinkingContainer.addView(thinkingRow)
-                sheetBinding.layoutAiChatResponses.addView(thinkingContainer)
+                turnContainer.addView(thinkingRow)
+                sheetBinding.layoutAiChatResponses.addView(turnContainer)
 
                 sheetBinding.scrollAiChatResponses.post {
-                    sheetBinding.scrollAiChatResponses.fullScroll(View.FOCUS_DOWN)
+                    val child = sheetBinding.scrollAiChatResponses.getChildAt(0)
+                    if (child != null) sheetBinding.scrollAiChatResponses.smoothScrollTo(0, child.bottom)
                 }
 
                 val pageCtx = lastAiPageContext.take(8000)
+                val historySnapshot = chatHistory.toList()
 
-                // Anchor search query to page subject to avoid irrelevant Wikipedia hits
-                val genericQueryPatterns = listOf(
-                    "what is this", "what this", "about", "what about", "explain",
-                    "tell me", "summary", "summarize", "who is", "where is"
+                // Smart search query builder: never search filler like "what is the post about who posted it"
+                val fillerWords = setOf(
+                    "what", "is", "this", "the", "post", "about", "who", "posted", "it",
+                    "article", "page", "summary", "summarize", "explain", "tell", "me",
+                    "wrote", "author", "published", "when", "was", "did", "can", "you",
+                    "please", "give", "brief", "key", "takeaways", "bullets", "points"
                 )
-                val lowerQ = query.trim().lowercase()
-                val isGenericQuery = genericQueryPatterns.any { lowerQ == it || lowerQ.startsWith("$it ") } || query.length < 20
-                val anchoredSearchQuery = if (isGenericQuery && title.isNotBlank()) {
-                    "$title $query".take(120)
-                } else {
-                    query
+                val meaningfulTerms = cleanQuery.lowercase(Locale.ROOT)
+                    .split(Regex("[^a-z0-9]+"))
+                    .filter { it.length >= 3 && !fillerWords.contains(it) }
+
+                val searchQuery = when {
+                    meaningfulTerms.size >= 2 -> cleanQuery.take(120)
+                    title.isNotBlank() -> title.take(110)
+                    else -> cleanQuery.take(120)
                 }
 
                 lifecycleScope.launch(Dispatchers.IO) {
-                    val sources = FokkSearchAggregator.aggregate(
-                        query = anchoredSearchQuery,
-                        pageTitle = title,
-                        pageHost = sourceHost,
-                        maxResults = 6
-                    )
+                    val sources = if (searchQuery.isNotBlank()) {
+                        FokkSearchAggregator.aggregate(
+                            query = searchQuery,
+                            pageTitle = if (meaningfulTerms.size < 2) title else "",
+                            pageHost = sourceHost,
+                            maxResults = 5
+                        )
+                    } else {
+                        emptyList()
+                    }
 
                     val searchSources = sources.map {
                         BrowserSearchResult(it.title, it.url, it.domain, it.snippet, it.sourceType, it.timestamp)
@@ -8864,15 +8958,31 @@ open class MediaHubActivity : AppCompatActivity() {
 
                     val (answer, followUps) = FokkAiEngine.queryInteractiveResearch(
                         context = this@MediaHubActivity,
-                        userQuery = query,
+                        userQuery = cleanQuery,
                         pageTitle = title,
                         pageHost = sourceHost,
                         pageContext = pageCtx,
-                        externalSources = sources
+                        externalSources = sources,
+                        pageAuthor = pageAuthor,
+                        pagePublished = pagePublished,
+                        pageUrl = activeUrl,
+                        conversationHistory = historySnapshot
                     )
 
+                    chatHistory.add(Pair(cleanQuery, answer))
+
                     withContext(Dispatchers.Main) {
-                        renderChatAnswerCard(thinkingContainer, query, answer, sourceHost, activeUrl, searchSources, followUps)
+                        if (sheetDialog.isShowing) {
+                            renderChatAnswerCard(
+                                container = turnContainer,
+                                question = cleanQuery,
+                                answer = answer,
+                                pageSourceHost = sourceHost,
+                                pageSourceUrl = activeUrl,
+                                searchSources = searchSources,
+                                followUps = followUps
+                            )
+                        }
                     }
                 }
             }
@@ -8883,7 +8993,6 @@ open class MediaHubActivity : AppCompatActivity() {
                 if (q.isNotEmpty()) askAiQuestion(q)
             }
 
-            // Voice Input for Ask AI
             sheetBinding.btnAiVoiceInput.setOnClickListener {
                 aiVoiceInputCallback = { spokenText ->
                     sheetBinding.editAiUserQuestion.setText(spokenText)
@@ -8892,12 +9001,12 @@ open class MediaHubActivity : AppCompatActivity() {
                 try {
                     val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                         putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                        putExtra(RecognizerIntent.EXTRA_PROMPT, "Ask Fokk AI anything about this page...")
+                        putExtra(RecognizerIntent.EXTRA_PROMPT, "Ask Fokk AI anything...")
                         putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                     }
                     aiVoiceRecognitionLauncher.launch(intent)
                 } catch (_: Exception) {
-                    Toast.makeText(this@MediaHubActivity, "Voice input not available on this device", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MediaHubActivity, "Voice input unavailable on this device", Toast.LENGTH_SHORT).show()
                 }
             }
 
@@ -8911,252 +9020,177 @@ open class MediaHubActivity : AppCompatActivity() {
 
             sheetDialog.show()
 
-            // Multi-Source Truth & Research Corroboration Engine
-            val pageCtx = lastAiPageContext.take(8000)
-            val anchoredQuery = if (title.isNotBlank()) title.take(120) else sourceHost
+            // Background Live Corroboration & Deep AI Synthesis
+            val pageCtx = lastAiPageContext.take(9000)
+            val anchoredQuery = if (title.isNotBlank() && !title.equals("Fokk AI", ignoreCase = true)) {
+                title.take(120)
+            } else {
+                ""
+            }
 
-            lifecycleScope.launch(Dispatchers.IO) {
-                withContext(Dispatchers.Main) {
-                    sheetBinding.layoutAiCorroborationHeader.visibility = View.VISIBLE
-                    sheetBinding.textAiCorroborationStatus.text = "CORROBORATING MULTI-SOURCE EVIDENCE..."
-                    sheetBinding.textAiSourcesCount.text = "Searching..."
-                }
-
-                val sources = FokkSearchAggregator.aggregate(
-                    query = anchoredQuery,
-                    pageTitle = title,
-                    pageHost = sourceHost,
-                    maxResults = 6
-                )
-
-                withContext(Dispatchers.Main) {
-                    if (sources.isNotEmpty()) {
-                        sheetBinding.textAiCorroborationStatus.text = "MULTI-SOURCE EVIDENCE DRAWER"
-                        sheetBinding.textAiSourcesCount.text = "${sources.size} Sources"
-                        sheetBinding.scrollAiSources.visibility = View.VISIBLE
-                        sheetBinding.layoutAiSourcesList.removeAllViews()
-
-                        for (src in sources) {
-                            val pill = LinearLayout(this@MediaHubActivity).apply {
-                                orientation = LinearLayout.HORIZONTAL
-                                gravity = Gravity.CENTER_VERTICAL
-                                background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_engine_capsule)
-                                setPadding((10 * density).toInt(), (6 * density).toInt(), (12 * density).toInt(), (6 * density).toInt())
-                                layoutParams = LinearLayout.LayoutParams(
-                                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                                    ViewGroup.LayoutParams.WRAP_CONTENT
-                                ).apply { marginEnd = (8 * density).toInt() }
-                                isClickable = true
-                                isFocusable = true
-                                setOnClickListener {
-                                    sheetDialog.dismiss()
-                                    addNewTab(src.url, isPrivate = activeTab?.isPrivate == true)
-                                }
-                            }
-
-                            val faviconIv = ImageView(this@MediaHubActivity).apply {
-                                layoutParams = LinearLayout.LayoutParams((15 * density).toInt(), (15 * density).toInt()).apply {
-                                    marginEnd = (6 * density).toInt()
-                                }
-                                setImageResource(R.drawable.ic_world)
-                                setColorFilter(Color.parseColor("#38BDF8"))
-                            }
-
-                            val favUrl = "https://www.google.com/s2/favicons?domain=${Uri.encode(src.domain)}&sz=32"
-                            Thread {
-                                try {
-                                    val conn = java.net.URL(favUrl).openConnection() as java.net.HttpURLConnection
-                                    conn.connectTimeout = 3000
-                                    conn.readTimeout = 3000
-                                    val bmp = BitmapFactory.decodeStream(conn.inputStream)
-                                    if (bmp != null) runOnUiThread { faviconIv.clearColorFilter(); faviconIv.setImageBitmap(bmp) }
-                                } catch (_: Exception) {}
-                            }.start()
-
-                            val domainTv = TextView(this@MediaHubActivity).apply {
-                                text = src.domain
-                                setTextColor(Color.parseColor("#E2E8F0"))
-                                textSize = 11.5f
-                                setTypeface(null, Typeface.BOLD)
-                            }
-
-                            val typeBadge = TextView(this@MediaHubActivity).apply {
-                                text = src.sourceType
-                                setTextColor(Color.parseColor("#34D399"))
-                                textSize = 9f
-                                setTypeface(null, Typeface.BOLD)
-                                setPadding((5 * density).toInt(), (1 * density).toInt(), (5 * density).toInt(), (1 * density).toInt())
-                                background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_stat_chip)
-                                layoutParams = LinearLayout.LayoutParams(
-                                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                                    ViewGroup.LayoutParams.WRAP_CONTENT
-                                ).apply { marginStart = (6 * density).toInt() }
-                            }
-
-                            pill.addView(faviconIv)
-                            pill.addView(domainTv)
-                            pill.addView(typeBadge)
-                            sheetBinding.layoutAiSourcesList.addView(pill)
-                        }
-                    } else {
-                        sheetBinding.textAiCorroborationStatus.text = "LOCAL ON-DEVICE AUDIT"
-                        sheetBinding.textAiSourcesCount.text = "0 External"
-                    }
-                }
-
-                // If network available, perform deep multi-source intelligence analysis
-                val analysis = FokkAiEngine.analyzeWebpage(
-                    context = this@MediaHubActivity,
-                    pageTitle = title,
-                    pageHost = sourceHost,
-                    pageUrl = activeUrl,
-                    pageContext = pageCtx,
-                    externalSources = sources
-                )
-
-                withContext(Dispatchers.Main) {
-                    if (analysis.executiveBrief.isNotBlank()) {
-                        sheetBinding.textAiExecutiveHeader.visibility = View.VISIBLE
-                        sheetBinding.textAiExecutiveSummary.visibility = View.VISIBLE
-                        sheetBinding.textAiExecutiveSummary.text = analysis.executiveBrief
-                    }
-
-                    if (analysis.credibilityScore > 0) {
-                        activeScore = analysis.credibilityScore
-                        activeVerdict = analysis.credibilityVerdict
-                        val scoreColor = when {
-                            analysis.credibilityScore >= 85 -> "#34D399"
-                            analysis.credibilityScore >= 70 -> "#38BDF8"
-                            analysis.credibilityScore >= 50 -> "#FBBF24"
-                            else -> "#F87171"
-                        }
-                        sheetBinding.textAiCredibilityScore.text = "${analysis.credibilityScore}% ${analysis.credibilityVerdict}"
-                        sheetBinding.textAiCredibilityScore.setTextColor(Color.parseColor(scoreColor))
-                        sheetBinding.progressCredibilityScore.progress = analysis.credibilityScore
-                        sheetBinding.progressCredibilityScore.progressTintList =
-                            android.content.res.ColorStateList.valueOf(Color.parseColor(scoreColor))
-
-                        sheetBinding.textSummaryTrustVerdict.text = analysis.credibilityVerdict
-                        sheetBinding.textSummaryTrustScore.text = "${analysis.credibilityScore}%"
-                        sheetBinding.textSummaryTrustVerdict.setTextColor(Color.parseColor(scoreColor))
-                        sheetBinding.textSummaryTrustScore.setTextColor(Color.parseColor(scoreColor))
-                    }
-
-                    if (analysis.credibilityReason.isNotBlank()) {
-                        sheetBinding.textAiCredibilityReason.text = analysis.credibilityReason
-                        sheetBinding.textSummaryTrustReason.text = analysis.credibilityReason
-                    }
-
-                    if (analysis.isAggregator || analysis.originalSource.isNotBlank()) {
-                        val orig = analysis.originalSource.ifBlank { "Primary Reporting" }
-                        val agg = analysis.aggregatorSource.ifBlank { sourceHost }
-                        val flow = "$orig -> $agg -> Active Session"
-                        sheetBinding.layoutSummarySourceChain.visibility = View.VISIBLE
-                        sheetBinding.textSummarySourceChainFlow.text = flow
-                        sheetBinding.layoutAuditSourceChain.visibility = View.VISIBLE
-                        sheetBinding.textAuditSourceChainFlow.text = flow
-                    } else {
-                        sheetBinding.layoutSummarySourceChain.visibility = View.GONE
-                        sheetBinding.layoutAuditSourceChain.visibility = View.GONE
-                    }
-
-                    if (analysis.whatsMissing.isNotBlank()) {
-                        sheetBinding.layoutSummaryWhatsMissing.visibility = View.VISIBLE
-                        sheetBinding.textSummaryWhatsMissing.text = analysis.whatsMissing
-                    }
-
-                    if (analysis.biasTone.isNotBlank()) {
-                        sheetBinding.textAiBiasRating.text = analysis.biasTone
-                    }
-                    if (analysis.layer1DomainIdentity.isNotBlank()) {
-                        sheetBinding.textAiSourceReputation.text = analysis.layer1DomainIdentity
-                    }
-                    if (analysis.layer2RhetoricalStance.isNotBlank()) {
-                        sheetBinding.textAiBiasAnalysis.text = analysis.layer2RhetoricalStance
-                    }
-                    if (analysis.layer3EvidenceDensity.isNotBlank()) {
-                        sheetBinding.textAiEvidenceDensity.text = analysis.layer3EvidenceDensity
-                    }
-
-                    if (analysis.verifiedClaims.isNotEmpty()) {
-                        sheetBinding.layoutAiExtractedClaims.removeAllViews()
-                        for (claim in analysis.verifiedClaims) {
-                            renderBulletRow(claim, sheetBinding.layoutAiExtractedClaims)
-                        }
-                    }
-
-                    if (analysis.keyEvidencePoints.isNotEmpty()) {
-                        sheetBinding.layoutSummaryBullets.removeAllViews()
-                        for (point in analysis.keyEvidencePoints) {
-                            renderBulletRow(point, sheetBinding.layoutSummaryBullets)
-                        }
-                    }
-
-                    if (analysis.followUpQuestions.isNotEmpty()) {
-                        sheetBinding.textQuestionsLabel.visibility = View.VISIBLE
-                        sheetBinding.layoutFollowUpQuestions.visibility = View.VISIBLE
-                        sheetBinding.layoutFollowUpQuestions.removeAllViews()
-
-                        for (q in analysis.followUpQuestions) {
-                            val card = LinearLayout(this@MediaHubActivity).apply {
-                                orientation = LinearLayout.HORIZONTAL
-                                background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_stat_chip)
-                                setPadding((12 * density).toInt(), (10 * density).toInt(), (12 * density).toInt(), (10 * density).toInt())
-                                layoutParams = LinearLayout.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.WRAP_CONTENT
-                                ).apply { bottomMargin = (8 * density).toInt() }
-                                isClickable = true
-                                isFocusable = true
-                                setOnClickListener {
-                                    switchAiMode(1)
-                                    sheetBinding.editAiUserQuestion.setText(q)
-                                    askAiQuestionFunc?.invoke(q)
-                                }
-                            }
-
-                            val spark = TextView(this@MediaHubActivity).apply {
-                                text = "• "
-                                setTextColor(getColor(R.color.fokk_cyan))
-                                textSize = 14f
-                                typeface = android.graphics.Typeface.DEFAULT_BOLD
-                            }
-
-                            val qTv = TextView(this@MediaHubActivity).apply {
-                                text = q
-                                setTextColor(getColor(R.color.fokk_cyan))
-                                textSize = 13f
-                                setLineSpacing(0f, 1.3f)
-                                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                            }
-
-                            card.addView(spark)
-                            card.addView(qTv)
-                            sheetBinding.layoutFollowUpQuestions.addView(card)
-                        }
-                    }
-
-                    // Cache and persist in Fokk AI History
-                    cachedAiSummaryUrl = activeUrl
-                    val updatedJson = JSONObject(summaryJson).apply {
-                        put("executiveSummary", analysis.executiveBrief)
-                        put("credibilityScore", analysis.credibilityScore)
-                        put("credibilityVerdict", analysis.credibilityVerdict)
-                        put("credibilityReason", analysis.credibilityReason)
-                        put("bullets", JSONArray(analysis.keyEvidencePoints))
-                        put("verifiedClaims", JSONArray(analysis.verifiedClaims))
-                        put("followUpQuestions", JSONArray(analysis.followUpQuestions))
-                    }
-                    cachedAiSummaryJson = updatedJson.toString()
-                    saveAiHistoryItem(
-                        url = activeUrl,
-                        title = title,
-                        score = analysis.credibilityScore,
-                        verdict = analysis.credibilityVerdict,
-                        summary = analysis.executiveBrief,
-                        sourcesCount = sources.size,
-                        fullJson = cachedAiSummaryJson!!
+            if (anchoredQuery.isNotBlank()) {
+                sheetBinding.layoutSummaryAiLoading.visibility = View.VISIBLE
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val sources = FokkSearchAggregator.aggregate(
+                        query = anchoredQuery,
+                        pageTitle = title,
+                        pageHost = sourceHost,
+                        maxResults = 6
                     )
+
+                    withContext(Dispatchers.Main) {
+                        if (!sheetDialog.isShowing) return@withContext
+                        if (sources.isNotEmpty()) {
+                            sheetBinding.layoutAiCorroborationHeader.visibility = View.VISIBLE
+                            sheetBinding.textAiCorroborationStatus.text = "Related Sources"
+                            sheetBinding.textAiSourcesCount.text = "${sources.size}"
+                            sheetBinding.scrollAiSources.visibility = View.VISIBLE
+                            sheetBinding.layoutAiSourcesList.removeAllViews()
+
+                            for (src in sources) {
+                                val pill = LinearLayout(this@MediaHubActivity).apply {
+                                    orientation = LinearLayout.HORIZONTAL
+                                    gravity = Gravity.CENTER_VERTICAL
+                                    background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_ai_pill)
+                                    setPadding((10 * density).toInt(), (7 * density).toInt(), (12 * density).toInt(), (7 * density).toInt())
+                                    layoutParams = LinearLayout.LayoutParams(
+                                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                                        ViewGroup.LayoutParams.WRAP_CONTENT
+                                    ).apply { marginEnd = (8 * density).toInt() }
+                                    isClickable = true
+                                    isFocusable = true
+                                    setOnClickListener {
+                                        sheetDialog.dismiss()
+                                        addNewTab(src.url, isPrivate = activeTab?.isPrivate == true)
+                                    }
+                                }
+
+                                val faviconIv = ImageView(this@MediaHubActivity).apply {
+                                    layoutParams = LinearLayout.LayoutParams((14 * density).toInt(), (14 * density).toInt()).apply {
+                                        marginEnd = (6 * density).toInt()
+                                    }
+                                    setImageResource(R.drawable.ic_world)
+                                    setColorFilter(Color.parseColor("#64748B"))
+                                }
+
+                                val favUrl = "https://www.google.com/s2/favicons?domain=${Uri.encode(src.domain)}&sz=32"
+                                Thread {
+                                    try {
+                                        val conn = java.net.URL(favUrl).openConnection() as java.net.HttpURLConnection
+                                        conn.connectTimeout = 3000
+                                        conn.readTimeout = 3000
+                                        val bmp = BitmapFactory.decodeStream(conn.inputStream)
+                                        if (bmp != null) runOnUiThread {
+                                            if (sheetDialog.isShowing) {
+                                                faviconIv.clearColorFilter()
+                                                faviconIv.setImageBitmap(bmp)
+                                            }
+                                        }
+                                    } catch (_: Exception) {}
+                                }.start()
+
+                                val domainTv = TextView(this@MediaHubActivity).apply {
+                                    text = FokkSearchAggregator.cleanPublisherName(src.domain)
+                                    setTextColor(Color.parseColor("#E2E8F0"))
+                                    textSize = 12f
+                                    setTypeface(null, Typeface.BOLD)
+                                }
+
+                                pill.addView(faviconIv)
+                                pill.addView(domainTv)
+                                sheetBinding.layoutAiSourcesList.addView(pill)
+                            }
+                        } else {
+                            sheetBinding.layoutAiCorroborationHeader.visibility = View.GONE
+                            sheetBinding.scrollAiSources.visibility = View.GONE
+                        }
+                    }
+
+                    val analysis = FokkAiEngine.analyzeWebpage(
+                        context = this@MediaHubActivity,
+                        pageTitle = title,
+                        pageHost = sourceHost,
+                        pageUrl = activeUrl,
+                        pageContext = pageCtx,
+                        externalSources = sources,
+                        pageAuthor = pageAuthor,
+                        pagePublished = pagePublished
+                    )
+
+                    withContext(Dispatchers.Main) {
+                        if (!sheetDialog.isShowing) return@withContext
+                        sheetBinding.layoutSummaryAiLoading.visibility = View.GONE
+
+                        if (analysis.executiveBrief.isNotBlank()) {
+                            currentExecutiveSummary = stripEmojis(analysis.executiveBrief)
+                            sheetBinding.textAiExecutiveHeader.visibility = View.VISIBLE
+                            sheetBinding.textAiExecutiveSummary.visibility = View.VISIBLE
+                            sheetBinding.textAiExecutiveSummary.text = formatMarkdownToSpanned(currentExecutiveSummary)
+                        }
+
+                        applyCredibilityUi(
+                            score = analysis.credibilityScore,
+                            verdict = analysis.credibilityVerdict,
+                            reason = analysis.credibilityReason,
+                            bias = analysis.biasTone.ifBlank { "Objective Reporting" },
+                            l1 = analysis.layer1DomainIdentity,
+                            l2 = analysis.layer2RhetoricalStance,
+                            l3 = analysis.layer3EvidenceDensity,
+                            isAggregator = analysis.isAggregator,
+                            originalSource = analysis.originalSource,
+                            aggregatorSource = analysis.aggregatorSource,
+                            whatsMissing = analysis.whatsMissing
+                        )
+
+                        if (analysis.keyEvidencePoints.isNotEmpty()) {
+                            currentBullets = analysis.keyEvidencePoints.map { stripEmojis(it) }.toMutableList()
+                            sheetBinding.layoutSummaryBullets.removeAllViews()
+                            currentBullets.forEachIndexed { idx, point ->
+                                renderBulletRow(point, sheetBinding.layoutSummaryBullets, showDivider = idx < currentBullets.size - 1)
+                            }
+                        }
+
+                        if (analysis.keyMetrics.isNotEmpty()) {
+                            currentMetrics = analysis.keyMetrics.toMutableList()
+                            renderKeyMetrics(currentMetrics)
+                        }
+
+                        if (analysis.verifiedClaims.isNotEmpty()) {
+                            sheetBinding.layoutAiExtractedClaims.removeAllViews()
+                            val claims = analysis.verifiedClaims.map { stripEmojis(it) }
+                            claims.forEachIndexed { idx, claim ->
+                                renderBulletRow(claim, sheetBinding.layoutAiExtractedClaims, showDivider = idx < claims.size - 1)
+                            }
+                        }
+
+                        if (analysis.followUpQuestions.isNotEmpty()) {
+                            currentQuestions = analysis.followUpQuestions.map { stripEmojis(it) }.toMutableList()
+                            renderFollowUpSection(currentQuestions)
+                        }
+
+                        // Cache and persist in Fokk AI History
+                        cachedAiSummaryUrl = activeUrl
+                        val updatedJson = JSONObject(summaryJson).apply {
+                            put("executiveSummary", currentExecutiveSummary)
+                            put("credibilityScore", analysis.credibilityScore)
+                            put("credibilityVerdict", analysis.credibilityVerdict)
+                            put("credibilityReason", analysis.credibilityReason)
+                            put("bullets", JSONArray(currentBullets))
+                            put("metrics", JSONArray(currentMetrics.map { "${it.value} :: ${it.label}" }))
+                            put("verifiedClaims", JSONArray(analysis.verifiedClaims))
+                            put("followUpQuestions", JSONArray(currentQuestions))
+                        }
+                        cachedAiSummaryJson = updatedJson.toString()
+                        saveAiHistoryItem(
+                            url = activeUrl,
+                            title = title,
+                            score = analysis.credibilityScore,
+                            verdict = analysis.credibilityVerdict,
+                            summary = currentExecutiveSummary,
+                            sourcesCount = sources.size,
+                            fullJson = cachedAiSummaryJson!!
+                        )
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -9221,18 +9255,23 @@ open class MediaHubActivity : AppCompatActivity() {
 
     private fun formatMarkdownToSpanned(markdown: String): CharSequence {
         val html = markdown
+            .replace("\r\n", "\n")
             .replace("&", "&amp;")
             .replace("<", "&lt;")
             .replace(">", "&gt;")
-            .replace(Regex("""(?m)^### (.*?)$"""), "<br><b><font color=\"#38BDF8\">$1</font></b><br>")
-            .replace(Regex("""(?m)^## (.*?)$"""), "<br><b><font color=\"#00E5FF\"><big>$1</big></font></b><br>")
-            .replace(Regex("""(?m)^# (.*?)$"""), "<br><b><font color=\"#FFFFFF\"><big><big>$1</big></big></font></b><br>")
-            .replace(Regex("""\*\*(.*?)\*\*"""), "<b>$1</b>")
-            .replace(Regex("""\*(.*?)\*"""), "<i>$1</i>")
-            .replace(Regex("""(?m)^[•*-] (.*?)$"""), "&#8226; $1<br>")
-            .replace(Regex("""(?m)^(\d+)\. (.*?)$"""), "<b>$1.</b> $2<br>")
+            .replace(Regex("""(?m)^###\s+(.*?)$"""), "<br><b><font color=\"#F8FAFC\">$1</font></b><br>")
+            .replace(Regex("""(?m)^##\s+(.*?)$"""), "<br><b><font color=\"#F8FAFC\"><big>$1</big></font></b><br>")
+            .replace(Regex("""(?m)^#\s+(.*?)$"""), "<br><b><font color=\"#FFFFFF\"><big>$1</big></font></b><br>")
+            .replace(Regex("""\*\*(.+?)\*\*"""), "<b><font color=\"#FFFFFF\">$1</font></b>")
+            .replace(Regex("""`([^`]+)`"""), "<tt><font color=\"#38BDF8\">$1</font></tt>")
+            .replace(Regex("""(?<!\*)\*([^*]+?)\*(?!\*)"""), "<i>$1</i>")
+            .replace(Regex("""(?m)^[•*-]\s+(.*?)$"""), "<font color=\"#38BDF8\">&#8226;</font>&nbsp; $1<br>")
+            .replace(Regex("""(?m)^(\d+)\.\s+(.*?)$"""), "<b><font color=\"#38BDF8\">$1.</font></b> $2<br>")
+            .replace(Regex("""\[(\d+)]"""), "<font color=\"#38BDF8\"><sup>[$1]</sup></font>")
             .replace("\n\n", "<br><br>")
             .replace("\n", "<br>")
+            .replace(Regex("""^(<br>)+"""), "")
+            .replace(Regex("""(<br>){3,}"""), "<br><br>")
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             android.text.Html.fromHtml(html, android.text.Html.FROM_HTML_MODE_COMPACT)
@@ -9518,30 +9557,62 @@ open class MediaHubActivity : AppCompatActivity() {
 
     private fun initTextToSpeech() {
         if (textToSpeech == null) {
+            isTtsReady = false
             textToSpeech = TextToSpeech(this) { status ->
                 if (status == TextToSpeech.SUCCESS) {
+                    isTtsReady = true
                     textToSpeech?.language = Locale.getDefault()
                     val isMale = prefs.getBoolean("pref_tts_male_voice", true)
                     configureTtsVoice(isMale)
+                    textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                        override fun onStart(utteranceId: String?) {
+                            runOnUiThread { ttsStateCallback?.invoke(true) }
+                        }
+                        override fun onDone(utteranceId: String?) {
+                            runOnUiThread { ttsStateCallback?.invoke(false) }
+                        }
+                        @Deprecated("Deprecated in Java")
+                        override fun onError(utteranceId: String?) {
+                            runOnUiThread { ttsStateCallback?.invoke(false) }
+                        }
+                    })
+                    val queued = pendingTtsText
+                    if (!queued.isNullOrBlank()) {
+                        pendingTtsText = null
+                        speakNow(queued)
+                    }
                 }
             }
         }
     }
 
-    fun startTextToSpeech(text: String) {
-        initTextToSpeech()
+    private fun speakNow(text: String) {
         val isMale = prefs.getBoolean("pref_tts_male_voice", true)
         configureTtsVoice(isMale)
+        val cleanText = text.replace(Regex("""[*#`_]"""), "").replace(Regex("""\[\d+]"""), "").trim()
+        if (cleanText.isBlank()) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "fokk_tts")
+            textToSpeech?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, null, "fokk_tts")
         } else {
             @Suppress("DEPRECATION")
-            textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, null)
+            textToSpeech?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, null)
         }
     }
 
+    fun startTextToSpeech(text: String) {
+        if (textToSpeech == null || !isTtsReady) {
+            pendingTtsText = text
+            initTextToSpeech()
+            ttsStateCallback?.invoke(true)
+            return
+        }
+        speakNow(text)
+    }
+
     fun stopTextToSpeech() {
+        pendingTtsText = null
         textToSpeech?.stop()
+        ttsStateCallback?.invoke(false)
     }
 
     // =========================================================================
@@ -9656,12 +9727,13 @@ open class MediaHubActivity : AppCompatActivity() {
                     put("Listen to summaries aloud or save them for offline research.")
                 })
                 put("metrics", org.json.JSONArray().apply {
-                    put("100% On-Device Extraction")
-                    put("Zero Server Tracking")
-                    put("Real LLM-Powered Q&A")
+                    put("On-Device :: Local page parsing")
+                    put("Zero Tracking :: No ad profiling")
+                    put("Live Search :: Web-grounded Q&A")
+                    put("3-Layer :: Source & bias audit")
                 })
                 put("followUpQuestions", org.json.JSONArray().apply {
-                    put("How does on-device intelligence protect browsing privacy?")
+                    put("How does Fokk AI verify claims across independent sources?")
                 })
             }
             showAiSummarySheet(introJson.toString(), initialTab)
@@ -9704,7 +9776,12 @@ open class MediaHubActivity : AppCompatActivity() {
                     }
                     if (!root) root = document.body;
                     var paras = Array.from(root.querySelectorAll('p, blockquote'))
-                        .map(function(el) { return (el.innerText || '').replace(/\s+/g, ' ').trim(); })
+                        .map(function(el) {
+                            return (el.innerText || '')
+                                .replace(/\s+/g, ' ')
+                                .replace(/\b([B-HJ-Z])\s+([a-z]{2,})\b/g, '$1$2')
+                                .trim();
+                        })
                         .filter(function(t) {
                             return t.length > 25 && !t.includes('{') &&
                                    !/^(sign in|subscribe|cookie|terms|privacy|follow us|all rights reserved)/i.test(t) &&
