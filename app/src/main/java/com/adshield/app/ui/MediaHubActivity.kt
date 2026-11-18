@@ -7958,6 +7958,12 @@ open class MediaHubActivity : AppCompatActivity() {
             }
 
             // Retrieve or create persistent Ask AI chat session for this exact page/post
+            val persistedSummaryJson = runCatching {
+                JSONObject(summaryJson).apply {
+                    if (optString("url", "").isBlank() && activeUrl.isNotBlank()) put("url", activeUrl)
+                    if (optString("postUrl", "").isBlank() && sessionKey.isNotBlank()) put("postUrl", sessionKey)
+                }.toString()
+            }.getOrDefault(summaryJson)
             val chatSession = aiChatSessions.getOrPut(sessionKey) {
                 if (aiChatSessions.size >= 15) {
                     val oldest = aiChatSessions.keys.firstOrNull()
@@ -7967,11 +7973,11 @@ open class MediaHubActivity : AppCompatActivity() {
                     sessionKey = sessionKey,
                     url = activeUrl,
                     title = title,
-                    summaryJson = summaryJson,
+                    summaryJson = persistedSummaryJson,
                     pageContext = lastAiPageContext
                 )
             }
-            chatSession.summaryJson = summaryJson
+            chatSession.summaryJson = persistedSummaryJson
             if (lastAiPageContext.isNotBlank()) {
                 chatSession.pageContext = lastAiPageContext
             }
@@ -9601,6 +9607,8 @@ open class MediaHubActivity : AppCompatActivity() {
                         // Cache and persist in Fokk AI History & active Chat Session
                         cachedAiSummaryUrl = activeUrl
                         val updatedJson = JSONObject(summaryJson).apply {
+                            put("url", activeUrl)
+                            put("postUrl", sessionKey)
                             put("executiveSummary", currentExecutiveSummary)
                             put("credibilityScore", analysis.credibilityScore)
                             put("credibilityVerdict", analysis.credibilityVerdict)
