@@ -55,7 +55,6 @@ CANDIDATE_POOL = [
     {"host": "5.75.133.113",    "port": 10802, "country": "DE", "city": "Frankfurt",    "type": "socks5", "ingress_relay": False},
     {"host": "5.75.133.113",    "port": 10807, "country": "DE", "city": "Falkenstein",  "type": "socks5", "ingress_relay": False},
     {"host": "171.25.158.95",   "port": 1080,  "country": "SE", "city": "Stockholm",    "type": "socks5", "ingress_relay": False},
-    {"host": "193.218.118.128", "port": 1080,  "country": "NL", "city": "Amsterdam",    "type": "socks5", "ingress_relay": False},
     {"host": "51.159.115.233",  "port": 1080,  "country": "FR", "city": "Paris",        "type": "socks5", "ingress_relay": False},
     {"host": "77.91.90.27",     "port": 1082,  "country": "GB", "city": "London",       "type": "socks5", "ingress_relay": False},
     # Asia & Pacific
@@ -64,8 +63,41 @@ CANDIDATE_POOL = [
     {"host": "101.36.104.239",  "port": 10808, "country": "JP", "city": "Tokyo",        "type": "socks5", "ingress_relay": False},
     {"host": "101.36.104.46",   "port": 10808, "country": "JP", "city": "Osaka",        "type": "socks5", "ingress_relay": False},
     {"host": "123.58.219.171",  "port": 10808, "country": "HK", "city": "Hong Kong",    "type": "socks5", "ingress_relay": False},
-    {"host": "121.169.46.116",  "port": 1090,  "country": "KR", "city": "Suwon",        "type": "socks5", "ingress_relay": False},
 ]
+
+# Residential / consumer telecom ISP keywords — automatically rejected by Sentinel
+# so misconfigured home/office routers are never admitted into Fokk Mesh.
+RESIDENTIAL_ISP_KEYWORDS = (
+    "korea telecom", "sk broadband", "lg uplus",
+    "comcast", "xfinity", "charter", "spectrum", "cox communications", "as6079 rcn", "rcn corporation",
+    "at&t services", "verizon business", "verizon fios", "t-mobile", "centurylink",
+    "reliance jio", "bharti airtel", "bsnl", "vodafone idea", "act fibernet",
+    "deutsche telekom", "vodafone gmbh", "telefonica", "orange s.a", "free sas", "sfr",
+    "british telecommunications", "bt public", "virgin media", "sky uk",
+    "rogers communications", "bell canada", "telus", "shaw communications",
+    "china telecom", "china unicom", "china mobile", "chinatelecom",
+    "ntt communications", "kddi", "softbank bb", "telstra", "optus",
+    "residential", "broadband", "cablevision", "mobile network"
+)
+
+
+def lookup_asn_and_country(ip: str) -> tuple:
+    """Query public ASN/org & country metadata for residential-ISP filtering and GeoIP accuracy."""
+    try:
+        req = urllib.request.Request(
+            f"https://ipinfo.io/{ip}/json",
+            headers={"User-Agent": "FokkMeshSentinel/3.1"},
+        )
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+            return str(data.get("org", "")).strip(), str(data.get("country", "")).strip().upper()
+    except Exception:
+        return "", ""
+
+
+def is_residential_isp(org: str) -> bool:
+    low = (org or "").lower()
+    return any(kw in low for kw in RESIDENTIAL_ISP_KEYWORDS)
 
 # Strict TLS context — CERT_REQUIRED + hostname check blocks any MITM relay
 ssl_ctx = ssl.create_default_context()
@@ -279,6 +311,11 @@ def test_node(node: dict, scanner_ip: str) -> dict:
     if avg_latency > MAX_LATENCY_MS:
         return {"ok": False, "reason": f"TOO_SLOW({avg_latency}ms)"}
 
+    # Check 4: ASN / Residential ISP guard + GeoIP country verification
+    asn_org, geo_country = lookup_asn_and_country(exit_ip)
+    if asn_org and is_residential_isp(asn_org):
+        return {"ok": False, "reason": f"RESIDENTIAL_ISP({asn_org})"}
+
     # Quality score (0-100): favors low latency and clean dual-endpoint pass
     quality_score = max(10, min(100, int(100 - (avg_latency / 30))))
 
@@ -286,6 +323,8 @@ def test_node(node: dict, scanner_ip: str) -> dict:
         "ok": True,
         "latency_ms": avg_latency,
         "exit_ip": exit_ip,
+        "asn_org": asn_org,
+        "geo_country": geo_country,
         "quality_score": quality_score,
         "reason": "PASS",
     }
@@ -301,20 +340,23 @@ def test_dual_hop_chain(ingress: dict, egress: dict) -> bool:
     if ingress["host"] == egress["host"]:
         return False
 
-    raw = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    raw.settimeout(CONNECT_TIMEOUT)
+    raw = None
     try:
-        raw.connect((ingress["host"], int(ingress["port"])))
-        raw.settimeout(SSL_TIMEOUT)
+        raw = _open_relay_transport(ingress)
+        raw.settimeout(8.0)
+        in_u = str(ingress.get("username", "")).strip()
+        in_p = str(ingress.get("password", "")).strip()
+        eg_u = str(egress.get("username", "")).strip()
+        eg_p = str(egress.get("password", "")).strip()
         # Hop 1: Ingress -> Egress
-        if not _socks5_connect(raw, egress["host"], int(egress["port"]), do_greeting=True):
+        if not _socks5_connect(raw, egress["host"], int(egress["port"]), do_greeting=True, username=in_u, password=in_p):
             return False
         # Hop 2: Egress -> api.ipify.org:443
         if egress.get("type", "socks5") == "http":
-            if not _http_connect(raw, "api.ipify.org", 443):
+            if not _http_connect(raw, "api.ipify.org", 443, username=eg_u, password=eg_p):
                 return False
         else:
-            if not _socks5_connect(raw, "api.ipify.org", 443, do_greeting=True):
+            if not _socks5_connect(raw, "api.ipify.org", 443, do_greeting=True, username=eg_u, password=eg_p):
                 return False
         # Strict TLS through the full 2-hop circuit
         tls = ssl_ctx.wrap_socket(raw, server_hostname="api.ipify.org")
@@ -448,14 +490,15 @@ def write_job_summary(results: list, failed: list, dual_hop_count: int) -> None:
         "",
         "## Verified Relays",
         "",
-        "| Host | Port | Country | City | Latency | Score | Dual-Hop | Exit IP |",
-        "|------|------|---------|------|---------|-------|----------|---------|",
+        "| Host | Port | Country | City | Latency | Score | Dual-Hop | ASN / Provider | Exit IP |",
+        "|------|------|---------|------|---------|-------|----------|----------------|---------|",
     ]
     for r in sorted(results, key=lambda x: x["latency_ms"]):
         dh = "YES" if r.get("supports_dual_hop") else "egress"
+        org = (r.get("asn_org") or "verified").replace("|", "/")
         lines.append(
             f"| `{r['host']}` | {r['port']} | {r['country']} | {r['city']} "
-            f"| {r['latency_ms']} ms | {r['quality_score']} | {dh} | `{r['exit_ip']}` |"
+            f"| {r['latency_ms']} ms | {r['quality_score']} | {dh} | {org} | `{r['exit_ip']}` |"
         )
     if failed:
         lines += ["", "## Rejected Relays", ""]
@@ -504,7 +547,7 @@ def main() -> None:
                 entry = {
                     "host": node["host"],
                     "port": int(node["port"]),
-                    "country": str(node.get("country", "")).upper(),
+                    "country": res.get("geo_country") or str(node.get("country", "")).upper(),
                     "city": str(node.get("city", "")),
                     "type": "http" if node.get("type") == "http" else "socks5",
                     "tier": "speed" if res["latency_ms"] < 650 else "balanced",
@@ -519,7 +562,7 @@ def main() -> None:
                     "verified": True,
                 }
                 verified.append(entry)
-                results.append({**entry, "exit_ip": res["exit_ip"]})
+                results.append({**entry, "exit_ip": res["exit_ip"], "asn_org": res.get("asn_org", "")})
             else:
                 print(f"  FAIL  {node['host']}:{node['port']} ({node['country']}) — {res['reason']}")
                 failed.append({
@@ -529,9 +572,9 @@ def main() -> None:
                     "reason": res["reason"],
                 })
 
-    if not verified:
-        print("ABORT: 0 relays passed verification. Preserving existing manifest unchanged.")
-        write_job_summary([], failed, 0)
+    if len(verified) < 3:
+        print(f"ABORT: Only {len(verified)} relays passed (minimum 3 required). Preserving existing manifest unchanged.")
+        write_job_summary(results, failed, 0)
         sys.exit(1)
 
     # Sort fastest first before testing dual-hop chaining
@@ -543,12 +586,13 @@ def main() -> None:
     if len(verified) >= 2 and socks_nodes:
         print("Phase 2: Testing real 2-hop chaining on SOCKS5 relays...")
         for candidate in socks_nodes:
-            egress_target = next((e for e in verified if e["host"] != candidate["host"]), None)
-            if egress_target and test_dual_hop_chain(candidate, egress_target):
+            egress_targets = [e for e in verified if e["host"] != candidate["host"]][:2]
+            passed_egress = next((e for e in egress_targets if test_dual_hop_chain(candidate, e)), None)
+            if passed_egress:
                 candidate["ingress_relay"] = True
                 candidate["supports_dual_hop"] = True
                 dual_hop_verified += 1
-                print(f"  2-HOP PASS  {candidate['host']}:{candidate['port']} -> {egress_target['host']}:{egress_target['port']}")
+                print(f"  2-HOP PASS  {candidate['host']}:{candidate['port']} -> {passed_egress['host']}:{passed_egress['port']}")
             else:
                 candidate["ingress_relay"] = False
                 candidate["supports_dual_hop"] = False

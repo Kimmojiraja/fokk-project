@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "issued_at": "2026-11-18T16:32:38Z",
-  "expires_at": "2026-11-20T16:32:38Z",
+  "issued_at": "2026-11-18T16:49:36Z",
+  "expires_at": "2026-11-20T16:49:36Z",
   "signed": false,
   "nodes": [
     {
@@ -104,23 +104,6 @@
       "password": "",
       "latency_ms": 2448,
       "quality_score": 18,
-      "verified": true
-    },
-    {
-      "host": "121.169.46.116",
-      "port": 1090,
-      "country": "KR",
-      "city": "Suwon",
-      "type": "socks5",
-      "tier": "balanced",
-      "ingress_relay": true,
-      "supports_dual_hop": true,
-      "tls": false,
-      "sni": "",
-      "username": "",
-      "password": "",
-      "latency_ms": 4124,
-      "quality_score": 10,
       "verified": true
     },
     {
