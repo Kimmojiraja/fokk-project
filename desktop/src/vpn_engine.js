@@ -11,74 +11,140 @@ const { spawn } = require('child_process');
  */
 
 const PRESET_LOCATIONS = {
-    'tor': {
-        id: 'tor',
-        name: 'Tor Network',
-        badge: 'Onion route',
-        protocol: 'Tor SOCKS5',
-        description: 'Route browser requests through Tor. The exit location varies and is not guaranteed.',
-        defaultPort: 9050,
-        region: 'Tor exit network',
-        color: '#7C3AED',
-        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="6" r="6"/><circle cx="12" cy="2" r="2"/></svg>',
-        setupTip: 'Starts the bundled Tor client and routes this browser through its local SOCKS port.'
-    },
     'relay_auto': {
         id: 'relay_auto',
-        name: 'Fokk Smart Relay (Optimal)',
-        badge: 'Zero-Drop Relay',
-        protocol: 'Split-Trust SOCKS5',
-        description: 'Automatic high-speed oblivious relay routing across 40+ global country locations.',
+        name: 'Optimal Location',
+        badge: 'Fokk Mesh',
+        protocol: 'Fokk Mesh SOCKS5',
+        description: 'Fastest verified Fokk Mesh relay node selected automatically by live ping.',
         region: 'Global Optimal',
-        color: '#00E5FF',
-        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>',
-        setupTip: 'Connects through the high-reliability multi-region Fokk Mesh network.'
+        meshRegion: 'AUTO',
+        color: '#38BDF8',
+        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>',
+        setupTip: 'Probes verified Fokk Mesh relays in parallel and connects to the lowest-latency exit.'
     },
     'relay_eu': {
         id: 'relay_eu',
-        name: 'Europe Cluster (40+ Locations)',
-        badge: 'EU Pro Egress',
-        protocol: 'Split-Trust SOCKS5',
-        description: 'Dedicated high-speed privacy routing across Germany, UK, Netherlands, France, and Nordic exits.',
-        region: 'Europe (Frankfurt / London / Amsterdam)',
-        color: '#38BDF8',
-        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>',
-        setupTip: 'Routes browser requests through verified European high-speed privacy nodes.'
+        name: 'Europe Cluster',
+        badge: 'DE · NL · GB · SE',
+        protocol: 'Fokk Mesh SOCKS5',
+        description: 'High-speed European privacy exits across Frankfurt, Amsterdam, London, Paris, and Stockholm.',
+        region: 'Europe',
+        meshRegion: 'EU',
+        color: '#60A5FA',
+        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>',
+        setupTip: 'Routes browser traffic through verified European Fokk Mesh nodes.'
     },
     'relay_am': {
         id: 'relay_am',
-        name: 'Americas Cluster (40+ Locations)',
-        badge: 'Americas Pro Egress',
-        protocol: 'Split-Trust SOCKS5',
-        description: 'Dedicated high-speed privacy routing across United States, Canada, and Latin American exits.',
-        region: 'Americas (New York / Miami / Toronto)',
+        name: 'Americas Cluster',
+        badge: 'US · CA',
+        protocol: 'Fokk Mesh SOCKS5',
+        description: 'High-speed Americas privacy exits across Miami, North Bergen, and Montreal.',
+        region: 'Americas',
+        meshRegion: 'AM',
         color: '#34D399',
         iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M6 12h12"/></svg>',
-        setupTip: 'Routes browser requests through verified Americas high-speed privacy nodes.'
+        setupTip: 'Routes browser traffic through verified Americas Fokk Mesh nodes.'
     },
     'relay_as': {
         id: 'relay_as',
-        name: 'Asia & Pacific Cluster (40+ Locations)',
-        badge: 'APAC Pro Egress',
-        protocol: 'Split-Trust SOCKS5',
-        description: 'Dedicated high-speed privacy routing across Singapore, Japan, Hong Kong, and Australia exits.',
-        region: 'Asia & Pacific (Singapore / Tokyo / Hong Kong)',
-        color: '#F59E0B',
-        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>',
-        setupTip: 'Routes browser requests through verified Asia-Pacific high-speed privacy nodes.'
+        name: 'Asia & Pacific Cluster',
+        badge: 'SG · JP · HK · IN',
+        protocol: 'Fokk Mesh SOCKS5',
+        description: 'High-speed APAC privacy exits across Singapore, Tokyo, Hong Kong, Mumbai, and Suwon.',
+        region: 'Asia-Pacific',
+        meshRegion: 'AS',
+        color: '#FBBF24',
+        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>',
+        setupTip: 'Routes browser traffic through verified Asia-Pacific Fokk Mesh nodes.'
+    },
+    'tor': {
+        id: 'tor',
+        name: 'Tor Onion Network',
+        badge: 'Multi-Hop',
+        protocol: 'Tor SOCKS5',
+        description: 'Maximum anonymity multi-hop onion routing via the bundled Tor client.',
+        defaultPort: 9050,
+        region: 'Tor Exit Network',
+        color: '#A78BFA',
+        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="6" r="6"/><circle cx="12" cy="2" r="2"/></svg>',
+        setupTip: 'Starts the bundled Tor client and routes this browser through its local SOCKS port.'
     },
     'custom': {
         id: 'custom',
         name: 'Custom Endpoint',
-        badge: 'User Defined',
-        protocol: 'SOCKS5 / HTTP proxy',
-        description: 'Route this browser through a reachable proxy endpoint.',
+        badge: 'User Proxy',
+        protocol: 'SOCKS5 / HTTP',
+        description: 'Route this browser through your own reachable SOCKS5 or HTTP proxy.',
         region: 'Custom Endpoint',
         color: '#10B981',
-        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><circle cx="12" cy="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
         setupTip: 'Enter a SOCKS5 or HTTP proxy server and port.'
     }
 };
+
+// Certified Fokk Mesh nodes (parity with Android NodeRegistry.kt & nodes_manifest.json)
+const BUILTIN_MESH_NODES = [
+    { host: '45.61.188.134',   port: 44499, type: 'socks5', country: 'US', city: 'Miami' },
+    { host: '69.55.49.177',    port: 38182, type: 'socks5', country: 'US', city: 'North Bergen' },
+    { host: '184.75.221.82',   port: 3118,  type: 'http',   country: 'CA', city: 'Montreal' },
+    { host: '49.13.22.249',    port: 10805, type: 'socks5', country: 'DE', city: 'Frankfurt' },
+    { host: '49.13.22.249',    port: 10802, type: 'socks5', country: 'DE', city: 'Frankfurt' },
+    { host: '5.75.133.113',    port: 10802, type: 'socks5', country: 'DE', city: 'Frankfurt' },
+    { host: '5.75.133.113',    port: 10807, type: 'socks5', country: 'DE', city: 'Falkenstein' },
+    { host: '171.25.158.95',   port: 1080,  type: 'socks5', country: 'SE', city: 'Stockholm' },
+    { host: '193.218.118.128', port: 1080,  type: 'socks5', country: 'NL', city: 'Amsterdam' },
+    { host: '51.159.115.233',  port: 1080,  type: 'socks5', country: 'FR', city: 'Paris' },
+    { host: '77.91.90.27',     port: 1082,  type: 'socks5', country: 'GB', city: 'London' },
+    { host: '188.166.178.163', port: 1088,  type: 'socks5', country: 'SG', city: 'Singapore' },
+    { host: '183.87.145.150',  port: 2080,  type: 'socks5', country: 'IN', city: 'Mumbai' },
+    { host: '101.36.104.239',  port: 10808, type: 'socks5', country: 'JP', city: 'Tokyo' },
+    { host: '123.58.219.171',  port: 10808, type: 'socks5', country: 'HK', city: 'Hong Kong' },
+    { host: '121.169.46.116',  port: 1090,  type: 'socks5', country: 'KR', city: 'Suwon' }
+];
+
+const MESH_MANIFEST_URL = 'https://raw.githubusercontent.com/Kimmojiraja/fokk-project/main/nodes_manifest.json';
+const AM_COUNTRIES = new Set(['US', 'CA', 'MX', 'BR', 'AR', 'CL', 'CO', 'PE', 'CR', 'PA']);
+const EU_COUNTRIES = new Set(['GB', 'DE', 'NL', 'FR', 'CH', 'SE', 'NO', 'FI', 'ES', 'IT', 'PL', 'IE', 'BE', 'AT', 'CZ', 'DK', 'PT', 'RO']);
+const AS_COUNTRIES = new Set(['JP', 'KR', 'SG', 'HK', 'IN', 'AU', 'NZ', 'TW', 'MY', 'ID', 'TH', 'VN']);
+
+const COUNTRY_NAMES = {
+    US: 'United States', CA: 'Canada', DE: 'Germany', SE: 'Sweden',
+    NL: 'Netherlands', FR: 'France', GB: 'United Kingdom', SG: 'Singapore',
+    IN: 'India', JP: 'Japan', HK: 'Hong Kong', KR: 'South Korea'
+};
+
+function probeMeshNode(node, timeout = 2200) {
+    return new Promise(resolve => {
+        const start = Date.now();
+        const socket = new net.Socket();
+        let settled = false;
+        let response = Buffer.alloc(0);
+        const finish = (ok) => {
+            if (settled) return;
+            settled = true;
+            try { socket.destroy(); } catch (_) {}
+            resolve(ok ? { node, latencyMs: Math.max(1, Date.now() - start) } : null);
+        };
+        socket.setTimeout(timeout);
+        socket.once('connect', () => {
+            if (node.type === 'http') {
+                finish(true);
+            } else {
+                try { socket.write(Buffer.from([5, 1, 0])); } catch (_) { finish(false); }
+            }
+        });
+        socket.on('data', chunk => {
+            if (node.type === 'http') return;
+            response = Buffer.concat([response, chunk]);
+            if (response.length >= 2) finish(response[0] === 5 && response[1] === 0);
+        });
+        socket.once('timeout', () => finish(false));
+        socket.once('error', () => finish(false));
+        try { socket.connect(node.port, node.host); } catch (_) { finish(false); }
+    });
+}
 
 function checkSocketListening(port, host = '127.0.0.1', timeout = 350) {
     return new Promise(resolve => {
@@ -133,12 +199,12 @@ class VpnEngine extends EventEmitter {
         this.configFile = path.join(this.userDataPath, 'fokk_vpn_config.json');
 
         this.state = 'disconnected'; // 'disconnected' | 'connecting' | 'connected' | 'error'
-        this.activeMode = 'tor';
+        this.activeMode = 'relay_auto';
         this.killSwitch = true;
         this.customConfig = '';
         this.connectedAt = null;
         this.currentProxyRules = '';
-        this.virtualIp = 'Direct (Real IP Exposed)';
+        this.virtualIp = 'Direct connection (IP not masked)';
         this.virtualCountry = 'Local Direct';
         this.ping = 0;
         this.errorMessage = null;
@@ -147,12 +213,68 @@ class VpnEngine extends EventEmitter {
         this.torPort = null;
         this.lastTorMode = null;
         this.routeHealthTimer = null;
+        this.manifestNodes = [];
+        this.manifestExpiry = 0;
+        this.activeMeshNode = null;
 
         this.loadConfig();
+        this.refreshManifestIfNeeded();
         // Stop the embedded route process when the browser exits.
         process.on('exit', () => {
             this.stopEmbeddedTor();
         });
+    }
+
+    refreshManifestIfNeeded() {
+        if (Date.now() < this.manifestExpiry) return;
+        this.manifestExpiry = Date.now() + 6 * 60 * 60 * 1000;
+        try {
+            const req = https.get(MESH_MANIFEST_URL, {
+                timeout: 6000,
+                headers: { 'User-Agent': 'FokkMesh/2.0' }
+            }, res => {
+                if (res.statusCode !== 200) return;
+                let body = '';
+                res.on('data', c => { body += c; });
+                res.on('end', () => {
+                    try {
+                        const parsed = JSON.parse(body);
+                        if (Array.isArray(parsed.nodes) && parsed.nodes.length > 0) {
+                            this.manifestNodes = parsed.nodes
+                                .filter(n => n && n.host && n.port)
+                                .map(n => ({
+                                    host: String(n.host),
+                                    port: Number(n.port),
+                                    type: n.type === 'http' ? 'http' : 'socks5',
+                                    country: String(n.country || '').toUpperCase(),
+                                    city: String(n.city || '')
+                                }));
+                            this.manifestExpiry = Date.now() + 24 * 60 * 60 * 1000;
+                        }
+                    } catch (_) {}
+                });
+            });
+            req.on('timeout', () => req.destroy());
+            req.on('error', () => {});
+        } catch (_) {}
+    }
+
+    getMeshPoolForRegion(region) {
+        const all = this.manifestNodes.length > 0 ? this.manifestNodes : BUILTIN_MESH_NODES;
+        if (!region || region === 'AUTO') return all;
+        let filtered = [];
+        if (region === 'EU') filtered = all.filter(n => EU_COUNTRIES.has(n.country));
+        else if (region === 'AM') filtered = all.filter(n => AM_COUNTRIES.has(n.country));
+        else if (region === 'AS') filtered = all.filter(n => AS_COUNTRIES.has(n.country));
+        else filtered = all.filter(n => n.country === region);
+        return filtered.length > 0 ? filtered : all;
+    }
+
+    async findBestMeshNode(region) {
+        const pool = this.getMeshPoolForRegion(region);
+        const results = await Promise.all(pool.map(n => probeMeshNode(n, 2200)));
+        const alive = results.filter(Boolean).sort((a, b) => a.latencyMs - b.latencyMs);
+        return alive.length > 0 ? alive[0] : null;
     }
 
     loadConfig() {
@@ -216,7 +338,7 @@ class VpnEngine extends EventEmitter {
         return {
             state: this.state,
             activeMode: this.activeMode,
-            location: PRESET_LOCATIONS[this.activeMode] || PRESET_LOCATIONS.tor,
+            location: PRESET_LOCATIONS[this.activeMode] || PRESET_LOCATIONS.relay_auto,
             virtualIp: this.virtualIp,
             virtualCountry: this.virtualCountry,
             ping: this.ping,
@@ -224,7 +346,9 @@ class VpnEngine extends EventEmitter {
             customConfig: this.customConfig,
             connectedAt: this.connectedAt,
             uptimeSeconds: this.connectedAt ? Math.floor((Date.now() - this.connectedAt) / 1000) : 0,
-            errorMessage: this.errorMessage
+            errorMessage: this.errorMessage,
+            activeMeshNode: this.activeMeshNode,
+            meshNodeCount: (this.manifestNodes.length > 0 ? this.manifestNodes : BUILTIN_MESH_NODES).length
         };
     }
 
@@ -505,20 +629,49 @@ class VpnEngine extends EventEmitter {
             if (this.killSwitch) {
                 await this.applyProxyRules('127.0.0.1:9');
             }
-            const isTorBased = this.activeMode === 'tor' || this.activeMode.startsWith('relay_');
-            if (!isTorBased) await this.stopEmbeddedTor();
+            const isMeshRelay = this.activeMode.startsWith('relay_');
+            const isTorMode = this.activeMode === 'tor';
+            this.activeMeshNode = null;
             let proxyRules = '';
             let locationName = '';
+            let measuredPing = 0;
+            let exitIpDisplay = 'Route configured — verify exit IP';
 
-            if (isTorBased) {
+            if (isMeshRelay) {
+                this.refreshManifestIfNeeded();
+                const region = PRESET_LOCATIONS[this.activeMode]?.meshRegion || 'AUTO';
+                const best = await this.findBestMeshNode(region);
+                if (best && best.node) {
+                    await this.stopEmbeddedTor();
+                    const n = best.node;
+                    this.activeMeshNode = n;
+                    proxyRules = n.type === 'http'
+                        ? `http=${n.host}:${n.port};https=${n.host}:${n.port}`
+                        : `socks5://${n.host}:${n.port}`;
+                    const countryLabel = COUNTRY_NAMES[n.country] || n.country || 'Global';
+                    locationName = n.city ? `${n.city}, ${countryLabel}` : countryLabel;
+                    measuredPing = best.latencyMs;
+                    exitIpDisplay = n.host;
+                } else {
+                    // Fallback to bundled Tor with regional exit nodes if direct mesh ports are blocked
+                    const torPort = await this.ensureTorRunning();
+                    if (torPort) {
+                        proxyRules = `socks5://127.0.0.1:${torPort}`;
+                        locationName = `${PRESET_LOCATIONS[this.activeMode]?.name || 'Fokk Mesh'} (Tor fallback)`;
+                    } else {
+                        throw new Error('No Fokk Mesh relay responded on this network and bundled Tor is unavailable.');
+                    }
+                }
+            } else if (isTorMode) {
                 const torPort = await this.ensureTorRunning();
                 if (torPort) {
                     proxyRules = `socks5://127.0.0.1:${torPort}`;
-                    locationName = PRESET_LOCATIONS[this.activeMode]?.name || 'Fokk Mesh Network';
+                    locationName = 'Tor Onion Network';
                 } else {
                     throw new Error('The bundled Tor runtime is missing from this desktop build. Routing was not enabled.');
                 }
             } else if (this.activeMode === 'custom') {
+                await this.stopEmbeddedTor();
                 proxyRules = this.resolveCustomProxyRules();
                 if (!proxyRules) {
                     throw new Error('Enter the address of a running SOCKS5 or HTTP proxy. Custom mode does not start a proxy server.');
@@ -541,8 +694,8 @@ class VpnEngine extends EventEmitter {
             this.state = 'connected';
             this.connectedAt = Date.now();
             this.virtualCountry = locationName;
-            this.virtualIp = 'Route configured — verify exit IP';
-            this.ping = 0;
+            this.virtualIp = exitIpDisplay;
+            this.ping = measuredPing;
             this.errorMessage = null;
 
             this.startRouteHealthMonitor();
@@ -569,6 +722,7 @@ class VpnEngine extends EventEmitter {
         this.state = 'disconnected';
         this.connectedAt = null;
         this.errorMessage = null;
+        this.activeMeshNode = null;
         this.stopRouteHealthMonitor();
         this.currentProxyRules = '';
         this.virtualIp = 'Direct connection (IP not masked)';

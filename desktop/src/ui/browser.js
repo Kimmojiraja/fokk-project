@@ -1262,152 +1262,700 @@ const actShare = document.getElementById('actShare');
 const actAddShortcut = document.getElementById('actAddShortcut');
 const actBookmarks = document.getElementById('actBookmarks');
 
-function openSummaryModal(summary) {
-    if (!featureHubModal || !featureModalTitle || !featureModalBody) return;
-    featureModalTitle.textContent = 'Fokk Summary';
+// =========================================================================
+// FOKK AI SIDE DRAWER (Full Parity with Mobile v2.8.6 — Zero Emojis)
+// =========================================================================
+const fokkAiDrawer = document.getElementById('fokkAiDrawer');
+const btnFokkAiToolbar = document.getElementById('btnFokkAiToolbar');
+const btnFokkAiClose = document.getElementById('btnFokkAiClose');
+const btnFokkAiRefresh = document.getElementById('btnFokkAiRefresh');
+const btnFokkAiTabSummary = document.getElementById('btnFokkAiTabSummary');
+const btnFokkAiTabChat = document.getElementById('btnFokkAiTabChat');
+const btnFokkAiTabAudit = document.getElementById('btnFokkAiTabAudit');
+const fokkAiPanelSummary = document.getElementById('fokkAiPanelSummary');
+const fokkAiPanelChat = document.getElementById('fokkAiPanelChat');
+const fokkAiPanelAudit = document.getElementById('fokkAiPanelAudit');
+const fokkAiChatInput = document.getElementById('fokkAiChatInput');
+const btnFokkAiSend = document.getElementById('btnFokkAiSend');
 
-    const bulletsHtml = (summary.bullets || []).map(b => `
-        <li style="display: flex; gap: 10px; font-size: 13px; line-height: 1.5; color: #E2E8F0; margin-bottom: 8px;">
-            <span style="color: var(--fokk-cyan); font-weight: 800; font-size: 16px; line-height: 1;">•</span>
-            <span>${b}</span>
-        </li>
-    `).join('');
+const FOKK_AI_LOGO_SVG = `<svg width="17" height="17" viewBox="0 0 100 100" fill="#F8FAFC"><path d="M25.6,78.0L13.2,78.0L14.4,75.8L27.6,50.6L39.9,30.6L52.0,14.1L55.7,10.0L55.8,41.5L55.0,43.3L53.4,44.2L41.6,44.3L37.9,51.5L55.2,51.6L55.3,57.7L54.0,60.9L51.9,62.5L50.3,62.9L33.3,62.9L25.8,77.7Z"/><path d="M89.0,74.8L58.8,74.8L58.3,10.0Z"/><path d="M49.9,90.0L20.9,90.0L19.0,89.7L16.2,88.6L14.4,87.4L11.1,83.9L8.0,80.2L38.9,80.2L41.7,79.7L46.3,77.9L48.9,77.4L92.0,77.4L86.4,83.2L82.0,86.9L77.3,89.4L74.8,89.9L50.0,89.9Z"/></svg>`;
 
-    let metricsHtml = '';
-    if (summary.metrics && summary.metrics.length > 0) {
-        metricsHtml = `
-            <div style="margin-top: 14px;">
-                <span style="font-size: 10.5px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">Key Figures &amp; Data Points</span>
-                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                    ${summary.metrics.map(m => `<span style="background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.25); color: var(--fokk-cyan); padding: 2px 8px; border-radius: 4px; font-size: 11px;">${m}</span>`).join('')}
-                </div>
-            </div>
-        `;
-    }
+const fokkAiState = {
+    url: '',
+    title: '',
+    host: '',
+    publisher: 'Web',
+    author: '',
+    published: '',
+    pageContext: '',
+    executiveSummary: '',
+    bullets: [],
+    metrics: [],
+    followUps: [],
+    chatHistory: [],
+    ttsMale: localStorage.getItem('fokk_ai_tts_male') !== 'false',
+    ttsPlaying: false,
+    analysisToken: 0
+};
 
-    let questionsHtml = '';
-    if (summary.followUpQuestions && summary.followUpQuestions.length > 0) {
-        questionsHtml = `
-            <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08);">
-                <span style="font-size: 10.5px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">Deep-Dive Questions</span>
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                    ${summary.followUpQuestions.map(q => `
-                        <div style="font-size: 12px; color: var(--fokk-cyan); background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.15); border-radius: 6px; padding: 6px 10px;">
-                            <span>✦ ${q}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
+function fokkAiEscapeHtml(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
 
-    let imageHtml = '';
-    if (summary.leadImage) {
-        imageHtml = `
-            <div style="margin-bottom: 14px; border-radius: 10px; overflow: hidden; max-height: 180px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center;">
-                <img src="${summary.leadImage}" alt="" style="max-height: 180px; width: 100%; object-fit: cover;" onerror="this.parentElement.style.display='none'" />
-            </div>
-        `;
-    }
+function fokkAiRenderMarkdown(md) {
+    let s = fokkAiEscapeHtml(String(md || '').replace(/\r\n/g, '\n'));
+    s = s.replace(/^###\s+(.+)$/gm, '<div style="font-weight:700;color:#F8FAFC;margin:10px 0 4px;">$1</div>');
+    s = s.replace(/^##\s+(.+)$/gm, '<div style="font-weight:700;color:#F8FAFC;font-size:15px;margin:12px 0 6px;">$1</div>');
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    s = s.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
+    s = s.replace(/\[(\d+)\]/g, '<sup style="color:#38BDF8;font-weight:700;">[$1]</sup>');
 
-    featureModalBody.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
-            <span style="background: rgba(0,229,255,0.15); color: var(--fokk-cyan); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
-                <svg width="12" height="12" viewBox="0 0 100 100" fill="currentColor"><path d="M25.6,78.0L13.2,78.0L14.4,75.8L27.6,50.6L39.9,30.6L52.0,14.1L55.7,10.0L55.8,41.5L55.0,43.3L53.4,44.2L41.6,44.3L37.9,51.5L55.2,51.6L55.3,57.7L54.0,60.9L51.9,62.5L50.3,62.9L33.3,62.9L25.8,77.7Z"/><path d="M89.0,74.8L58.8,74.8L58.3,10.0Z"/><path d="M49.9,90.0L20.9,90.0L19.0,89.7L16.2,88.6L14.4,87.4L11.1,83.9L8.0,80.2L38.9,80.2L41.7,79.7L46.3,77.9L48.9,77.4L92.0,77.4L86.4,83.2L82.0,86.9L77.3,89.4L74.8,89.9L50.0,89.9Z"/></svg>
-                <span>100% In-Browser Engine · Zero Cloud</span>
-            </span>
-            <span style="font-size: 11.5px; color: var(--text-secondary);">${summary.readingTime || '1 min'} read · ${summary.wordCount || 0} words</span>
-        </div>
-        ${imageHtml}
-        <h3 style="color: #FFF; font-size: 15px; font-weight: 700; margin-bottom: 12px; line-height: 1.4;">${summary.title || 'Executive Brief'}</h3>
-
-        <!-- Executive Narrative Paragraph with live typing stream -->
-        <div style="background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.18); border-radius: 10px; padding: 12px; margin-bottom: 14px; line-height: 1.6; font-size: 13px; color: #E2E8F0;">
-            <span style="font-size: 10.5px; font-weight: 800; color: var(--fokk-cyan); letter-spacing: 0.8px; text-transform: uppercase; display: block; margin-bottom: 4px;">Executive Brief</span>
-            <span id="__fokk_desktop_exec_text"></span><span id="__fokk_desktop_exec_cursor" style="color: var(--fokk-cyan); font-weight: bold;">▌</span>
-        </div>
-
-        <div id="__fokk_desktop_bullets" style="opacity: 0; transition: opacity 0.3s ease;">
-            <span style="font-size: 10.5px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 8px;">Key Takeaways</span>
-            <ul style="list-style: none; padding: 0; margin: 0;">
-                ${bulletsHtml}
-            </ul>
-            ${metricsHtml}
-            ${questionsHtml}
-        </div>
-
-        <div style="display: flex; gap: 8px; margin-top: 16px;">
-            <button class="modal-btn secondary" id="btnCopyFokkSummary" style="flex: 1;">Copy Summary</button>
-            <button class="modal-btn primary" id="btnCloseSummary" style="flex: 1;">Done</button>
-        </div>
-    `;
-
-    document.getElementById('btnCloseSummary').onclick = () => {
-        featureHubModal.classList.add('hidden');
+    const lines = s.split('\n');
+    const out = [];
+    let inUl = false;
+    let inOl = false;
+    const closeLists = () => {
+        if (inUl) { out.push('</ul>'); inUl = false; }
+        if (inOl) { out.push('</ol>'); inOl = false; }
     };
-
-    document.getElementById('btnCopyFokkSummary').onclick = (e) => {
-        const fullContent = (summary.executiveSummary ? summary.executiveSummary + '\n\n' : '') + (summary.bullets || []).join('\n\n');
-        navigator.clipboard.writeText(fullContent);
-        e.target.textContent = 'Copied!';
-        setTimeout(() => { if (e.target) e.target.textContent = 'Copy Summary'; }, 2000);
-    };
-
-    featureHubModal.classList.remove('hidden');
-
-    // Live Typewriter Streaming
-    const execTarget = document.getElementById('__fokk_desktop_exec_text');
-    const execCursor = document.getElementById('__fokk_desktop_exec_cursor');
-    const bulletsBox = document.getElementById('__fokk_desktop_bullets');
-    const textToStream = summary.executiveSummary || (summary.bullets && summary.bullets[0]) || "";
-    let sIdx = 0;
-
-    function streamNextChunk() {
-        if (sIdx < textToStream.length) {
-            const chunk = textToStream.slice(sIdx, sIdx + 4);
-            sIdx += 4;
-            if (execTarget) execTarget.textContent += chunk;
-            setTimeout(streamNextChunk, 14);
+    for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) { closeLists(); continue; }
+        if (/^[-*•]\s+/.test(line)) {
+            if (inOl) { out.push('</ol>'); inOl = false; }
+            if (!inUl) { out.push('<ul>'); inUl = true; }
+            out.push(`<li>${line.replace(/^[-*•]\s+/, '')}</li>`);
+        } else if (/^\d+\.\s+/.test(line)) {
+            if (inUl) { out.push('</ul>'); inUl = false; }
+            if (!inOl) { out.push('<ol>'); inOl = true; }
+            out.push(`<li>${line.replace(/^\d+\.\s+/, '')}</li>`);
         } else {
-            if (execCursor) execCursor.style.display = 'none';
-            if (bulletsBox) bulletsBox.style.opacity = '1';
+            closeLists();
+            out.push(line.startsWith('<div') ? line : `<p>${line}</p>`);
         }
     }
-    streamNextChunk();
+    closeLists();
+    return out.join('');
 }
+
+function fokkAiClassifyTag(text) {
+    const t = String(text || '').toLowerCase();
+    const hasFact = /\b(?:jailed|sentenced|arrested|convicted|announced|confirmed|published|founded|ruled|voted|signed|acquired|found|showed|data|research|budget|[£$€]\d+|\d+%|\d+\s*(?:million|billion|thousand|years?|months?|days?))\b/.test(t);
+    const hasOpinion = /\b(?:impressive|masterclass|disaster|amazing|incredible|appalling|shocking|arguably|perhaps|believe|opinion|feels|seems|criticised|criticized)\b/.test(t);
+    const hasClaim = /\b(?:claims?|claimed|alleged|promised|rumored|sources say|according to|disputed|unconfirmed|proposed)\b/.test(t);
+    if (hasOpinion && !hasFact) return { label: 'Opinion', cls: 'opinion' };
+    if (hasFact && !hasClaim) return { label: 'Fact', cls: 'fact' };
+    if (hasClaim) return { label: 'Claim', cls: 'claim' };
+    if (hasFact) return { label: 'Fact', cls: 'fact' };
+    return { label: 'Claim', cls: 'claim' };
+}
+
+function fokkAiCleanPublisher(domain) {
+    const d = String(domain || '').toLowerCase().replace(/^www\./, '');
+    if (!d) return 'Web';
+    if (d.includes('theguardian.com')) return 'The Guardian';
+    if (d.includes('bbc.com') || d.includes('bbc.co.uk')) return 'BBC News';
+    if (d.includes('reuters.com')) return 'Reuters';
+    if (d.includes('nytimes.com')) return 'NY Times';
+    if (d.includes('washingtonpost.com')) return 'Washington Post';
+    if (d.includes('thetimes.')) return 'The Times';
+    if (d.includes('independent.co.uk')) return 'The Independent';
+    if (d.includes('telegraph.co.uk')) return 'The Telegraph';
+    if (d.includes('sky.com')) return 'Sky News';
+    if (d.includes('bloomberg.com')) return 'Bloomberg';
+    if (d.includes('theverge.com')) return 'The Verge';
+    if (d.includes('techcrunch.com')) return 'TechCrunch';
+    if (d.includes('wikipedia.org')) return 'Wikipedia';
+    const parts = d.split('.');
+    const root = parts.length >= 2 ? parts[parts.length - 2] : d;
+    return root ? root.charAt(0).toUpperCase() + root.slice(1) : d;
+}
+
+function fokkAiSwitchTab(tabName) {
+    const isSummary = tabName === 'summary';
+    const isChat = tabName === 'chat';
+    const isAudit = tabName === 'audit';
+    if (fokkAiPanelSummary) fokkAiPanelSummary.classList.toggle('hidden', !isSummary);
+    if (fokkAiPanelChat) fokkAiPanelChat.classList.toggle('hidden', !isChat);
+    if (fokkAiPanelAudit) fokkAiPanelAudit.classList.toggle('hidden', !isAudit);
+    if (btnFokkAiTabSummary) btnFokkAiTabSummary.classList.toggle('active', isSummary);
+    if (btnFokkAiTabChat) btnFokkAiTabChat.classList.toggle('active', isChat);
+    if (btnFokkAiTabAudit) btnFokkAiTabAudit.classList.toggle('active', isAudit);
+    if (isChat && fokkAiChatInput) setTimeout(() => fokkAiChatInput.focus(), 40);
+}
+
+function fokkAiStopTts() {
+    try { window.speechSynthesis.cancel(); } catch (_) {}
+    fokkAiState.ttsPlaying = false;
+    const btn = document.getElementById('btnFokkAiListen');
+    const st = document.getElementById('fokkAiTtsStatus');
+    if (btn) btn.textContent = 'Listen';
+    if (st) { st.textContent = 'Ready'; st.style.color = '#64748B'; }
+}
+
+function fokkAiSpeak(text) {
+    if (!text || !window.speechSynthesis) return;
+    fokkAiStopTts();
+    const clean = String(text).replace(/[*#`_]/g, '').replace(/\[\d+\]/g, '').trim();
+    if (!clean) return;
+    const utter = new SpeechSynthesisUtterance(clean);
+    utter.rate = fokkAiState.ttsMale ? 0.98 : 1.02;
+    utter.pitch = fokkAiState.ttsMale ? 0.88 : 1.06;
+    const voices = window.speechSynthesis.getVoices() || [];
+    const targetVoice = voices.find(v => /en/i.test(v.lang) && (fokkAiState.ttsMale ? /male|david|mark|daniel|google uk english male/i.test(v.name) : /female|zira|samantha|aria|google us english/i.test(v.name)));
+    if (targetVoice) utter.voice = targetVoice;
+    const btn = document.getElementById('btnFokkAiListen');
+    const st = document.getElementById('fokkAiTtsStatus');
+    utter.onstart = () => {
+        fokkAiState.ttsPlaying = true;
+        if (btn) btn.textContent = 'Stop';
+        if (st) { st.textContent = 'Playing...'; st.style.color = '#38BDF8'; }
+    };
+    utter.onend = () => fokkAiStopTts();
+    utter.onerror = () => fokkAiStopTts();
+    window.speechSynthesis.speak(utter);
+}
+
+function fokkAiHighlightInActiveTab(sentence) {
+    const active = getActiveWebview();
+    if (!active || !sentence) return;
+    const plain = String(sentence).replace(/\*\*/g, '').replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "\\'");
+    active.executeJavaScript(`window.highlightPageSentence && window.highlightPageSentence("${plain}");`).catch(() => {});
+    showToast('Highlighted passage on page');
+}
+
+function fokkAiRenderBullets(containerEl, items) {
+    if (!containerEl) return;
+    containerEl.innerHTML = '';
+    (items || []).forEach(bullet => {
+        const tag = fokkAiClassifyTag(bullet);
+        const row = document.createElement('div');
+        row.className = 'fokk-ai-bullet-row';
+        row.innerHTML = `<span class="fokk-ai-tag ${tag.cls}">${tag.label}</span><div class="fokk-ai-bullet-text">${fokkAiRenderMarkdown(bullet)}</div>`;
+        row.onclick = () => fokkAiHighlightInActiveTab(bullet);
+        containerEl.appendChild(row);
+    });
+}
+
+function fokkAiRenderMetrics(metrics) {
+    const sec = document.getElementById('fokkAiMetricsSection');
+    const grid = document.getElementById('fokkAiMetricsGrid');
+    if (!sec || !grid) return;
+    const parsed = [];
+    (metrics || []).forEach(m => {
+        if (m && typeof m === 'object' && m.value && m.label) {
+            parsed.push({ value: String(m.value), label: String(m.label) });
+        } else if (typeof m === 'string' && m.includes('::')) {
+            const idx = m.indexOf('::');
+            const v = m.slice(0, idx).trim();
+            const l = m.slice(idx + 2).trim();
+            if (v && l) parsed.push({ value: v, label: l });
+        }
+    });
+    if (parsed.length === 0) {
+        sec.classList.add('hidden');
+        grid.innerHTML = '';
+        return;
+    }
+    sec.classList.remove('hidden');
+    grid.innerHTML = parsed.slice(0, 4).map(m => `
+        <div class="fokk-ai-metric-card">
+            <div class="fokk-ai-metric-val">${fokkAiEscapeHtml(m.value)}</div>
+            <div class="fokk-ai-metric-label">${fokkAiEscapeHtml(m.label)}</div>
+        </div>
+    `).join('');
+}
+
+function fokkAiRenderPrompts(containerEl, questions, switchToChat) {
+    if (!containerEl) return;
+    containerEl.innerHTML = '';
+    (questions || []).forEach(q => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'fokk-ai-prompt-card';
+        btn.innerHTML = `<span>${fokkAiEscapeHtml(q)}</span><span class="fokk-ai-prompt-chevron">›</span>`;
+        btn.onclick = () => {
+            if (switchToChat) fokkAiSwitchTab('chat');
+            fokkAiAskQuestion(q);
+        };
+        containerEl.appendChild(btn);
+    });
+}
+
+function fokkAiApplyCredibility(data) {
+    const score = Number(data.credibilityScore || 75);
+    const verdict = data.credibilityVerdict || 'Established Source';
+    const reason = data.credibilityReason || '';
+    const bias = data.biasTone || 'Objective Reporting';
+    const color = score >= 82 ? '#34D399' : score >= 68 ? '#38BDF8' : score >= 50 ? '#FBBF24' : '#F87171';
+
+    const pill = document.getElementById('btnFokkAiTrustPill');
+    const vEl = document.getElementById('fokkAiTrustVerdict');
+    const sEl = document.getElementById('fokkAiTrustScore');
+    if (pill) pill.style.color = color;
+    if (vEl) vEl.textContent = verdict;
+    if (sEl) sEl.textContent = `${score}%`;
+
+    const aScore = document.getElementById('fokkAiAuditScore');
+    const aBias = document.getElementById('fokkAiAuditBias');
+    const aBar = document.getElementById('fokkAiAuditBar');
+    const aReason = document.getElementById('fokkAiAuditReason');
+    if (aScore) { aScore.textContent = `${score}% · ${verdict}`; aScore.style.color = color; }
+    if (aBias) aBias.textContent = bias;
+    if (aBar) { aBar.style.width = `${score}%`; aBar.style.background = color; }
+    if (aReason) aReason.textContent = reason;
+
+    const l1 = document.getElementById('fokkAiLayer1');
+    const l2 = document.getElementById('fokkAiLayer2');
+    const l3 = document.getElementById('fokkAiLayer3');
+    if (l1 && data.layer1DomainIdentity) l1.textContent = data.layer1DomainIdentity;
+    if (l2 && data.layer2RhetoricalStance) l2.textContent = data.layer2RhetoricalStance;
+    if (l3 && data.layer3EvidenceDensity) l3.textContent = data.layer3EvidenceDensity;
+
+    const provWrap = document.getElementById('fokkAiAuditProvenance');
+    const provFlow = document.getElementById('fokkAiAuditProvFlow');
+    if (provWrap && provFlow) {
+        if (data.originalSource && data.originalSource.toLowerCase() !== fokkAiState.publisher.toLowerCase()) {
+            provWrap.classList.remove('hidden');
+            provFlow.textContent = `${data.originalSource} → ${data.aggregatorSource || fokkAiState.publisher}`;
+        } else {
+            provWrap.classList.add('hidden');
+        }
+    }
+
+    const missCard = document.getElementById('fokkAiMissingCard');
+    const missText = document.getElementById('fokkAiMissingText');
+    if (missCard && missText) {
+        if (data.whatsMissing) {
+            missCard.classList.remove('hidden');
+            missText.textContent = data.whatsMissing;
+        } else {
+            missCard.classList.add('hidden');
+        }
+    }
+}
+
+function fokkAiRenderSourcesRow(containerEl, sources) {
+    if (!containerEl) return;
+    containerEl.innerHTML = '';
+    (sources || []).slice(0, 6).forEach(src => {
+        const a = document.createElement('a');
+        a.className = 'fokk-ai-source-pill';
+        a.href = '#';
+        const domain = (src.domain || '').replace(/^www\./, '');
+        const label = fokkAiCleanPublisher(domain);
+        const fav = domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32` : '';
+        a.innerHTML = `${fav ? `<img src="${fav}" onerror="this.style.display='none'" alt="">` : ''}<span>${fokkAiEscapeHtml(label)}</span>`;
+        a.onclick = (e) => {
+            e.preventDefault();
+            if (src.url) createTab(src.url);
+        };
+        containerEl.appendChild(a);
+    });
+}
+
+async function fokkAiAskQuestion(queryText) {
+    const q = String(queryText || '').trim();
+    if (!q) return;
+    if (fokkAiChatInput) { fokkAiChatInput.value = ''; fokkAiChatInput.style.height = 'auto'; }
+    const emptyEl = document.getElementById('fokkAiChatEmpty');
+    const msgsEl = document.getElementById('fokkAiChatMessages');
+    const scrollEl = document.getElementById('fokkAiChatScroll');
+    if (emptyEl) emptyEl.classList.add('hidden');
+    if (!msgsEl) return;
+
+    const turn = document.createElement('div');
+    turn.className = 'fokk-ai-turn';
+    turn.innerHTML = `
+        <div class="fokk-ai-user-row"><div class="fokk-ai-user-bubble">${fokkAiEscapeHtml(q)}</div></div>
+        <div class="fokk-ai-reply-header">${FOKK_AI_LOGO_SVG}<span class="fokk-ai-reply-brand">Fokk AI</span></div>
+        <div class="fokk-ai-reply-body" style="color:#94A3B8;">Thinking...</div>
+    `;
+    msgsEl.appendChild(turn);
+    if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
+
+    const historySnapshot = fokkAiState.chatHistory.slice(-6);
+    const res = await ipcRenderer.invoke('fokk-ai-ask', {
+        userQuery: q,
+        pageTitle: fokkAiState.title,
+        pageHost: fokkAiState.host,
+        pageContext: fokkAiState.pageContext,
+        pageAuthor: fokkAiState.author,
+        pagePublished: fokkAiState.published,
+        pageUrl: fokkAiState.url,
+        conversationHistory: historySnapshot
+    });
+
+    const answer = (res && res.answer) ? res.answer : 'Unable to answer right now. Please try again.';
+    const followUps = (res && Array.isArray(res.followUps)) ? res.followUps : [];
+    const extSources = (res && Array.isArray(res.sources)) ? res.sources : [];
+    fokkAiState.chatHistory.push([q, answer]);
+
+    const bodyEl = turn.querySelector('.fokk-ai-reply-body');
+    if (bodyEl) {
+        bodyEl.style.color = '#E2E8F0';
+        bodyEl.innerHTML = fokkAiRenderMarkdown(answer);
+    }
+
+    const actionsRow = document.createElement('div');
+    actionsRow.className = 'fokk-ai-reply-actions';
+    const btnCopy = document.createElement('button');
+    btnCopy.className = 'fokk-ai-pill-btn';
+    btnCopy.textContent = 'Copy';
+    btnCopy.onclick = () => { navigator.clipboard.writeText(answer); showToast('Copied'); };
+    const btnSpeak = document.createElement('button');
+    btnSpeak.className = 'fokk-ai-pill-btn';
+    btnSpeak.textContent = 'Listen';
+    btnSpeak.onclick = () => fokkAiSpeak(answer);
+    const btnWeb = document.createElement('button');
+    btnWeb.className = 'fokk-ai-pill-btn';
+    btnWeb.textContent = 'Web Search';
+    btnWeb.onclick = () => createTab(`https://www.google.com/search?q=${encodeURIComponent(q)}`);
+    actionsRow.append(btnCopy, btnSpeak, btnWeb);
+    turn.appendChild(actionsRow);
+
+    const allSources = [];
+    if (fokkAiState.host && fokkAiState.url && !fokkAiState.url.startsWith('file://')) {
+        allSources.push({ domain: fokkAiState.host, url: fokkAiState.url, title: fokkAiState.title });
+    }
+    extSources.forEach(s => { if (s.url !== fokkAiState.url) allSources.push(s); });
+
+    if (allSources.length > 0) {
+        const lbl = document.createElement('div');
+        lbl.className = 'fokk-ai-sub-label';
+        lbl.textContent = 'Sources';
+        const row = document.createElement('div');
+        row.className = 'fokk-ai-sources-row';
+        fokkAiRenderSourcesRow(row, allSources);
+        turn.append(lbl, row);
+    }
+
+    if (followUps.length > 0) {
+        const lbl = document.createElement('div');
+        lbl.className = 'fokk-ai-sub-label';
+        lbl.textContent = 'Related';
+        const list = document.createElement('div');
+        list.className = 'fokk-ai-prompts-list';
+        fokkAiRenderPrompts(list, followUps.slice(0, 2), false);
+        turn.append(lbl, list);
+    }
+
+    if (scrollEl) {
+        const dist = scrollEl.scrollHeight - (scrollEl.scrollTop + scrollEl.clientHeight);
+        if (dist < 280) scrollEl.scrollTop = scrollEl.scrollHeight;
+    }
+}
+
+async function openFokkAiDrawer(initialTab = 'summary', forceRefresh = false) {
+    if (!fokkAiDrawer) return;
+    if (desktopBrowserMenu) desktopBrowserMenu.classList.add('hidden');
+    if (vpnPopover) vpnPopover.classList.add('hidden');
+    fokkAiDrawer.classList.remove('hidden');
+    if (btnFokkAiToolbar) btnFokkAiToolbar.classList.add('active');
+    fokkAiSwitchTab(initialTab);
+
+    const active = getActiveWebview();
+    let activeUrl = '';
+    try { activeUrl = active ? active.getURL() : ''; } catch (_) {}
+
+    if (!forceRefresh && activeUrl && activeUrl === fokkAiState.url && fokkAiState.executiveSummary) {
+        return;
+    }
+
+    const token = ++fokkAiState.analysisToken;
+    fokkAiStopTts();
+    fokkAiState.chatHistory = [];
+    const msgsEl = document.getElementById('fokkAiChatMessages');
+    const emptyEl = document.getElementById('fokkAiChatEmpty');
+    if (msgsEl) msgsEl.innerHTML = '';
+    if (emptyEl) emptyEl.classList.remove('hidden');
+
+    fokkAiRenderPrompts(document.getElementById('fokkAiQuickStarters'), [
+        'Summarize this page in 3 concise bullet points',
+        'Who published this and what is the main takeaway?',
+        'Fact-check the key claims and note any missing context'
+    ], false);
+
+    // Handle start page gracefully
+    if (!active || !activeUrl || activeUrl.includes('start.html') || activeUrl.startsWith('file://')) {
+        fokkAiState.url = activeUrl || 'fokk://home';
+        fokkAiState.title = 'Fokk AI';
+        fokkAiState.host = 'fokk.ai';
+        fokkAiState.publisher = 'Fokk AI';
+        fokkAiState.pageContext = '';
+        fokkAiState.executiveSummary = 'Open any article or webpage in Fokk Browser and launch Fokk AI for a synthesized overview, contextual key numbers, interactive Ask AI chat, and a 3-layer Truth & Bias audit.';
+        fokkAiState.bullets = [
+            'Instant AI-synthesized Summary with contextual Key Numbers.',
+            'Conversational Ask AI with multi-turn memory and live web search.',
+            'Three-layer Truth & Bias Audit with clickable passage highlighting.'
+        ];
+        document.getElementById('fokkAiSourceName').textContent = 'Fokk AI';
+        document.getElementById('fokkAiSourceFavicon').classList.add('hidden');
+        document.getElementById('fokkAiLeadWrap').classList.add('hidden');
+        document.getElementById('fokkAiTitle').textContent = 'Fokk AI';
+        document.getElementById('fokkAiMetaText').textContent = 'Ready';
+        document.getElementById('fokkAiLoadingPill').classList.add('hidden');
+        document.getElementById('fokkAiOverviewSection').classList.remove('hidden');
+        document.getElementById('fokkAiOverviewText').textContent = fokkAiState.executiveSummary;
+        fokkAiRenderBullets(document.getElementById('fokkAiTakeawaysList'), fokkAiState.bullets);
+        fokkAiRenderMetrics([
+            { value: 'Live AI', label: 'Fast multi-model synthesis' },
+            { value: 'Zero Ads', label: 'Clean extraction & search' },
+            { value: '3-Layer', label: 'Source & bias verification' },
+            { value: 'Audio', label: 'Built-in voice briefing' }
+        ]);
+        document.getElementById('fokkAiMissingCard').classList.add('hidden');
+        document.getElementById('fokkAiExploreSection').classList.add('hidden');
+        document.getElementById('fokkAiSourcesSection').classList.add('hidden');
+        return;
+    }
+
+    // Extract page summary + clean editorial context from active webview
+    let summary = null;
+    let pageContext = '';
+    try {
+        const script = await ipcRenderer.invoke('fokk-get-summarizer-script');
+        const extracted = await active.executeJavaScript(`
+            (function() {
+                try {
+                    if (typeof window.generatePageSummary !== 'function') {
+                        ${script}
+                    }
+                    var sum = typeof window.generatePageSummary === 'function' ? window.generatePageSummary() : null;
+                    var containers = document.querySelectorAll('article,[role="main"],main,.article-body,.post-content,.entry-content,[itemprop="articleBody"]');
+                    var root = null;
+                    for (var i = 0; i < containers.length; i++) {
+                        if (containers[i].querySelectorAll('p').length >= 2) { root = containers[i]; break; }
+                    }
+                    if (!root) root = document.body;
+                    var paras = Array.from(root.querySelectorAll('p, blockquote, [data-testid="tweetText"]'))
+                        .map(function(el) {
+                            return (el.innerText || '').replace(/\\s+/g, ' ').replace(/\\b([B-HJ-Z])\\s+([a-z]{2,})\\b/g, '$1$2').trim();
+                        })
+                        .filter(function(t) { return t.length > 25 && !t.includes('{'); });
+                    var ctx = paras.slice(0, 80).join('\\n\\n').slice(0, 10000);
+                    return { summary: sum, context: ctx, url: window.location.href, host: window.location.hostname.replace(/^www\\./i, '') };
+                } catch (e) { return { summary: null, context: '', url: window.location.href, host: window.location.hostname }; }
+            })();
+        `);
+        summary = extracted && extracted.summary ? extracted.summary : null;
+        pageContext = (extracted && extracted.context) || '';
+    } catch (_) {}
+
+    if (token !== fokkAiState.analysisToken) return;
+
+    let host = '';
+    try { host = new URL(activeUrl).hostname.replace(/^www\./i, ''); } catch (_) {}
+    const title = (summary && summary.title) || active.getTitle() || 'Article Summary';
+    const publisher = fokkAiCleanPublisher(host);
+
+    fokkAiState.url = activeUrl;
+    fokkAiState.title = title;
+    fokkAiState.host = host;
+    fokkAiState.publisher = publisher;
+    fokkAiState.author = (summary && (summary.author || (summary.provenance && summary.provenance.author))) || '';
+    fokkAiState.published = (summary && (summary.published || (summary.provenance && summary.provenance.published))) || '';
+    fokkAiState.pageContext = pageContext;
+    fokkAiState.executiveSummary = (summary && (summary.executiveSummary || summary.summary)) || '';
+    fokkAiState.bullets = (summary && Array.isArray(summary.bullets)) ? summary.bullets : [];
+    fokkAiState.metrics = (summary && Array.isArray(summary.metrics)) ? summary.metrics : [];
+    fokkAiState.followUps = (summary && Array.isArray(summary.followUpQuestions)) ? summary.followUpQuestions : [];
+
+    // Instant baseline UI render
+    document.getElementById('fokkAiSourceName').textContent = publisher;
+    const favEl = document.getElementById('fokkAiSourceFavicon');
+    if (favEl && host) {
+        favEl.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=32`;
+        favEl.classList.remove('hidden');
+    }
+
+    const leadWrap = document.getElementById('fokkAiLeadWrap');
+    const leadImg = document.getElementById('fokkAiLeadImg');
+    if (leadWrap && leadImg && summary && summary.leadImage && /^https?:\/\//.test(summary.leadImage)) {
+        leadImg.src = summary.leadImage;
+        leadImg.onerror = () => leadWrap.classList.add('hidden');
+        leadWrap.classList.remove('hidden');
+    } else if (leadWrap) {
+        leadWrap.classList.add('hidden');
+    }
+
+    document.getElementById('fokkAiTitle').textContent = title;
+    const metaBits = [];
+    if (summary && summary.readingTime) metaBits.push(summary.readingTime);
+    if (summary && summary.wordCount > 0) metaBits.push(`${Number(summary.wordCount).toLocaleString()} words`);
+    document.getElementById('fokkAiMetaText').textContent = metaBits.join(' · ') || 'Web page';
+
+    if (fokkAiState.executiveSummary) {
+        document.getElementById('fokkAiOverviewSection').classList.remove('hidden');
+        document.getElementById('fokkAiOverviewText').innerHTML = fokkAiRenderMarkdown(fokkAiState.executiveSummary);
+    }
+    fokkAiRenderBullets(document.getElementById('fokkAiTakeawaysList'), fokkAiState.bullets);
+    fokkAiRenderBullets(document.getElementById('fokkAiClaimsList'), fokkAiState.bullets.slice(0, 4));
+    fokkAiRenderMetrics(fokkAiState.metrics);
+
+    if (fokkAiState.followUps.length > 0) {
+        document.getElementById('fokkAiExploreSection').classList.remove('hidden');
+        fokkAiRenderPrompts(document.getElementById('fokkAiExploreList'), fokkAiState.followUps.slice(0, 3), true);
+    } else {
+        document.getElementById('fokkAiExploreSection').classList.add('hidden');
+    }
+
+    const loadingPill = document.getElementById('fokkAiLoadingPill');
+    if (loadingPill) loadingPill.classList.remove('hidden');
+
+    // Run live AI synthesis & multi-source corroboration in main process
+    const analysis = await ipcRenderer.invoke('fokk-ai-analyze', {
+        pageTitle: title,
+        pageHost: host,
+        pageUrl: activeUrl,
+        pageContext,
+        pageAuthor: fokkAiState.author,
+        pagePublished: fokkAiState.published
+    });
+
+    if (token !== fokkAiState.analysisToken) return;
+    if (loadingPill) loadingPill.classList.add('hidden');
+    if (!analysis) return;
+
+    if (analysis.executiveBrief) {
+        fokkAiState.executiveSummary = analysis.executiveBrief;
+        document.getElementById('fokkAiOverviewSection').classList.remove('hidden');
+        document.getElementById('fokkAiOverviewText').innerHTML = fokkAiRenderMarkdown(analysis.executiveBrief);
+    }
+    if (Array.isArray(analysis.keyEvidencePoints) && analysis.keyEvidencePoints.length > 0) {
+        fokkAiState.bullets = analysis.keyEvidencePoints;
+        fokkAiRenderBullets(document.getElementById('fokkAiTakeawaysList'), analysis.keyEvidencePoints);
+    }
+    if (Array.isArray(analysis.verifiedClaims) && analysis.verifiedClaims.length > 0) {
+        fokkAiRenderBullets(document.getElementById('fokkAiClaimsList'), analysis.verifiedClaims);
+    }
+    if (Array.isArray(analysis.keyMetrics) && analysis.keyMetrics.length > 0) {
+        fokkAiState.metrics = analysis.keyMetrics;
+        fokkAiRenderMetrics(analysis.keyMetrics);
+    }
+    if (Array.isArray(analysis.followUpQuestions) && analysis.followUpQuestions.length > 0) {
+        fokkAiState.followUps = analysis.followUpQuestions;
+        document.getElementById('fokkAiExploreSection').classList.remove('hidden');
+        fokkAiRenderPrompts(document.getElementById('fokkAiExploreList'), analysis.followUpQuestions.slice(0, 3), true);
+    }
+
+    const srcSec = document.getElementById('fokkAiSourcesSection');
+    const srcCount = document.getElementById('fokkAiSourcesCount');
+    const srcRow = document.getElementById('fokkAiSourcesRow');
+    if (Array.isArray(analysis.corroboratedSources) && analysis.corroboratedSources.length > 0) {
+        if (srcSec) srcSec.classList.remove('hidden');
+        if (srcCount) srcCount.textContent = String(analysis.corroboratedSources.length);
+        fokkAiRenderSourcesRow(srcRow, analysis.corroboratedSources);
+    } else if (srcSec) {
+        srcSec.classList.add('hidden');
+    }
+
+    fokkAiApplyCredibility(analysis);
+}
+
+// Wire Fokk AI Drawer Controls
+if (btnFokkAiToolbar) {
+    btnFokkAiToolbar.onclick = () => {
+        if (fokkAiDrawer && !fokkAiDrawer.classList.contains('hidden')) {
+            fokkAiDrawer.classList.add('hidden');
+            btnFokkAiToolbar.classList.remove('active');
+            fokkAiStopTts();
+        } else {
+            openFokkAiDrawer('summary');
+        }
+    };
+}
+if (btnFokkAiClose) {
+    btnFokkAiClose.onclick = () => {
+        if (fokkAiDrawer) fokkAiDrawer.classList.add('hidden');
+        if (btnFokkAiToolbar) btnFokkAiToolbar.classList.remove('active');
+        fokkAiStopTts();
+    };
+}
+if (btnFokkAiRefresh) {
+    btnFokkAiRefresh.onclick = () => openFokkAiDrawer('summary', true);
+}
+if (btnFokkAiTabSummary) btnFokkAiTabSummary.onclick = () => fokkAiSwitchTab('summary');
+if (btnFokkAiTabChat) btnFokkAiTabChat.onclick = () => fokkAiSwitchTab('chat');
+if (btnFokkAiTabAudit) btnFokkAiTabAudit.onclick = () => fokkAiSwitchTab('audit');
+
+const btnFokkAiTrustPill = document.getElementById('btnFokkAiTrustPill');
+if (btnFokkAiTrustPill) btnFokkAiTrustPill.onclick = () => fokkAiSwitchTab('audit');
+
+const btnFokkAiVoiceToggle = document.getElementById('btnFokkAiVoiceToggle');
+if (btnFokkAiVoiceToggle) {
+    btnFokkAiVoiceToggle.textContent = fokkAiState.ttsMale ? 'Voice: Male' : 'Voice: Female';
+    btnFokkAiVoiceToggle.onclick = () => {
+        fokkAiState.ttsMale = !fokkAiState.ttsMale;
+        localStorage.setItem('fokk_ai_tts_male', String(fokkAiState.ttsMale));
+        btnFokkAiVoiceToggle.textContent = fokkAiState.ttsMale ? 'Voice: Male' : 'Voice: Female';
+        if (fokkAiState.ttsPlaying) {
+            fokkAiSpeak(`${fokkAiState.title}. ${fokkAiState.executiveSummary}. ${(fokkAiState.bullets || []).join('. ')}`);
+        }
+    };
+}
+
+const btnFokkAiListen = document.getElementById('btnFokkAiListen');
+if (btnFokkAiListen) {
+    btnFokkAiListen.onclick = () => {
+        if (fokkAiState.ttsPlaying) {
+            fokkAiStopTts();
+        } else {
+            const text = [fokkAiState.title, fokkAiState.executiveSummary, ...(fokkAiState.bullets || [])].filter(Boolean).join('. ');
+            fokkAiSpeak(text);
+        }
+    };
+}
+
+const btnFokkAiCopy = document.getElementById('btnFokkAiCopy');
+if (btnFokkAiCopy) {
+    btnFokkAiCopy.onclick = () => {
+        const text = `${fokkAiState.title}\n\n${fokkAiState.executiveSummary}\n\nKey Takeaways:\n${(fokkAiState.bullets || []).map(b => '- ' + b.replace(/\*\*/g, '')).join('\n')}`.trim();
+        navigator.clipboard.writeText(text);
+        showToast('Summary copied');
+    };
+}
+
+if (btnFokkAiSend) {
+    btnFokkAiSend.onclick = () => {
+        if (fokkAiChatInput && fokkAiChatInput.value.trim()) {
+            fokkAiAskQuestion(fokkAiChatInput.value);
+        }
+    };
+}
+if (fokkAiChatInput) {
+    fokkAiChatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (fokkAiChatInput.value.trim()) fokkAiAskQuestion(fokkAiChatInput.value);
+        }
+    });
+    fokkAiChatInput.addEventListener('input', () => {
+        fokkAiChatInput.style.height = 'auto';
+        fokkAiChatInput.style.height = Math.min(100, fokkAiChatInput.scrollHeight) + 'px';
+    });
+}
+
+document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        openFokkAiDrawer('summary');
+    }
+});
 
 if (actNewTab) actNewTab.onclick = () => { createTab(START_PAGE_URL); desktopBrowserMenu.classList.add('hidden'); };
 if (actPrivateTab) actPrivateTab.onclick = () => { createTab(START_PAGE_URL, { isPrivate: true }); desktopBrowserMenu.classList.add('hidden'); };
 if (actReaderMode) actReaderMode.onclick = () => { desktopBrowserMenu.classList.add('hidden'); toggleReaderMode(); };
 
 if (actSmartSummary) {
-    actSmartSummary.onclick = async () => {
+    actSmartSummary.onclick = () => {
         desktopBrowserMenu.classList.add('hidden');
-        const active = getActiveWebview();
-        if (!active) return;
-        showToast('Generating Fokk Summary...');
-        try {
-            const script = await ipcRenderer.invoke('fokk-get-summarizer-script');
-            const summary = await active.executeJavaScript(`
-                (function() {
-                    if (typeof window.generatePageSummary !== 'function') {
-                        ${script}
-                    }
-                    if (typeof window.generatePageSummary === 'function') {
-                        return window.generatePageSummary();
-                    }
-                    return null;
-                })();
-            `);
-
-            if (summary && (summary.bullets || summary.executiveSummary)) {
-                openSummaryModal(summary);
-            } else {
-                showToast('Not enough article content found to summarize', true);
-            }
-        } catch (e) {
-            showToast('Fokk Summary error: ' + (e.message || e), true);
-        }
+        openFokkAiDrawer('summary');
     };
 }
 
@@ -2564,10 +3112,13 @@ function renderProtocolPicker(locations, activeMode) {
 
             try {
                 await ipcRenderer.invoke('fokk-vpn-set-mode', modeId);
-                if (modeId === 'tor') {
-                    showToast('Tor browser route selected. Connect to apply it.');
+                if (modeId.startsWith('relay_')) {
+                    const label = card.querySelector('.vpn-proto-name')?.textContent || 'Fokk Mesh';
+                    showToast(`${label} selected. Tap power to connect.`);
+                } else if (modeId === 'tor') {
+                    showToast('Tor Onion Network selected. Tap power to connect.');
                 } else {
-                    showToast('Custom browser proxy selected. Enter a reachable endpoint.');
+                    showToast('Custom proxy selected. Enter a reachable endpoint.');
                 }
             } catch (_) {}
         });
@@ -2594,22 +3145,14 @@ function updateVpnUI(status) {
     if (btnVpnToggle) {
         btnVpnToggle.classList.toggle('active', isConn || (vpnPopover && !vpnPopover.classList.contains('hidden')));
         btnVpnToggle.title = isConn
-            ? `Fokk Shield Tunnel: Connected (${status.virtualCountry || 'Anycast'})`
-            : isConnecting
-            ? 'Fokk Shield Tunnel: Connecting...'
-            : 'Fokk Browser privacy routing';
-    }
-
-    if (btnVpnToggle) {
-        btnVpnToggle.title = isConn
-            ? `Fokk browser route configured (${status.virtualCountry || 'selected endpoint'}); exit IP not verified`
-            : isConnecting ? 'Applying browser route...' : 'Fokk browser privacy routing';
+            ? `Fokk Mesh: Protected (${status.virtualCountry || 'Optimal'}${status.ping ? ` · ${status.ping} ms` : ''})`
+            : isConnecting ? 'Fokk Mesh: Connecting...' : 'Fokk Mesh — Multi-Region Privacy Routing';
     }
 
     // 2. Popover Status Pill
     if (vpnStatusPill) {
         vpnStatusPill.className = 'vpn-status-pill ' + state;
-        vpnStatusPill.textContent = isConn ? 'Route set' : isConnecting ? 'Connecting...' : isErr ? 'Unavailable' : 'Disconnected';
+        vpnStatusPill.textContent = isConn ? 'Protected' : isConnecting ? 'Connecting...' : isErr ? 'Unavailable' : 'Disconnected';
     }
 
     // 3. Power Button & Radar Ring
@@ -2635,24 +3178,26 @@ function updateVpnUI(status) {
                 });
             }
         } else {
-            vpnPowerLabel.textContent = isConn ? 'Connected — Tunnel Active' : isConnecting ? 'Detecting Relay...' : 'Tap to Connect';
+            vpnPowerLabel.textContent = isConn ? 'Protected' : isConnecting ? 'Probing Mesh Relays...' : 'Disconnected';
         }
     }
-    if (vpnPowerLabel && !isErr) {
-        vpnPowerLabel.textContent = isConn ? 'Browser route set — verify exit IP' : isConnecting ? 'Applying route...' : 'Tap to connect';
-    }
     if (vpnPowerSub) {
-        vpnPowerSub.textContent = isConn 
-            ? 'Browser traffic only; exit IP is unverified'
-            : isConnecting 
-            ? 'Checking and applying the selected route...'
-            : 'Select Tor or configure a proxy';
+        vpnPowerSub.textContent = isConn
+            ? (status.activeMeshNode ? `Routed via ${status.virtualCountry}` : 'Browser route active')
+            : isConnecting
+            ? 'Selecting fastest verified Fokk Mesh relay...'
+            : 'Your real IP is visible';
+    }
+
+    const meshBadge = document.getElementById('vpnMeshNodeBadge');
+    if (meshBadge && status.meshNodeCount) {
+        meshBadge.textContent = `${status.meshNodeCount} Relays`;
     }
 
     // 4. Metrics
     if (vpnMetricIp) {
-        vpnMetricIp.textContent = verifiedExitIp || status.virtualIp || (isConn ? 'Route configured — verify exit IP' : 'Direct connection (IP not masked)');
-        vpnMetricIp.className = 'metric-val ' + (verifiedExitIp && browserExitDiffersFromDirect ? 'masked' : isConn || isConnecting ? 'connecting' : 'unmasked');
+        vpnMetricIp.textContent = verifiedExitIp || status.virtualIp || (isConn ? 'Route active' : 'Direct connection (IP not masked)');
+        vpnMetricIp.className = 'metric-val ' + ((verifiedExitIp && browserExitDiffersFromDirect) || (isConn && status.activeMeshNode) ? 'masked' : isConn || isConnecting ? 'connecting' : 'unmasked');
     }
     if (vpnMetricLocation) vpnMetricLocation.textContent = status.virtualCountry || status.location?.region || 'Local Direct';
     if (vpnMetricProtocol) vpnMetricProtocol.textContent = status.location?.protocol || 'Browser proxy';

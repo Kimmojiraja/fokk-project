@@ -6,6 +6,7 @@ const { spawn } = require('child_process');
 const AdBlockEngine = require('./adblock');
 const newsService = require('./news');
 const { VpnEngine } = require('./vpn_engine');
+const { FokkAiService } = require('./fokk_ai');
 const { cleanTrackingUrl } = require('./clean_url');
 
 // Universal Stealth & Anti-Automation Flags (matching Brave / Un-automated Chromium)
@@ -80,6 +81,10 @@ function executeInMainWindow(script) {
 let stealthPoisonerScript = '';
 try {
     stealthPoisonerScript = fs.readFileSync(path.join(__dirname, 'stealth_poisoner.js'), 'utf8');
+} catch (_) {}
+let fokkAiService = null;
+try {
+    fokkAiService = new FokkAiService(app.getPath('userData'));
 } catch (_) {}
 let vpnEngine = null;
 try {
@@ -872,6 +877,34 @@ ipcMain.handle('fokk-get-reader-script', () => {
 
 ipcMain.handle('fokk-get-summarizer-script', () => {
     return adblock.summarizerJs || '';
+});
+
+ipcMain.handle('fokk-ai-analyze', async (event, params) => {
+    if (!fokkAiService) return null;
+    try {
+        return await fokkAiService.analyzeWebpage(params || {});
+    } catch (_) {
+        return null;
+    }
+});
+
+ipcMain.handle('fokk-ai-ask', async (event, params) => {
+    if (!fokkAiService) return { answer: 'Fokk AI service is unavailable.', followUps: [], sources: [] };
+    try {
+        return await fokkAiService.queryInteractiveResearch(params || {});
+    } catch (_) {
+        return { answer: 'Unable to reach Fokk AI right now. Please try again.', followUps: [], sources: [] };
+    }
+});
+
+ipcMain.handle('fokk-ai-set-key', (event, key) => {
+    if (!fokkAiService) return false;
+    return fokkAiService.setApiKey(key);
+});
+
+ipcMain.handle('fokk-ai-get-key', () => {
+    if (!fokkAiService) return '';
+    return fokkAiService.getApiKey();
 });
 
 const fokkAuditPageGrants = new Map();

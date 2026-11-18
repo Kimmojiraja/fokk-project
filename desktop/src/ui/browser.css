@@ -2879,3 +2879,738 @@ body.theme-light .vpn-footer-toggle {
 
 
 
+
+/* ==========================================================================
+   Fokk AI Side Drawer (Desktop Parity with Mobile v2.8.6 — Zero Emojis)
+   ========================================================================== */
+.fokk-ai-toolbar-btn {
+    color: #E2E8F0;
+}
+.fokk-ai-toolbar-btn.active {
+    color: #38BDF8;
+    background: rgba(56, 189, 248, 0.14);
+}
+
+.fokk-ai-drawer {
+    position: fixed;
+    top: 86px;
+    right: 0;
+    bottom: 0;
+    width: 440px;
+    max-width: 92vw;
+    background: #06080D;
+    border-left: 1px solid #151E2E;
+    box-shadow: -12px 0 36px rgba(0, 0, 0, 0.55);
+    z-index: 9500;
+    display: flex;
+    flex-direction: column;
+    color: #E2E8F0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+}
+.fokk-ai-drawer.hidden {
+    display: none !important;
+}
+
+.fokk-ai-top {
+    flex-shrink: 0;
+    padding: 14px 18px 12px;
+    border-bottom: 1px solid #131B29;
+    background: #06080D;
+}
+
+.fokk-ai-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.fokk-ai-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+}
+.fokk-ai-brand-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #F8FAFC;
+    white-space: nowrap;
+}
+.fokk-ai-dot {
+    color: #475569;
+    font-weight: 700;
+}
+.fokk-ai-source-fav {
+    width: 15px;
+    height: 15px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+.fokk-ai-source-fav.hidden {
+    display: none;
+}
+.fokk-ai-source-name {
+    font-size: 13px;
+    color: #94A3B8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fokk-ai-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.fokk-ai-icon-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #94A3B8;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.fokk-ai-icon-btn:hover {
+    background: #131B29;
+    color: #F8FAFC;
+}
+
+.fokk-ai-tabs {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.1fr;
+    gap: 4px;
+    background: #0D111A;
+    border: 1px solid #1C2536;
+    border-radius: 14px;
+    padding: 3px;
+}
+.fokk-ai-tab {
+    border: 1px solid transparent;
+    background: transparent;
+    color: #8B95A5;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 10px;
+    border-radius: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+.fokk-ai-tab:hover {
+    color: #E2E8F0;
+}
+.fokk-ai-tab.active {
+    background: #1E293B;
+    border-color: #334155;
+    color: #FFFFFF;
+}
+
+.fokk-ai-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.fokk-ai-panel {
+    flex: 1;
+    min-height: 0;
+}
+.fokk-ai-panel.hidden {
+    display: none !important;
+}
+.fokk-ai-scroll {
+    overflow-y: auto;
+    padding: 16px 18px 28px;
+    scroll-behavior: smooth;
+}
+.fokk-ai-scroll::-webkit-scrollbar,
+.fokk-ai-chat-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+.fokk-ai-scroll::-webkit-scrollbar-thumb,
+.fokk-ai-chat-scroll::-webkit-scrollbar-thumb {
+    background: #1E293B;
+    border-radius: 3px;
+}
+
+.fokk-ai-lead-wrap {
+    margin-bottom: 14px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #0F141E;
+    border: 1px solid #1B2434;
+    max-height: 170px;
+}
+.fokk-ai-lead-wrap.hidden {
+    display: none;
+}
+.fokk-ai-lead-img {
+    width: 100%;
+    height: 170px;
+    object-fit: cover;
+    display: block;
+}
+
+.fokk-ai-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.fokk-ai-trust-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    background: #121926;
+    border: 1px solid #222E42;
+    color: #34D399;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    max-width: 72%;
+}
+.fokk-ai-trust-pill:hover {
+    border-color: #334155;
+}
+.fokk-ai-meta-text {
+    font-size: 12px;
+    color: #64748B;
+    white-space: nowrap;
+}
+
+.fokk-ai-headline {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: #F8FAFC;
+}
+
+.fokk-ai-loading-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: #121926;
+    border: 1px solid #222E42;
+    color: #94A3B8;
+    font-size: 12px;
+}
+.fokk-ai-loading-pill.hidden {
+    display: none;
+}
+.fokk-ai-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid #223047;
+    border-top-color: #38BDF8;
+    border-radius: 50%;
+    animation: fokkAiSpin 0.8s linear infinite;
+}
+@keyframes fokkAiSpin {
+    to { transform: rotate(360deg); }
+}
+
+.fokk-ai-section {
+    margin-top: 20px;
+}
+.fokk-ai-section.hidden {
+    display: none;
+}
+.fokk-ai-section-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #F8FAFC;
+    margin-bottom: 10px;
+}
+.fokk-ai-section-head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.fokk-ai-count-pill {
+    padding: 2px 9px;
+    border-radius: 20px;
+    background: #121926;
+    border: 1px solid #222E42;
+    color: #94A3B8;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.fokk-ai-overview-text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #E2E8F0;
+}
+
+.fokk-ai-bullets-list {
+    display: flex;
+    flex-direction: column;
+}
+.fokk-ai-bullet-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 4px;
+    border-bottom: 1px solid #111827;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.12s;
+}
+.fokk-ai-bullet-row:last-child {
+    border-bottom: none;
+}
+.fokk-ai-bullet-row:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+.fokk-ai-tag {
+    flex-shrink: 0;
+    margin-top: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 6px;
+}
+.fokk-ai-tag.fact { background: #0C261B; color: #34D399; }
+.fokk-ai-tag.opinion { background: #1D1736; color: #A78BFA; }
+.fokk-ai-tag.claim { background: #251C09; color: #FBBF24; }
+.fokk-ai-bullet-text {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: #E2E8F0;
+}
+
+.fokk-ai-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+.fokk-ai-metric-card {
+    background: #0E131D;
+    border: 1px solid #1B2434;
+    border-radius: 13px;
+    padding: 12px 14px;
+}
+.fokk-ai-metric-val {
+    font-size: 17px;
+    font-weight: 700;
+    color: #F8FAFC;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.fokk-ai-metric-label {
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: 1.35;
+    color: #94A3B8;
+}
+
+.fokk-ai-warning-card {
+    margin-top: 18px;
+    background: #141109;
+    border: 1px solid #2E2410;
+    border-radius: 13px;
+    padding: 13px 14px;
+}
+.fokk-ai-warning-card.hidden {
+    display: none;
+}
+.fokk-ai-warning-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #FBBF24;
+    margin-bottom: 4px;
+}
+.fokk-ai-warning-text {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #E2E8F0;
+}
+
+.fokk-ai-prompts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.fokk-ai-prompt-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    text-align: left;
+    background: #0E131D;
+    border: 1px solid #1B2434;
+    border-radius: 13px;
+    padding: 11px 13px;
+    color: #E2E8F0;
+    font-size: 13px;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+.fokk-ai-prompt-card:hover {
+    background: #131B2A;
+    border-color: #2B3B55;
+}
+.fokk-ai-prompt-chevron {
+    color: #64748B;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.fokk-ai-sources-row {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+.fokk-ai-sources-row::-webkit-scrollbar {
+    height: 4px;
+}
+.fokk-ai-sources-row::-webkit-scrollbar-thumb {
+    background: #1E293B;
+    border-radius: 2px;
+}
+.fokk-ai-source-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 6px 11px;
+    border-radius: 20px;
+    background: #121926;
+    border: 1px solid #222E42;
+    color: #CBD5E1;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+}
+.fokk-ai-source-pill:hover {
+    border-color: #38BDF8;
+    color: #FFFFFF;
+}
+.fokk-ai-source-pill img {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+}
+
+.fokk-ai-audio-card {
+    margin-top: 22px;
+    background: #0E131D;
+    border: 1px solid #1B2434;
+    border-radius: 14px;
+    padding: 14px;
+}
+.fokk-ai-audio-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+.fokk-ai-audio-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.fokk-ai-audio-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #F8FAFC;
+}
+.fokk-ai-audio-status {
+    font-size: 11.5px;
+    color: #64748B;
+}
+.fokk-ai-pill-btn {
+    padding: 5px 11px;
+    border-radius: 20px;
+    background: #121926;
+    border: 1px solid #222E42;
+    color: #CBD5E1;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.fokk-ai-pill-btn:hover {
+    border-color: #334155;
+    color: #FFFFFF;
+}
+.fokk-ai-audio-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.fokk-ai-btn-primary {
+    height: 38px;
+    border-radius: 11px;
+    border: none;
+    background: #F8FAFC;
+    color: #06080D;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.fokk-ai-btn-primary:hover {
+    background: #E2E8F0;
+}
+.fokk-ai-btn-secondary {
+    height: 38px;
+    border-radius: 11px;
+    border: 1px solid #253247;
+    background: #161E2E;
+    color: #E2E8F0;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.fokk-ai-btn-secondary:hover {
+    border-color: #334155;
+    color: #FFFFFF;
+}
+
+/* Truth & Bias Tab */
+.fokk-ai-card {
+    background: #0E131D;
+    border: 1px solid #1B2434;
+    border-radius: 14px;
+    padding: 15px;
+}
+.fokk-ai-audit-hero-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.fokk-ai-audit-score {
+    font-size: 16px;
+    font-weight: 700;
+    color: #34D399;
+}
+.fokk-ai-pill-static {
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: #121926;
+    border: 1px solid #222E42;
+    color: #CBD5E1;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.fokk-ai-progress-track {
+    margin-top: 12px;
+    height: 6px;
+    border-radius: 3px;
+    background: #1B2434;
+    overflow: hidden;
+}
+.fokk-ai-progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: #34D399;
+    transition: width 0.35s ease;
+}
+.fokk-ai-audit-reason {
+    margin-top: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #94A3B8;
+}
+.fokk-ai-audit-prov {
+    margin-top: 10px;
+    font-size: 12px;
+    display: flex;
+    gap: 6px;
+}
+.fokk-ai-audit-prov.hidden { display: none; }
+.fokk-ai-prov-label { color: #64748B; font-weight: 700; }
+.fokk-ai-prov-flow { color: #38BDF8; }
+.fokk-ai-layer-card {
+    margin-bottom: 10px;
+}
+.fokk-ai-layer-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #F8FAFC;
+    margin-bottom: 5px;
+}
+.fokk-ai-layer-text {
+    font-size: 13px;
+    line-height: 1.55;
+    color: #CBD5E1;
+}
+
+/* Ask AI Tab */
+.fokk-ai-chat-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.fokk-ai-chat-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 14px 18px 16px;
+}
+.fokk-ai-chat-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 28px 6px 12px;
+}
+.fokk-ai-chat-empty.hidden { display: none; }
+.fokk-ai-chat-empty-title {
+    margin-top: 12px;
+    font-size: 17px;
+    font-weight: 700;
+    color: #F8FAFC;
+}
+.fokk-ai-chat-empty-sub {
+    margin: 6px 0 20px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #94A3B8;
+    max-width: 310px;
+}
+
+.fokk-ai-chat-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.fokk-ai-turn {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #111827;
+}
+.fokk-ai-user-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+}
+.fokk-ai-user-bubble {
+    max-width: 84%;
+    padding: 9px 14px;
+    border-radius: 16px;
+    background: #1A2436;
+    border: 1px solid #2A3A54;
+    color: #F8FAFC;
+    font-size: 13.5px;
+    line-height: 1.45;
+}
+.fokk-ai-reply-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.fokk-ai-reply-brand {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #F8FAFC;
+}
+.fokk-ai-reply-body {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #E2E8F0;
+    user-select: text;
+}
+.fokk-ai-reply-body p { margin: 0 0 8px; }
+.fokk-ai-reply-body ul, .fokk-ai-reply-body ol { margin: 4px 0 8px 18px; padding: 0; }
+.fokk-ai-reply-body li { margin-bottom: 5px; }
+.fokk-ai-reply-body strong { color: #FFFFFF; }
+.fokk-ai-reply-body code { color: #38BDF8; background: #121926; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+.fokk-ai-reply-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+.fokk-ai-sub-label {
+    margin-top: 12px;
+    margin-bottom: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #64748B;
+}
+
+.fokk-ai-composer-dock {
+    flex-shrink: 0;
+    padding: 8px 16px 12px;
+    border-top: 1px solid #131B29;
+    background: #06080D;
+}
+.fokk-ai-composer {
+    background: #0F1520;
+    border: 1px solid #243146;
+    border-radius: 18px;
+    padding: 10px 12px 8px 14px;
+}
+.fokk-ai-chat-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    color: #F8FAFC;
+    font-size: 13.5px;
+    line-height: 1.45;
+    max-height: 100px;
+    font-family: inherit;
+}
+.fokk-ai-chat-input::placeholder {
+    color: #64748B;
+}
+.fokk-ai-composer-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #1A2435;
+}
+.fokk-ai-composer-hint {
+    font-size: 11px;
+    color: #526075;
+}
+.fokk-ai-send-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: #F8FAFC;
+    color: #06080D;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.fokk-ai-send-btn:hover {
+    background: #E2E8F0;
+}
+.fokk-ai-disclaimer {
+    margin-top: 7px;
+    text-align: center;
+    font-size: 10.5px;
+    color: #526075;
+}

@@ -144,7 +144,14 @@
                     <line x1="12" y1="19" x2="20" y2="19"/>
                 </svg>
             </button>
-            <button class="nav-btn vpn-toggle-btn" id="btnVpnToggle" title="Fokk Browser Privacy Routing">
+            <button class="nav-btn fokk-ai-toolbar-btn" id="btnFokkAiToolbar" title="Fokk AI — Summary, Ask AI &amp; Truth Audit (Ctrl+Shift+A)">
+                <svg width="16" height="16" viewBox="0 0 100 100" fill="currentColor">
+                    <path d="M25.6,78.0L13.2,78.0L14.4,75.8L27.6,50.6L39.9,30.6L52.0,14.1L55.7,10.0L55.8,41.5L55.0,43.3L53.4,44.2L41.6,44.3L37.9,51.5L55.2,51.6L55.3,57.7L54.0,60.9L51.9,62.5L50.3,62.9L33.3,62.9L25.8,77.7Z"/>
+                    <path d="M89.0,74.8L58.8,74.8L58.3,10.0Z"/>
+                    <path d="M49.9,90.0L20.9,90.0L19.0,89.7L16.2,88.6L14.4,87.4L11.1,83.9L8.0,80.2L38.9,80.2L41.7,79.7L46.3,77.9L48.9,77.4L92.0,77.4L86.4,83.2L82.0,86.9L77.3,89.4L74.8,89.9L50.0,89.9Z"/>
+                </svg>
+            </button>
+            <button class="nav-btn vpn-toggle-btn" id="btnVpnToggle" title="Fokk Mesh — Multi-Region Privacy Routing">
                 <svg class="vpn-quantum-glyph" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 2L3.5 7v10L12 22l8.5-5V7L12 2z" stroke="currentColor" stroke-width="1.9"/>
                     <circle cx="12" cy="12" r="4.8" stroke="currentColor" stroke-width="1.6" stroke-dasharray="7 2.5"/>
@@ -427,8 +434,8 @@
                     </svg>
                 </div>
                 <div>
-                    <div class="vpn-title">Browser Privacy Route</div>
-                    <div class="vpn-subtitle">Browser traffic routing</div>
+                    <div class="vpn-title">Fokk Mesh</div>
+                    <div class="vpn-subtitle">Multi-region privacy routing</div>
                 </div>
             </div>
             <span class="vpn-status-pill disconnected" id="vpnStatusPill">Disconnected</span>
@@ -485,8 +492,8 @@
 
         <div class="vpn-location-section">
             <div class="vpn-section-header-row">
-                <span class="vpn-section-label">Privacy Relay Protocol</span>
-                <span class="vpn-section-badge">Browser only</span>
+                <span class="vpn-section-label">Mesh Location &amp; Protocol</span>
+                <span class="vpn-section-badge" id="vpnMeshNodeBadge">Fokk Mesh</span>
             </div>
             <div class="vpn-protocol-picker" id="vpnProtocolPicker">
                 <!-- Available browser routing modes -->
@@ -525,6 +532,181 @@
             </div>
             <div class="feature-modal-body" id="featureModalBody">
                 <!-- Dynamically populated based on active hub -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 4b. Fokk AI Side Drawer (Desktop Parity with Mobile v2.8.6, Zero Emojis) -->
+    <div id="fokkAiDrawer" class="fokk-ai-drawer hidden">
+        <div class="fokk-ai-top">
+            <div class="fokk-ai-header-row">
+                <div class="fokk-ai-brand">
+                    <svg class="fokk-ai-logo-svg" width="20" height="20" viewBox="0 0 100 100" fill="#F8FAFC">
+                        <path d="M25.6,78.0L13.2,78.0L14.4,75.8L27.6,50.6L39.9,30.6L52.0,14.1L55.7,10.0L55.8,41.5L55.0,43.3L53.4,44.2L41.6,44.3L37.9,51.5L55.2,51.6L55.3,57.7L54.0,60.9L51.9,62.5L50.3,62.9L33.3,62.9L25.8,77.7Z"/>
+                        <path d="M89.0,74.8L58.8,74.8L58.3,10.0Z"/>
+                        <path d="M49.9,90.0L20.9,90.0L19.0,89.7L16.2,88.6L14.4,87.4L11.1,83.9L8.0,80.2L38.9,80.2L41.7,79.7L46.3,77.9L48.9,77.4L92.0,77.4L86.4,83.2L82.0,86.9L77.3,89.4L74.8,89.9L50.0,89.9Z"/>
+                    </svg>
+                    <span class="fokk-ai-brand-title">Fokk AI</span>
+                    <span class="fokk-ai-dot">·</span>
+                    <img id="fokkAiSourceFavicon" class="fokk-ai-source-fav hidden" alt="">
+                    <span id="fokkAiSourceName" class="fokk-ai-source-name">Web</span>
+                </div>
+                <div class="fokk-ai-header-actions">
+                    <button id="btnFokkAiRefresh" class="fokk-ai-icon-btn" title="Refresh Analysis">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/></svg>
+                    </button>
+                    <button id="btnFokkAiClose" class="fokk-ai-icon-btn" title="Close Fokk AI">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="fokk-ai-tabs" id="fokkAiTabs">
+                <button class="fokk-ai-tab active" data-tab="summary" id="btnFokkAiTabSummary">Summary</button>
+                <button class="fokk-ai-tab" data-tab="chat" id="btnFokkAiTabChat">Ask AI</button>
+                <button class="fokk-ai-tab" data-tab="audit" id="btnFokkAiTabAudit">Truth &amp; Bias</button>
+            </div>
+        </div>
+
+        <div class="fokk-ai-body">
+            <!-- TAB 1: SUMMARY -->
+            <div id="fokkAiPanelSummary" class="fokk-ai-panel fokk-ai-scroll">
+                <div id="fokkAiLeadWrap" class="fokk-ai-lead-wrap hidden">
+                    <img id="fokkAiLeadImg" class="fokk-ai-lead-img" alt="">
+                </div>
+
+                <div class="fokk-ai-meta-row">
+                    <button id="btnFokkAiTrustPill" class="fokk-ai-trust-pill" type="button">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                        <span id="fokkAiTrustVerdict">Established Source</span>
+                        <span id="fokkAiTrustScore">82%</span>
+                    </button>
+                    <span id="fokkAiMetaText" class="fokk-ai-meta-text">3 min read</span>
+                </div>
+
+                <h2 id="fokkAiTitle" class="fokk-ai-headline">Article Summary</h2>
+
+                <div id="fokkAiLoadingPill" class="fokk-ai-loading-pill hidden">
+                    <span class="fokk-ai-spinner"></span>
+                    <span>Synthesizing with Fokk AI...</span>
+                </div>
+
+                <div id="fokkAiOverviewSection" class="fokk-ai-section hidden">
+                    <div class="fokk-ai-section-title">Overview</div>
+                    <div id="fokkAiOverviewText" class="fokk-ai-overview-text"></div>
+                </div>
+
+                <div id="fokkAiTakeawaysSection" class="fokk-ai-section">
+                    <div class="fokk-ai-section-title">Key Takeaways</div>
+                    <div id="fokkAiTakeawaysList" class="fokk-ai-bullets-list"></div>
+                </div>
+
+                <div id="fokkAiMetricsSection" class="fokk-ai-section hidden">
+                    <div class="fokk-ai-section-title">Key Numbers</div>
+                    <div id="fokkAiMetricsGrid" class="fokk-ai-metrics-grid"></div>
+                </div>
+
+                <div id="fokkAiMissingCard" class="fokk-ai-warning-card hidden">
+                    <div class="fokk-ai-warning-title">Missing Context</div>
+                    <div id="fokkAiMissingText" class="fokk-ai-warning-text"></div>
+                </div>
+
+                <div id="fokkAiExploreSection" class="fokk-ai-section hidden">
+                    <div class="fokk-ai-section-title">Explore Further</div>
+                    <div id="fokkAiExploreList" class="fokk-ai-prompts-list"></div>
+                </div>
+
+                <div id="fokkAiSourcesSection" class="fokk-ai-section hidden">
+                    <div class="fokk-ai-section-head-row">
+                        <div class="fokk-ai-section-title" style="margin:0;">Related Sources</div>
+                        <span id="fokkAiSourcesCount" class="fokk-ai-count-pill">0</span>
+                    </div>
+                    <div id="fokkAiSourcesRow" class="fokk-ai-sources-row"></div>
+                </div>
+
+                <!-- Audio Brief Card -->
+                <div class="fokk-ai-audio-card">
+                    <div class="fokk-ai-audio-top">
+                        <div class="fokk-ai-audio-left">
+                            <span class="fokk-ai-audio-title">Audio Brief</span>
+                            <span id="fokkAiTtsStatus" class="fokk-ai-audio-status">Ready</span>
+                        </div>
+                        <button id="btnFokkAiVoiceToggle" class="fokk-ai-pill-btn" type="button">Voice: Male</button>
+                    </div>
+                    <div class="fokk-ai-audio-actions">
+                        <button id="btnFokkAiListen" class="fokk-ai-btn-primary" type="button">Listen</button>
+                        <button id="btnFokkAiCopy" class="fokk-ai-btn-secondary" type="button">Copy</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: ASK AI -->
+            <div id="fokkAiPanelChat" class="fokk-ai-panel fokk-ai-chat-panel hidden">
+                <div id="fokkAiChatScroll" class="fokk-ai-chat-scroll">
+                    <div id="fokkAiChatEmpty" class="fokk-ai-chat-empty">
+                        <svg width="36" height="36" viewBox="0 0 100 100" fill="#F8FAFC">
+                            <path d="M25.6,78.0L13.2,78.0L14.4,75.8L27.6,50.6L39.9,30.6L52.0,14.1L55.7,10.0L55.8,41.5L55.0,43.3L53.4,44.2L41.6,44.3L37.9,51.5L55.2,51.6L55.3,57.7L54.0,60.9L51.9,62.5L50.3,62.9L33.3,62.9L25.8,77.7Z"/>
+                            <path d="M89.0,74.8L58.8,74.8L58.3,10.0Z"/>
+                            <path d="M49.9,90.0L20.9,90.0L19.0,89.7L16.2,88.6L14.4,87.4L11.1,83.9L8.0,80.2L38.9,80.2L41.7,79.7L46.3,77.9L48.9,77.4L92.0,77.4L86.4,83.2L82.0,86.9L77.3,89.4L74.8,89.9L50.0,89.9Z"/>
+                        </svg>
+                        <div class="fokk-ai-chat-empty-title">Ask Fokk AI</div>
+                        <div class="fokk-ai-chat-empty-sub">Ask about this page, verify claims, or explore deeper with live context.</div>
+                        <div id="fokkAiQuickStarters" class="fokk-ai-prompts-list" style="width:100%;"></div>
+                    </div>
+                    <div id="fokkAiChatMessages" class="fokk-ai-chat-messages"></div>
+                </div>
+
+                <div class="fokk-ai-composer-dock">
+                    <div class="fokk-ai-composer">
+                        <textarea id="fokkAiChatInput" class="fokk-ai-chat-input" rows="1" placeholder="Ask Fokk AI anything..."></textarea>
+                        <div class="fokk-ai-composer-footer">
+                            <span class="fokk-ai-composer-hint">Enter to send</span>
+                            <button id="btnFokkAiSend" class="fokk-ai-send-btn" type="button" title="Send">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="fokk-ai-disclaimer">Fokk AI can make mistakes. Always verify important claims with primary sources.</div>
+                </div>
+            </div>
+
+            <!-- TAB 3: TRUTH & BIAS -->
+            <div id="fokkAiPanelAudit" class="fokk-ai-panel fokk-ai-scroll hidden">
+                <div class="fokk-ai-card">
+                    <div class="fokk-ai-audit-hero-top">
+                        <div id="fokkAiAuditScore" class="fokk-ai-audit-score">82% · Established Source</div>
+                        <span id="fokkAiAuditBias" class="fokk-ai-pill-static">Objective</span>
+                    </div>
+                    <div class="fokk-ai-progress-track">
+                        <div id="fokkAiAuditBar" class="fokk-ai-progress-fill" style="width:82%;"></div>
+                    </div>
+                    <div id="fokkAiAuditReason" class="fokk-ai-audit-reason"></div>
+                    <div id="fokkAiAuditProvenance" class="fokk-ai-audit-prov hidden">
+                        <span class="fokk-ai-prov-label">Source path:</span>
+                        <span id="fokkAiAuditProvFlow" class="fokk-ai-prov-flow"></span>
+                    </div>
+                </div>
+
+                <div class="fokk-ai-section">
+                    <div class="fokk-ai-section-title">Audit Breakdown</div>
+                    <div class="fokk-ai-card fokk-ai-layer-card">
+                        <div class="fokk-ai-layer-title">Source Authenticity</div>
+                        <div id="fokkAiLayer1" class="fokk-ai-layer-text"></div>
+                    </div>
+                    <div class="fokk-ai-card fokk-ai-layer-card">
+                        <div class="fokk-ai-layer-title">Tone &amp; Bias</div>
+                        <div id="fokkAiLayer2" class="fokk-ai-layer-text"></div>
+                    </div>
+                    <div class="fokk-ai-card fokk-ai-layer-card">
+                        <div class="fokk-ai-layer-title">Evidence &amp; Corroboration</div>
+                        <div id="fokkAiLayer3" class="fokk-ai-layer-text"></div>
+                    </div>
+                </div>
+
+                <div class="fokk-ai-section">
+                    <div class="fokk-ai-section-title">Claims Breakdown</div>
+                    <div id="fokkAiClaimsList" class="fokk-ai-bullets-list"></div>
+                </div>
             </div>
         </div>
     </div>
