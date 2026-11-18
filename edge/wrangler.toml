@@ -1,0 +1,7 @@
+name = "fokk-edge-relay"
+main = "cloudflare-worker.js"
+compatibility_date = "2024-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+[placement]
+mode = "smart"

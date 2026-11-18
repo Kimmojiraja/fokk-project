@@ -87,6 +87,7 @@ try {
     fokkAiService = new FokkAiService(app.getPath('userData'));
 } catch (_) {}
 let vpnEngine = null;
+let homeBaseService = null;
 try {
     vpnEngine = new VpnEngine(app.getPath('userData'));
     vpnEngine.on('status-changed', (status) => {
@@ -94,6 +95,10 @@ try {
             try { wc.send('fokk-vpn-status-changed', status); } catch (_) {}
         });
     });
+} catch (_) {}
+try {
+    const { HomeBaseService } = require('./home_base');
+    homeBaseService = new HomeBaseService(app.getPath('userData'));
 } catch (_) {}
 
 // Authentic DNS-over-HTTPS providers matching com.adshield.app.model.DnsOverHttpsEngine
@@ -868,6 +873,20 @@ ipcMain.handle('fokk-vpn-set-killswitch', (event, enabled) => {
 ipcMain.handle('fokk-vpn-set-custom', (event, config) => {
     if (vpnEngine) vpnEngine.setCustomConfig(config);
     return true;
+});
+
+// 5c. Fokk Home-Base (Personal PC Relay Server)
+ipcMain.handle('fokk-homebase-status', async () => {
+    return homeBaseService ? homeBaseService.getStatus() : { isRunning: false };
+});
+
+ipcMain.handle('fokk-homebase-toggle', async () => {
+    if (!homeBaseService) return { isRunning: false };
+    if (homeBaseService.isRunning) {
+        return await homeBaseService.stop();
+    } else {
+        return await homeBaseService.start();
+    }
 });
 
 // 6. Scripts Serving (Reader Mode & Smart AI Summarizer from APK assets)

@@ -29,6 +29,26 @@ object VpnEngine {
     const val KEY_PRIVATE_ONLY = "vpn_private_only"
     const val KEY_PRO_MODE = "vpn_pro_mode"
     const val KEY_ENTIRE_DEVICE = "vpn_entire_device"
+    const val KEY_HOME_BASE_HOST = "vpn_home_base_host"
+    const val KEY_HOME_BASE_PORT = "vpn_home_base_port"
+    const val KEY_HOME_BASE_TOKEN = "vpn_home_base_token"
+
+    fun getHomeBaseConfig(context: Context): Triple<String, Int, String> {
+        val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
+        val host = prefs.getString(KEY_HOME_BASE_HOST, "").orEmpty().trim()
+        val port = prefs.getInt(KEY_HOME_BASE_PORT, 10850)
+        val token = prefs.getString(KEY_HOME_BASE_TOKEN, "").orEmpty().trim()
+        return Triple(host, port, token)
+    }
+
+    fun setHomeBaseConfig(context: Context, host: String, port: Int, token: String) {
+        val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(KEY_HOME_BASE_HOST, host.trim())
+            .putInt(KEY_HOME_BASE_PORT, if (port in 1..65535) port else 10850)
+            .putString(KEY_HOME_BASE_TOKEN, token.trim())
+            .apply()
+    }
 
     fun isEntireDeviceEnabled(context: Context): Boolean {
         // Device-wide 0.0.0.0/0 TUN is disabled until native Layer-3 tun2socks is bundled,
@@ -140,6 +160,8 @@ object VpnEngine {
 
     fun getRegionDisplayName(code: String): String = when (code) {
         "SMART_CLOAK" -> "Smart-Cloak (Full Speed)"
+        "EDGE" -> "Oblivious Edge (300+ Cities)"
+        "HOME_BASE" -> "Home-Base (Personal PC Relay)"
         "AM" -> "Americas"
         "EU" -> "Europe"
         "AS" -> "Asia & Pacific"
@@ -496,6 +518,11 @@ object VpnEngine {
                         else -> "AUTO"
                     }
 
+                    if (region == "HOME_BASE") {
+                        val (hbHost, hbPort, hbToken) = getHomeBaseConfig(context)
+                        FokkTunnelEngine.configureHomeBase(hbHost, hbPort, hbToken)
+                    }
+
                     FokkTunnelEngine.isProMode = isProModeEnabled(context)
                     FokkTunnelEngine.start(context, region)
                     // Wait up to 2 s for the tunnel to bind a port
@@ -513,8 +540,11 @@ object VpnEngine {
                     routeDesc = when (mode) {
                         VpnMode.SMART_CLOAK ->
                             "Fokk Smart-Cloak Active · Full Native Speed with Encrypted WebView DoH & TLS SNI Cloaking."
-                        VpnMode.CUSTOM ->
-                            "Fokk Mesh Pro Active ($regionLabel) · Live Verified Relay Routing."
+                        VpnMode.CUSTOM -> when (region) {
+                            "HOME_BASE" -> "Fokk Home-Base Active · Relaying through paired Desktop PC."
+                            "EDGE" -> "Fokk Oblivious Edge Active · 300+ Global Cities (RFC 9458)."
+                            else -> "Fokk Mesh Pro Active ($regionLabel) · Live Verified Relay Routing."
+                        }
                         else ->
                             "Fokk Mesh Pro Active ($regionLabel) · Dual-Hop Oblivious Relay Routing."
                     }

@@ -7524,6 +7524,20 @@ open class MediaHubActivity : AppCompatActivity() {
         b.btnCloseLocationSheet.setOnClickListener { sheetDialog.dismiss() }
         b.rowLocationSmartCloak.setOnClickListener { select("SMART_CLOAK") }
         b.rowLocationAuto.setOnClickListener { select("AUTO") }
+        b.rowLocationEdgeRelay.setOnClickListener { select("EDGE") }
+        b.rowLocationHomeBase.setOnClickListener {
+            val (hbHost, _, _) = com.adshield.app.engine.VpnEngine.getHomeBaseConfig(this)
+            if (hbHost.isNotBlank()) {
+                select("HOME_BASE")
+            } else {
+                sheetDialog.dismiss()
+                showHomeBasePairDialog { onApplied("HOME_BASE") }
+            }
+        }
+        val (curHbHost, curHbPort, _) = com.adshield.app.engine.VpnEngine.getHomeBaseConfig(this)
+        if (curHbHost.isNotBlank()) {
+            b.textHomeBaseSubtitle.text = "Paired PC: $curHbHost:$curHbPort · Tap to relay"
+        }
 
         val countryCheckViews = mutableMapOf<String, View>()
         val inflater = layoutInflater
@@ -7541,6 +7555,8 @@ open class MediaHubActivity : AppCompatActivity() {
 
         b.checkLocationSmartCloak.visibility = View.GONE
         b.checkLocationAuto.visibility = View.GONE
+        b.checkLocationEdgeRelay.visibility = View.GONE
+        b.checkLocationHomeBase.visibility = View.GONE
         b.checkLocationCustom.visibility = View.GONE
         countryCheckViews.values.forEach { it.visibility = View.GONE }
 
@@ -7555,6 +7571,10 @@ open class MediaHubActivity : AppCompatActivity() {
             b.checkLocationSmartCloak.visibility = View.VISIBLE
         } else if (normalizedActiveCode == "AUTO") {
             b.checkLocationAuto.visibility = View.VISIBLE
+        } else if (normalizedActiveCode == "EDGE") {
+            b.checkLocationEdgeRelay.visibility = View.VISIBLE
+        } else if (normalizedActiveCode == "HOME_BASE") {
+            b.checkLocationHomeBase.visibility = View.VISIBLE
         } else if (normalizedActiveCode in countryCheckViews) {
             countryCheckViews[normalizedActiveCode]?.visibility = View.VISIBLE
         } else {
@@ -7615,6 +7635,53 @@ open class MediaHubActivity : AppCompatActivity() {
                                 Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
                             }
                         }
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showHomeBasePairDialog(onPaired: () -> Unit) {
+        val (curHost, curPort, curToken) = com.adshield.app.engine.VpnEngine.getHomeBaseConfig(this)
+        val input = EditText(this).apply {
+            hint = "fokk://pair?host=... or IP:Port:Token"
+            if (curHost.isNotBlank()) {
+                setText(if (curToken.isNotBlank()) "$curHost:$curPort:$curToken" else "$curHost:$curPort")
+            }
+            setSingleLine(true)
+        }
+        val container = android.widget.FrameLayout(this).apply {
+            setPadding(48, 16, 48, 0)
+            addView(input)
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Fokk Home-Base (Pair Desktop PC)")
+            .setMessage("Turn your Desktop into your phone's personal private relay.\n\nEnter the pairing string or host:port:token shown on your Fokk Desktop browser:")
+            .setView(container)
+            .setPositiveButton("Save & Connect") { _, _ ->
+                val raw = input.text.toString().trim()
+                if (raw.isNotBlank()) {
+                    var host = ""
+                    var port = 10850
+                    var token = ""
+                    if (raw.startsWith("fokk://", ignoreCase = true)) {
+                        val uri = runCatching { Uri.parse(raw) }.getOrNull()
+                        host = uri?.getQueryParameter("host").orEmpty()
+                        port = uri?.getQueryParameter("port")?.toIntOrNull() ?: 10850
+                        token = uri?.getQueryParameter("token").orEmpty()
+                    } else if (raw.contains(":")) {
+                        val parts = raw.split(":")
+                        host = parts.getOrNull(0).orEmpty()
+                        port = parts.getOrNull(1)?.toIntOrNull() ?: 10850
+                        token = parts.getOrNull(2).orEmpty()
+                    } else {
+                        host = raw
+                    }
+                    if (host.isNotBlank()) {
+                        com.adshield.app.engine.VpnEngine.setHomeBaseConfig(this, host, port, token)
+                        Toast.makeText(this, "Home-Base configured ($host:$port)", Toast.LENGTH_SHORT).show()
+                        onPaired()
                     }
                 }
             }

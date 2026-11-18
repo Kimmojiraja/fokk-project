@@ -120,8 +120,8 @@
             <div class="container">
                 <!-- Pill Badge without glowing dot -->
                 <div class="hero-pill-badge">
-                    <span class="badge-accent">v1.2.0 Released</span>
-                    <span>Desktop &amp; Mobile • 100% Zero Telemetry</span>
+                    <span class="badge-accent">v2.9.1 Live</span>
+                    <span>Fokk Smart-Cloak • Home-Base Relay • 100% Zero Telemetry</span>
                 </div>
 
                 <h1 class="hero-title">
@@ -432,6 +432,34 @@
                             <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> WebAuthn 2FA &amp; Passkey native support</li>
                         </ul>
                     </div>
+
+                    <!-- Feature 7: Fokk Smart-Cloak (Free · Native Speed) -->
+                    <div class="feature-card green">
+                        <div class="feature-icon-badge">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                        </div>
+                        <h3 class="feature-card-title">Fokk Smart-Cloak (Free)</h3>
+                        <p class="feature-card-desc">Full native bandwidth with encrypted DNS-over-HTTPS (DoH) resolution and local 2-byte TLS ClientHello SNI fragmentation. Evades ISP throttling and censorship middleboxes with zero proxy latency.</p>
+                        <ul class="feature-check-list">
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 100% Native ISP Speed (0 ms proxy lag)</li>
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> True Encrypted DoH (fixes WebView leaks)</li>
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Anti-DPI TLS SNI packet shielding</li>
+                        </ul>
+                    </div>
+
+                    <!-- Feature 8: Fokk Home-Base & Oblivious Edge (Pro) -->
+                    <div class="feature-card">
+                        <div class="feature-icon-badge">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        </div>
+                        <h3 class="feature-card-title">Home-Base &amp; Edge Relay</h3>
+                        <p class="feature-card-desc">Turn your Desktop into your phone's personal residential relay via QR code pairing, or route through 300+ global Cloudflare edge cities with split-trust RFC 9458 Oblivious HTTP. Dedicated residential IP with zero cloud hosting bills.</p>
+                        <ul class="feature-check-list">
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Phone-to-Desktop QR Personal Relay</li>
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 300+ Global Edge Cities via RFC 9458 (&lt;40ms)</li>
+                            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Dedicated unbannable residential IP</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </section>
@@ -694,6 +722,28 @@
                                 <td><span class="status-icon no">✗</span> Heavy telemetry</td>
                                 <td><span class="status-icon partial">~</span> Opt-out telemetry</td>
                                 <td><span class="status-icon no">✗</span> Copilot telemetry</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="feature-title">Fokk Smart-Cloak (Local SNI Fragmentation + DoH)</span>
+                                    <span class="feature-sub">Bypass ISP domain throttling &amp; blocks at 100% native speed (0ms lag)</span>
+                                </td>
+                                <td class="highlight"><span class="status-icon yes">✓</span> <strong>Built-in Free (0ms Lag)</strong></td>
+                                <td><span class="status-icon partial">~</span> DoH only</td>
+                                <td><span class="status-icon no">✗</span> Plaintext DNS</td>
+                                <td><span class="status-icon partial">~</span> DoH only</td>
+                                <td><span class="status-icon no">✗</span> Plaintext DNS</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="feature-title">Home-Base &amp; Oblivious Edge Relays</span>
+                                    <span class="feature-sub">Phone-to-Desktop QR personal relay &amp; 300-city RFC 9458 edge workers</span>
+                                </td>
+                                <td class="highlight"><span class="status-icon yes">✓</span> <strong>Built-in (Pair PC / Edge)</strong></td>
+                                <td><span class="status-icon no">✗</span> Paid VPN ($10/mo)</td>
+                                <td><span class="status-icon no">✗</span> None</td>
+                                <td><span class="status-icon no">✗</span> Paid Mozilla VPN</td>
+                                <td><span class="status-icon partial">~</span> Edge Secure (1GB cap)</td>
                             </tr>
                             <tr>
                                 <td>
@@ -1060,6 +1110,26 @@
                         </div>
                         <div class="faq-answer">
                             No. Fokk has zero telemetry servers, zero user analytics, and zero tracking pings. Your browsing history, bookmarks, and sessions remain strictly encrypted on your local machine. You can also use the 1-click Burn Session tool to immediately purge all browsing artifacts at any time.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>What is Fokk Smart-Cloak and how does it achieve 100% native speed?</span>
+                            <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div class="faq-answer">
+                            Traditional VPNs route your traffic through distant servers, introducing 200–500ms of lag. Fokk Smart-Cloak operates entirely on your device: it resolves hostnames using encrypted DNS-over-HTTPS (DoH) and fragments the initial TLS ClientHello packet across two TCP segments. This prevents ISP DPI filters from reading the requested domain (SNI) while sending your traffic directly to the destination at 100% of your real internet bandwidth with zero proxy latency.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>How does Fokk Home-Base turn my PC into my phone's personal relay?</span>
+                            <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div class="faq-answer">
+                            Fokk Desktop includes a built-in authenticated Home-Base relay server. When enabled, it generates a unique cryptographic pairing string (or QR code). Entering this into Fokk Browser on Android routes your phone's browsing through your home PC's internet connection. This gives you a dedicated, unbannable residential IP while traveling or on public Wi-Fi, completely free of cloud hosting fees.
                         </div>
                     </div>
 
