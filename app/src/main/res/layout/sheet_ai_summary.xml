@@ -22,13 +22,6 @@
             android:layout_gravity="center_horizontal"
             android:layout_marginBottom="16dp"
             android:background="#1E2D3D" />
-        <!-- Handle drag indicator -->
-        <View
-            android:layout_width="38dp"
-            android:layout_height="4dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="16dp"
-            android:background="#1E2D3D" />
 
         <!-- Header: Badges & Action Buttons -->
         <LinearLayout
@@ -225,9 +218,60 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:text="3 min read • 100% On-Device AI • Zero Server Latency"
+                android:text="3 min read • Fokk AI Truth Engine"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp" />
+
+            <!-- Multi-Source Intelligence Header & Evidence Drawer -->
+            <LinearLayout
+                android:id="@+id/layoutAiCorroborationHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/textAiCorroborationStatus"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="MULTI-SOURCE EVIDENCE DRAWER"
+                    android:textColor="#38BDF8"
+                    android:textSize="10.5sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.08" />
+
+                <TextView
+                    android:id="@+id/textAiSourcesCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_stat_chip"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
+                    android:text="0 Sources"
+                    android:textColor="#94A3B8"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Horizontal Evidence Drawer -->
+            <HorizontalScrollView
+                android:id="@+id/scrollAiSources"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="14dp"
+                android:scrollbars="none"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/layoutAiSourcesList"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
 
 
 

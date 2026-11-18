@@ -1,8 +1,8 @@
 {
-  "versionCode": 281,
-  "versionName": "2.8.1",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.8.1/app-debug.apk",
-  "changelog": "- Country-Based Privacy Locations: Replaced continental gateway selectors with dedicated country selection featuring 15 verified countries (US, UK, Germany, Canada, Netherlands, France, Sweden, Singapore, India, Japan, South Korea, Hong Kong, Switzerland, Italy, Brazil).\n- Circular Flag Avatars: Each country is paired with high-definition vector circular flag badges.\n- Quality Verified Nodes Only: All country endpoints route strictly through verified, zero-MITM SSL relays with smart continental fallback if local servers are saturated.\n- Zero Legal Risk: Dedicated curated relay infrastructure only — zero scraped or unverified proxies."
+  "versionCode": 282,
+  "versionName": "2.8.2",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.8.2/app-debug.apk",
+  "changelog": "- Fokk AI 2.0 Truth Engine: Upgraded on-device intelligence into a multi-source synthesis engine.\n- Multi-Source Web Intelligence Layer: Integrated live Google News RSS, DuckDuckGo HTML web search, Wikipedia encyclopedic archives, and Wikidata factual entities in parallel.\n- High-Reliability AI Inference Pipeline: Added multi-provider failover across modern Google Gemini and OpenRouter models with smart offline forensic synthesis.\n- Multi-Source Evidence Drawer: Visual source carousel displaying real-time publication favicons, publisher domains, and source classification pills.\n- Forensic Claim Verification: Automatic cross-examination of article assertions against independent reports and live research follow-up prompts."
 }
 
 

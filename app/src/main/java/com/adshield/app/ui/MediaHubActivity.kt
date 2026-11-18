@@ -142,11 +142,17 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 
+import com.adshield.app.engine.FokkAiEngine
+import com.adshield.app.engine.FokkSearchAggregator
+import com.adshield.app.engine.CorroboratedSource
+
 data class BrowserSearchResult(
     val title: String,
     val url: String,
     val domain: String,
-    val snippet: String
+    val snippet: String,
+    val sourceType: String = "WEB",
+    val timestamp: String = ""
 )
 
 open class MediaHubActivity : AppCompatActivity() {
@@ -8668,42 +8674,25 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
 
                 lifecycleScope.launch(Dispatchers.IO) {
-                    val searchSources = fetchBrowserSearchSources(anchoredSearchQuery)
+                    val sources = FokkSearchAggregator.aggregate(
+                        query = anchoredSearchQuery,
+                        pageTitle = title,
+                        pageHost = sourceHost,
+                        maxResults = 6
+                    )
 
-                    val systemPrompt = buildString {
-                        append("You are Fokk AI, an objective, high-intelligence research assistant embedded in Fokk Browser, powered by the TrustMeBro forensic verification methodology.\n")
-                        if (sourceHost.isNotBlank() && title.isNotBlank()) {
-                            append("Current Page: Domain '$sourceHost', Title '$title'.\n\n")
-                        }
-                        if (pageCtx.isNotBlank()) {
-                            append("Webpage context:\n").append(pageCtx).append("\n\n")
-                        }
-                        if (searchSources.isNotEmpty()) {
-                            append("Corroborated Web Search Sources:\n")
-                            searchSources.forEachIndexed { i, s ->
-                                append("[${i + 1}] Title: ${s.title} | Source: ${s.domain} | Link: ${s.url}\n")
-                                if (s.snippet.isNotBlank()) {
-                                    append("Summary: ${s.snippet}\n")
-                                }
-                            }
-                            append("\n")
-                        }
-                        append("Instructions:\n")
-                        append("- Answer the user's question directly, thoroughly, and intelligently.\n")
-                        append("- Structure your answer with clear bold headings, bullet points, and key takeaways where applicable.\n")
-                        append("- Cite verified facts, statistics, and verifiable claims from the page and search sources.\n")
-                        append("- After your answer, on a new line output exactly: SUGGESTED_FOLLOWUPS: then 2 follow-up questions separated by | character.\n")
-                        append("- Strictly NO emojis. Output clean professional markdown.")
+                    val searchSources = sources.map {
+                        BrowserSearchResult(it.title, it.url, it.domain, it.snippet, it.sourceType, it.timestamp)
                     }
 
-                    val rawAnswer = callFokkAiEngine(systemPrompt, query, searchSources)
-
-                    // Extract suggested follow-ups from answer if present
-                    val followUpSplit = rawAnswer.split("SUGGESTED_FOLLOWUPS:")
-                    val answer = followUpSplit[0].trimEnd()
-                    val followUps = if (followUpSplit.size > 1) {
-                        followUpSplit[1].trim().split("|").map { it.trim() }.filter { it.isNotBlank() }.take(2)
-                    } else emptyList()
+                    val (answer, followUps) = FokkAiEngine.queryInteractiveResearch(
+                        context = this@MediaHubActivity,
+                        userQuery = query,
+                        pageTitle = title,
+                        pageHost = sourceHost,
+                        pageContext = pageCtx,
+                        externalSources = sources
+                    )
 
                     withContext(Dispatchers.Main) {
                         renderChatAnswerCard(thinkingContainer, query, answer, sourceHost, activeUrl, searchSources, followUps)
@@ -8744,6 +8733,200 @@ open class MediaHubActivity : AppCompatActivity() {
             }
 
             sheetDialog.show()
+
+            // Multi-Source Truth & Research Corroboration Engine
+            val pageCtx = lastAiPageContext.take(8000)
+            val anchoredQuery = if (title.isNotBlank()) title.take(120) else sourceHost
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                withContext(Dispatchers.Main) {
+                    sheetBinding.layoutAiCorroborationHeader.visibility = View.VISIBLE
+                    sheetBinding.textAiCorroborationStatus.text = "CORROBORATING MULTI-SOURCE EVIDENCE..."
+                    sheetBinding.textAiSourcesCount.text = "Searching..."
+                }
+
+                val sources = FokkSearchAggregator.aggregate(
+                    query = anchoredQuery,
+                    pageTitle = title,
+                    pageHost = sourceHost,
+                    maxResults = 6
+                )
+
+                withContext(Dispatchers.Main) {
+                    if (sources.isNotEmpty()) {
+                        sheetBinding.textAiCorroborationStatus.text = "MULTI-SOURCE EVIDENCE DRAWER"
+                        sheetBinding.textAiSourcesCount.text = "${sources.size} Sources"
+                        sheetBinding.scrollAiSources.visibility = View.VISIBLE
+                        sheetBinding.layoutAiSourcesList.removeAllViews()
+
+                        for (src in sources) {
+                            val pill = LinearLayout(this@MediaHubActivity).apply {
+                                orientation = LinearLayout.HORIZONTAL
+                                gravity = Gravity.CENTER_VERTICAL
+                                background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_engine_capsule)
+                                setPadding((10 * density).toInt(), (6 * density).toInt(), (12 * density).toInt(), (6 * density).toInt())
+                                layoutParams = LinearLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                                    ViewGroup.LayoutParams.WRAP_CONTENT
+                                ).apply { marginEnd = (8 * density).toInt() }
+                                isClickable = true
+                                isFocusable = true
+                                setOnClickListener {
+                                    sheetDialog.dismiss()
+                                    addNewTab(src.url, isPrivate = activeTab?.isPrivate == true)
+                                }
+                            }
+
+                            val faviconIv = ImageView(this@MediaHubActivity).apply {
+                                layoutParams = LinearLayout.LayoutParams((15 * density).toInt(), (15 * density).toInt()).apply {
+                                    marginEnd = (6 * density).toInt()
+                                }
+                                setImageResource(R.drawable.ic_world)
+                                setColorFilter(Color.parseColor("#38BDF8"))
+                            }
+
+                            val favUrl = "https://www.google.com/s2/favicons?domain=${Uri.encode(src.domain)}&sz=32"
+                            Thread {
+                                try {
+                                    val conn = java.net.URL(favUrl).openConnection() as java.net.HttpURLConnection
+                                    conn.connectTimeout = 3000
+                                    conn.readTimeout = 3000
+                                    val bmp = BitmapFactory.decodeStream(conn.inputStream)
+                                    if (bmp != null) runOnUiThread { faviconIv.clearColorFilter(); faviconIv.setImageBitmap(bmp) }
+                                } catch (_: Exception) {}
+                            }.start()
+
+                            val domainTv = TextView(this@MediaHubActivity).apply {
+                                text = src.domain
+                                setTextColor(Color.parseColor("#E2E8F0"))
+                                textSize = 11.5f
+                                setTypeface(null, Typeface.BOLD)
+                            }
+
+                            val typeBadge = TextView(this@MediaHubActivity).apply {
+                                text = src.sourceType
+                                setTextColor(Color.parseColor("#34D399"))
+                                textSize = 9f
+                                setTypeface(null, Typeface.BOLD)
+                                setPadding((5 * density).toInt(), (1 * density).toInt(), (5 * density).toInt(), (1 * density).toInt())
+                                background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_stat_chip)
+                                layoutParams = LinearLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                                    ViewGroup.LayoutParams.WRAP_CONTENT
+                                ).apply { marginStart = (6 * density).toInt() }
+                            }
+
+                            pill.addView(faviconIv)
+                            pill.addView(domainTv)
+                            pill.addView(typeBadge)
+                            sheetBinding.layoutAiSourcesList.addView(pill)
+                        }
+                    } else {
+                        sheetBinding.textAiCorroborationStatus.text = "LOCAL ON-DEVICE AUDIT"
+                        sheetBinding.textAiSourcesCount.text = "0 External"
+                    }
+                }
+
+                // If network available, perform deep multi-source intelligence analysis
+                val analysis = FokkAiEngine.analyzeWebpage(
+                    context = this@MediaHubActivity,
+                    pageTitle = title,
+                    pageHost = sourceHost,
+                    pageUrl = activeUrl,
+                    pageContext = pageCtx,
+                    externalSources = sources
+                )
+
+                withContext(Dispatchers.Main) {
+                    if (analysis.executiveBrief.isNotBlank()) {
+                        sheetBinding.textAiExecutiveHeader.visibility = View.VISIBLE
+                        sheetBinding.textAiExecutiveSummary.visibility = View.VISIBLE
+                        sheetBinding.textAiExecutiveSummary.text = analysis.executiveBrief
+                    }
+
+                    if (analysis.credibilityScore > 0) {
+                        sheetBinding.textAiCredibilityScore.text = "${analysis.credibilityScore}% ${analysis.credibilityVerdict}"
+                        sheetBinding.progressCredibilityScore.progress = analysis.credibilityScore
+                    }
+
+                    if (analysis.verifiedClaims.isNotEmpty()) {
+                        sheetBinding.layoutAiExtractedClaims.removeAllViews()
+                        for (claim in analysis.verifiedClaims) {
+                            val claimRow = LinearLayout(this@MediaHubActivity).apply {
+                                orientation = LinearLayout.HORIZONTAL
+                                gravity = Gravity.TOP
+                                setPadding(0, (6 * density).toInt(), 0, (8 * density).toInt())
+                                layoutParams = LinearLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.WRAP_CONTENT
+                                ).apply { bottomMargin = (6 * density).toInt() }
+                            }
+                            val checkIv = ImageView(this@MediaHubActivity).apply {
+                                setImageResource(R.drawable.ic_shield_check)
+                                setColorFilter(Color.parseColor("#34D399"))
+                                layoutParams = LinearLayout.LayoutParams((18 * density).toInt(), (18 * density).toInt()).apply {
+                                    topMargin = (2 * density).toInt()
+                                    marginEnd = (10 * density).toInt()
+                                }
+                            }
+                            val claimTv = TextView(this@MediaHubActivity).apply {
+                                text = claim
+                                setTextColor(Color.parseColor("#F1F5F9"))
+                                textSize = 13.5f
+                                setLineSpacing(3 * density, 1f)
+                                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                            }
+                            claimRow.addView(checkIv)
+                            claimRow.addView(claimTv)
+                            sheetBinding.layoutAiExtractedClaims.addView(claimRow)
+                        }
+                    }
+
+                    if (analysis.followUpQuestions.isNotEmpty()) {
+                        sheetBinding.textQuestionsLabel.visibility = View.VISIBLE
+                        sheetBinding.layoutFollowUpQuestions.visibility = View.VISIBLE
+                        sheetBinding.layoutFollowUpQuestions.removeAllViews()
+
+                        for (q in analysis.followUpQuestions) {
+                            val card = LinearLayout(this@MediaHubActivity).apply {
+                                orientation = LinearLayout.HORIZONTAL
+                                background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_stat_chip)
+                                setPadding((12 * density).toInt(), (10 * density).toInt(), (12 * density).toInt(), (10 * density).toInt())
+                                layoutParams = LinearLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.WRAP_CONTENT
+                                ).apply { bottomMargin = (8 * density).toInt() }
+                                isClickable = true
+                                isFocusable = true
+                                setOnClickListener {
+                                    switchAiMode(2)
+                                    sheetBinding.editAiUserQuestion.setText(q)
+                                    askAiQuestionFunc?.invoke(q)
+                                }
+                            }
+
+                            val spark = TextView(this@MediaHubActivity).apply {
+                                text = "• "
+                                setTextColor(getColor(R.color.fokk_cyan))
+                                textSize = 14f
+                                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                            }
+
+                            val qTv = TextView(this@MediaHubActivity).apply {
+                                text = q
+                                setTextColor(getColor(R.color.fokk_cyan))
+                                textSize = 13f
+                                setLineSpacing(0f, 1.3f)
+                                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                            }
+
+                            card.addView(spark)
+                            card.addView(qTv)
+                            sheetBinding.layoutFollowUpQuestions.addView(card)
+                        }
+                    }
+                }
+            }
         } catch (e: Exception) {
             Toast.makeText(this, "Could not render summary", Toast.LENGTH_SHORT).show()
         }
@@ -8827,77 +9010,18 @@ open class MediaHubActivity : AppCompatActivity() {
         }
     }
 
-    private fun fetchBrowserSearchSources(query: String, maxResults: Int = 3): List<BrowserSearchResult> {
-        val results = mutableListOf<BrowserSearchResult>()
+    private fun fetchBrowserSearchSources(query: String, maxResults: Int = 4): List<BrowserSearchResult> {
         val cleanQ = query.trim()
-        if (cleanQ.isBlank()) return results
-
-        // 1. Wikipedia Search API (Free, zero rate limit, full encyclopedic depth)
-        try {
-            val encoded = Uri.encode(cleanQ)
-            val wikiUrl = "https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=$encoded&format=json&utf8=&srlimit=$maxResults"
-            val conn = java.net.URL(wikiUrl).openConnection() as java.net.HttpURLConnection
-            conn.setRequestProperty("User-Agent", "FokkBrowser/2.6 (Android; Mobile)")
-            conn.connectTimeout = 4000
-            conn.readTimeout = 4000
-            if (conn.responseCode == 200) {
-                val text = conn.inputStream.bufferedReader(java.nio.charset.StandardCharsets.UTF_8).use { it.readText() }
-                val root = org.json.JSONObject(text)
-                val searchArr = root.optJSONObject("query")?.optJSONArray("search")
-                if (searchArr != null) {
-                    for (i in 0 until searchArr.length()) {
-                        val item = searchArr.getJSONObject(i)
-                        val t = item.optString("title", "")
-                        val rawSnip = item.optString("snippet", "")
-                        val cleanSnip = rawSnip.replace(Regex("<[^<]+?>"), "").trim()
-                        val link = "https://en.wikipedia.org/wiki/" + Uri.encode(t.replace(' ', '_'))
-                        if (t.isNotBlank()) {
-                            results.add(BrowserSearchResult(t, link, "en.wikipedia.org", cleanSnip))
-                        }
-                    }
-                }
-            }
-        } catch (_: Exception) {}
-
-        // 2. DuckDuckGo Instant Answer API (Free, structured abstract and related topics)
-        try {
-            val encoded = Uri.encode(cleanQ)
-            val ddgUrl = "https://api.duckduckgo.com/?q=$encoded&format=json"
-            val conn = java.net.URL(ddgUrl).openConnection() as java.net.HttpURLConnection
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; Mobile)")
-            conn.connectTimeout = 4000
-            conn.readTimeout = 4000
-            if (conn.responseCode == 200) {
-                val text = conn.inputStream.bufferedReader(java.nio.charset.StandardCharsets.UTF_8).use { it.readText() }
-                val root = org.json.JSONObject(text)
-                val absUrl = root.optString("AbstractURL", "")
-                val absText = root.optString("AbstractText", "")
-                val heading = root.optString("Heading", "")
-                if (absUrl.isNotBlank() && absText.isNotBlank()) {
-                    val domain = Uri.parse(absUrl).host.orEmpty().ifBlank { "duckduckgo.com" }
-                    val title = if (heading.isNotBlank()) heading else "Direct Web Source"
-                    if (results.none { it.url == absUrl }) {
-                        results.add(BrowserSearchResult(title, absUrl, domain, absText))
-                    }
-                }
-                val related = root.optJSONArray("RelatedTopics")
-                if (related != null) {
-                    for (i in 0 until minOf(2, related.length())) {
-                        val relObj = related.optJSONObject(i) ?: continue
-                        val firstUrl = relObj.optString("FirstURL", "")
-                        val relText = relObj.optString("Text", "")
-                        if (firstUrl.isNotBlank() && relText.isNotBlank()) {
-                            val domain = Uri.parse(firstUrl).host.orEmpty().ifBlank { "duckduckgo.com" }
-                            if (results.none { it.url == firstUrl }) {
-                                results.add(BrowserSearchResult(relText.take(60), firstUrl, domain, relText))
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (_: Exception) {}
-
-        return results.take(maxResults)
+        if (cleanQ.isBlank()) return emptyList()
+        return try {
+            val googleNews = FokkSearchAggregator.fetchGoogleNews(cleanQ, max = 2)
+            val wiki = FokkSearchAggregator.fetchWikipedia(cleanQ, max = 2)
+            (googleNews + wiki).map {
+                BrowserSearchResult(it.title, it.url, it.domain, it.snippet, it.sourceType, it.timestamp)
+            }.take(maxResults)
+        } catch (_: Exception) {
+            emptyList()
+        }
     }
 
     private fun callFokkAiEngine(
@@ -8905,31 +9029,27 @@ open class MediaHubActivity : AppCompatActivity() {
         userQuery: String,
         searchSources: List<BrowserSearchResult> = emptyList()
     ): String {
-        val customKey = prefs.getString("fokk_ai_api_key", "").orEmpty().trim().ifBlank {
-            BuildConfig.FOKK_AI_KEY.ifBlank {
-                try {
-                    String(android.util.Base64.decode("c2stb3ItdjEtM2U1M2U2YmViZTc2M2ZiOGZjYzE3M2NmMjg0NzFjNjM5MDJjZGZjZWEyMGNlMjhmYmY1ODdiZWRiNDgzM2YwMw==", android.util.Base64.DEFAULT), Charsets.UTF_8).trim()
-                } catch (_: Exception) { "" }
-            }
+        val sources = searchSources.map {
+            CorroboratedSource(it.title, it.url, it.domain, it.snippet, it.sourceType, it.timestamp)
         }
-
-        val freeModels = listOf(
-            "particle-ai/particle-1:free",
-            "baidu/ernie-5.5-flash-preview:free",
-            "nvidia/nemotron-3.5-lightning:free",
-            "recursive/flint-v1.0:free",
-            "dots-studio/dots-3-note-preview:free",
-            "inclusionai/ling-3.2-flash:free"
-        )
-
-        if (customKey.isNotBlank()) {
-            for (model in freeModels) {
-                val result = callOpenRouterEndpoint(customKey, systemPrompt, userQuery, model)
-                if (result.isNotBlank()) return result
+        val (answer, followUps) = runCatching {
+            kotlinx.coroutines.runBlocking(Dispatchers.IO) {
+                FokkAiEngine.queryInteractiveResearch(
+                    context = this@MediaHubActivity,
+                    userQuery = userQuery,
+                    pageTitle = "",
+                    pageHost = "",
+                    pageContext = lastAiPageContext,
+                    externalSources = sources
+                )
             }
-        }
+        }.getOrDefault(Pair(FokkAiEngine.buildOfflineForensicSynthesis(userQuery, lastAiPageContext, sources), emptyList()))
 
-        return buildOfflineForensicBriefing(userQuery, searchSources)
+        return if (followUps.isNotEmpty()) {
+            answer + "\n\nSUGGESTED_FOLLOWUPS: " + followUps.joinToString(" | ")
+        } else {
+            answer
+        }
     }
 
     private fun callOpenRouterEndpoint(
