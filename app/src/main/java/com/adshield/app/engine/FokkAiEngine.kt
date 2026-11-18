@@ -50,7 +50,11 @@ data class FokkAiAnalysis(
     val isAggregator: Boolean = false,
     val whatsMissing: String = "",
     val taggedBullets: List<TaggedEvidencePoint> = emptyList(),
-    val keyMetrics: List<KeyMetric> = emptyList()
+    val keyMetrics: List<KeyMetric> = emptyList(),
+    val biasPosition: Int = 50,
+    val sensationalismScore: Int = 18,
+    val counterPerspective: String = "",
+    val visualEntities: List<String> = emptyList()
 )
 
 /**
@@ -181,11 +185,15 @@ object FokkAiEngine {
             append("TRUTH_AUDIT:\n")
             append("SCORE: [Integer 0-100]\n")
             append("VERDICT: [Short clear verdict, e.g. Verified Reporting / Credible Editorial / Single-Source Report / Opinion & Commentary / Unverified Claim]\n")
-            append("BIAS: [2-3 words, e.g. Objective Reporting / Analytical / Left-Leaning Editorial / Opinionated / Promotional]\n")
+            append("BIAS: [2-3 words, e.g. Objective Reporting / Analytical / Left-Leaning Editorial / Right-Leaning Editorial / Opinionated]\n")
+            append("BIAS_POSITION: [Integer 0-100 where 0=Far Left, 25=Center-Left, 50=Center/Neutral, 75=Center-Right, 100=Far Right]\n")
+            append("SENSATIONALISM: [Integer 0-100 representing clickbait or emotional framing intensity; 0=calm factual, 100=extreme sensationalism]\n")
             append("LAYER1_DOMAIN: [1-2 concise sentences assessing the publisher/platform authenticity and whether it is original reporting or an aggregator.]\n")
             append("LAYER2_STANCE: [1-2 concise sentences assessing tone, framing, loaded language, or balance.]\n")
             append("LAYER3_EVIDENCE: [1-2 concise sentences assessing data, named sources, research, and external corroboration.]\n")
-            append("WHATS_MISSING: [1 concise sentence noting any missing perspective, official response, or pending data — or NONE if thorough.]\n\n")
+            append("COUNTER_PERSPECTIVE: [1-2 concise objective sentences presenting the strongest opposing viewpoint, rebuttal, or alternative interpretation — or NONE if purely technical/factual.]\n")
+            append("WHATS_MISSING: [1 concise sentence noting any missing perspective, official response, or pending data — or NONE if thorough.]\n")
+            append("VISUAL_ENTITIES: [Up to 4 key people, organizations, places, or products from the story separated by | for photo lookup, e.g. Nigel Farage | Reform UK | Elon Musk]\n\n")
             append("SUGGESTED_FOLLOWUPS:\n")
             append("[Specific curious question 1] | [Specific curious question 2] | [Specific curious question 3]\n\n")
             append("Strictly ZERO emojis anywhere in your response.")
@@ -728,7 +736,7 @@ object FokkAiEngine {
         }
 
         fun extractTag(tag: String): String {
-            val m = Regex("(?is)(?:\\*\\*)?${tag}(?:\\*\\*)?\\s*:\\s*(.*?)(?=(?:\\*\\*)?(?:SCORE|VERDICT|BIAS|LAYER1_DOMAIN|LAYER2_STANCE|LAYER3_EVIDENCE|WHATS_MISSING|KEY_EVIDENCE|KEY_METRICS|EXECUTIVE_BRIEF|TRUTH_AUDIT|SUGGESTED_FOLLOWUPS)(?:\\*\\*)?:|$)").find(mainBody)
+            val m = Regex("(?is)(?:\\*\\*)?${tag}(?:\\*\\*)?\\s*:\\s*(.*?)(?=(?:\\*\\*)?(?:SCORE|VERDICT|BIAS_POSITION|BIAS|SENSATIONALISM|LAYER1_DOMAIN|LAYER2_STANCE|LAYER3_EVIDENCE|COUNTER_PERSPECTIVE|WHATS_MISSING|VISUAL_ENTITIES|KEY_EVIDENCE|KEY_METRICS|EXECUTIVE_BRIEF|TRUTH_AUDIT|SUGGESTED_FOLLOWUPS)(?:\\*\\*)?:|$)").find(mainBody)
             return m?.groupValues?.get(1)?.trim().orEmpty()
         }
 
@@ -738,10 +746,14 @@ object FokkAiEngine {
         val tagScore = extractTag("SCORE").filter { it.isDigit() }.toIntOrNull()
         val tagVerdict = extractTag("VERDICT").lines().firstOrNull()?.trim().orEmpty()
         val tagBias = extractTag("BIAS").lines().firstOrNull()?.trim().orEmpty()
+        val tagBiasPos = extractTag("BIAS_POSITION").filter { it.isDigit() }.toIntOrNull()
+        val tagSensationalism = extractTag("SENSATIONALISM").filter { it.isDigit() }.toIntOrNull()
         val tagL1 = extractTag("LAYER1_DOMAIN")
         val tagL2 = extractTag("LAYER2_STANCE")
         val tagL3 = extractTag("LAYER3_EVIDENCE")
+        val tagCounter = extractTag("COUNTER_PERSPECTIVE")
         val tagMissing = extractTag("WHATS_MISSING")
+        val tagVisualEntities = extractTag("VISUAL_ENTITIES")
 
         val bulletSource = if (tagKeyEvidence.isNotBlank()) tagKeyEvidence else mainBody
         val bulletPoints = bulletSource.split("\n")
@@ -803,6 +815,27 @@ object FokkAiEngine {
             else -> assessment.whatsMissing
         }
 
+        val finalCounter = when {
+            tagCounter.equals("NONE", ignoreCase = true) -> ""
+            tagCounter.isNotBlank() -> tagCounter
+            else -> ""
+        }
+        val finalEntities = tagVisualEntities
+            .split(Regex("[|,\n]"))
+            .map { it.trim().removePrefix("-").removePrefix("*").trim() }
+            .filter { it.length in 3..55 && !it.equals("NONE", ignoreCase = true) }
+            .distinct()
+            .take(4)
+
+        val inferredBiasPos = tagBiasPos?.coerceIn(5, 95) ?: when {
+            finalBias.contains("far left", ignoreCase = true) -> 15
+            finalBias.contains("left", ignoreCase = true) -> 30
+            finalBias.contains("far right", ignoreCase = true) -> 85
+            finalBias.contains("right", ignoreCase = true) -> 70
+            else -> 50
+        }
+        val inferredSensationalism = tagSensationalism?.coerceIn(0, 100) ?: 18
+
         val finalBullets = if (bulletPoints.isNotEmpty()) bulletPoints else listOf(execBrief)
         val tagged = finalBullets.map { TaggedEvidencePoint(it, classifyBullet(it)) }
 
@@ -825,8 +858,53 @@ object FokkAiEngine {
             isAggregator = assessment.isAggregator,
             whatsMissing = finalMissing,
             taggedBullets = tagged,
-            keyMetrics = finalMetrics
+            keyMetrics = finalMetrics,
+            biasPosition = inferredBiasPos,
+            sensationalismScore = inferredSensationalism,
+            counterPerspective = finalCounter,
+            visualEntities = finalEntities
         )
+    }
+
+    /**
+     * On-demand Reading Depth transformer ("ELI5" or "DEEP") for the Summary tab.
+     */
+    suspend fun rewriteSummaryDepth(
+        context: Context,
+        mode: String,
+        pageTitle: String,
+        pageHost: String,
+        pageContext: String
+    ): String = withContext(Dispatchers.IO) {
+        val apiKey = resolveApiKey(context)
+        val cleanCtx = cleanDropCaps(pageContext).take(7500)
+        val isEli5 = mode.equals("ELI5", ignoreCase = true)
+        val systemPrompt = if (isEli5) {
+            """
+            You are Fokk AI. Explain this page in crystal-clear, everyday plain English (Explain Like I'm 5 style) without being condescending.
+            - Use 2 short paragraphs or 3 simple bullet points with relatable everyday analogies.
+            - Avoid jargon; if a technical or political term is needed, explain it in parentheses.
+            - Strictly ZERO emojis. No preamble.
+            """.trimIndent()
+        } else {
+            """
+            You are Fokk AI, a senior strategic analyst. Deliver a sharp Deep Dive into this page.
+            - Go beyond the surface summary: explain WHY this matters, second-order implications, incentives of the key players, and what to watch next.
+            - Format as 3 concise analytical bullets with **bold lead-ins**.
+            - Strictly ZERO emojis. No preamble.
+            """.trimIndent()
+        }
+        val userQuery = "Title: $pageTitle ($pageHost)\n\nContent:\n$cleanCtx"
+        val raw = queryInferencePipeline(apiKey, systemPrompt, userQuery)
+        if (raw.isNotBlank()) {
+            sanitizeLlmOutput(raw)
+        } else {
+            if (isEli5) {
+                "In simple terms: $pageTitle covers key developments reported by ${FokkSearchAggregator.cleanPublisherName(pageHost)}. Try again when connected to load the full simplified breakdown."
+            } else {
+                "Deep analysis requires live AI connectivity. Re-tap Deep once your connection stabilizes."
+            }
+        }
     }
 
     /**

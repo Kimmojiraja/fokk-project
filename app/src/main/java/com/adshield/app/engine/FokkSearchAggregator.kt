@@ -25,6 +25,17 @@ data class CorroboratedSource(
 )
 
 /**
+ * Verified visual context card (real editorial/encyclopedic photo of a key person,
+ * organization, place, or concept referenced in the active page).
+ */
+data class VisualEvidenceItem(
+    val title: String,
+    val caption: String,
+    val imageUrl: String,
+    val sourceUrl: String
+)
+
+/**
  * High-reliability multi-source web intelligence aggregator for Fokk AI.
  * Fetches, filters, ranks, and cross-corroborates information from Google News RSS,
  * DuckDuckGo HTML search, Wikipedia encyclopedic archives, and Wikidata entities.
@@ -421,6 +432,97 @@ object FokkSearchAggregator {
                                 domain = "wikidata.org",
                                 snippet = desc,
                                 sourceType = "FACT_DB"
+                            )
+                        )
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+        return results
+    }
+
+    /**
+     * Fetches relevant, high-resolution verified photographs for key entities/topics
+     * in the story via the free Wikipedia PageImages API (zero API key, zero cost).
+     */
+    suspend fun fetchVisualEvidence(
+        entities: List<String>,
+        fallbackTitle: String = "",
+        max: Int = 5
+    ): List<VisualEvidenceItem> = withContext(Dispatchers.IO) {
+        val queries = entities
+            .map { it.trim() }
+            .filter { it.length in 3..60 }
+            .distinctBy { it.lowercase(Locale.ROOT) }
+            .take(5)
+            .ifEmpty {
+                val cleaned = fallbackTitle
+                    .replace(Regex("""[^a-zA-Z0-9\s\-']"""), " ")
+                    .split(Regex("\\s+"))
+                    .filter { it.length >= 4 && !QUERY_STOP_WORDS.contains(it.lowercase(Locale.ROOT)) }
+                    .take(4)
+                    .joinToString(" ")
+                if (cleaned.isNotBlank()) listOf(cleaned) else emptyList()
+            }
+
+        if (queries.isEmpty()) return@withContext emptyList()
+
+        coroutineScope {
+            val deferreds = queries.map { q ->
+                async { fetchSingleWikipediaVisual(q) }
+            }
+            val seenImages = mutableSetOf<String>()
+            val seenTitles = mutableSetOf<String>()
+            val out = mutableListOf<VisualEvidenceItem>()
+            for (d in deferreds) {
+                val items = runCatching { d.await() }.getOrDefault(emptyList())
+                for (item in items) {
+                    val keyTitle = item.title.lowercase(Locale.ROOT)
+                    if (seenImages.add(item.imageUrl) && seenTitles.add(keyTitle)) {
+                        out.add(item)
+                        if (out.size >= max) break
+                    }
+                }
+                if (out.size >= max) break
+            }
+            out
+        }
+    }
+
+    private fun fetchSingleWikipediaVisual(query: String): List<VisualEvidenceItem> {
+        val results = mutableListOf<VisualEvidenceItem>()
+        try {
+            val encoded = Uri.encode(query)
+            val apiUrl = "https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=$encoded&gsrlimit=2&prop=pageimages|description&piprop=thumbnail&pithumbsize=480&format=json"
+            val conn = (URL(apiUrl).openConnection() as HttpURLConnection).apply {
+                setRequestProperty("User-Agent", "FokkBrowser/2.8 (Android; Mobile)")
+                connectTimeout = CONNECT_TIMEOUT_MS
+                readTimeout = READ_TIMEOUT_MS
+            }
+            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
+                val text = conn.inputStream.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+                val pages = JSONObject(text).optJSONObject("query")?.optJSONObject("pages") ?: return results
+                val keys = pages.keys()
+                while (keys.hasNext()) {
+                    val page = pages.optJSONObject(keys.next()) ?: continue
+                    val title = page.optString("title", "").trim()
+                    val desc = page.optString("description", "").trim()
+                    val thumb = page.optJSONObject("thumbnail")?.optString("source", "").orEmpty().trim()
+                    val lowerThumb = thumb.lowercase(Locale.ROOT)
+                    if (title.isNotBlank() && thumb.startsWith("http") &&
+                        !lowerThumb.endsWith(".svg") &&
+                        !lowerThumb.contains("flag_of_") &&
+                        !lowerThumb.contains("commons-logo") &&
+                        !lowerThumb.contains("question_book") &&
+                        !lowerThumb.contains("ambox")
+                    ) {
+                        val pageUrl = "https://en.wikipedia.org/wiki/" + Uri.encode(title.replace(' ', '_'))
+                        results.add(
+                            VisualEvidenceItem(
+                                title = title,
+                                caption = desc.ifBlank { "Verified encyclopedic context" },
+                                imageUrl = thumb,
+                                sourceUrl = pageUrl
                             )
                         )
                     }

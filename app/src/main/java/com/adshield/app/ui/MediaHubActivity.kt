@@ -147,6 +147,7 @@ import com.adshield.app.engine.FokkAiEngine
 import com.adshield.app.engine.FokkSearchAggregator
 import com.adshield.app.engine.CorroboratedSource
 import com.adshield.app.engine.KeyMetric
+import com.adshield.app.engine.VisualEvidenceItem
 import android.speech.tts.UtteranceProgressListener
 
 data class BrowserSearchResult(
@@ -156,6 +157,24 @@ data class BrowserSearchResult(
     val snippet: String,
     val sourceType: String = "WEB",
     val timestamp: String = ""
+)
+
+data class AiChatTurn(
+    val question: String,
+    val answer: String,
+    val sources: List<BrowserSearchResult>,
+    val followUps: List<String>,
+    val pageSourceHost: String = "",
+    val pageSourceUrl: String = ""
+)
+
+data class AiChatSession(
+    val sessionKey: String,
+    val url: String,
+    val title: String,
+    var summaryJson: String,
+    var pageContext: String,
+    val turns: MutableList<AiChatTurn> = mutableListOf()
 )
 
 open class MediaHubActivity : AppCompatActivity() {
@@ -244,10 +263,19 @@ open class MediaHubActivity : AppCompatActivity() {
     private var aiSummaryWatchdog: Runnable? = null
     private var pendingAiSummaryInitialTab: Int = 0
     private var activeAiSummarySheetDialog: BottomSheetDialog? = null
+    private val aiChatSessions = LinkedHashMap<String, AiChatSession>()
+    private var lastChatSessionLeftForSource: AiChatSession? = null
     private var textToSpeech: TextToSpeech? = null
     private var isTtsReady = false
     private var pendingTtsText: String? = null
-    private var ttsStateCallback: ((Boolean) -> Unit)? = null
+    private var pendingTtsSourceTag: String = ""
+    private var ttsPlaybackState: Int = 0 // 0=IDLE, 1=PLAYING, 2=PAUSED
+    private var ttsChunks: List<String> = emptyList()
+    private var ttsChunkIndex: Int = 0
+    private var ttsCurrentSourceTag: String = ""
+    private var ttsSessionId: Long = 0L
+    private var ttsSpeechSpeed: Float = 1.0f
+    private var ttsProgressCallback: ((Int, Int, Int, String) -> Unit)? = null
     var lastPaywallUrl = ""
     var isDualDeckMode = false
     private var secondaryTabIndex = -1
@@ -7903,6 +7931,21 @@ open class MediaHubActivity : AppCompatActivity() {
             val leadImage = json.optString("leadImage", "").trim()
             val explicitSummary = json.optString("executiveSummary", json.optString("summary", "")).trim()
             val activeUrl = json.optString("url", activeWebView?.url.orEmpty())
+            val postUrl = json.optString("postUrl", "").trim()
+            val extractedContext = json.optString("extractedContext", "").trim()
+            if (extractedContext.isNotBlank()) {
+                lastAiPageContext = FokkAiEngine.cleanDropCaps(extractedContext).take(10000)
+            }
+            val topEntitiesFromJs = mutableListOf<String>().apply {
+                val arr = json.optJSONArray("topEntities")
+                if (arr != null) {
+                    for (i in 0 until arr.length()) {
+                        val e = arr.optString(i, "").trim()
+                        if (e.length >= 3) add(e)
+                    }
+                }
+            }
+            val sessionKey = postUrl.ifBlank { activeUrl }.ifBlank { title }
 
             lastGeneratedSummaryJson = summaryJson
 
@@ -7914,16 +7957,58 @@ open class MediaHubActivity : AppCompatActivity() {
                 return
             }
 
+            // Retrieve or create persistent Ask AI chat session for this exact page/post
+            val persistedSummaryJson = runCatching {
+                JSONObject(summaryJson).apply {
+                    if (optString("url", "").isBlank() && activeUrl.isNotBlank()) put("url", activeUrl)
+                    if (optString("postUrl", "").isBlank() && sessionKey.isNotBlank()) put("postUrl", sessionKey)
+                }.toString()
+            }.getOrDefault(summaryJson)
+            val chatSession = aiChatSessions.getOrPut(sessionKey) {
+                if (aiChatSessions.size >= 15) {
+                    val oldest = aiChatSessions.keys.firstOrNull()
+                    if (oldest != null) aiChatSessions.remove(oldest)
+                }
+                AiChatSession(
+                    sessionKey = sessionKey,
+                    url = activeUrl,
+                    title = title,
+                    summaryJson = persistedSummaryJson,
+                    pageContext = lastAiPageContext
+                )
+            }
+            chatSession.summaryJson = persistedSummaryJson
+            if (lastAiPageContext.isNotBlank()) {
+                chatSession.pageContext = lastAiPageContext
+            }
+
             val sheetDialog = BottomSheetDialog(this)
             activeAiSummarySheetDialog = sheetDialog
             val activeStreamHandlers = mutableListOf<Pair<Handler, Runnable>>()
-            var isTtsPlaying = false
+            val activeChatListenChips = mutableMapOf<String, TextView>()
 
             val sheetBinding = SheetAiSummaryBinding.inflate(layoutInflater)
             sheetDialog.setContentView(sheetBinding.root)
             sheetDialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
             val density = resources.displayMetrics.density
+
+            // Show "Resume Chat" banner if user opened this source tab from an active Ask AI chat
+            val pendingSourceChat = lastChatSessionLeftForSource
+            if (pendingSourceChat != null && pendingSourceChat.sessionKey != sessionKey && pendingSourceChat.turns.isNotEmpty()) {
+                sheetBinding.layoutResumeChatBanner.visibility = View.VISIBLE
+                sheetBinding.textResumeChatTitle.text = "Active chat: ${pendingSourceChat.title}"
+                sheetBinding.btnResumeChatAction.setOnClickListener {
+                    lastChatSessionLeftForSource = pendingSourceChat
+                    sheetDialog.dismiss()
+                    mainHandler.postDelayed({
+                        lastAiPageContext = pendingSourceChat.pageContext
+                        showAiSummarySheet(pendingSourceChat.summaryJson, initialTab = 1)
+                    }, 120L)
+                }
+            } else {
+                sheetBinding.layoutResumeChatBanner.visibility = View.GONE
+            }
 
             // Proper keyboard & system navigation bar insets (prevents bottom clipping and composer overlap)
             ViewCompat.setOnApplyWindowInsetsListener(sheetBinding.root) { _, insets ->
@@ -7968,11 +8053,11 @@ open class MediaHubActivity : AppCompatActivity() {
             sheetDialog.setOnDismissListener {
                 activeStreamHandlers.forEach { (h, r) -> h.removeCallbacks(r) }
                 activeStreamHandlers.clear()
-                if (isTtsPlaying) {
+                activeChatListenChips.clear()
+                if (ttsPlaybackState != 0) {
                     stopTextToSpeech()
-                    isTtsPlaying = false
                 }
-                ttsStateCallback = null
+                ttsProgressCallback = null
                 if (activeAiSummarySheetDialog === sheetDialog) {
                     activeAiSummarySheetDialog = null
                     aiVoiceInputCallback = null
@@ -8139,23 +8224,53 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
             }
 
-            // TTS Voice & Play/Stop State
+            // Modern Audio Brief Mini-Player State (Play / Pause / Resume / Stop + Speed + Voice + Live Progress)
             var isMale = prefs.getBoolean("pref_tts_male_voice", true)
+            val speedSteps = listOf(1.0f, 1.25f, 1.5f, 0.85f)
+            ttsSpeechSpeed = prefs.getFloat("pref_tts_speed", 1.0f)
             val updateVoiceBtn = {
-                sheetBinding.btnTtsVoiceToggle.text = if (isMale) "Voice: Male" else "Voice: Female"
+                sheetBinding.btnTtsVoiceToggle.text = if (isMale) "Male" else "Female"
             }
-            val updateTtsPlaybackUi: (Boolean) -> Unit = { playing ->
-                isTtsPlaying = playing
-                sheetBinding.btnListenSummary.text = if (playing) "Stop" else "Listen"
-                sheetBinding.textTtsStatus.text = if (playing) "Playing..." else "Ready"
-                sheetBinding.textTtsStatus.setTextColor(
-                    Color.parseColor(if (playing) "#38BDF8" else "#64748B")
-                )
+            val updateSpeedBtn = {
+                sheetBinding.btnTtsSpeedToggle.text = "${ttsSpeechSpeed}x"
+            }
+            val updateAudioPlayerUi: (Int, Int, Int, String) -> Unit = { state, idx, total, sourceTag ->
+                val isSummarySource = sourceTag == "summary"
+                if (isSummarySource && state == 1) {
+                    sheetBinding.btnListenSummary.text = "Pause"
+                    sheetBinding.btnListenSummary.setIconResource(R.drawable.ic_pause_fill)
+                    sheetBinding.btnStopSummary.visibility = View.VISIBLE
+                    sheetBinding.textTtsStatus.text = if (total > 1) "Playing · ${idx + 1}/$total" else "Playing"
+                    sheetBinding.textTtsStatus.setTextColor(Color.parseColor("#38BDF8"))
+                    sheetBinding.progressAudioBrief.progress = if (total > 0) ((idx + 1) * 100 / total).coerceIn(8, 100) else 25
+                } else if (isSummarySource && state == 2) {
+                    sheetBinding.btnListenSummary.text = "Resume"
+                    sheetBinding.btnListenSummary.setIconResource(R.drawable.ic_play_fill)
+                    sheetBinding.btnStopSummary.visibility = View.VISIBLE
+                    sheetBinding.textTtsStatus.text = if (total > 1) "Paused · ${idx + 1}/$total" else "Paused"
+                    sheetBinding.textTtsStatus.setTextColor(Color.parseColor("#FBBF24"))
+                } else {
+                    sheetBinding.btnListenSummary.text = "Listen"
+                    sheetBinding.btnListenSummary.setIconResource(R.drawable.ic_play_fill)
+                    sheetBinding.btnStopSummary.visibility = View.GONE
+                    sheetBinding.textTtsStatus.text = "Ready to listen"
+                    sheetBinding.textTtsStatus.setTextColor(Color.parseColor("#64748B"))
+                    sheetBinding.progressAudioBrief.progress = 0
+                }
+                // Sync Ask AI per-answer Listen/Stop chips cleanly
+                activeChatListenChips.forEach { (tag, chipTv) ->
+                    val active = state == 1 && sourceTag == tag
+                    chipTv.text = if (active) "Stop" else "Listen"
+                    chipTv.setTextColor(Color.parseColor(if (active) "#F87171" else "#94A3B8"))
+                }
             }
             updateVoiceBtn()
-            updateTtsPlaybackUi(false)
-            ttsStateCallback = { playing ->
-                if (sheetDialog.isShowing) updateTtsPlaybackUi(playing)
+            updateSpeedBtn()
+            updateAudioPlayerUi(0, 0, 0, "summary")
+            ttsProgressCallback = { state, idx, total, sourceTag ->
+                if (sheetDialog.isShowing) {
+                    updateAudioPlayerUi(state, idx, total, sourceTag)
+                }
             }
 
             sheetBinding.btnTtsVoiceToggle.setOnClickListener {
@@ -8163,9 +8278,24 @@ open class MediaHubActivity : AppCompatActivity() {
                 prefs.edit().putBoolean("pref_tts_male_voice", isMale).apply()
                 updateVoiceBtn()
                 configureTtsVoice(isMale)
-                if (isTtsPlaying) {
-                    startTextToSpeech(buildReadableBriefText())
+                if (ttsPlaybackState == 1 && ttsCurrentSourceTag == "summary") {
+                    speakCurrentChunk()
                 }
+            }
+
+            sheetBinding.btnTtsSpeedToggle.setOnClickListener {
+                val curIdx = speedSteps.indexOfFirst { kotlin.math.abs(it - ttsSpeechSpeed) < 0.05f }
+                ttsSpeechSpeed = speedSteps[(curIdx + 1) % speedSteps.size]
+                prefs.edit().putFloat("pref_tts_speed", ttsSpeechSpeed).apply()
+                updateSpeedBtn()
+                configureTtsVoice(isMale)
+                if (ttsPlaybackState == 1 && ttsCurrentSourceTag == "summary") {
+                    speakCurrentChunk()
+                }
+            }
+
+            sheetBinding.btnStopSummary.setOnClickListener {
+                stopTextToSpeech()
             }
 
             // Forward reference for interactive Ask AI
@@ -8395,9 +8525,83 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
             }
 
+            // Reading Depth Switcher state (Brief / ELI5 / Deep)
+            var activeDepthMode = "BRIEF"
+            var eli5CachedText: String? = null
+            var deepCachedText: String? = null
+
+            fun styleDepthButtons(mode: String) {
+                sheetBinding.btnDepthBrief.setBackgroundResource(if (mode == "BRIEF") R.drawable.bg_ai_tab_selected else 0)
+                sheetBinding.btnDepthBrief.setTextColor(Color.parseColor(if (mode == "BRIEF") "#FFFFFF" else "#8B95A5"))
+                sheetBinding.btnDepthEli5.setBackgroundResource(if (mode == "ELI5") R.drawable.bg_ai_tab_selected else 0)
+                sheetBinding.btnDepthEli5.setTextColor(Color.parseColor(if (mode == "ELI5") "#FFFFFF" else "#8B95A5"))
+                sheetBinding.btnDepthDeep.setBackgroundResource(if (mode == "DEEP") R.drawable.bg_ai_tab_selected else 0)
+                sheetBinding.btnDepthDeep.setTextColor(Color.parseColor(if (mode == "DEEP") "#FFFFFF" else "#8B95A5"))
+            }
+
+            fun switchSummaryDepth(mode: String) {
+                activeDepthMode = mode
+                styleDepthButtons(mode)
+                when (mode) {
+                    "BRIEF" -> {
+                        sheetBinding.textAiExecutiveSummary.text = formatMarkdownToSpanned(currentExecutiveSummary)
+                    }
+                    "ELI5" -> {
+                        val cached = eli5CachedText
+                        if (!cached.isNullOrBlank()) {
+                            sheetBinding.textAiExecutiveSummary.text = formatMarkdownToSpanned(cached)
+                        } else {
+                            sheetBinding.textAiExecutiveSummary.text = "Simplifying into plain English..."
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                val rewritten = FokkAiEngine.rewriteSummaryDepth(
+                                    context = this@MediaHubActivity,
+                                    mode = "ELI5",
+                                    pageTitle = title,
+                                    pageHost = sourceHost,
+                                    pageContext = lastAiPageContext.ifBlank { currentExecutiveSummary }
+                                )
+                                eli5CachedText = stripEmojis(rewritten)
+                                withContext(Dispatchers.Main) {
+                                    if (sheetDialog.isShowing && activeDepthMode == "ELI5") {
+                                        sheetBinding.textAiExecutiveSummary.text = formatMarkdownToSpanned(eli5CachedText.orEmpty())
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    "DEEP" -> {
+                        val cached = deepCachedText
+                        if (!cached.isNullOrBlank()) {
+                            sheetBinding.textAiExecutiveSummary.text = formatMarkdownToSpanned(cached)
+                        } else {
+                            sheetBinding.textAiExecutiveSummary.text = "Analyzing deeper implications..."
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                val rewritten = FokkAiEngine.rewriteSummaryDepth(
+                                    context = this@MediaHubActivity,
+                                    mode = "DEEP",
+                                    pageTitle = title,
+                                    pageHost = sourceHost,
+                                    pageContext = lastAiPageContext.ifBlank { currentExecutiveSummary }
+                                )
+                                deepCachedText = stripEmojis(rewritten)
+                                withContext(Dispatchers.Main) {
+                                    if (sheetDialog.isShowing && activeDepthMode == "DEEP") {
+                                        sheetBinding.textAiExecutiveSummary.text = formatMarkdownToSpanned(deepCachedText.orEmpty())
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            sheetBinding.btnDepthBrief.setOnClickListener { switchSummaryDepth("BRIEF") }
+            sheetBinding.btnDepthEli5.setOnClickListener { switchSummaryDepth("ELI5") }
+            sheetBinding.btnDepthDeep.setOnClickListener { switchSummaryDepth("DEEP") }
+
             // Initial immediate render from on-device extraction
             if (currentExecutiveSummary.isNotBlank()) {
-                sheetBinding.textAiExecutiveHeader.visibility = View.VISIBLE
+                sheetBinding.layoutOverviewHeaderRow.visibility = View.VISIBLE
                 sheetBinding.textAiExecutiveSummary.visibility = View.VISIBLE
                 sheetBinding.textAiExecutiveSummary.text = formatMarkdownToSpanned(currentExecutiveSummary)
             }
@@ -8432,13 +8636,14 @@ open class MediaHubActivity : AppCompatActivity() {
                 Toast.makeText(this, "Summary copied", Toast.LENGTH_SHORT).show()
             }
 
+            // Play / Pause / Resume Audio Brief (true sentence-chunked pause & resume!)
             sheetBinding.btnListenSummary.setOnClickListener {
-                if (isTtsPlaying) {
-                    stopTextToSpeech()
+                if (ttsPlaybackState == 1 && ttsCurrentSourceTag == "summary") {
+                    pauseTextToSpeech()
                 } else {
                     val textToSpeak = buildReadableBriefText()
                     if (textToSpeak.isNotBlank()) {
-                        startTextToSpeech(textToSpeak)
+                        startTextToSpeech(textToSpeak, "summary")
                     }
                 }
             }
@@ -8447,7 +8652,155 @@ open class MediaHubActivity : AppCompatActivity() {
             sheetBinding.btnTabAiChat.setOnClickListener { switchAiMode(1) }
             sheetBinding.btnTabAiAudit.setOnClickListener { switchAiMode(2) }
 
-            switchAiMode(initialTab)
+            val autoOpenChat = lastChatSessionLeftForSource?.sessionKey == sessionKey && chatSession.turns.isNotEmpty()
+            if (autoOpenChat) {
+                lastChatSessionLeftForSource = null
+            }
+            switchAiMode(if (autoOpenChat) 1 else initialTab)
+
+            // Render Visual Context & Entities photo gallery in Truth & Bias
+            fun renderVisualEvidenceGallery(items: List<VisualEvidenceItem>) {
+                sheetBinding.layoutAuditVisualList.removeAllViews()
+                if (items.isEmpty()) {
+                    sheetBinding.layoutAuditVisualSection.visibility = View.GONE
+                    return
+                }
+                sheetBinding.layoutAuditVisualSection.visibility = View.VISIBLE
+                for (item in items) {
+                    val card = LinearLayout(this@MediaHubActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_ai_card)
+                        layoutParams = LinearLayout.LayoutParams(
+                            (156 * density).toInt(),
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                        ).apply { marginEnd = (10 * density).toInt() }
+                        isClickable = true
+                        isFocusable = true
+                        setOnClickListener {
+                            if (chatSession.turns.isNotEmpty()) lastChatSessionLeftForSource = chatSession
+                            sheetDialog.dismiss()
+                            addNewTab(item.sourceUrl, isPrivate = activeTab?.isPrivate == true)
+                        }
+                    }
+
+                    val imgCard = androidx.cardview.widget.CardView(this@MediaHubActivity).apply {
+                        radius = 12 * density
+                        cardElevation = 0f
+                        setCardBackgroundColor(Color.parseColor("#111827"))
+                        layoutParams = LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            (96 * density).toInt()
+                        )
+                    }
+                    val iv = ImageView(this@MediaHubActivity).apply {
+                        scaleType = ImageView.ScaleType.CENTER_CROP
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                    }
+                    imgCard.addView(iv)
+                    card.addView(imgCard)
+
+                    Thread {
+                        try {
+                            val conn = java.net.URL(item.imageUrl).openConnection() as java.net.HttpURLConnection
+                            conn.connectTimeout = 4000
+                            conn.readTimeout = 4000
+                            conn.setRequestProperty("User-Agent", "FokkBrowser/2.8 (Android; Mobile)")
+                            val bmp = BitmapFactory.decodeStream(conn.inputStream)
+                            if (bmp != null) {
+                                runOnUiThread {
+                                    if (sheetDialog.isShowing) iv.setImageBitmap(bmp)
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }.start()
+
+                    val textWrap = LinearLayout(this@MediaHubActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding((10 * density).toInt(), (8 * density).toInt(), (10 * density).toInt(), (10 * density).toInt())
+                    }
+                    val titleTv = TextView(this@MediaHubActivity).apply {
+                        text = item.title
+                        setTextColor(Color.parseColor("#F8FAFC"))
+                        textSize = 12.5f
+                        setTypeface(null, Typeface.BOLD)
+                        maxLines = 1
+                        ellipsize = TextUtils.TruncateAt.END
+                    }
+                    val capTv = TextView(this@MediaHubActivity).apply {
+                        text = item.caption
+                        setTextColor(Color.parseColor("#94A3B8"))
+                        textSize = 11f
+                        maxLines = 2
+                        ellipsize = TextUtils.TruncateAt.END
+                        layoutParams = LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                        ).apply { topMargin = (2 * density).toInt() }
+                    }
+                    textWrap.addView(titleTv)
+                    textWrap.addView(capTv)
+                    card.addView(textWrap)
+                    sheetBinding.layoutAuditVisualList.addView(card)
+                }
+            }
+
+            // Update Bias Spectrum dot, Sensationalism gauge, Fact/Claim/Opinion ratio bar, and Counter-Perspective
+            fun renderBiasSpectrumAndRatios(
+                biasPos: Int,
+                sensationalism: Int,
+                counterPerspective: String,
+                claims: List<String>
+            ) {
+                val clampedPos = biasPos.coerceIn(5, 95)
+                sheetBinding.frameBiasSpectrumTrack.post {
+                    val trackWidth = sheetBinding.frameBiasSpectrumTrack.width
+                    val dotWidth = sheetBinding.viewBiasIndicatorDot.width.coerceAtLeast((14 * density).toInt())
+                    if (trackWidth > dotWidth) {
+                        val tx = ((trackWidth - dotWidth) * (clampedPos / 100f))
+                        sheetBinding.viewBiasIndicatorDot.translationX = tx
+                    }
+                }
+
+                val sensLevel = when {
+                    sensationalism >= 60 -> "High"
+                    sensationalism >= 30 -> "Moderate"
+                    else -> "Low"
+                }
+                sheetBinding.textSensationalismLabel.text = "Sensationalism: $sensLevel ($sensationalism%)"
+                sheetBinding.textSensationalismLabel.setTextColor(
+                    Color.parseColor(
+                        when {
+                            sensationalism >= 60 -> "#F87171"
+                            sensationalism >= 30 -> "#FBBF24"
+                            else -> "#34D399"
+                        }
+                    )
+                )
+
+                val total = claims.size.coerceAtLeast(1)
+                val factCount = claims.count { FokkAiEngine.classifyBullet(it) == "FACT" }
+                val opinionCount = claims.count { FokkAiEngine.classifyBullet(it) == "OPINION" }
+                val claimCount = (total - factCount - opinionCount).coerceAtLeast(0)
+                val fPct = (factCount * 100) / total
+                val oPct = (opinionCount * 100) / total
+                val cPct = (100 - fPct - oPct).coerceAtLeast(0)
+
+                sheetBinding.textRatioSummary.text = "$fPct% Fact  ·  $cPct% Claim  ·  $oPct% Opinion"
+                (sheetBinding.barRatioFact.layoutParams as LinearLayout.LayoutParams).weight = fPct.coerceAtLeast(if (factCount > 0) 6 else 0).toFloat()
+                (sheetBinding.barRatioClaim.layoutParams as LinearLayout.LayoutParams).weight = cPct.coerceAtLeast(if (claimCount > 0) 6 else 0).toFloat()
+                (sheetBinding.barRatioOpinion.layoutParams as LinearLayout.LayoutParams).weight = oPct.coerceAtLeast(if (opinionCount > 0) 6 else 0).toFloat()
+                sheetBinding.barRatioFact.requestLayout()
+
+                if (counterPerspective.isNotBlank()) {
+                    sheetBinding.layoutCounterPerspectiveCard.visibility = View.VISIBLE
+                    sheetBinding.textCounterPerspective.text = counterPerspective
+                } else {
+                    sheetBinding.layoutCounterPerspectiveCard.visibility = View.GONE
+                }
+            }
 
             // Baseline Truth & Bias Initialization
             fun applyCredibilityUi(
@@ -8526,13 +8879,34 @@ open class MediaHubActivity : AppCompatActivity() {
                 whatsMissing = initialEval.whatsMissing
             )
 
-            // Populate initial Claims Breakdown
+            // Populate initial Claims Breakdown & Ratios
             sheetBinding.layoutAiExtractedClaims.removeAllViews()
             val initialClaims = currentBullets.take(4).ifEmpty {
                 if (currentExecutiveSummary.isNotBlank()) listOf(currentExecutiveSummary) else emptyList()
             }
             initialClaims.forEachIndexed { idx, claim ->
                 renderBulletRow(claim, sheetBinding.layoutAiExtractedClaims, showDivider = idx < initialClaims.size - 1)
+            }
+            renderBiasSpectrumAndRatios(
+                biasPos = json.optInt("biasPosition", 50),
+                sensationalism = json.optInt("sensationalismScore", 18),
+                counterPerspective = stripEmojis(json.optString("counterPerspective", "")),
+                claims = initialClaims
+            )
+            // Pre-populate Visual Context & Entities quickly if focal page entities are already extracted
+            if (topEntitiesFromJs.isNotEmpty()) {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val quickVisuals = FokkSearchAggregator.fetchVisualEvidence(
+                        entities = topEntitiesFromJs,
+                        fallbackTitle = title,
+                        max = 4
+                    )
+                    withContext(Dispatchers.Main) {
+                        if (sheetDialog.isShowing && quickVisuals.isNotEmpty() && sheetBinding.layoutAuditVisualList.childCount == 0) {
+                            renderVisualEvidenceGallery(quickVisuals)
+                        }
+                    }
+                }
             }
 
             // Multi-turn Conversation History for Ask AI
@@ -8558,7 +8932,8 @@ open class MediaHubActivity : AppCompatActivity() {
                 pageSourceHost: String,
                 pageSourceUrl: String,
                 searchSources: List<BrowserSearchResult> = emptyList(),
-                followUps: List<String> = emptyList()
+                followUps: List<String> = emptyList(),
+                animate: Boolean = true
             ) {
                 // Remove thinking indicator while keeping user question bubble
                 while (container.childCount > 1) {
@@ -8617,7 +8992,7 @@ open class MediaHubActivity : AppCompatActivity() {
                         .trim()
                 )
 
-                // 3. Minimal Action Row: Copy, Listen, Web Search
+                // 3. Minimal Action Row: Copy, Listen / Stop, Web Search
                 val actionRow = LinearLayout(this@MediaHubActivity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     visibility = View.GONE
@@ -8651,11 +9026,19 @@ open class MediaHubActivity : AppCompatActivity() {
                     Toast.makeText(this@MediaHubActivity, "Copied", Toast.LENGTH_SHORT).show()
                 })
 
-                actionRow.addView(makeActionChip("Listen") {
-                    startTextToSpeech(cleanAnswerText)
-                })
+                val turnAudioTag = "chat_${System.nanoTime()}"
+                val listenChip = makeActionChip("Listen") {
+                    if (ttsPlaybackState == 1 && ttsCurrentSourceTag == turnAudioTag) {
+                        stopTextToSpeech()
+                    } else {
+                        startTextToSpeech(cleanAnswerText, turnAudioTag)
+                    }
+                }
+                activeChatListenChips[turnAudioTag] = listenChip
+                actionRow.addView(listenChip)
 
                 actionRow.addView(makeActionChip("Web Search") {
+                    if (chatSession.turns.isNotEmpty()) lastChatSessionLeftForSource = chatSession
                     sheetDialog.dismiss()
                     val searchUrl = currentSearchEngine.searchUrl + Uri.encode(question)
                     addNewTab(searchUrl, isPrivate = activeTab?.isPrivate == true)
@@ -8720,6 +9103,7 @@ open class MediaHubActivity : AppCompatActivity() {
                         isClickable = true
                         isFocusable = true
                         setOnClickListener {
+                            if (chatSession.turns.isNotEmpty()) lastChatSessionLeftForSource = chatSession
                             sheetDialog.dismiss()
                             addNewTab(s.url, isPrivate = activeTab?.isPrivate == true)
                         }
@@ -8801,14 +9185,14 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
                 container.addView(turnDivider)
 
-                // 6. Smooth Non-Intrusive Text Reveal (never steals focus or fights manual scroll)
+                // 6. Smooth Non-Intrusive Text Reveal (instant when restoring saved chat turns)
                 val words = cleanAnswerText.split(" ")
-                if (words.size <= 8) {
+                if (!animate || words.size <= 8) {
                     aTv.text = formatMarkdownToSpanned(cleanAnswerText)
                     actionRow.visibility = View.VISIBLE
                     if (allSources.isNotEmpty()) sourcesContainer.visibility = View.VISIBLE
                     if (cleanFollowUps.isNotEmpty()) followUpsContainer.visibility = View.VISIBLE
-                    scrollChatToBottomIfNearEnd()
+                    if (animate) scrollChatToBottomIfNearEnd()
                 } else {
                     var currentWordIndex = 0
                     val streamedBuilder = StringBuilder()
@@ -8842,6 +9226,36 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
             }
 
+            fun buildUserTurnContainer(queryText: String): LinearLayout {
+                val turnContainer = LinearLayout(this@MediaHubActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(0, (6 * density).toInt(), 0, (10 * density).toInt())
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+                }
+                val qRow = LinearLayout(this@MediaHubActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply { bottomMargin = (10 * density).toInt() }
+                }
+                val qPill = TextView(this@MediaHubActivity).apply {
+                    text = queryText
+                    setTextColor(Color.parseColor("#F8FAFC"))
+                    textSize = 14f
+                    background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_ai_user_bubble)
+                    setPadding((14 * density).toInt(), (10 * density).toInt(), (14 * density).toInt(), (10 * density).toInt())
+                    maxWidth = (resources.displayMetrics.widthPixels * 0.80f).toInt()
+                }
+                qRow.addView(qPill)
+                turnContainer.addView(qRow)
+                return turnContainer
+            }
+
             fun askAiQuestion(query: String) {
                 val cleanQuery = query.trim()
                 if (cleanQuery.isBlank()) return
@@ -8859,35 +9273,7 @@ open class MediaHubActivity : AppCompatActivity() {
                     return
                 }
 
-                val turnContainer = LinearLayout(this@MediaHubActivity).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding(0, (6 * density).toInt(), 0, (10 * density).toInt())
-                    layoutParams = LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
-                }
-
-                // Right-aligned user question bubble
-                val qRow = LinearLayout(this@MediaHubActivity).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                    layoutParams = LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply { bottomMargin = (10 * density).toInt() }
-                }
-
-                val qPill = TextView(this@MediaHubActivity).apply {
-                    text = cleanQuery
-                    setTextColor(Color.parseColor("#F8FAFC"))
-                    textSize = 14f
-                    background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_ai_user_bubble)
-                    setPadding((14 * density).toInt(), (10 * density).toInt(), (14 * density).toInt(), (10 * density).toInt())
-                    maxWidth = (resources.displayMetrics.widthPixels * 0.80f).toInt()
-                }
-                qRow.addView(qPill)
-                turnContainer.addView(qRow)
+                val turnContainer = buildUserTurnContainer(cleanQuery)
 
                 // Clean thinking indicator
                 val thinkingRow = LinearLayout(this@MediaHubActivity).apply {
@@ -8970,6 +9356,17 @@ open class MediaHubActivity : AppCompatActivity() {
                     )
 
                     chatHistory.add(Pair(cleanQuery, answer))
+                    chatSession.pageContext = pageCtx
+                    chatSession.turns.add(
+                        AiChatTurn(
+                            question = cleanQuery,
+                            answer = answer,
+                            sources = searchSources,
+                            followUps = followUps,
+                            pageSourceHost = sourceHost,
+                            pageSourceUrl = activeUrl
+                        )
+                    )
 
                     withContext(Dispatchers.Main) {
                         if (sheetDialog.isShowing) {
@@ -8980,13 +9377,38 @@ open class MediaHubActivity : AppCompatActivity() {
                                 pageSourceHost = sourceHost,
                                 pageSourceUrl = activeUrl,
                                 searchSources = searchSources,
-                                followUps = followUps
+                                followUps = followUps,
+                                animate = true
                             )
                         }
                     }
                 }
             }
             askAiQuestionFunc = { q -> askAiQuestion(q) }
+
+            // Restore persisted Ask AI conversation turns for this page/session (seamless return after clicking sources!)
+            if (chatSession.turns.isNotEmpty()) {
+                sheetBinding.layoutChatEmptyState.visibility = View.GONE
+                chatSession.turns.forEach { savedTurn ->
+                    chatHistory.add(Pair(savedTurn.question, savedTurn.answer))
+                    val turnBox = buildUserTurnContainer(savedTurn.question)
+                    sheetBinding.layoutAiChatResponses.addView(turnBox)
+                    renderChatAnswerCard(
+                        container = turnBox,
+                        question = savedTurn.question,
+                        answer = savedTurn.answer,
+                        pageSourceHost = sourceHost,
+                        pageSourceUrl = activeUrl,
+                        searchSources = savedTurn.sources,
+                        followUps = savedTurn.followUps,
+                        animate = false
+                    )
+                }
+                sheetBinding.scrollAiChatResponses.post {
+                    val child = sheetBinding.scrollAiChatResponses.getChildAt(0)
+                    if (child != null) sheetBinding.scrollAiChatResponses.scrollTo(0, child.bottom)
+                }
+            }
 
             sheetBinding.btnSendAiQuestion.setOnClickListener {
                 val q = sheetBinding.editAiUserQuestion.text?.toString()?.trim().orEmpty()
@@ -9060,6 +9482,7 @@ open class MediaHubActivity : AppCompatActivity() {
                                     isClickable = true
                                     isFocusable = true
                                     setOnClickListener {
+                                        if (chatSession.turns.isNotEmpty()) lastChatSessionLeftForSource = chatSession
                                         sheetDialog.dismiss()
                                         addNewTab(src.url, isPrivate = activeTab?.isPrivate == true)
                                     }
@@ -9123,9 +9546,11 @@ open class MediaHubActivity : AppCompatActivity() {
 
                         if (analysis.executiveBrief.isNotBlank()) {
                             currentExecutiveSummary = stripEmojis(analysis.executiveBrief)
-                            sheetBinding.textAiExecutiveHeader.visibility = View.VISIBLE
+                            sheetBinding.layoutOverviewHeaderRow.visibility = View.VISIBLE
                             sheetBinding.textAiExecutiveSummary.visibility = View.VISIBLE
-                            sheetBinding.textAiExecutiveSummary.text = formatMarkdownToSpanned(currentExecutiveSummary)
+                            if (activeDepthMode == "BRIEF") {
+                                sheetBinding.textAiExecutiveSummary.text = formatMarkdownToSpanned(currentExecutiveSummary)
+                            }
                         }
 
                         applyCredibilityUi(
@@ -9155,22 +9580,35 @@ open class MediaHubActivity : AppCompatActivity() {
                             renderKeyMetrics(currentMetrics)
                         }
 
-                        if (analysis.verifiedClaims.isNotEmpty()) {
+                        val resolvedClaims = if (analysis.verifiedClaims.isNotEmpty()) {
                             sheetBinding.layoutAiExtractedClaims.removeAllViews()
                             val claims = analysis.verifiedClaims.map { stripEmojis(it) }
                             claims.forEachIndexed { idx, claim ->
                                 renderBulletRow(claim, sheetBinding.layoutAiExtractedClaims, showDivider = idx < claims.size - 1)
                             }
+                            claims
+                        } else {
+                            initialClaims
                         }
+
+                        // Upgrade Truth & Bias Pro Analytics: Bias Spectrum, Sensationalism, Ratio Bar & Counter-Perspective
+                        renderBiasSpectrumAndRatios(
+                            biasPos = analysis.biasPosition,
+                            sensationalism = analysis.sensationalismScore,
+                            counterPerspective = stripEmojis(analysis.counterPerspective),
+                            claims = resolvedClaims
+                        )
 
                         if (analysis.followUpQuestions.isNotEmpty()) {
                             currentQuestions = analysis.followUpQuestions.map { stripEmojis(it) }.toMutableList()
                             renderFollowUpSection(currentQuestions)
                         }
 
-                        // Cache and persist in Fokk AI History
+                        // Cache and persist in Fokk AI History & active Chat Session
                         cachedAiSummaryUrl = activeUrl
                         val updatedJson = JSONObject(summaryJson).apply {
+                            put("url", activeUrl)
+                            put("postUrl", sessionKey)
                             put("executiveSummary", currentExecutiveSummary)
                             put("credibilityScore", analysis.credibilityScore)
                             put("credibilityVerdict", analysis.credibilityVerdict)
@@ -9179,8 +9617,12 @@ open class MediaHubActivity : AppCompatActivity() {
                             put("metrics", JSONArray(currentMetrics.map { "${it.value} :: ${it.label}" }))
                             put("verifiedClaims", JSONArray(analysis.verifiedClaims))
                             put("followUpQuestions", JSONArray(currentQuestions))
+                            put("biasPosition", analysis.biasPosition)
+                            put("sensationalismScore", analysis.sensationalismScore)
+                            put("counterPerspective", stripEmojis(analysis.counterPerspective))
                         }
                         cachedAiSummaryJson = updatedJson.toString()
+                        chatSession.summaryJson = cachedAiSummaryJson!!
                         saveAiHistoryItem(
                             url = activeUrl,
                             title = title,
@@ -9190,6 +9632,25 @@ open class MediaHubActivity : AppCompatActivity() {
                             sourcesCount = sources.size,
                             fullJson = cachedAiSummaryJson!!
                         )
+
+                        // Fetch high-relevance Visual Context & Entities photography (free Wikipedia PageImages API)
+                        val visualEntitiesQuery = (analysis.visualEntities + topEntitiesFromJs)
+                            .map { it.trim() }
+                            .filter { it.length >= 2 }
+                            .distinct()
+                            .take(5)
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            val visuals = FokkSearchAggregator.fetchVisualEvidence(
+                                entities = visualEntitiesQuery,
+                                fallbackTitle = title,
+                                max = 5
+                            )
+                            withContext(Dispatchers.Main) {
+                                if (sheetDialog.isShowing && visuals.isNotEmpty()) {
+                                    renderVisualEvidenceGallery(visuals)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -9533,9 +9994,10 @@ open class MediaHubActivity : AppCompatActivity() {
 
     private fun configureTtsVoice(isMale: Boolean) {
         textToSpeech?.let { tts ->
+            val speed = ttsSpeechSpeed.coerceIn(0.75f, 2.0f)
             if (isMale) {
-                tts.setPitch(0.85f)
-                tts.setSpeechRate(0.96f)
+                tts.setPitch(0.88f)
+                tts.setSpeechRate(0.96f * speed)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     val male = tts.voices?.firstOrNull {
                         it.name.contains("male", ignoreCase = true) || it.name.contains("#male", ignoreCase = true)
@@ -9543,8 +10005,8 @@ open class MediaHubActivity : AppCompatActivity() {
                     if (male != null) tts.voice = male
                 }
             } else {
-                tts.setPitch(1.05f)
-                tts.setSpeechRate(1.0f)
+                tts.setPitch(1.04f)
+                tts.setSpeechRate(1.0f * speed)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     val female = tts.voices?.firstOrNull {
                         it.name.contains("female", ignoreCase = true) || it.name.contains("#female", ignoreCase = true)
@@ -9553,6 +10015,43 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun buildTtsChunks(rawText: String): List<String> {
+        val clean = rawText
+            .replace(Regex("""[*#`_]"""), "")
+            .replace(Regex("""\[\d+]"""), "")
+            .replace(Regex("""\s+"""), " ")
+            .trim()
+        if (clean.isBlank()) return emptyList()
+        val sentences = clean.split(Regex("""(?<=[.!?])\s+""")).map { it.trim() }.filter { it.isNotBlank() }
+        val chunks = mutableListOf<String>()
+        val buf = StringBuilder()
+        for (s in sentences) {
+            if (s.length > 260) {
+                if (buf.isNotEmpty()) {
+                    chunks.add(buf.toString().trim())
+                    buf.clear()
+                }
+                var idx = 0
+                while (idx < s.length) {
+                    val end = minOf(idx + 240, s.length)
+                    chunks.add(s.substring(idx, end).trim())
+                    idx = end
+                }
+            } else if (buf.length + s.length + 1 > 260) {
+                if (buf.isNotEmpty()) {
+                    chunks.add(buf.toString().trim())
+                    buf.clear()
+                }
+                buf.append(s)
+            } else {
+                if (buf.isNotEmpty()) buf.append(" ")
+                buf.append(s)
+            }
+        }
+        if (buf.isNotEmpty()) chunks.add(buf.toString().trim())
+        return chunks.filter { it.isNotBlank() }
     }
 
     private fun initTextToSpeech() {
@@ -9566,53 +10065,120 @@ open class MediaHubActivity : AppCompatActivity() {
                     configureTtsVoice(isMale)
                     textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                         override fun onStart(utteranceId: String?) {
-                            runOnUiThread { ttsStateCallback?.invoke(true) }
+                            runOnUiThread {
+                                if (ttsPlaybackState == 1) {
+                                    ttsProgressCallback?.invoke(1, ttsChunkIndex, ttsChunks.size, ttsCurrentSourceTag)
+                                }
+                            }
                         }
+
                         override fun onDone(utteranceId: String?) {
-                            runOnUiThread { ttsStateCallback?.invoke(false) }
+                            runOnUiThread {
+                                val expectedId = "fokk_tts_${ttsSessionId}_${ttsChunkIndex}"
+                                if (ttsPlaybackState != 1 || utteranceId != expectedId) return@runOnUiThread
+                                if (ttsChunkIndex + 1 < ttsChunks.size) {
+                                    ttsChunkIndex++
+                                    speakCurrentChunk()
+                                } else {
+                                    ttsPlaybackState = 0
+                                    ttsChunkIndex = 0
+                                    ttsProgressCallback?.invoke(0, 0, ttsChunks.size, ttsCurrentSourceTag)
+                                }
+                            }
                         }
+
                         @Deprecated("Deprecated in Java")
                         override fun onError(utteranceId: String?) {
-                            runOnUiThread { ttsStateCallback?.invoke(false) }
+                            runOnUiThread {
+                                val expectedId = "fokk_tts_${ttsSessionId}_${ttsChunkIndex}"
+                                if (utteranceId == expectedId) {
+                                    ttsPlaybackState = 0
+                                    ttsChunkIndex = 0
+                                    ttsProgressCallback?.invoke(0, 0, ttsChunks.size, ttsCurrentSourceTag)
+                                }
+                            }
                         }
                     })
                     val queued = pendingTtsText
+                    val queuedTag = pendingTtsSourceTag
                     if (!queued.isNullOrBlank()) {
                         pendingTtsText = null
-                        speakNow(queued)
+                        startTextToSpeech(queued, queuedTag)
                     }
                 }
             }
         }
     }
 
-    private fun speakNow(text: String) {
+    private fun speakCurrentChunk() {
+        val tts = textToSpeech ?: return
+        if (ttsChunkIndex !in ttsChunks.indices) {
+            ttsPlaybackState = 0
+            ttsChunkIndex = 0
+            ttsProgressCallback?.invoke(0, 0, ttsChunks.size, ttsCurrentSourceTag)
+            return
+        }
         val isMale = prefs.getBoolean("pref_tts_male_voice", true)
         configureTtsVoice(isMale)
-        val cleanText = text.replace(Regex("""[*#`_]"""), "").replace(Regex("""\[\d+]"""), "").trim()
-        if (cleanText.isBlank()) return
+        val chunk = ttsChunks[ttsChunkIndex]
+        val uttId = "fokk_tts_${ttsSessionId}_${ttsChunkIndex}"
+        ttsProgressCallback?.invoke(1, ttsChunkIndex, ttsChunks.size, ttsCurrentSourceTag)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            textToSpeech?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, null, "fokk_tts")
+            tts.speak(chunk, TextToSpeech.QUEUE_FLUSH, null, uttId)
         } else {
             @Suppress("DEPRECATION")
-            textToSpeech?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, null)
+            tts.speak(chunk, TextToSpeech.QUEUE_FLUSH, null)
         }
     }
 
-    fun startTextToSpeech(text: String) {
+    fun startTextToSpeech(text: String, sourceTag: String = "summary") {
+        val chunks = buildTtsChunks(text)
+        if (chunks.isEmpty()) return
+
         if (textToSpeech == null || !isTtsReady) {
             pendingTtsText = text
+            pendingTtsSourceTag = sourceTag
+            ttsCurrentSourceTag = sourceTag
+            ttsChunks = chunks
+            ttsChunkIndex = 0
+            ttsPlaybackState = 1
             initTextToSpeech()
-            ttsStateCallback?.invoke(true)
+            ttsProgressCallback?.invoke(1, 0, chunks.size, sourceTag)
             return
         }
-        speakNow(text)
+
+        // If resuming the exact same paused source, continue right from ttsChunkIndex
+        if (ttsPlaybackState == 2 && ttsCurrentSourceTag == sourceTag && ttsChunks.isNotEmpty() && ttsChunkIndex in ttsChunks.indices) {
+            ttsSessionId++
+            ttsPlaybackState = 1
+            speakCurrentChunk()
+            return
+        }
+
+        ttsSessionId++
+        ttsCurrentSourceTag = sourceTag
+        ttsChunks = chunks
+        ttsChunkIndex = 0
+        ttsPlaybackState = 1
+        speakCurrentChunk()
+    }
+
+    fun pauseTextToSpeech() {
+        if (ttsPlaybackState != 1) return
+        ttsSessionId++
+        pendingTtsText = null
+        textToSpeech?.stop()
+        ttsPlaybackState = 2
+        ttsProgressCallback?.invoke(2, ttsChunkIndex, ttsChunks.size, ttsCurrentSourceTag)
     }
 
     fun stopTextToSpeech() {
+        ttsSessionId++
         pendingTtsText = null
         textToSpeech?.stop()
-        ttsStateCallback?.invoke(false)
+        ttsPlaybackState = 0
+        ttsChunkIndex = 0
+        ttsProgressCallback?.invoke(0, 0, ttsChunks.size, ttsCurrentSourceTag)
     }
 
     // =========================================================================
@@ -9740,31 +10306,67 @@ open class MediaHubActivity : AppCompatActivity() {
             return
         }
 
-        // Instant re-opening if already summarized for this exact URL
-        if (url == cachedAiSummaryUrl && !cachedAiSummaryJson.isNullOrBlank()) {
+        // Dynamic social feeds (Instagram home, X home/profile, Reddit, Threads) change focal post while scrolling
+        // WITHOUT changing window.location.href — never return a stale URL-only cached summary on those pages!
+        val lowerUrl = url.lowercase(Locale.ROOT)
+        val isDynamicSocialFeed = lowerUrl.contains("instagram.com") ||
+            lowerUrl.contains("x.com") ||
+            lowerUrl.contains("twitter.com") ||
+            lowerUrl.contains("threads.net") ||
+            lowerUrl.contains("reddit.com") ||
+            lowerUrl.contains("facebook.com") ||
+            lowerUrl.contains("tiktok.com")
+
+        // Instant re-opening ONLY for static articles/pages already summarized for this exact URL
+        if (!isDynamicSocialFeed && url == cachedAiSummaryUrl && !cachedAiSummaryJson.isNullOrBlank()) {
             showAiSummarySheet(cachedAiSummaryJson!!, initialTab)
             return
         }
 
-        // Extract full editorial or focal tweet text for LLM context (sanitized)
+        // Extract full editorial or viewport-focal social post text for LLM context (sanitized)
         val contextExtractJs = """
             (function() {
                 try {
                     var host = (window.location.hostname || '').replace(/^www\./i, '').toLowerCase();
+                    function pickVisible(nodes) {
+                        var arr = Array.from(nodes || []);
+                        var vh = window.innerHeight || 800;
+                        var best = null, bestScore = -1;
+                        for (var i = 0; i < arr.length; i++) {
+                            var r = arr[i].getBoundingClientRect();
+                            if (r.height < 60 || r.bottom <= 20 || r.top >= vh - 20) continue;
+                            var visH = Math.max(0, Math.min(vh, r.bottom) - Math.max(0, r.top));
+                            var cy = (Math.max(0, r.top) + Math.min(vh, r.bottom)) / 2;
+                            var score = visH + Math.max(0, 1 - Math.abs(cy - vh * 0.44) / (vh * 0.75)) * 220;
+                            if (score > bestScore) { bestScore = score; best = arr[i]; }
+                        }
+                        return best || arr[0] || null;
+                    }
 
-                    // 1. Focal Tweet on Twitter/X: Strictly ignore reply threads and engagement counters
-                    if (host === 'x.com' || host === 'twitter.com') {
-                        var focal = document.querySelector('article[data-testid="tweet"]');
+                    // 1. Focal Tweet on Twitter/X (status match or viewport-centered tweet)
+                    if (host === 'x.com' || host === 'twitter.com' || host === 'mobile.x.com' || host === 'mobile.twitter.com') {
+                        var tweets = document.querySelectorAll('article[data-testid="tweet"]');
+                        var m = window.location.pathname.match(/\/status\/(\d+)/);
+                        var focal = m ? Array.from(tweets).find(function(t){ return !!t.querySelector('a[href*="/status/' + m[1] + '"]'); }) : null;
+                        if (!focal) focal = pickVisible(tweets);
                         if (focal) {
                             var nodes = Array.from(focal.querySelectorAll('[data-testid="tweetText"]'));
                             var texts = nodes.map(function(el) { return (el.innerText || '').replace(/\s+/g, ' ').trim(); })
-                                .filter(function(t) {
-                                    return t.length > 10 &&
-                                           !/\b\d{1,2}:\d{2}\s+(?:AM|PM)\b/i.test(t) &&
-                                           !/\b\d+K?\s+Views\b/i.test(t) &&
-                                           !/^@\w+$/.test(t);
-                                });
+                                .filter(function(t) { return t.length > 6 && !/\b\d+K?\s+Views\b/i.test(t) && !/^@\w+$/.test(t); });
                             if (texts.length > 0) return texts.join('\n\n');
+                        }
+                    }
+
+                    // 2. Focal Instagram post (currently visible article in viewport or open modal)
+                    if (host.indexOf('instagram.com') !== -1) {
+                        var igFocal = document.querySelector('[role="dialog"] article') || pickVisible(document.querySelectorAll('article'));
+                        if (igFocal) {
+                            var capNodes = Array.from(igFocal.querySelectorAll('h1, span[dir="auto"], div[dir="auto"]'));
+                            var caps = capNodes
+                                .filter(function(el){ return !el.closest('header, button, [role="button"]'); })
+                                .map(function(el){ return (el.innerText || '').replace(/\s+/g, ' ').trim(); })
+                                .filter(function(t){ return t.length >= 12 && t.length < 1200 && !/^(like|likes|comment|share|save|follow|view all \d+ comments|add a comment|liked by)/i.test(t); });
+                            if (caps.length > 0) return caps.slice(0, 6).join('\n\n');
                         }
                     }
 
