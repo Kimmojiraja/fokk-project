@@ -181,6 +181,53 @@
         android:layout_height="1dp"
         android:background="#131B29" />
 
+    <!-- Return to Active Ask AI Chat Banner (shown after clicking a source link from Ask AI) -->
+    <LinearLayout
+        android:id="@+id/layoutResumeChatBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#0D1626"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="18dp"
+        android:paddingVertical="9dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="15dp"
+            android:layout_height="15dp"
+            android:src="@drawable/ic_fokk_ai_logo"
+            android:scaleType="fitCenter"
+            android:contentDescription="Fokk AI" />
+
+        <TextView
+            android:id="@+id/textResumeChatTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:text="Active chat in progress"
+            android:textColor="#CBD5E1"
+            android:textSize="12sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/btnResumeChatAction"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_ai_pill"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingHorizontal="11dp"
+            android:paddingVertical="4dp"
+            android:text="Resume Chat"
+            android:textColor="#38BDF8"
+            android:textSize="11.5sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
     <!-- Main Dynamic Content Container -->
     <FrameLayout
         android:layout_width="match_parent"
@@ -333,18 +380,76 @@
                         android:textSize="12sp" />
                 </LinearLayout>
 
-                <!-- Overview Section -->
-                <TextView
-                    android:id="@+id/textAiExecutiveHeader"
+                <!-- Overview Header + Reading Depth Switcher (Brief / ELI5 / Deep) -->
+                <LinearLayout
+                    android:id="@+id/layoutOverviewHeaderRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="18dp"
                     android:layout_marginBottom="8dp"
-                    android:text="Overview"
-                    android:textColor="#F8FAFC"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:visibility="gone" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/textAiExecutiveHeader"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Overview"
+                        android:textColor="#F8FAFC"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:id="@+id/layoutDepthSwitcher"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_ai_tab_track"
+                        android:orientation="horizontal"
+                        android:padding="2dp">
+
+                        <TextView
+                            android:id="@+id/btnDepthBrief"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_ai_tab_selected"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:paddingHorizontal="9dp"
+                            android:paddingVertical="4dp"
+                            android:text="Brief"
+                            android:textColor="#FFFFFF"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/btnDepthEli5"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:paddingHorizontal="9dp"
+                            android:paddingVertical="4dp"
+                            android:text="ELI5"
+                            android:textColor="#8B95A5"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/btnDepthDeep"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:paddingHorizontal="9dp"
+                            android:paddingVertical="4dp"
+                            android:text="Deep"
+                            android:textColor="#8B95A5"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/textAiExecutiveSummary"
@@ -491,14 +596,14 @@
                         android:orientation="horizontal" />
                 </HorizontalScrollView>
 
-                <!-- Audio Brief & Quick Actions Card -->
+                <!-- Modern Audio Brief Mini-Player Card -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="22dp"
                     android:background="@drawable/bg_ai_card"
                     android:orientation="vertical"
-                    android:padding="14dp">
+                    android:padding="15dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -506,23 +611,59 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Audio Brief"
-                            android:textColor="#F8FAFC"
-                            android:textSize="13.5sp"
-                            android:textStyle="bold" />
+                        <FrameLayout
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_ai_pill">
 
-                        <TextView
-                            android:id="@+id/textTtsStatus"
+                            <ImageView
+                                android:id="@+id/imgAudioBriefWave"
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_audio_wave"
+                                android:contentDescription="Audio Brief" />
+                        </FrameLayout>
+
+                        <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:layout_marginStart="8dp"
-                            android:text="Ready"
-                            android:textColor="#64748B"
-                            android:textSize="11.5sp" />
+                            android:layout_marginStart="11dp"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Audio Brief"
+                                android:textColor="#F8FAFC"
+                                android:textSize="13.5sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/textTtsStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="1dp"
+                                android:text="Ready to listen"
+                                android:textColor="#64748B"
+                                android:textSize="11.5sp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/btnTtsSpeedToggle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="6dp"
+                            android:background="@drawable/bg_ai_pill"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="5dp"
+                            android:text="1.0x"
+                            android:textColor="#CBD5E1"
+                            android:textSize="11.5sp"
+                            android:textStyle="bold" />
 
                         <TextView
                             android:id="@+id/btnTtsVoiceToggle"
@@ -531,26 +672,37 @@
                             android:background="@drawable/bg_ai_pill"
                             android:clickable="true"
                             android:focusable="true"
-                            android:paddingHorizontal="12dp"
+                            android:paddingHorizontal="10dp"
                             android:paddingVertical="5dp"
-                            android:text="Voice: Male"
+                            android:text="Male"
                             android:textColor="#CBD5E1"
                             android:textSize="11.5sp"
                             android:textStyle="bold" />
                     </LinearLayout>
 
+                    <ProgressBar
+                        android:id="@+id/progressAudioBrief"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="3dp"
+                        android:layout_marginTop="12dp"
+                        android:max="100"
+                        android:progress="0"
+                        android:progressBackgroundTint="#1B2434"
+                        android:progressTint="#38BDF8" />
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
+                        android:gravity="center_vertical"
                         android:orientation="horizontal">
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnListenSummary"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="6dp"
+                            android:layout_height="42dp"
+                            android:layout_weight="1.2"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
                             android:text="Listen"
@@ -558,15 +710,31 @@
                             android:textColor="#06080D"
                             android:textSize="13sp"
                             android:textStyle="bold"
+                            app:icon="@drawable/ic_play_fill"
+                            app:iconGravity="textStart"
+                            app:iconPadding="6dp"
+                            app:iconSize="16dp"
+                            app:iconTint="#06080D"
                             app:backgroundTint="#F8FAFC"
                             app:cornerRadius="12dp" />
+
+                        <ImageButton
+                            android:id="@+id/btnStopSummary"
+                            android:layout_width="42dp"
+                            android:layout_height="42dp"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_ai_pill"
+                            android:src="@drawable/ic_stop_fill"
+                            android:scaleType="centerInside"
+                            android:contentDescription="Stop Audio"
+                            android:visibility="gone" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnCopySummary"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="42dp"
                             android:layout_weight="1"
-                            android:layout_marginStart="6dp"
+                            android:layout_marginStart="8dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
                             android:text="Copy"
@@ -690,6 +858,196 @@
                             android:textColor="#38BDF8"
                             android:textSize="12sp" />
                     </LinearLayout>
+                </LinearLayout>
+
+                <!-- Visual Context & Evidence Gallery (Verified Real Photos of Key Entities) -->
+                <LinearLayout
+                    android:id="@+id/layoutAuditVisualSection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:text="Visual Context &amp; Entities"
+                        android:textColor="#F8FAFC"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <HorizontalScrollView
+                        android:id="@+id/scrollAuditVisuals"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:overScrollMode="never"
+                        android:scrollbars="none">
+
+                        <LinearLayout
+                            android:id="@+id/layoutAuditVisualList"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal" />
+                    </HorizontalScrollView>
+                </LinearLayout>
+
+                <!-- Bias Spectrum & Fact-to-Opinion Breakdown Card -->
+                <LinearLayout
+                    android:id="@+id/layoutBiasSpectrumCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_ai_card"
+                    android:orientation="vertical"
+                    android:padding="15dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Bias Spectrum"
+                            android:textColor="#F8FAFC"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/textSensationalismLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Sensationalism: Low (18%)"
+                            android:textColor="#94A3B8"
+                            android:textSize="11.5sp" />
+                    </LinearLayout>
+
+                    <!-- Visual 5-Point Spectrum Track with Dynamic Indicator Dot -->
+                    <FrameLayout
+                        android:id="@+id/frameBiasSpectrumTrack"
+                        android:layout_width="match_parent"
+                        android:layout_height="18dp"
+                        android:layout_marginTop="10dp">
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="6dp"
+                            android:layout_gravity="center_vertical"
+                            android:background="@drawable/bg_bias_spectrum" />
+
+                        <View
+                            android:id="@+id/viewBiasIndicatorDot"
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:layout_gravity="center_vertical|start"
+                            android:background="@drawable/bg_bias_dot" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Left"
+                            android:textColor="#64748B"
+                            android:textSize="10.5sp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:text="Center"
+                            android:textColor="#94A3B8"
+                            android:textSize="10.5sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="end"
+                            android:text="Right"
+                            android:textColor="#64748B"
+                            android:textSize="10.5sp" />
+                    </LinearLayout>
+
+                    <!-- Fact / Claim / Opinion Ratio Bar -->
+                    <TextView
+                        android:id="@+id/textRatioSummary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:text="Fact / Claim / Opinion Mix"
+                        android:textColor="#94A3B8"
+                        android:textSize="11.5sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="6dp"
+                        android:layout_marginTop="6dp"
+                        android:orientation="horizontal">
+
+                        <View
+                            android:id="@+id/barRatioFact"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="50"
+                            android:background="#34D399" />
+
+                        <View
+                            android:id="@+id/barRatioClaim"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="35"
+                            android:background="#FBBF24" />
+
+                        <View
+                            android:id="@+id/barRatioOpinion"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="15"
+                            android:background="#A78BFA" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Counter-Perspective (Steelman Other Side) Card -->
+                <LinearLayout
+                    android:id="@+id/layoutCounterPerspectiveCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_ai_card"
+                    android:orientation="vertical"
+                    android:padding="15dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Counter-Perspective (The Other Side)"
+                        android:textColor="#38BDF8"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textCounterPerspective"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:textColor="#E2E8F0"
+                        android:textSize="13sp"
+                        android:lineSpacingExtra="3.5dp" />
                 </LinearLayout>
 
                 <!-- Audit Breakdown Section -->
