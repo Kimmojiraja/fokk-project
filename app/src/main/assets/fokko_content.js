@@ -392,13 +392,13 @@
       ? "tmb-verdict-verified"
       : "tmb-verdict-contested";
 
-    const statusBadge = (data.statusBadge || (isDebunked ? "CERTIFIED CAP" : isVerified ? "VERIFIED RECORD" : "CONTEXT NEEDED"))
-      .replace(/[🧢🔍⚖️✨]/g, "")
+    const statusBadge = (data.statusBadge || (isDebunked ? "DISPUTED / UNVERIFIED" : isVerified ? "OFFICIALLY CONFIRMED" : "CREDIBLY REPORTED"))
+      .replace(/[\uD83C-\uDBFF\uDC00-\uDFFF\u2600-\u27BF]/g, "")
       .trim();
 
-    const verdictTitle = data.verdictTitle || (isDebunked ? "FABRICATION CONFIRMED" : isVerified ? "PRIMARY RECORD CONFIRMED" : "CONTESTED CLAIM");
-    const confidence = Number.isFinite(Number(data.confidence)) && Number(data.confidence) > 0 ? Number(data.confidence) : 92;
-    const confidenceLabel = `${confidence}% FORENSIC CONFIDENCE`;
+    const verdictTitle = data.verdictTitle || (isDebunked ? "DISPUTED CLAIM" : isVerified ? "CONFIRMED REPORT" : "CONTESTED CLAIM");
+    const confidence = Number.isFinite(Number(data.confidence)) && Number(data.confidence) > 0 ? Number(data.confidence) : 88;
+    const confidenceLabel = `${confidence}% CONFIDENCE`;
 
     const docketId = String(data.id || "LIVE").replace(/^check_|^tmb_|^live_|^offline_/, "").slice(-6).toUpperCase();
     const docketElem = document.getElementById("tmb-header-docket");

@@ -22,7 +22,8 @@ data class CorroboratedSource(
     val domain: String,
     val snippet: String,
     val sourceType: String = "WEB", // NEWS, WEB, ENCYCLOPEDIA, FACT_DB
-    val timestamp: String = ""
+    val timestamp: String = "",
+    val stance: String = "SUPPORTS" // SUPPORTS, PARTIAL, CONTRADICTS
 )
 
 /**
@@ -197,12 +198,28 @@ object FokkSearchAggregator {
                     val domain = runCatching { Uri.parse(targetUrl).host }.getOrNull().orEmpty().removePrefix("www.")
 
                     if (cleanTitle.isNotBlank() && targetUrl.startsWith("http") && domain.isNotBlank()) {
+                        val publisherName = when {
+                            domain.contains("thestandard.co.uk", ignoreCase = true) -> "The Standard"
+                            domain.contains("theguardian.com", ignoreCase = true) -> "The Guardian"
+                            domain.contains("yahoo.com", ignoreCase = true) -> "Yahoo Sports"
+                            domain.contains("skysports.com", ignoreCase = true) -> "Sky Sports"
+                            domain.contains("bbc.", ignoreCase = true) -> "BBC Sport"
+                            domain.contains("theathletic.com", ignoreCase = true) -> "The Athletic"
+                            domain.contains("reuters.com", ignoreCase = true) -> "Reuters"
+                            else -> domain.split(".").firstOrNull()?.replaceFirstChar { it.uppercase() } ?: domain
+                        }
+                        val formattedSnippet = if (cleanSnippet.isNotBlank()) {
+                            "Reported by $publisherName: $cleanSnippet"
+                        } else {
+                            "Reported by $publisherName"
+                        }
+
                         results.add(
                             CorroboratedSource(
                                 title = cleanTitle,
                                 url = targetUrl,
                                 domain = domain,
-                                snippet = cleanSnippet,
+                                snippet = formattedSnippet,
                                 sourceType = "WEB"
                             )
                         )
@@ -302,17 +319,26 @@ object FokkSearchAggregator {
     /**
      * Strips HTML tags, entities, and excessive whitespace.
      */
-    private fun cleanHtmlText(raw: String): String {
+    fun cleanHtmlText(raw: String): String {
         if (raw.isBlank()) return ""
-        return raw
-            .replace(Regex("<[^>]+?>"), " ")
-            .replace("&quot;", "\"")
-            .replace("&amp;", "&")
-            .replace("&#39;", "'")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&nbsp;", " ")
-            .replace(Regex("\\s+"), " ")
-            .trim()
+        val withoutTags = raw.replace(Regex("<[^>]+?>"), " ")
+        return try {
+            androidx.core.text.HtmlCompat.fromHtml(withoutTags, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY)
+                .toString()
+                .replace(Regex("\\s+"), " ")
+                .trim()
+        } catch (_: Exception) {
+            withoutTags
+                .replace("&quot;", "\"")
+                .replace("&amp;", "&")
+                .replace("&#39;", "'")
+                .replace("&#x27;", "'")
+                .replace("&apos;", "'")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&nbsp;", " ")
+                .replace(Regex("\\s+"), " ")
+                .trim()
+        }
     }
 }

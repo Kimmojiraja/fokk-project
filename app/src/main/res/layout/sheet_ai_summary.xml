@@ -99,6 +99,17 @@
                 app:tint="@color/text_secondary"
                 android:contentDescription="Save Summary" />
 
+            <!-- Fokk AI History Button -->
+            <ImageButton
+                android:id="@+id/btnAiHistory"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_clock"
+                app:tint="@color/text_secondary"
+                android:contentDescription="Fokk AI History" />
+
             <!-- Close Button -->
             <ImageButton
                 android:id="@+id/btnCloseSummary"
@@ -199,12 +210,100 @@
                     android:contentDescription="Article Lead Image" />
             </androidx.cardview.widget.CardView>
 
+            <!-- Top Trust Badge & Verdict Chip (First Line Answer) -->
+            <LinearLayout
+                android:id="@+id/layoutSummaryTrustBadge"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="10dp"
+                android:background="@drawable/bg_stat_chip"
+                android:orientation="vertical"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="10dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_shield_check"
+                        app:tint="#34D399" />
+
+                    <TextView
+                        android:id="@+id/textSummaryTrustVerdict"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:text="Credibly reported, not yet official"
+                        android:textColor="#34D399"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textSummaryTrustScore"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="88%"
+                        android:textColor="#34D399"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/textSummaryTrustReason"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Corroborated across independent newsrooms; awaiting official club statement."
+                    android:textColor="#94A3B8"
+                    android:textSize="11.5sp"
+                    android:lineSpacingExtra="2dp" />
+            </LinearLayout>
+
+            <!-- Source Provenance Chain Card -->
+            <LinearLayout
+                android:id="@+id/layoutSummarySourceChain"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_search_chip"
+                android:orientation="vertical"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SOURCE CHAIN · PROVENANCE"
+                    android:textColor="#64748B"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.08" />
+
+                <TextView
+                    android:id="@+id/textSummarySourceChainFlow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="Original Source -> Aggregator -> This Page"
+                    android:textColor="#00E5FF"
+                    android:textSize="11.5sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
             <!-- Prominent Article Title -->
             <TextView
                 android:id="@+id/textSummaryTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="4dp"
                 android:text="Executive Brief"
                 android:textColor="@color/text_primary"
                 android:textSize="18sp"
@@ -263,6 +362,39 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />
+
+            <!-- What's Missing Context Card -->
+            <LinearLayout
+                android:id="@+id/layoutSummaryWhatsMissing"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="14dp"
+                android:background="@drawable/bg_stat_chip"
+                android:orientation="vertical"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="10dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="WHAT'S MISSING"
+                    android:textColor="#FBBF24"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.08" />
+
+                <TextView
+                    android:id="@+id/textSummaryWhatsMissing"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Awaiting official club announcement or formal contract signing."
+                    android:textColor="#E2E8F0"
+                    android:textSize="12.5sp"
+                    android:lineSpacingExtra="3dp" />
+            </LinearLayout>
 
             <!-- Key Metrics Section -->
             <TextView
@@ -463,7 +595,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="REALITY VERDICT &amp; CONSENSUS"
+                        android:text="REPORTING STATUS &amp; VERDICT"
                         android:textColor="#94A3B8"
                         android:textSize="10.5sp"
                         android:textStyle="bold"
@@ -474,7 +606,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="94% Verified Consensus"
+                        android:text="Credibly Reported"
                         android:textColor="#34D399"
                         android:textSize="17sp"
                         android:textStyle="bold" />
@@ -500,22 +632,65 @@
                 android:layout_height="4dp"
                 android:layout_marginTop="10dp"
                 android:max="100"
-                android:progress="94"
+                android:progress="88"
                 android:progressTint="#34D399" />
 
-            <!-- TrustMeBro Multi-Layer Cross-Examination Matrix -->
+            <TextView
+                android:id="@+id/textAiCredibilityReason"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Corroborated across independent newsrooms; awaiting official announcement."
+                android:textColor="#94A3B8"
+                android:textSize="12sp"
+                android:lineSpacingExtra="2dp" />
+
+            <!-- Source Provenance Chain Visual -->
+            <LinearLayout
+                android:id="@+id/layoutAuditSourceChain"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="8dp"
+                android:background="@drawable/bg_search_chip"
+                android:orientation="vertical"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SOURCE PROVENANCE CHAIN"
+                    android:textColor="#64748B"
+                    android:textSize="9.5sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.08" />
+
+                <TextView
+                    android:id="@+id/textAuditSourceChainFlow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="Original Source -> Aggregator -> Current Page"
+                    android:textColor="#00E5FF"
+                    android:textSize="11.5sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Multi-Layer Cross-Examination Matrix -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
+                android:layout_marginTop="14dp"
                 android:layout_marginBottom="8dp"
-                android:text="FORENSIC CROSS-EXAMINATION MATRIX"
+                android:text="VERIFICATION &amp; AUTHENTICITY LAYERS"
                 android:textColor="#64748B"
                 android:textSize="10.5sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.08" />
 
-            <!-- Layer 1: Domain Authenticity -->
+            <!-- Layer 1: Page Authenticity & Distribution Channel -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -525,7 +700,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="LAYER 1 · DOMAIN &amp; INFRASTRUCTURE IDENTITY"
+                    android:text="LAYER 1 · PAGE AUTHENTICITY &amp; DISTRIBUTION CHANNEL"
                     android:textColor="#00E5FF"
                     android:textSize="10sp"
                     android:textStyle="bold"
