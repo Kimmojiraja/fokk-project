@@ -23,8 +23,8 @@ android {
         applicationId = "com.adshield.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 285
-        versionName = "2.8.5"
+        versionCode = 286
+        versionName = "2.8.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "FOKK_AI_KEY", "\"$fokkAiKey\"")
