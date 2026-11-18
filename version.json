@@ -1,8 +1,8 @@
 {
-  "versionCode": 282,
-  "versionName": "2.8.2",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.8.2/app-debug.apk",
-  "changelog": "- Fokk AI 2.0 Truth Engine: Upgraded on-device intelligence into a multi-source synthesis engine.\n- Multi-Source Web Intelligence Layer: Integrated live Google News RSS, DuckDuckGo HTML web search, Wikipedia encyclopedic archives, and Wikidata factual entities in parallel.\n- High-Reliability AI Inference Pipeline: Added multi-provider failover across modern Google Gemini and OpenRouter models with smart offline forensic synthesis.\n- Multi-Source Evidence Drawer: Visual source carousel displaying real-time publication favicons, publisher domains, and source classification pills.\n- Forensic Claim Verification: Automatic cross-examination of article assertions against independent reports and live research follow-up prompts."
+  "versionCode": 283,
+  "versionName": "2.8.3",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.8.3/app-debug.apk",
+  "changelog": "- Fokk Mesh Service Stability: Fixed Android 14 foreground service crash by removing systemExempted requirement and making startup non-blocking.\n- Fokk AI In-Page Modal Fix: Completely removed intrusive DOM summary modal, routing all summarizer actions cleanly to the native bottom sheet.\n- Reasoning Scratchpad Leak Fix: Stripped internal thinking tokens and chain-of-thought scratchpad notes from AI responses, delivering direct authoritative answers.\n- Dynamic Truth & Bias Audit: Replaced static keyword regex templates with dynamic multi-source analysis across domain identity, rhetorical stance, and evidence density.\n- Ask AI Receipts Redesign: Eliminated vertical duplicate receipt buttons, consolidating all corroborating sources into a horizontal scrolling drawer with favicons.\n- Summary UX Improvements: Positioned Multi-Source Evidence Drawer at the bottom of the summary tab, reordered tabs (Summary & TTS, Ask AI, Truth & Bias Audit), and added smooth tab bar scroll collapsing.\n- Fokk AI Logo Integration: Replaced plain text AI badge in the browser bottom menu with the official Fokk AI logo."
 }
 
 
