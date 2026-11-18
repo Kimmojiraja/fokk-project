@@ -3,6 +3,7 @@ package com.adshield.app.ui
 import android.app.role.RoleManager
 import android.provider.Settings
 import android.widget.RelativeLayout
+import android.widget.HorizontalScrollView
 
 import android.annotation.SuppressLint
 import android.app.Activity
