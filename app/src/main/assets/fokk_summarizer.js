@@ -117,6 +117,19 @@
     // Helper to detect and reject engagement counters, social noise, and scraping junk
     function isScrapingJunk(text) {
         if (!text || text.length < 15) return true;
+        const lower = text.toLowerCase();
+        // Newsroom boilerplate & promotional CTAs
+        if (lower.includes('bookmark your favourite') || lower.includes('bookmark your favorite') ||
+            lower.includes('sign up to our newsletter') || lower.includes('sign up for our newsletter') ||
+            lower.includes('subscribe to our') || lower.includes('join our whatsapp channel') ||
+            lower.includes('follow us on') || lower.includes('read more:') || lower.includes('download the app') ||
+            lower.includes('find out more here') || lower.includes('terms of service') || lower.includes('privacy policy') ||
+            lower.includes('all rights reserved') || lower.includes('click here to') || lower.includes('have your say') ||
+            lower.includes('already have an account') || lower.includes('register to continue') || lower.includes('sign in to read') ||
+            lower.includes('cookies on our website') || lower.includes('allow all cookies') || lower.includes('watch more videos') ||
+            lower.includes('get all the latest') || lower.includes('send your stories to') || lower.includes('got a story?')) {
+            return true;
+        }
         // Timestamp + engagement counts like "1:04 PM · 28.9K Views 5 22 113 2 Relevant View quotes"
         if (/\b\d{1,2}:\d{2}\s+(?:AM|PM)\b/i.test(text) && /\b(?:Views|Quotes|Reposts|Likes)\b/i.test(text)) return true;
         if (/\b\d+(?:\.\d+)?[KM]?\s+Views\b/i.test(text)) return true;

@@ -78,11 +78,24 @@ object FokkSearchAggregator {
                 combined.add(src)
             }
 
-            // Prioritize fresh news reports, then encyclopedic context, then broad web results
+            // Prioritize fresh news reports and live web journalism over encyclopedic entries
             newsResults.forEach { addSource(it) }
-            wikiResults.forEach { addSource(it) }
-            wikidataResults.forEach { addSource(it) }
             ddgResults.forEach { addSource(it) }
+
+            // Only include encyclopedic results if their title directly matches key named entities from the query
+            val queryKeywords = cleanQuery.lowercase(Locale.ROOT)
+                .split(Regex("\\W+"))
+                .filter { it.length >= 4 && !it.matches(Regex("^(what|this|about|news|page|article|transfer|latest|video)$")) }
+
+            wikiResults.filter { w ->
+                val titleLower = w.title.lowercase(Locale.ROOT)
+                queryKeywords.any { kw -> titleLower.contains(kw) }
+            }.forEach { addSource(it) }
+
+            wikidataResults.filter { wd ->
+                val titleLower = wd.title.lowercase(Locale.ROOT)
+                queryKeywords.any { kw -> titleLower.contains(kw) }
+            }.forEach { addSource(it) }
 
             combined.take(maxResults)
         }
@@ -197,15 +210,19 @@ object FokkSearchAggregator {
                     val cleanSnippet = cleanHtmlText(rawSnippet)
                     val domain = runCatching { Uri.parse(targetUrl).host }.getOrNull().orEmpty().removePrefix("www.")
 
-                    if (cleanTitle.isNotBlank() && targetUrl.startsWith("http") && domain.isNotBlank()) {
                         val publisherName = when {
+                            domain.contains("independent.co.uk", ignoreCase = true) -> "The Independent"
+                            domain.contains("thetimes.com", ignoreCase = true) || domain.contains("thetimes.co.uk", ignoreCase = true) -> "The Times"
                             domain.contains("thestandard.co.uk", ignoreCase = true) -> "The Standard"
                             domain.contains("theguardian.com", ignoreCase = true) -> "The Guardian"
-                            domain.contains("yahoo.com", ignoreCase = true) -> "Yahoo Sports"
                             domain.contains("skysports.com", ignoreCase = true) -> "Sky Sports"
-                            domain.contains("bbc.", ignoreCase = true) -> "BBC Sport"
+                            domain.contains("sky.com", ignoreCase = true) || domain.contains("news.sky.com", ignoreCase = true) -> "Sky News"
+                            domain.contains("bbc.com", ignoreCase = true) || domain.contains("bbc.co.uk", ignoreCase = true) -> "BBC News"
+                            domain.contains("yahoo.com", ignoreCase = true) -> "Yahoo"
                             domain.contains("theathletic.com", ignoreCase = true) -> "The Athletic"
                             domain.contains("reuters.com", ignoreCase = true) -> "Reuters"
+                            domain.contains("lbc.co.uk", ignoreCase = true) -> "LBC"
+                            domain.contains("telegraph.co.uk", ignoreCase = true) -> "The Telegraph"
                             else -> domain.split(".").firstOrNull()?.replaceFirstChar { it.uppercase() } ?: domain
                         }
                         val formattedSnippet = if (cleanSnippet.isNotBlank()) {

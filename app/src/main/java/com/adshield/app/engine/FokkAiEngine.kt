@@ -198,14 +198,13 @@ object FokkAiEngine {
                 append("\n")
             }
             append("INSTRUCTIONS:\n")
-            append("- Open with an immediate, plain-spoken direct answer answering whether the claim is real, confirmed, or unverified.\n")
-            append("  For example: 'Yes, credibly reported. Sky Sports, the Guardian, the Standard and Yahoo all report a verbal agreement. The club has not announced it officially.'\n")
-            append("- Detail what each source specifically adds (contract length, wages, fee) rather than dumping headlines.\n")
-            append("- Clearly separate the original reporting source (e.g. Sky Sports) from any secondhand social post or aggregator (e.g. DeadlineDayLive on x.com).\n")
-            append("- Answer the first follow-up question directly within your response.\n")
-            append("- Avoid buzzwords like 'Forensic Consensus' or 'Verified Record'. Use plain, transparent language.\n")
+            append("- Open with an immediate, plain-spoken direct answer to the user's question, stating whether the claim or event is confirmed, credibly reported, or unverified.\n")
+            append("- Synthesize what established newsrooms specifically report, citing key facts, dates, court findings, or official statements.\n")
+            append("- If external corroborating sources are provided, cite them using inline brackets [1], [2].\n")
+            append("- Clearly distinguish primary newsroom journalism from secondhand social aggregation.\n")
+            append("- Answer the question objectively, concisely, and cleanly. Avoid buzzwords.\n")
             append("- Strictly NO emojis anywhere in the response. Output clean professional markdown.\n")
-            append("- At the very end of your response, output on a new line: SUGGESTED_FOLLOWUPS: then 2 claim-specific follow-up research questions separated by | character.")
+            append("- At the very end of your response, output on a new line: SUGGESTED_FOLLOWUPS: then 2 relevant follow-up research questions separated by | character.")
         }
 
         val rawAnswer = queryInferencePipeline(apiKey, systemPrompt, userQuery)
@@ -386,13 +385,18 @@ object FokkAiEngine {
      */
     fun classifyBullet(text: String): String {
         val t = text.lowercase(Locale.ROOT)
-        val hasMetricsOrDates = Regex("""\b(?:20\d{2}|\$\d+|\d+k|\d+m|\d+b|\d+\s*years?|\d+-year|contract|signed)\b""").containsMatchIn(t)
-        val hasOpinionKeywords = Regex("""\b(?:impressive|masterclass|disaster|amazing|incredible|arguably|perhaps|believe|fans|pundit|opinion|feels|seems)\b""").containsMatchIn(t)
-        val hasClaimKeywords = Regex("""\b(?:reports?|claimed|alleged|verbally agreed|in talks|rumored|sources say|according to|set to)\b""").containsMatchIn(t)
+        // Hard factual markers: legal rulings, sentences, arrests, dates, confirmed numbers, institutional actions
+        val hasFactualMarkers = Regex("""\b(?:jailed|sentenced|arrested|convicted|pleaded|announced|confirmed|published|appointed|died|founded|ruled|voted|signed|acquired|passed|established|20\d{2}|\$\d+|\d+k|\d+m|\d+b|\d+\s*(?:years?|months?|days?)|ten-and-a-half|years earlier)\b""").containsMatchIn(t)
+        // Subjective opinion markers
+        val hasOpinionKeywords = Regex("""\b(?:impressive|masterclass|disaster|amazing|incredible|appalling|shocking|disgraceful|outrageous|arguably|perhaps|believe|fans|pundit|opinion|feels|seems|beautiful|awful|terrible)\b""").containsMatchIn(t)
+        // Claim / quote / allegation markers
+        val hasClaimKeywords = Regex("""\b(?:claims?|claimed|alleged|allegations?|verbally agreed|in talks|rumored|sources say|according to|set to|disputed|unconfirmed)\b""").containsMatchIn(t)
 
         return when {
             hasOpinionKeywords -> "OPINION"
-            hasMetricsOrDates && !hasClaimKeywords -> "FACT"
+            hasFactualMarkers && !hasClaimKeywords -> "FACT"
+            hasClaimKeywords -> "CLAIM"
+            hasFactualMarkers -> "FACT"
             else -> "CLAIM"
         }
     }
@@ -415,16 +419,28 @@ object FokkAiEngine {
 
         val combinedText = "$title $context".lowercase(Locale.ROOT)
 
-        // Identify cited primary source
+        // Identify cited primary source ONLY when actually attributing or on an aggregator platform
+        val explicitAttribution = Regex("""(?i)(?:first reported by|according to|citing|reported by|as told to|per)\s+([A-Z][a-zA-Z\s]{2,25})""").find("$title $context")
+        val citedOutletName = explicitAttribution?.groupValues?.get(1)?.trim().orEmpty()
+
         val detectedOriginalSource = when {
-            combinedText.contains("sky sports") || combinedText.contains("sky news") || combinedText.contains("sky") -> "Sky Sports"
-            combinedText.contains("the athletic") || combinedText.contains("athletic") -> "The Athletic"
-            combinedText.contains("guardian") -> "The Guardian"
-            combinedText.contains("bbc") -> "BBC Sport"
-            combinedText.contains("reuters") -> "Reuters"
-            combinedText.contains("fabrizio romano") -> "Fabrizio Romano"
-            combinedText.contains("the standard") || combinedText.contains("evening standard") -> "The Standard"
-            combinedText.contains("yahoo") -> "Yahoo Sports"
+            citedOutletName.contains("Sky", ignoreCase = true) -> "Sky News"
+            citedOutletName.contains("Athletic", ignoreCase = true) -> "The Athletic"
+            citedOutletName.contains("Guardian", ignoreCase = true) -> "The Guardian"
+            citedOutletName.contains("BBC", ignoreCase = true) -> "BBC News"
+            citedOutletName.contains("Times", ignoreCase = true) -> "The Times"
+            citedOutletName.contains("Independent", ignoreCase = true) -> "The Independent"
+            citedOutletName.contains("Standard", ignoreCase = true) -> "The Standard"
+            citedOutletName.contains("Reuters", ignoreCase = true) -> "Reuters"
+            citedOutletName.isNotBlank() -> citedOutletName
+            isSocialAggregator && combinedText.contains("sky sports") -> "Sky Sports"
+            isSocialAggregator && combinedText.contains("sky news") -> "Sky News"
+            isSocialAggregator && combinedText.contains("bbc") -> "BBC News"
+            isSocialAggregator && combinedText.contains("the athletic") -> "The Athletic"
+            isSocialAggregator && combinedText.contains("guardian") -> "The Guardian"
+            isSocialAggregator && combinedText.contains("the times") -> "The Times"
+            isSocialAggregator && combinedText.contains("independent") -> "The Independent"
+            isSocialAggregator && combinedText.contains("reuters") -> "Reuters"
             else -> ""
         }
 
@@ -437,41 +453,29 @@ object FokkAiEngine {
         }
 
         val isOfficialAnnouncement = combinedText.contains("official statement") ||
-                combinedText.contains("club announcement") ||
-                combinedText.contains("confirmed by club") ||
-                combinedText.contains("officially confirmed") ||
                 combinedText.contains("press release") ||
-                combinedText.contains("sec filing")
-
-        val isVerbalOrTransferRumor = combinedText.contains("verbal agreement") ||
-                combinedText.contains("agreed terms") ||
-                combinedText.contains("agreed personal terms") ||
-                combinedText.contains("set to sign") ||
-                combinedText.contains("close to signing") ||
-                combinedText.contains("reported agreement")
+                combinedText.contains("sec filing") ||
+                combinedText.contains("court ruling") ||
+                combinedText.contains("official announcement") ||
+                combinedText.contains("sentenced to") ||
+                combinedText.contains("ministry of justice") ||
+                combinedText.contains("prison service confirmed")
 
         val newsSourcesCount = sources.count { s ->
             s.sourceType == "NEWS" ||
-            s.domain.contains("sky") || s.domain.contains("guardian") ||
+            s.domain.contains("times") || s.domain.contains("guardian") ||
             s.domain.contains("bbc") || s.domain.contains("reuters") ||
             s.domain.contains("standard") || s.domain.contains("athletic") ||
-            s.domain.contains("yahoo")
+            s.domain.contains("independent") || s.domain.contains("lbc") ||
+            s.domain.contains("telegraph")
         }
 
         val (score, verdict, reason) = when {
             isOfficialAnnouncement -> {
                 Triple(
-                    96,
+                    95,
                     "Officially Confirmed",
-                    "Direct official announcement or confirmed primary documentation."
-                )
-            }
-            isVerbalOrTransferRumor && sources.size >= 2 -> {
-                val s = minOf(91, 86 + minOf(sources.size, 5))
-                Triple(
-                    s,
-                    "Credibly Reported, Not Yet Official",
-                    "Corroborated across ${sources.size} independent newsrooms; verbal agreement reported, awaiting official club announcement."
+                    "Direct institutional announcement, court ruling, or confirmed public record."
                 )
             }
             sources.size >= 4 || newsSourcesCount >= 3 -> {
@@ -479,28 +483,28 @@ object FokkAiEngine {
                 Triple(
                     s,
                     "Credibly Reported Across Multiple Outlets",
-                    "Corroborated across ${sources.size} independent sources; consistent reporting across major newsrooms."
+                    "Corroborated across ${sources.size} independent newsrooms; consistent reporting across major outlets."
                 )
             }
             sources.size in 1..3 -> {
                 Triple(
-                    74,
+                    76,
                     "Single-Source / Limited Corroboration",
-                    "Reported by limited outlets; awaiting broader independent verification."
+                    "Reported by limited newsrooms; awaiting broader independent verification."
                 )
             }
             isSocialAggregator -> {
                 Triple(
-                    50,
-                    "Unconfirmed Secondhand Post",
-                    "Secondhand social media distribution; unverified without primary official record."
+                    45,
+                    "Unconfirmed Social Media Post",
+                    "Secondhand social media distribution; unverified without primary newsroom reporting."
                 )
             }
             else -> {
                 Triple(
-                    68,
-                    "Single-Source Reporting",
-                    "Published by single origin ($host); not yet cross-corroborated by independent newsrooms."
+                    70,
+                    "Direct Editorial Reporting",
+                    "Published directly by $host; awaiting secondary independent verification."
                 )
             }
         }
@@ -514,12 +518,11 @@ object FokkAiEngine {
         }
 
         // Layer 2: Rhetorical Stance & Framing (with concrete loaded words analysis)
-        val loadedWords = listOf("bombshell", "shock move", "masterclass", "disaster", "embarrassing", "furious", "unbelievable", "massive boost", "crisis", "slams", "humiliating", "outrage")
+        val loadedWords = listOf("bombshell", "shock move", "masterclass", "disaster", "embarrassing", "furious", "unbelievable", "massive boost", "crisis", "slams", "humiliating", "outrage", "appalling")
         val foundLoaded = loadedWords.filter { combinedText.contains(it) }
         val l2 = when {
             foundLoaded.isNotEmpty() -> "Sensationalized framing detected. Content uses emotionally loaded vocabulary ('${foundLoaded.take(3).joinToString("', '")}') rather than objective reporting language."
             isSocialAggregator -> "Aggregator Framing: Social post format designed for high engagement. Summarizes external reporting without an original investigative byline."
-            isVerbalOrTransferRumor -> "Reporting Framework: Sports transfer reporting format citing insider or verbal agreements. Informative tone pending club release."
             else -> "Informational Stance: Objective reporting structure with documented subject focus and low sensationalism."
         }
 
@@ -531,11 +534,11 @@ object FokkAiEngine {
         }
 
         val whatsMissing = when {
-            isOfficialAnnouncement -> "No major missing confirmation. Officially documented by primary institutional record."
-            isVerbalOrTransferRumor -> "Awaiting official club statement or formal press announcement. Primary contract filings and financial breakdown have not been independently confirmed."
-            sources.size in 1..2 -> "Independent secondary confirmation from other major newsrooms is currently absent."
-            sources.isEmpty() -> "Multi-source external corroboration has not yet verified this page's assertions."
-            else -> "Primary institutional documentation or formal press release not yet published."
+            isOfficialAnnouncement -> "No major missing confirmation. Formally documented by primary institutional or public record."
+            sources.size >= 4 -> "Primary institutional documentation or formal agency statement not yet independently published."
+            sources.size in 1..3 -> "Independent secondary confirmation from other major newsrooms is currently limited."
+            sources.isEmpty() -> "Multi-source external corroboration has not yet cross-verified this report."
+            else -> ""
         }
 
         return CredibilityAssessment(
@@ -543,7 +546,7 @@ object FokkAiEngine {
             verdict = verdict,
             reason = reason,
             isAggregator = isSocialAggregator,
-            originalSource = detectedOriginalSource.ifBlank { if (!isSocialAggregator && host.isNotBlank()) host else "" },
+            originalSource = detectedOriginalSource,
             aggregatorSource = aggregatorSource,
             layer1 = l1,
             layer2 = l2,
@@ -571,8 +574,8 @@ object FokkAiEngine {
                 .take(3)
         } else {
             listOf(
-                "Has an official club or entity announcement been confirmed?",
-                "What are the reported contract length, wages, and terms?"
+                "What are the verified primary sources for this story?",
+                "What are the latest official developments?"
             )
         }
 
@@ -698,8 +701,8 @@ object FokkAiEngine {
             corroboratedSources = sources,
             verifiedClaims = bullets.take(3),
             followUpQuestions = listOf(
-                "Has an official club or entity announcement been confirmed?",
-                "What are the reported contract length, wages, and terms?"
+                "What are the verified primary sources for this story?",
+                "What are the latest official developments?"
             ),
             layer1DomainIdentity = assessment.layer1,
             layer2RhetoricalStance = assessment.layer2,
@@ -727,63 +730,58 @@ object FokkAiEngine {
             sources.take(4).map {
                 when {
                     it.domain.contains("guardian") -> "The Guardian"
-                    it.domain.contains("sky") -> "Sky Sports"
+                    it.domain.contains("times") -> "The Times"
                     it.domain.contains("standard") -> "The Standard"
+                    it.domain.contains("independent") -> "The Independent"
+                    it.domain.contains("lbc") -> "LBC"
                     it.domain.contains("yahoo") -> "Yahoo"
-                    it.domain.contains("bbc") -> "BBC"
+                    it.domain.contains("sky") -> "Sky News"
+                    it.domain.contains("bbc") -> "BBC News"
                     it.domain.contains("athletic") -> "The Athletic"
+                    it.domain.contains("reuters") -> "Reuters"
                     else -> it.domain.split(".").firstOrNull()?.replaceFirstChar { c -> c.uppercase() } ?: it.domain
                 }
             }.distinct().joinToString(", ")
         } else ""
 
         val directAnswer = when {
-            sources.size >= 2 -> "Yes, credibly reported. $pubNames all report on this agreement, though the club has not announced it officially."
-            sources.size == 1 -> "Single-source report. Reported by ${sources[0].domain}, but not yet independently verified by other major newsrooms."
-            else -> "This claim is currently based on unverified reporting without direct independent corroboration."
+            sources.size >= 2 -> "Credibly documented across major independent newsrooms, including $pubNames."
+            sources.size == 1 -> "Reported by ${sources[0].domain}; awaiting broader multi-source corroboration."
+            else -> "Based on available active reporting; external independent dispatches are currently limited."
         }
 
-        sb.append("**Verdict: ${assessment.verdict} (${assessment.score}%)**\n\n")
-        sb.append("$directAnswer\n\n")
-
-        if (assessment.whatsMissing.isNotBlank()) {
-            sb.append("**Missing context:** ${assessment.whatsMissing}\n\n")
-        }
-
-        if (sources.isNotEmpty()) {
-            sb.append("### CORROBORATING SOURCES\n")
-            sources.forEachIndexed { i, s ->
-                sb.append("${i + 1}. **${s.title}** (${s.domain}) [${s.stance}]\n")
-                if (s.snippet.isNotBlank()) sb.append("   ${s.snippet}\n")
-            }
-            sb.append("\n")
-        }
+        sb.append(directAnswer)
+        sb.append("\n\n")
 
         if (pageContext.isNotBlank()) {
             val qLower = query.lowercase(Locale.ROOT)
             val sentences = pageContext.split(Regex("[.!?]\\s+"))
                 .map { stripEmojis(it.trim()) }
-                .filter { it.length > 20 }
+                .filter { it.length > 25 && !it.startsWith("Want to bookmark", ignoreCase = true) }
                 .take(100)
 
-            val words = qLower.split(Regex("\\W+")).filter { it.length > 3 }
+            val words = qLower.split(Regex("\\W+")).filter { it.length > 3 && !it.matches(Regex("^(what|this|about|article|explain|tell|page|news)$")) }
             val scored = sentences.map { s ->
                 val hits = words.count { s.lowercase(Locale.ROOT).contains(it) }
                 Pair(s, hits)
             }.sortedByDescending { it.second }
 
-            val relevant = scored.filter { it.second > 0 }.map { it.first }.take(4)
+            val relevant = scored.filter { it.second > 0 }.map { it.first }.take(3)
             val leadSentences = if (relevant.isNotEmpty()) relevant else sentences.take(3)
 
-            sb.append("### KEY REPORTED DETAILS\n")
             leadSentences.forEachIndexed { idx, b ->
                 val cleanB = b.replace(Regex("""^[\s•*–—\-\d.)\]]+"""), "").trimEnd('.')
                 val citationTag = if (sources.isNotEmpty()) " [${(idx % sources.size) + 1}]" else ""
-                sb.append("${idx + 1}. $cleanB$citationTag.\n")
+                sb.append("• $cleanB$citationTag.\n")
             }
+            sb.append("\n")
         }
 
-        sb.append("\nSUGGESTED_FOLLOWUPS: Has the club officially announced it? | What are the reported contract length and wages?")
+        if (assessment.whatsMissing.isNotBlank() && !assessment.whatsMissing.startsWith("No major")) {
+            sb.append("Missing context: ${assessment.whatsMissing}\n")
+        }
+
+        sb.append("\nSUGGESTED_FOLLOWUPS: What are the verified primary sources? | What are the latest developments?")
         return sb.toString()
     }
 
