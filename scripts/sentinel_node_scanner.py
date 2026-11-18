@@ -39,9 +39,9 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MANIFEST_PATH = os.path.join(REPO_ROOT, "nodes_manifest.json")
 NODES_JSON_PATH = os.path.join(REPO_ROOT, "nodes.json")
 
-CONNECT_TIMEOUT = 4.5          # seconds for TCP connect to relay
-SSL_TIMEOUT = 6.5              # seconds for TLS handshake + HTTP through relay
-MAX_LATENCY_MS = 2500          # exclude sluggish relays
+CONNECT_TIMEOUT = 5.5          # seconds for TCP/TLS connect to relay
+SSL_TIMEOUT = 7.0              # seconds for TLS handshake + HTTP through relay
+MAX_LATENCY_MS = 6000          # realistic global threshold across continents
 
 # Curated Fokk Mesh relay candidate pool (registered/vetted relays only).
 CANDIDATE_POOL = [
@@ -122,14 +122,25 @@ def _read_exact(sock: socket.socket, n: int) -> bytes:
     return buf
 
 
-def _socks5_handshake(sock: socket.socket) -> bool:
-    sock.sendall(b"\x05\x01\x00")
+def _socks5_handshake(sock: socket.socket, username: str = "", password: str = "") -> bool:
+    has_auth = bool(username and password)
+    sock.sendall(b"\x05\x02\x00\x02" if has_auth else b"\x05\x01\x00")
     resp = _read_exact(sock, 2)
-    return resp[0] == 0x05 and resp[1] == 0x00
+    if resp[0] != 0x05:
+        return False
+    if resp[1] == 0x00:
+        return True
+    if resp[1] == 0x02 and has_auth:
+        u = username.encode("utf-8")
+        p = password.encode("utf-8")
+        sock.sendall(b"\x01" + bytes([len(u)]) + u + bytes([len(p)]) + p)
+        auth_resp = _read_exact(sock, 2)
+        return auth_resp[0] == 0x01 and auth_resp[1] == 0x00
+    return False
 
 
-def _socks5_connect(sock: socket.socket, host: str, port: int, do_greeting: bool = True) -> bool:
-    if do_greeting and not _socks5_handshake(sock):
+def _socks5_connect(sock: socket.socket, host: str, port: int, do_greeting: bool = True, username: str = "", password: str = "") -> bool:
+    if do_greeting and not _socks5_handshake(sock, username, password):
         return False
     host_bytes = host.encode("ascii")
     req = b"\x05\x01\x00\x03" + bytes([len(host_bytes)]) + host_bytes + struct.pack(">H", port)
@@ -150,8 +161,12 @@ def _socks5_connect(sock: socket.socket, host: str, port: int, do_greeting: bool
     return True
 
 
-def _http_connect(sock: socket.socket, host: str, port: int) -> bool:
-    req = f"CONNECT {host}:{port} HTTP/1.1\r\nHost: {host}:{port}\r\nProxy-Connection: Keep-Alive\r\n\r\n"
+def _http_connect(sock: socket.socket, host: str, port: int, username: str = "", password: str = "") -> bool:
+    auth_hdr = ""
+    if username and password:
+        tok = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode("ascii")
+        auth_hdr = f"Proxy-Authorization: Basic {tok}\r\n"
+    req = f"CONNECT {host}:{port} HTTP/1.1\r\nHost: {host}:{port}\r\n{auth_hdr}Proxy-Connection: Keep-Alive\r\n\r\n"
     sock.sendall(req.encode("ascii"))
     buf = b""
     while b"\r\n\r\n" not in buf and len(buf) < 2048:
@@ -163,21 +178,37 @@ def _http_connect(sock: socket.socket, host: str, port: int) -> bool:
     return b" 200" in first_line
 
 
+def _open_relay_transport(node: dict) -> socket.socket:
+    host = node["host"]
+    port = int(node["port"])
+    raw = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    raw.settimeout(CONNECT_TIMEOUT)
+    raw.connect((host, port))
+    raw.settimeout(SSL_TIMEOUT)
+    if node.get("tls", False):
+        sni = node.get("sni") or host
+        return ssl_ctx.wrap_socket(raw, server_hostname=sni)
+    return raw
+
+
 def _https_get_via_relay(node: dict, target_host: str, target_path: str) -> tuple:
     """
     Open a strict CERT_REQUIRED TLS tunnel through node to target_host:443.
+    Supports RFC 1929 SOCKS5 auth, HTTP Basic auth, and TLS-over-SOCKS5 (`tls: True`).
     Returns (latency_ms, body_text, error_reason).
     """
-    host = node["host"]
-    port = int(node["port"])
     proto = node.get("type", "socks5")
+    user = str(node.get("username", "")).strip()
+    pwd = str(node.get("password", "")).strip()
     t0 = time.time()
-    raw = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    raw.settimeout(CONNECT_TIMEOUT)
+    raw = None
     try:
-        raw.connect((host, port))
-        raw.settimeout(SSL_TIMEOUT)
-        ok = _socks5_connect(raw, target_host, 443) if proto == "socks5" else _http_connect(raw, target_host, 443)
+        raw = _open_relay_transport(node)
+        ok = (
+            _socks5_connect(raw, target_host, 443, do_greeting=True, username=user, password=pwd)
+            if proto == "socks5"
+            else _http_connect(raw, target_host, 443, username=user, password=pwd)
+        )
         if not ok:
             return None, "", "PROXY_CONNECT_REJECT"
 
@@ -208,10 +239,11 @@ def _https_get_via_relay(node: dict, target_host: str, target_path: str) -> tupl
     except Exception as e:
         return None, "", type(e).__name__
     finally:
-        try:
-            raw.close()
-        except Exception:
-            pass
+        if raw is not None:
+            try:
+                raw.close()
+            except Exception:
+                pass
 
 
 def test_node(node: dict, scanner_ip: str) -> dict:
@@ -293,10 +325,11 @@ def test_dual_hop_chain(ingress: dict, egress: dict) -> bool:
     except Exception:
         return False
     finally:
-        try:
-            raw.close()
-        except Exception:
-            pass
+        if raw is not None:
+            try:
+                raw.close()
+            except Exception:
+                pass
 
 
 def build_canonical_payload(issued_at: str, verified_nodes: list) -> bytes:
@@ -477,6 +510,10 @@ def main() -> None:
                     "tier": "speed" if res["latency_ms"] < 650 else "balanced",
                     "ingress_relay": bool(node.get("ingress_relay", False)),
                     "supports_dual_hop": False,
+                    "tls": bool(node.get("tls", False)),
+                    "sni": str(node.get("sni", "")).strip(),
+                    "username": str(node.get("username", "")).strip(),
+                    "password": str(node.get("password", "")).strip(),
                     "latency_ms": res["latency_ms"],
                     "quality_score": res["quality_score"],
                     "verified": True,

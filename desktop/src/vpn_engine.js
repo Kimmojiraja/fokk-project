@@ -2,6 +2,7 @@ const EventEmitter = require('events');
 const path = require('path');
 const fs = require('fs');
 const net = require('net');
+const tls = require('tls');
 const https = require('https');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
@@ -183,8 +184,38 @@ function isSafePublicRelayHost(host) {
     return true;
 }
 
-function socks5HandshakeAndConnect(socket, targetHost, targetPort, doGreeting = true, timeoutMs = 3500) {
+function openRelayTransportSocket(node, timeoutMs = 5500) {
     return new Promise((resolve, reject) => {
+        const onTimeout = sock => {
+            try { sock.destroy(); } catch (_) {}
+            reject(new Error('Relay connect timeout'));
+        };
+        if (node.tls) {
+            const sni = node.sni || node.host;
+            const sock = tls.connect({
+                host: node.host,
+                port: node.port,
+                servername: sni,
+                rejectUnauthorized: true
+            });
+            sock.setNoDelay(true);
+            const timer = setTimeout(() => onTimeout(sock), timeoutMs);
+            sock.once('secureConnect', () => { clearTimeout(timer); resolve(sock); });
+            sock.once('error', err => { clearTimeout(timer); sock.destroy(); reject(err); });
+        } else {
+            const sock = new net.Socket();
+            sock.setNoDelay(true);
+            const timer = setTimeout(() => onTimeout(sock), timeoutMs);
+            sock.once('connect', () => { clearTimeout(timer); resolve(sock); });
+            sock.once('error', err => { clearTimeout(timer); sock.destroy(); reject(err); });
+            sock.connect(node.port, node.host);
+        }
+    });
+}
+
+function socks5HandshakeAndConnect(socket, targetHost, targetPort, authNode = null, doGreeting = true, timeoutMs = 6000) {
+    return new Promise((resolve, reject) => {
+        const hasAuth = !!(authNode && authNode.username && authNode.password);
         let stage = doGreeting ? 'greet' : 'connect';
         let buf = Buffer.alloc(0);
         const timer = setTimeout(() => {
@@ -211,13 +242,44 @@ function socks5HandshakeAndConnect(socket, targetHost, targetPort, doGreeting = 
             socket.write(req);
         };
 
+        const sendRfc1929Auth = () => {
+            const uBuf = Buffer.from(authNode.username, 'utf8');
+            const pBuf = Buffer.from(authNode.password, 'utf8');
+            const req = Buffer.alloc(3 + uBuf.length + pBuf.length);
+            req[0] = 0x01;
+            req[1] = uBuf.length;
+            uBuf.copy(req, 2);
+            req[2 + uBuf.length] = pBuf.length;
+            pBuf.copy(req, 3 + uBuf.length);
+            socket.write(req);
+        };
+
         const onData = chunk => {
             buf = Buffer.concat([buf, chunk]);
             if (stage === 'greet') {
                 if (buf.length < 2) return;
-                if (buf[0] !== 0x05 || buf[1] !== 0x00) {
+                if (buf[0] !== 0x05) {
                     cleanup();
-                    return reject(new Error('SOCKS5 auth rejected'));
+                    return reject(new Error('Invalid SOCKS5 version'));
+                }
+                const method = buf[1];
+                buf = buf.slice(2);
+                if (method === 0x00) {
+                    stage = 'connect';
+                    sendConnect();
+                } else if (method === 0x02 && hasAuth) {
+                    stage = 'auth';
+                    sendRfc1929Auth();
+                } else {
+                    cleanup();
+                    return reject(new Error('SOCKS5 auth method rejected'));
+                }
+            }
+            if (stage === 'auth') {
+                if (buf.length < 2) return;
+                if (buf[0] !== 0x01 || buf[1] !== 0x00) {
+                    cleanup();
+                    return reject(new Error('SOCKS5 RFC1929 auth failed'));
                 }
                 buf = buf.slice(2);
                 stage = 'connect';
@@ -249,12 +311,15 @@ function socks5HandshakeAndConnect(socket, targetHost, targetPort, doGreeting = 
         socket.on('data', onData);
         socket.once('error', onErr);
         socket.once('close', onClose);
-        if (doGreeting) socket.write(Buffer.from([0x05, 0x01, 0x00]));
-        else sendConnect();
+        if (doGreeting) {
+            socket.write(hasAuth ? Buffer.from([0x05, 0x02, 0x00, 0x02]) : Buffer.from([0x05, 0x01, 0x00]));
+        } else {
+            sendConnect();
+        }
     });
 }
 
-function httpConnectViaSocket(socket, targetHost, targetPort, timeoutMs = 3500) {
+function httpConnectViaSocket(socket, targetHost, targetPort, authNode = null, timeoutMs = 6000) {
     return new Promise((resolve, reject) => {
         let buf = Buffer.alloc(0);
         const timer = setTimeout(() => { cleanup(); reject(new Error('HTTP CONNECT timeout')); }, timeoutMs);
@@ -284,58 +349,47 @@ function httpConnectViaSocket(socket, targetHost, targetPort, timeoutMs = 3500) 
         socket.on('data', onData);
         socket.once('error', onErr);
         socket.once('close', onClose);
-        socket.write(`CONNECT ${targetHost}:${targetPort} HTTP/1.1\r\nHost: ${targetHost}:${targetPort}\r\nProxy-Connection: Keep-Alive\r\n\r\n`);
-    });
-}
-
-function openSingleHopSocket(node, targetHost, targetPort, timeoutMs = 3000) {
-    return new Promise((resolve, reject) => {
-        const sock = new net.Socket();
-        sock.setNoDelay(true);
-        const timer = setTimeout(() => { sock.destroy(); reject(new Error('Connect timeout')); }, timeoutMs);
-        sock.once('error', err => { clearTimeout(timer); sock.destroy(); reject(err); });
-        sock.connect(node.port, node.host, async () => {
-            clearTimeout(timer);
-            try {
-                if (node.type === 'http') await httpConnectViaSocket(sock, targetHost, targetPort, timeoutMs);
-                else await socks5HandshakeAndConnect(sock, targetHost, targetPort, true, timeoutMs);
-                resolve(sock);
-            } catch (err) {
-                sock.destroy();
-                reject(err);
-            }
-        });
-    });
-}
-
-function openDualHopSocket(ingress, egress, targetHost, targetPort, timeoutMs = 3800) {
-    return new Promise((resolve, reject) => {
-        if (!ingress || ingress.type === 'http' || ingress.host === egress.host) {
-            return reject(new Error('Invalid dual-hop pair'));
+        let authHeader = '';
+        if (authNode && authNode.username && authNode.password) {
+            const token = Buffer.from(`${authNode.username}:${authNode.password}`, 'utf8').toString('base64');
+            authHeader = `Proxy-Authorization: Basic ${token}\r\n`;
         }
-        const sock = new net.Socket();
-        sock.setNoDelay(true);
-        const timer = setTimeout(() => { sock.destroy(); reject(new Error('Dual-hop timeout')); }, timeoutMs);
-        sock.once('error', err => { clearTimeout(timer); sock.destroy(); reject(err); });
-        sock.connect(ingress.port, ingress.host, async () => {
-            clearTimeout(timer);
-            try {
-                // Hop 1: Ingress -> Egress
-                await socks5HandshakeAndConnect(sock, egress.host, egress.port, true, timeoutMs);
-                // Hop 2: Egress -> Final Target
-                if (egress.type === 'http') await httpConnectViaSocket(sock, targetHost, targetPort, timeoutMs);
-                else await socks5HandshakeAndConnect(sock, targetHost, targetPort, true, timeoutMs);
-                resolve(sock);
-            } catch (err) {
-                sock.destroy();
-                reject(err);
-            }
-        });
+        socket.write(`CONNECT ${targetHost}:${targetPort} HTTP/1.1\r\nHost: ${targetHost}:${targetPort}\r\n${authHeader}Proxy-Connection: Keep-Alive\r\n\r\n`);
     });
 }
 
-// Protocol-level probe: verifies real SOCKS5/HTTP CONNECT to api.ipify.org:443 (no fake TCP-only passes)
-async function probeMeshNode(node, timeout = 2600) {
+async function openSingleHopSocket(node, targetHost, targetPort, timeoutMs = 6000) {
+    const sock = await openRelayTransportSocket(node, timeoutMs);
+    try {
+        if (node.type === 'http') await httpConnectViaSocket(sock, targetHost, targetPort, node, timeoutMs);
+        else await socks5HandshakeAndConnect(sock, targetHost, targetPort, node, true, timeoutMs);
+        return sock;
+    } catch (err) {
+        try { sock.destroy(); } catch (_) {}
+        throw err;
+    }
+}
+
+async function openDualHopSocket(ingress, egress, targetHost, targetPort, timeoutMs = 6500) {
+    if (!ingress || ingress.type === 'http' || ingress.host === egress.host) {
+        throw new Error('Invalid dual-hop pair');
+    }
+    const sock = await openRelayTransportSocket(ingress, timeoutMs);
+    try {
+        // Hop 1: Ingress (optional TLS + RFC1929 auth) -> Egress
+        await socks5HandshakeAndConnect(sock, egress.host, egress.port, ingress, true, timeoutMs);
+        // Hop 2: Egress (optional RFC1929/Basic auth) -> Final Target
+        if (egress.type === 'http') await httpConnectViaSocket(sock, targetHost, targetPort, egress, timeoutMs);
+        else await socks5HandshakeAndConnect(sock, targetHost, targetPort, egress, true, timeoutMs);
+        return sock;
+    } catch (err) {
+        try { sock.destroy(); } catch (_) {}
+        throw err;
+    }
+}
+
+// Protocol-level probe with realistic 6s global timeout
+async function probeMeshNode(node, timeout = 6000) {
     if (!isSafePublicRelayHost(node.host)) return null;
     const start = Date.now();
     try {
@@ -447,7 +501,11 @@ class VpnEngine extends EventEmitter {
                 country: String(n.country || '').toUpperCase(),
                 city: String(n.city || ''),
                 ingress_relay: !!n.ingress_relay && n.type !== 'http',
-                supports_dual_hop: !!n.supports_dual_hop
+                supports_dual_hop: !!n.supports_dual_hop,
+                username: String(n.username || '').trim(),
+                password: String(n.password || '').trim(),
+                tls: !!n.tls,
+                sni: String(n.sni || '').trim()
             }));
     }
 
@@ -472,8 +530,8 @@ class VpnEngine extends EventEmitter {
     fetchJsonUrl(urlStr, redirectsLeft = 3) {
         return new Promise((resolve, reject) => {
             const req = https.get(urlStr, {
-                timeout: 6000,
-                headers: { 'User-Agent': 'FokkMesh/3.0', 'Cache-Control': 'no-cache' }
+                timeout: 5500,
+                headers: { 'User-Agent': 'FokkMesh/3.1', 'Cache-Control': 'no-cache' }
             }, res => {
                 if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirectsLeft > 0) {
                     res.resume();
@@ -497,23 +555,29 @@ class VpnEngine extends EventEmitter {
     async refreshManifestIfNeeded(force = false) {
         if (!force && Date.now() < this.manifestExpiry && this.manifestNodes.length > 0) return;
         this.manifestExpiry = Date.now() + 30 * 60 * 1000;
-        for (const url of MESH_MANIFEST_URLS) {
-            try {
-                const parsed = await this.fetchJsonUrl(url);
-                const cleanNodes = this.parseSafeManifestNodes(parsed);
-                if (cleanNodes.length > 0) {
-                    this.manifestNodes = cleanNodes;
-                    this.manifestExpiry = Date.now() + 3 * 60 * 60 * 1000;
-                    this.saveCachedManifestToDisk(parsed);
-                    return;
+        // Fetch all live Sentinel feeds in parallel (no sequential 404 stalls)
+        const settled = await Promise.all(
+            MESH_MANIFEST_URLS.map(async (url, idx) => {
+                try {
+                    const parsed = await this.fetchJsonUrl(url);
+                    const cleanNodes = this.parseSafeManifestNodes(parsed);
+                    return cleanNodes.length > 0 ? { idx, parsed, cleanNodes } : null;
+                } catch (_) {
+                    return null;
                 }
-            } catch (_) {}
+            })
+        );
+        const best = settled.filter(Boolean).sort((a, b) => a.idx - b.idx)[0];
+        if (best) {
+            this.manifestNodes = best.cleanNodes;
+            this.manifestExpiry = Date.now() + 3 * 60 * 60 * 1000;
+            this.saveCachedManifestToDisk(best.parsed);
         }
     }
 
     nodeKey(n) { return `${n.host}:${n.port}`; }
     isNodeAlive(n) { return Date.now() > (this.deadUntilMap.get(this.nodeKey(n)) || 0); }
-    markNodeDead(n, ms = 120_000) { this.deadUntilMap.set(this.nodeKey(n), Date.now() + ms); }
+    markNodeDead(n, ms = 45_000) { this.deadUntilMap.set(this.nodeKey(n), Date.now() + ms); }
 
     getMeshPoolForRegion(region) {
         const all = this.manifestNodes;
@@ -529,7 +593,7 @@ class VpnEngine extends EventEmitter {
 
     async findAliveMeshNodes(region) {
         const pool = this.getMeshPoolForRegion(region);
-        const results = await Promise.all(pool.map(n => probeMeshNode(n, 2600)));
+        const results = await Promise.all(pool.map(n => probeMeshNode(n, 6000)));
         const alive = results.filter(Boolean).sort((a, b) => a.latencyMs - b.latencyMs);
         this.aliveMeshNodes = alive;
         return alive;
@@ -540,51 +604,89 @@ class VpnEngine extends EventEmitter {
         return alive.length > 0 ? alive[0] : null;
     }
 
+    raceSingleHopDesktop(candidates, targetHost, targetPort) {
+        if (!candidates || candidates.length === 0) return Promise.reject(new Error('No candidates'));
+        return new Promise((resolve, reject) => {
+            let won = false;
+            let remaining = candidates.length;
+            candidates.forEach(node => {
+                const t0 = Date.now();
+                openSingleHopSocket(node, targetHost, targetPort, 6000)
+                    .then(sock => {
+                        if (won) {
+                            try { sock.destroy(); } catch (_) {}
+                            return;
+                        }
+                        won = true;
+                        resolve({ node, sock, latencyMs: Math.max(1, Date.now() - t0) });
+                    })
+                    .catch(() => {
+                        this.markNodeDead(node, 45_000);
+                        remaining--;
+                        if (!won && remaining === 0) reject(new Error('All race candidates failed'));
+                    });
+            });
+        });
+    }
+
     async routeMeshConnection(targetHost, targetPort) {
         if (!isSafePublicRelayHost(targetHost)) {
             throw new Error('Blocked private/SSRF target');
         }
-        const regionPool = this.aliveMeshNodes.length > 0
-            ? this.aliveMeshNodes.map(x => x.node).filter(n => this.isNodeAlive(n))
-            : this.getMeshPoolForRegion(this.meshRegion).filter(n => this.isNodeAlive(n));
-        const allPool = this.manifestNodes.filter(n => this.isNodeAlive(n));
-        const egressList = (regionPool.length > 0 ? regionPool : allPool).slice(0, 4);
-        const ingressList = allPool.filter(n => n.type === 'socks5' && (n.ingress_relay || n.supports_dual_hop));
-        const fallbackIngress = ingressList.length > 0 ? ingressList : allPool.filter(n => n.type === 'socks5');
+        const regionBase = this.aliveMeshNodes.length > 0
+            ? this.aliveMeshNodes.map(x => x.node)
+            : this.getMeshPoolForRegion(this.meshRegion);
+        const regionAlive = regionBase.filter(n => this.isNodeAlive(n));
+        const allAlive = this.manifestNodes.filter(n => this.isNodeAlive(n));
+        // Never dead-lock to empty list if every relay hit a transient cooldown
+        const egressList = (regionAlive.length > 0 ? regionAlive : (allAlive.length > 0 ? allAlive : regionBase)).slice(0, 4);
+        const ingressPool = (allAlive.length > 0 ? allAlive : this.manifestNodes)
+            .filter(n => n.type === 'socks5' && (n.ingress_relay || n.supports_dual_hop));
 
-        // Tier 1: Dual-Hop (Ingress -> Egress -> Target)
-        for (const egress of egressList.slice(0, 2)) {
-            const ingress = fallbackIngress.find(i => i.host !== egress.host);
-            if (!ingress) continue;
-            try {
-                const t0 = Date.now();
-                const sock = await openDualHopSocket(ingress, egress, targetHost, targetPort, 3800);
-                this.activeHopMode = 'DUAL_HOP';
-                this.activeIngressNode = ingress;
-                this.activeMeshNode = egress;
-                this.ping = Math.max(1, Date.now() - t0);
-                return sock;
-            } catch (_) {
-                this.markNodeDead(egress, 90_000);
+        // Tier 1: Dual-Hop if we have a verified dual-hop ingress distinct from egress
+        if (egressList.length > 0 && ingressPool.length > 0) {
+            const egress = egressList[0];
+            const ingress = ingressPool.find(i => i.host !== egress.host);
+            if (ingress) {
+                try {
+                    const t0 = Date.now();
+                    const sock = await openDualHopSocket(ingress, egress, targetHost, targetPort, 6500);
+                    this.activeHopMode = 'DUAL_HOP';
+                    this.activeIngressNode = ingress;
+                    this.activeMeshNode = egress;
+                    this.ping = Math.max(1, Date.now() - t0);
+                    return sock;
+                } catch (_) {
+                    this.markNodeDead(egress, 45_000);
+                }
             }
         }
 
-        // Tier 2: Single-Hop failover across surviving verified relays
-        for (const node of egressList) {
+        // Tier 2: Happy-Eyeballs parallel race across top 3 surviving verified relays
+        try {
+            const win = await this.raceSingleHopDesktop(egressList.slice(0, 3), targetHost, targetPort);
+            this.activeHopMode = 'SINGLE_HOP';
+            this.activeIngressNode = null;
+            this.activeMeshNode = win.node;
+            this.ping = win.latencyMs;
+            return win.sock;
+        } catch (_) {}
+
+        // Tier 3: Global fallback race across remaining relays
+        const tried = new Set(egressList.slice(0, 3).map(n => this.nodeKey(n)));
+        const fallback = this.manifestNodes.filter(n => !tried.has(this.nodeKey(n))).slice(0, 3);
+        if (fallback.length > 0) {
             try {
-                const t0 = Date.now();
-                const sock = await openSingleHopSocket(node, targetHost, targetPort, 3200);
+                const win = await this.raceSingleHopDesktop(fallback, targetHost, targetPort);
                 this.activeHopMode = 'SINGLE_HOP';
                 this.activeIngressNode = null;
-                this.activeMeshNode = node;
-                this.ping = Math.max(1, Date.now() - t0);
-                return sock;
-            } catch (_) {
-                this.markNodeDead(node, 120_000);
-            }
+                this.activeMeshNode = win.node;
+                this.ping = win.latencyMs;
+                return win.sock;
+            } catch (_) {}
         }
 
-        // Tier 3: Self-heal manifest & stay strictly fail-closed
+        // Tier 4: Self-heal manifest & stay strictly fail-closed
         this.activeHopMode = 'OFFLINE';
         this.refreshManifestIfNeeded(true).catch(() => {});
         throw new Error('All Fokk Mesh relays exhausted (fail-closed killswitch)');

@@ -1,9 +1,6 @@
 package com.adshield.app.engine
 
 import android.util.Log
-import java.io.EOFException
-import java.io.InputStream
-import java.net.InetSocketAddress
 import java.net.Socket
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.ArrayBlockingQueue
@@ -12,25 +9,15 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Fokk Mesh 3.0 Circuit Manager — maintains a fresh pool of pre-warmed 2-hop circuits.
- *
- * Dual-Hop Architecture:
- *   Browser -> Ingress Relay (Hop 1: knows client IP, routes only to Egress IP)
- *           -> Egress Relay  (Hop 2: knows destination, never sees client IP)
- *           -> Target Website
- *
- * Key Reliability Fixes (v3.0):
- *   - 25-second max idle pool lifetime (prevents silently-dropped half-open sockets
- *     that previously stalled requests when circuits sat idle for up to 10 minutes).
- *   - Multi-pair candidate iteration: tries up to 4 (ingress, egress) pairs instead
- *     of giving up after only the first node.
- *   - Strict non-colocation: guarantees ingress.host != egress.host and ingress is SOCKS5.
+ * Fokk Mesh 3.1 Circuit Manager — pre-warms fresh 2-hop circuits with full support for
+ * RFC 1929 SOCKS5 authentication and TLS-over-SOCKS5 encrypted Hop-1 relays.
  */
 object FokkCircuitManager {
     private const val TAG = "FokkCircuitManager"
     private const val TARGET_POOL_SIZE = 2
-    private const val MAX_IDLE_POOL_AGE_MS = 25_000L // Keep idle pre-warmed sockets fresh
-    private const val BUILD_TIMEOUT_MS = 3_500
+    private const val MAX_IDLE_POOL_AGE_MS = 25_000L
+    private const val BUILD_CONNECT_TIMEOUT_MS = 5_500
+    private const val BUILD_IO_TIMEOUT_MS = 6_000
 
     data class Circuit(
         val socket: Socket,
@@ -86,10 +73,6 @@ object FokkCircuitManager {
         Log.i(TAG, "Region changed to $region, pool drained and rebuilding")
     }
 
-    /**
-     * Acquire a fresh pre-warmed 2-hop circuit from the pool.
-     * Automatically discards any expired or closed sockets.
-     */
     fun acquireCircuit(): Circuit? {
         while (true) {
             val circuit = pool.poll() ?: return null
@@ -133,6 +116,7 @@ object FokkCircuitManager {
     private fun buildAndAdd() {
         if (!running.get()) return
         try {
+            FokkNodeManifest.ensureLoadedBlocking(4_500L)
             val circuit = buildCircuit(currentRegion) ?: return
             if (running.get()) {
                 if (!pool.offer(circuit)) {
@@ -155,10 +139,6 @@ object FokkCircuitManager {
         }
     }
 
-    /**
-     * Build a fresh 2-hop circuit for the requested region, trying up to 4
-     * distinct (ingress, egress) pairs before giving up.
-     */
     fun buildCircuit(region: String, excludeEgressHosts: Set<String> = emptySet()): Circuit? {
         val egressCandidates = NodeRegistry.getNodesForRegion(region)
             .filter { it.host !in excludeEgressHosts && FokkNodeManifest.isSafePublicRelayHost(it.host) }
@@ -171,7 +151,7 @@ object FokkCircuitManager {
                 .filter { !it.isHttpConnect && FokkNodeManifest.isSafePublicRelayHost(it.host) }
                 .take(2)
             for (ingress in ingressCandidates) {
-                if (attempts >= 4) return null
+                if (attempts >= 3) return null
                 attempts++
                 val circuit = buildTunnel(ingress, egress)
                 if (circuit != null) return circuit
@@ -180,22 +160,10 @@ object FokkCircuitManager {
         return null
     }
 
-    fun buildCircuitTo(egress: FokkTunnelEngine.PrivacyNode): Circuit? {
-        if (!FokkNodeManifest.isSafePublicRelayHost(egress.host)) return null
-        val ingressCandidates = NodeRegistry.getBestIngress(excludeHosts = setOf(egress.host))
-            .filter { !it.isHttpConnect && FokkNodeManifest.isSafePublicRelayHost(it.host) }
-            .take(2)
-        for (ingress in ingressCandidates) {
-            val circuit = buildTunnel(ingress, egress)
-            if (circuit != null) return circuit
-        }
-        return null
-    }
-
     /**
-     * Construct a fully-handshaked Ingress -> Egress SOCKS5 tunnel socket.
-     * Upon return, the socket is positioned directly at the Egress relay ready
-     * to issue a CONNECT to the destination host.
+     * Build a fully-handshaked Ingress -> Egress tunnel socket supporting:
+     *   - TLS-over-SOCKS5 on Hop 1 (`ingress.useTls`)
+     *   - RFC 1929 SOCKS5 username/password auth on BOTH Hop 1 and Hop 2
      */
     private fun buildTunnel(
         ingress: FokkTunnelEngine.PrivacyNode,
@@ -203,51 +171,28 @@ object FokkCircuitManager {
     ): Circuit? {
         var sock: Socket? = null
         try {
-            sock = Socket()
-            sock.tcpNoDelay = true
-            sock.sendBufferSize = 65536
-            sock.receiveBufferSize = 65536
-            sock.connect(InetSocketAddress(ingress.host, ingress.port), BUILD_TIMEOUT_MS)
-            sock.soTimeout = 3_500
-
+            sock = FokkTunnelEngine.openRelaySocket(ingress, BUILD_CONNECT_TIMEOUT_MS, BUILD_IO_TIMEOUT_MS)
             val out = sock.getOutputStream()
             val inp = sock.getInputStream()
 
-            // Hop 1: SOCKS5 greeting with Ingress Relay
-            out.write(byteArrayOf(0x05, 0x01, 0x00))
-            out.flush()
-            val greet = ByteArray(2)
-            readFully(inp, greet)
-            if (greet[0] != 0x05.toByte() || greet[1] != 0x00.toByte()) {
-                NodeRegistry.markDead(ingress, 120_000L)
+            // Hop 1: SOCKS5 greeting + optional RFC 1929 auth with Ingress Relay
+            if (!FokkTunnelEngine.performSocks5GreetingAndAuth(inp, out, ingress)) {
+                NodeRegistry.markDead(ingress, 45_000L)
                 sock.close()
                 return null
             }
 
             // Hop 1 -> Hop 2: Ask Ingress to connect to Egress
-            val gwBytes = egress.host.toByteArray(StandardCharsets.ISO_8859_1)
-            val hop1Req = ByteArray(4 + 1 + gwBytes.size + 2)
-            hop1Req[0] = 0x05; hop1Req[1] = 0x01; hop1Req[2] = 0x00; hop1Req[3] = 0x03
-            hop1Req[4] = gwBytes.size.toByte()
-            System.arraycopy(gwBytes, 0, hop1Req, 5, gwBytes.size)
-            hop1Req[hop1Req.size - 2] = (egress.port shr 8).toByte()
-            hop1Req[hop1Req.size - 1] = (egress.port and 0xFF).toByte()
-            out.write(hop1Req)
-            out.flush()
-            if (!readSocks5Reply(inp)) {
-                NodeRegistry.markDead(ingress, 60_000L)
+            if (!FokkTunnelEngine.sendSocks5Connect(inp, out, egress.host, egress.port)) {
+                NodeRegistry.markDead(ingress, 30_000L)
                 sock.close()
                 return null
             }
 
-            // Hop 2: SOCKS5 greeting with Egress Relay (through Ingress tunnel)
+            // Hop 2: SOCKS5 greeting + optional RFC 1929 auth with Egress Relay (through Ingress tunnel)
             if (!egress.isHttpConnect) {
-                out.write(byteArrayOf(0x05, 0x01, 0x00))
-                out.flush()
-                val egGreet = ByteArray(2)
-                readFully(inp, egGreet)
-                if (egGreet[0] != 0x05.toByte() || egGreet[1] != 0x00.toByte()) {
-                    NodeRegistry.markDead(egress, 120_000L)
+                if (!FokkTunnelEngine.performSocks5GreetingAndAuth(inp, out, egress)) {
+                    NodeRegistry.markDead(egress, 45_000L)
                     sock.close()
                     return null
                 }
@@ -262,78 +207,30 @@ object FokkCircuitManager {
         }
     }
 
-    /**
-     * Issue a CONNECT command to the final destination through a pre-warmed 2-hop circuit.
-     */
     fun connectCircuitTo(
         circuit: Circuit,
         targetHost: String,
         targetPort: Int
     ): Socket? {
-        val out = circuit.socket.getOutputStream()
-        val inp = circuit.socket.getInputStream()
         return try {
-            circuit.socket.soTimeout = 4_500
-            if (circuit.egress.isHttpConnect) {
-                val req = "CONNECT $targetHost:$targetPort HTTP/1.1\r\nHost: $targetHost:$targetPort\r\nProxy-Connection: Keep-Alive\r\n\r\n"
-                out.write(req.toByteArray(StandardCharsets.ISO_8859_1))
-                out.flush()
-                val buf = ByteArray(1024)
-                var n = 0
-                while (n < buf.size) {
-                    val b = inp.read()
-                    if (b == -1) break
-                    buf[n++] = b.toByte()
-                    if (n >= 4 &&
-                        buf[n - 4] == '\r'.code.toByte() && buf[n - 3] == '\n'.code.toByte() &&
-                        buf[n - 2] == '\r'.code.toByte() && buf[n - 1] == '\n'.code.toByte()
-                    ) break
-                }
-                val firstLine = String(buf, 0, n, StandardCharsets.ISO_8859_1).substringBefore("\r\n")
-                if (firstLine.startsWith("HTTP/") && firstLine.contains(" 200")) {
-                    circuit.socket.soTimeout = 30_000
-                    circuit.socket
-                } else null
+            circuit.socket.soTimeout = 6_000
+            val ok = if (circuit.egress.isHttpConnect) {
+                FokkTunnelEngine.performHttpConnect(circuit.socket, targetHost, targetPort, circuit.egress)
             } else {
-                val hostBytes = targetHost.toByteArray(StandardCharsets.ISO_8859_1)
-                val req = ByteArray(4 + 1 + hostBytes.size + 2)
-                req[0] = 0x05; req[1] = 0x01; req[2] = 0x00; req[3] = 0x03
-                req[4] = hostBytes.size.toByte()
-                System.arraycopy(hostBytes, 0, req, 5, hostBytes.size)
-                req[req.size - 2] = (targetPort shr 8).toByte()
-                req[req.size - 1] = (targetPort and 0xFF).toByte()
-                out.write(req)
-                out.flush()
-                if (readSocks5Reply(inp)) {
-                    circuit.socket.soTimeout = 30_000
-                    circuit.socket
-                } else null
+                FokkTunnelEngine.sendSocks5Connect(
+                    circuit.socket.getInputStream(),
+                    circuit.socket.getOutputStream(),
+                    targetHost,
+                    targetPort
+                )
             }
+            if (ok) {
+                circuit.socket.soTimeout = 30_000
+                circuit.socket
+            } else null
         } catch (e: Exception) {
             Log.w(TAG, "connectCircuitTo $targetHost failed: ${e.message}")
             null
         }
-    }
-
-    private fun readFully(stream: InputStream, buf: ByteArray) {
-        var offset = 0
-        while (offset < buf.size) {
-            val n = stream.read(buf, offset, buf.size - offset)
-            if (n < 0) throw EOFException("EOF after $offset/${buf.size} bytes")
-            offset += n
-        }
-    }
-
-    private fun readSocks5Reply(stream: InputStream): Boolean {
-        val header = ByteArray(4)
-        readFully(stream, header)
-        if (header[0] != 0x05.toByte() || header[1] != 0x00.toByte()) return false
-        when (header[3].toInt()) {
-            0x01 -> { val b = ByteArray(6); readFully(stream, b) }
-            0x03 -> { val l = stream.read(); if (l < 0) return false; val b = ByteArray(l + 2); readFully(stream, b) }
-            0x04 -> { val b = ByteArray(18); readFully(stream, b) }
-            else -> return false
-        }
-        return true
     }
 }
