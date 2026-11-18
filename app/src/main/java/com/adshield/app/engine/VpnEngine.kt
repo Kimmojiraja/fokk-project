@@ -139,6 +139,7 @@ object VpnEngine {
     }
 
     fun getRegionDisplayName(code: String): String = when (code) {
+        "SMART_CLOAK" -> "Smart-Cloak (Full Speed)"
         "AM" -> "Americas"
         "EU" -> "Europe"
         "AS" -> "Asia & Pacific"
@@ -216,11 +217,12 @@ object VpnEngine {
     }
 
     enum class VpnMode(val id: String, val title: String, val defaultProxy: String) {
-        OFF("off", "Direct Connection (Real IP Exposed)", ""),
-        FAST("fast", "Fokk Oblivious Split-Trust Network", ""),
-        TOR("tor", "Fokk Oblivious Split-Trust Network", ""),
-        RELAY("relay", "Fokk Oblivious Split-Trust Network", ""),
-        CUSTOM("custom", "Fokk Oblivious Gateway", "")
+        OFF("off", "Direct Connection", ""),
+        SMART_CLOAK("smart_cloak", "Fokk Smart-Cloak (Free · DoH + SNI Shield)", ""),
+        FAST("fast", "Fokk Mesh Pro (Optimal Relay)", ""),
+        TOR("tor", "Fokk Mesh Pro (Optimal Relay)", ""),
+        RELAY("relay", "Fokk Mesh Pro (Optimal Relay)", ""),
+        CUSTOM("custom", "Fokk Mesh Pro Gateway", "")
     }
 
     private val executor = Executors.newSingleThreadExecutor()
@@ -488,16 +490,18 @@ object VpnEngine {
                     routeDesc = "Connected to Fokk Dedicated Node ($host:$port)."
                 } else {
                     val saved = customProxy ?: getCustomProxy(context)
-                    val region = if (mode == VpnMode.CUSTOM) {
-                        if (saved in FokkTunnelEngine.REGION_NODES.keys) saved else "AM"
-                    } else "AUTO"
+                    val region = when (mode) {
+                        VpnMode.SMART_CLOAK -> "SMART_CLOAK"
+                        VpnMode.CUSTOM -> if (saved in FokkTunnelEngine.REGION_NODES.keys) saved else "AUTO"
+                        else -> "AUTO"
+                    }
 
                     FokkTunnelEngine.isProMode = isProModeEnabled(context)
                     FokkTunnelEngine.start(context, region)
                     // Wait up to 2 s for the tunnel to bind a port
                     val deadline = System.currentTimeMillis() + 2_000
                     while (FokkTunnelEngine.localPort <= 0 && System.currentTimeMillis() < deadline) {
-                        Thread.sleep(50)
+                        Thread.sleep(25)
                     }
                     val port = FokkTunnelEngine.localPort
                     if (port <= 0) {
@@ -506,10 +510,13 @@ object VpnEngine {
                     }
                     endpoint = "http://127.0.0.1:$port"
                     val regionLabel = getRegionDisplayName(region)
-                    routeDesc = if (mode == VpnMode.CUSTOM) {
-                        "Connected to Fokk Oblivious Gateway ($regionLabel) via Pre-Warmed Circuit Pool. Identity and traffic cryptographically separated."
-                    } else {
-                        "Connected to Fokk Oblivious Network ($regionLabel) via Pre-Warmed Circuit Pool. Identity and traffic cryptographically separated."
+                    routeDesc = when (mode) {
+                        VpnMode.SMART_CLOAK ->
+                            "Fokk Smart-Cloak Active · Full Native Speed with Encrypted WebView DoH & TLS SNI Cloaking."
+                        VpnMode.CUSTOM ->
+                            "Fokk Mesh Pro Active ($regionLabel) · Live Verified Relay Routing."
+                        else ->
+                            "Fokk Mesh Pro Active ($regionLabel) · Dual-Hop Oblivious Relay Routing."
                     }
                 }
 
@@ -566,11 +573,11 @@ object VpnEngine {
     fun restoreSavedState(context: Context) {
         try {
             val mode = getActiveMode(context)
-            if (mode == VpnMode.FAST || mode == VpnMode.TOR || mode == VpnMode.RELAY) {
+            if (mode == VpnMode.SMART_CLOAK || mode == VpnMode.FAST || mode == VpnMode.TOR || mode == VpnMode.RELAY) {
                 applyVpnMode(context, mode)
             } else if (mode == VpnMode.CUSTOM) {
                 val savedProxy = getCustomProxy(context)
-                applyVpnMode(context, mode, savedProxy.ifBlank { "AM" })
+                applyVpnMode(context, mode, savedProxy.ifBlank { "AUTO" })
             } else {
                 FokkMeshVpnService.stop(context)
             }

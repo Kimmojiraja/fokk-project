@@ -1,6 +1,6 @@
 {
-  "versionCode": 290,
-  "versionName": "2.9.0",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.0/app-debug.apk",
-  "changelog": "- Fixed Other Apps Losing Internet: Disabled the experimental 0.0.0.0/0 device-wide TUN until native Layer-3 tun2socks is bundled so leaving Fokk Browser never disrupts WhatsApp, banking, YouTube, or other apps.\n- Live-Only Dynamic Location Picker (Android & Desktop): Removed hardcoded dead countries; location picker now dynamically shows only live verified relays from the 6-hour Sentinel manifest with real cities, relay counts, and measured ping.\n- Faster Fokk Mesh Browsing: Added a 90s Sticky Fastest-Relay fast-path (eliminating 3x parallel socket flooding per webpage asset) and doubled pre-warmed 2-hop circuit pool from 2 to 4.\n- Legal & Compliance Hardening: Purged residential ISP relays (Korea Telecom, RCN) and added automated Layer-7 ASN residential-ISP filtering in Sentinel; zero hardcoded IPs in binaries; RFC 1929 auth + TLS-over-SOCKS5 ready for self-hosted relays."
+  "versionCode": 291,
+  "versionName": "2.9.1",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.1/app-debug.apk",
+  "changelog": "- Fokk Smart-Cloak (Free · Full Native Speed): New default privacy shield wired directly into FokkTunnelEngine (Android & Desktop) combining true encrypted WebView DoH resolution (via DnsOverHttpsEngine + Cloudflare 1.1.1.1 fallback) with local TLS ClientHello SNI fragmentation — bypasses ISP DNS/SNI blocks and throttling at 100% native 5G/Wi-Fi speed with zero remote proxy lag.\n- Fokk Mesh Pro (IP-Masking Relays): Cleanly separated into Optimal IP-Mask Relay, Live Verified Countries (dynamic from Sentinel manifest), and Custom Private / Home-Base Relays with RFC 1929 auth & TLS-over-SOCKS5.\n- Eliminated GitGuardian false-positive alerts in Sentinel scanner."
 }

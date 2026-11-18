@@ -258,6 +258,103 @@ class DnsOverHttpsEngine {
         fallback
     }
 
+    /**
+     * Fast synchronous encrypted DoH resolver used by Fokk Smart-Cloak inside FokkTunnelEngine.
+     * - Checks sub-ms in-memory TTL cache first.
+     * - Queries the active DoH provider (AdGuard, Mullvad, NextDNS, Cloudflare, etc.) via HTTPS JSON API.
+     * - Falls back to Cloudflare 1.1.1.1 DoH (direct IP, zero plaintext DNS needed!) if primary DoH fails.
+     * - Returns emptyList() if the ad-blocking DoH provider explicitly sinkholed/blocked the domain.
+     */
+    fun resolveSync(host: String): List<InetAddress> {
+        val cleanHost = host.lowercase().trimEnd('.')
+        if (cleanHost.isBlank()) return emptyList()
+
+        // Already an IP literal? Return directly without DNS lookup.
+        if (cleanHost.matches(Regex("""^\d{1,3}(\.\d{1,3}){3}$""")) || cleanHost.contains(":")) {
+            return runCatching { listOf(InetAddress.getByName(cleanHost)) }.getOrDefault(emptyList())
+        }
+
+        val cached = cache[cleanHost]
+        if (cached != null && System.currentTimeMillis() < cached.expiresAtMs) {
+            return if (cached.isBlocked) emptyList() else cached.addresses
+        }
+
+        // Ordered encrypted DoH endpoints: active provider first, then direct-IP Cloudflare 1.1.1.1 DoH
+        val endpoints = buildList {
+            if (isEnabled) add(currentProvider.endpoint to currentProvider.isAdBlocking)
+            if (currentProvider != Provider.CLOUDFLARE) {
+                add("https://1.1.1.1/dns-query" to false)
+            }
+        }
+
+        for ((endpoint, isAdBlocking) in endpoints) {
+            var conn: HttpURLConnection? = null
+            try {
+                val url = URL("$endpoint?name=$cleanHost&type=A")
+                conn = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 2_000
+                    readTimeout = 2_000
+                    setRequestProperty("Accept", "application/dns-json")
+                    setRequestProperty("User-Agent", "FokkSmartCloak/3.2")
+                }
+                if (conn.responseCode == 200) {
+                    val responseStr = BufferedReader(InputStreamReader(conn.inputStream)).use { it.readText() }
+                    val json = JSONObject(responseStr)
+                    val status = json.optInt("Status", -1)
+
+                    if (status == 3 && isAdBlocking) {
+                        knownBlockedHosts.add(cleanHost)
+                        cache[cleanHost] = CacheEntry(emptyList(), isBlocked = true, System.currentTimeMillis() + 3600_000L)
+                        return emptyList()
+                    }
+
+                    if (status == 0 && json.has("Answer")) {
+                        val answers = json.getJSONArray("Answer")
+                        val result = mutableListOf<InetAddress>()
+                        var minTtl = 300L
+                        var hasSinkhole = false
+
+                        for (i in 0 until answers.length()) {
+                            val rec = answers.getJSONObject(i)
+                            if (rec.optInt("type", 1) == 1) {
+                                val ip = rec.optString("data", "").trim()
+                                val ttl = rec.optLong("TTL", 300L)
+                                if (ttl < minTtl) minTtl = ttl
+                                if (ip == "0.0.0.0" || ip == "127.0.0.1" || ip == "::") {
+                                    hasSinkhole = true
+                                } else if (ip.isNotEmpty()) {
+                                    runCatching { result.add(InetAddress.getByName(ip)) }
+                                }
+                            }
+                        }
+
+                        if (hasSinkhole) {
+                            knownBlockedHosts.add(cleanHost)
+                            cache[cleanHost] = CacheEntry(emptyList(), isBlocked = true, System.currentTimeMillis() + minTtl.coerceAtLeast(300L) * 1000L)
+                            return emptyList()
+                        }
+
+                        if (result.isNotEmpty()) {
+                            cache[cleanHost] = CacheEntry(result, isBlocked = false, System.currentTimeMillis() + minTtl.coerceAtLeast(60L) * 1000L)
+                            return result
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+            } finally {
+                runCatching { conn?.disconnect() }
+            }
+        }
+
+        // Last-resort system DNS fallback only if all encrypted DoH servers are unreachable
+        val fallback = runCatching { InetAddress.getAllByName(cleanHost).toList() }.getOrDefault(emptyList())
+        if (fallback.isNotEmpty()) {
+            cache[cleanHost] = CacheEntry(fallback, isBlocked = false, System.currentTimeMillis() + 60_000L)
+        }
+        return fallback
+    }
+
     fun clearCache() {
         cache.clear()
         knownBlockedHosts.clear()

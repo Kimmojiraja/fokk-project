@@ -39,7 +39,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Fokk Privacy Mesh"
+                    android:text="Fokk Smart-Cloak &amp; Mesh Pro"
                     android:textColor="#F8FAFC"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -48,7 +48,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Regional Oblivious Mesh • Zero-Drop Speed"
+                    android:text="Zero-lag Smart-Cloak Free · Live Verified Mesh Pro"
                     android:textColor="#38BDF8"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -65,20 +65,20 @@
                 android:contentDescription="Close" />
         </RelativeLayout>
 
-        <!-- SECTION 1: OPTIMAL ROUTING (FREE) -->
+        <!-- SECTION 1: FOKK SMART-CLOAK (FREE · FULL NATIVE SPEED) -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:text="OPTIMAL ROUTING (FREE)"
+            android:text="FOKK SMART-CLOAK (FREE · FULL SPEED)"
             android:textColor="#64748B"
             android:textSize="11.5sp"
             android:textStyle="bold"
             android:letterSpacing="0.08" />
 
-        <!-- 1. Optimal location -->
+        <!-- 0. Fokk Smart-Cloak (DoH + TLS SNI Fragmentation) -->
         <LinearLayout
-            android:id="@+id/rowLocationAuto"
+            android:id="@+id/rowLocationSmartCloak"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="?attr/selectableItemBackground"
@@ -89,8 +89,9 @@
             <ImageView
                 android:layout_width="36dp"
                 android:layout_height="36dp"
-                android:src="@drawable/ic_flag_optimal"
-                android:contentDescription="Optimal Location" />
+                android:src="@drawable/ic_shield_check"
+                app:tint="#34D399"
+                android:contentDescription="Fokk Smart-Cloak" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -108,7 +109,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Optimal location (Automatic)"
+                        android:text="Fokk Smart-Cloak"
                         android:textColor="#F8FAFC"
                         android:textSize="14.5sp"
                         android:textStyle="bold" />
@@ -120,7 +121,7 @@
                         android:background="@drawable/bg_stat_chip"
                         android:paddingHorizontal="6dp"
                         android:paddingVertical="2dp"
-                        android:text="FREE"
+                        android:text="FREE · FASTEST"
                         android:textColor="#34D399"
                         android:textSize="9.5sp"
                         android:textStyle="bold" />
@@ -130,7 +131,92 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Lowest latency routing across nearest privacy nodes"
+                    android:text="Full native speed · Encrypted WebView DoH + TLS SNI bypass"
+                    android:textColor="#94A3B8"
+                    android:textSize="11.5sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/checkLocationSmartCloak"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_check"
+                android:visibility="gone"
+                android:contentDescription="Selected" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#1E293B" />
+
+        <!-- SECTION 2: FOKK MESH PRO (IP-MASKING RELAYS) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"
+            android:text="FOKK MESH PRO (IP-MASKING RELAYS)"
+            android:textColor="#64748B"
+            android:textSize="11.5sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08" />
+
+        <!-- 1. Optimal IP-Masking Relay -->
+        <LinearLayout
+            android:id="@+id/rowLocationAuto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackground"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingVertical="12dp">
+
+            <ImageView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_flag_optimal"
+                android:contentDescription="Optimal Relay" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Optimal IP-Mask Relay (Auto)"
+                        android:textColor="#F8FAFC"
+                        android:textSize="14.5sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_stat_chip"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"
+                        android:text="MESH"
+                        android:textColor="#38BDF8"
+                        android:textSize="9.5sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Masks your IP via fastest verified dual-hop Fokk Mesh relay"
                     android:textColor="#94A3B8"
                     android:textSize="11.5sp" />
             </LinearLayout>
@@ -149,13 +235,13 @@
             android:layout_height="1dp"
             android:background="#1E293B" />
 
-        <!-- SECTION 2: VERIFIED PRIVACY COUNTRIES (PRO) -->
+        <!-- SECTION 3: LIVE VERIFIED COUNTRIES (PRO) -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="16dp"
             android:layout_marginBottom="8dp"
-            android:text="VERIFIED PRIVACY COUNTRIES"
+            android:text="LIVE VERIFIED COUNTRIES (PRO)"
             android:textColor="#64748B"
             android:textSize="11.5sp"
             android:textStyle="bold"

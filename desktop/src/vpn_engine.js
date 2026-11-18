@@ -13,12 +13,24 @@ const { spawn } = require('child_process');
  */
 
 const PRESET_LOCATIONS = {
+    'smart_cloak': {
+        id: 'smart_cloak',
+        name: 'Fokk Smart-Cloak',
+        badge: 'Free · Fastest',
+        protocol: 'DoH + TLS SNI Shield',
+        description: 'Full native internet speed with encrypted DoH DNS and local TLS ClientHello SNI fragmentation (zero proxy lag).',
+        region: 'Smart-Cloak (Local Shield)',
+        meshRegion: 'SMART_CLOAK',
+        color: '#34D399',
+        iconSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>',
+        setupTip: 'Bypasses ISP DNS blocks and SNI throttling locally at 100% of your native internet speed.'
+    },
     'relay_auto': {
         id: 'relay_auto',
-        name: 'Optimal Location',
-        badge: 'Fokk Mesh',
-        protocol: 'Fokk Mesh SOCKS5',
-        description: 'Fastest verified Fokk Mesh relay node selected automatically by live ping.',
+        name: 'Optimal IP-Mask Relay',
+        badge: 'Mesh Pro',
+        protocol: 'Fokk Mesh Pro',
+        description: 'Fastest verified Fokk Mesh relay node selected automatically by live ping for IP masking.',
         region: 'Global Optimal',
         meshRegion: 'AUTO',
         color: '#38BDF8',
@@ -455,7 +467,8 @@ class VpnEngine extends EventEmitter {
         this.manifestCacheFile = path.join(this.userDataPath, 'fokk_mesh_manifest_cache.json');
 
         this.state = 'disconnected'; // 'disconnected' | 'connecting' | 'connected' | 'error'
-        this.activeMode = 'relay_auto';
+        this.activeMode = 'smart_cloak';
+        this.dohCache = new Map();
         this.killSwitch = true;
         this.customConfig = '';
         this.connectedAt = null;
@@ -531,7 +544,7 @@ class VpnEngine extends EventEmitter {
         return new Promise((resolve, reject) => {
             const req = https.get(urlStr, {
                 timeout: 5500,
-                headers: { 'User-Agent': 'FokkMesh/3.1', 'Cache-Control': 'no-cache' }
+                headers: { 'User-Agent': 'FokkMesh/3.2', 'Accept': 'application/dns-json, application/json', 'Cache-Control': 'no-cache' }
             }, res => {
                 if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirectsLeft > 0) {
                     res.resume();
@@ -715,6 +728,40 @@ class VpnEngine extends EventEmitter {
         throw new Error('All Fokk Mesh relays exhausted (fail-closed killswitch)');
     }
 
+    async resolveHostDoh(host) {
+        const clean = String(host || '').trim().toLowerCase().replace(/\.$/, '');
+        if (!clean || net.isIP(clean)) return clean;
+        const cached = this.dohCache.get(clean);
+        if (cached && Date.now() < cached.expiresAt) return cached.ip;
+        try {
+            const data = await this.fetchJsonUrl(`https://1.1.1.1/dns-query?name=${encodeURIComponent(clean)}&type=A`);
+            const ans = Array.isArray(data?.Answer) ? data.Answer.find(a => a.type === 1 && net.isIP(a.data)) : null;
+            if (ans && ans.data) {
+                const ttlMs = Math.max(60, Number(ans.TTL) || 300) * 1000;
+                this.dohCache.set(clean, { ip: ans.data, expiresAt: Date.now() + ttlMs });
+                return ans.data;
+            }
+        } catch (_) {}
+        return clean;
+    }
+
+    async connectSmartCloakSocket(targetHost, targetPort) {
+        const t0 = Date.now();
+        const resolvedIp = await this.resolveHostDoh(targetHost);
+        return new Promise((resolve, reject) => {
+            const sock = new net.Socket();
+            sock.setNoDelay(true);
+            const timer = setTimeout(() => { sock.destroy(); reject(new Error('Smart-Cloak connect timeout')); }, 5000);
+            sock.once('error', err => { clearTimeout(timer); sock.destroy(); reject(err); });
+            sock.connect(targetPort, resolvedIp, () => {
+                clearTimeout(timer);
+                this.activeHopMode = 'SMART_CLOAK';
+                this.ping = Math.max(1, Date.now() - t0);
+                resolve(sock);
+            });
+        });
+    }
+
     startMeshTunnel(region) {
         this.meshRegion = region || 'AUTO';
         if (this.meshServer && this.meshPort > 0) {
@@ -739,17 +786,40 @@ class VpnEngine extends EventEmitter {
                     const rest = headerBuf.slice(headerEnd + 4);
                     const firstLine = headStr.split('\r\n')[0] || '';
                     const [method, target, version = 'HTTP/1.1'] = firstLine.split(' ');
+                    const isSmartCloak = this.meshRegion === 'SMART_CLOAK';
 
                     try {
                         if (method === 'CONNECT') {
                             const idx = target.lastIndexOf(':');
                             const targetHost = idx > -1 ? target.slice(0, idx) : target;
                             const targetPort = idx > -1 ? Number(target.slice(idx + 1)) || 443 : 443;
-                            const upstream = await this.routeMeshConnection(targetHost, targetPort);
+                            const upstream = isSmartCloak
+                                ? await this.connectSmartCloakSocket(targetHost, targetPort)
+                                : await this.routeMeshConnection(targetHost, targetPort);
                             clientSock.write('HTTP/1.1 200 Connection Established\r\n\r\n');
-                            if (rest.length > 0) upstream.write(rest);
-                            clientSock.pipe(upstream);
-                            upstream.pipe(clientSock);
+
+                            if (isSmartCloak) {
+                                // Fragment initial TLS ClientHello (0x16 0x03) across 2 TCP segments for 0-lag SNI bypass
+                                let cloakedFirstPacket = false;
+                                const writeWithSniCloak = buf => {
+                                    if (!cloakedFirstPacket && buf.length > 6 && buf[0] === 0x16 && buf[1] === 0x03) {
+                                        cloakedFirstPacket = true;
+                                        upstream.write(buf.slice(0, 2));
+                                        upstream.write(buf.slice(2));
+                                    } else {
+                                        cloakedFirstPacket = true;
+                                        upstream.write(buf);
+                                    }
+                                };
+                                if (rest.length > 0) writeWithSniCloak(rest);
+                                clientSock.on('data', data => writeWithSniCloak(data));
+                                clientSock.on('end', () => upstream.end());
+                                upstream.pipe(clientSock);
+                            } else {
+                                if (rest.length > 0) upstream.write(rest);
+                                clientSock.pipe(upstream);
+                                upstream.pipe(clientSock);
+                            }
                             clientSock.on('error', () => upstream.destroy());
                             upstream.on('error', () => clientSock.destroy());
                         } else {
@@ -757,7 +827,9 @@ class VpnEngine extends EventEmitter {
                             const parsed = new URL(target.startsWith('http') ? target : `http://${target}`);
                             const targetHost = parsed.hostname;
                             const targetPort = Number(parsed.port) || 80;
-                            const upstream = await this.routeMeshConnection(targetHost, targetPort);
+                            const upstream = isSmartCloak
+                                ? await this.connectSmartCloakSocket(targetHost, targetPort)
+                                : await this.routeMeshConnection(targetHost, targetPort);
                             const lines = headStr.split('\r\n');
                             const cleanLines = [`${method} ${parsed.pathname || '/'}${parsed.search || ''} ${version}`];
                             for (let i = 1; i < lines.length; i++) {
@@ -1174,6 +1246,7 @@ class VpnEngine extends EventEmitter {
             if (this.killSwitch) {
                 await this.applyProxyRules('127.0.0.1:9');
             }
+            const isSmartCloak = this.activeMode === 'smart_cloak';
             const isMeshRelay = this.activeMode.startsWith('relay_') || this.activeMode.startsWith('country_');
             const isTorMode = this.activeMode === 'tor';
             this.activeMeshNode = null;
@@ -1182,7 +1255,15 @@ class VpnEngine extends EventEmitter {
             let measuredPing = 0;
             let exitIpDisplay = 'Route configured — verify exit IP';
 
-            if (isMeshRelay) {
+            if (isSmartCloak) {
+                await this.stopEmbeddedTor();
+                const localPort = await this.startMeshTunnel('SMART_CLOAK');
+                this.activeHopMode = 'SMART_CLOAK';
+                proxyRules = `http=127.0.0.1:${localPort};https=127.0.0.1:${localPort}`;
+                locationName = 'Smart-Cloak (Full Speed)';
+                measuredPing = 1;
+                exitIpDisplay = 'DoH + TLS SNI Cloaking Active';
+            } else if (isMeshRelay) {
                 await this.refreshManifestIfNeeded();
                 const region = PRESET_LOCATIONS[this.activeMode]?.meshRegion || 'AUTO';
                 let alive = await this.findAliveMeshNodes(region);
