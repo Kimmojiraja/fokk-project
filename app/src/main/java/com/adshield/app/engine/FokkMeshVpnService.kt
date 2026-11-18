@@ -70,11 +70,69 @@ class FokkMeshVpnService : VpnService() {
     }
 
     private fun startMesh(region: String) {
-        // Safety Guard: Never open a 0.0.0.0/0 TUN without a native Layer-3 tun2socks TCP/UDP stack,
-        // otherwise non-browser apps (WhatsApp, YouTube, banking, games) lose internet when leaving Fokk Browser.
-        Log.i(TAG, "Device-wide TUN disabled (in-browser Fokk Mesh active; preserving full connectivity for other apps)")
-        disconnectMesh()
-        return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            Log.w(TAG, "Device-wide HTTP/HTTPS Fokk Mesh requires Android 10+ (API 29)")
+            disconnectMesh()
+            return
+        }
+
+        if (isRunning.get() && vpnInterface != null) {
+            updateNotification(region)
+            return
+        }
+
+        try {
+            val isPro = VpnEngine.isProModeEnabled(this)
+            FokkTunnelEngine.isProMode = isPro
+            FokkTunnelEngine.start(this, region)
+            val deadline = System.currentTimeMillis() + 2_000
+            while (FokkTunnelEngine.localPort <= 0 && System.currentTimeMillis() < deadline) {
+                Thread.sleep(50)
+            }
+            val localPort = FokkTunnelEngine.localPort
+            if (localPort <= 0) {
+                Log.e(TAG, "Failed to start local Fokk Tunnel Engine")
+                disconnectMesh()
+                return
+            }
+
+            val builder = Builder()
+                .setSession("Fokk Mesh (Device-Wide)")
+                .setMtu(1500)
+                .addAddress("10.233.0.2", 24)
+                .addDnsServer("10.233.0.1")
+                .addRoute("10.233.0.1", 32)
+                .setMetered(false)
+
+            // Prevent routing loopback for Fokk Browser's own relay sockets
+            runCatching {
+                builder.addDisallowedApplication(packageName)
+            }
+
+            // Route Android 10+ system-wide HTTP/HTTPS traffic through FokkTunnelEngine
+            builder.setHttpProxy(ProxyInfo.buildDirectProxy("127.0.0.1", localPort))
+
+            val pfd = builder.establish()
+            if (pfd == null) {
+                Log.e(TAG, "Failed to establish Fokk Mesh interface")
+                disconnectMesh()
+                return
+            }
+
+            vpnInterface = pfd
+            isRunning.set(true)
+            isServiceRunning = true
+
+            runCatching {
+                startForeground(NOTIFICATION_ID, buildNotification(region))
+            }
+
+            startPacketPump(pfd)
+            Log.i(TAG, "Fokk Mesh device-wide service active [Region: $region, Port: $localPort]")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error establishing Fokk Mesh device-wide service", e)
+            disconnectMesh()
+        }
     }
 
     /**
