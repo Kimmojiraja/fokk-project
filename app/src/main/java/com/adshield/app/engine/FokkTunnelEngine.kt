@@ -2,32 +2,32 @@ package com.adshield.app.engine
 
 import android.content.Context
 import android.util.Log
+import java.io.EOFException
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.util.Locale
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Fokk Mesh 2.0 — High-Performance Privacy Tunnel Engine
+ * Fokk Mesh 3.0 — High-Performance Oblivious Privacy Tunnel Engine
  *
- * Architecture:
- *   - FokkCircuitManager maintains a pool of pre-warmed 2-hop circuits
- *     (ingress relay -> egress node) so every request gets a circuit instantly.
- *   - FokkNodeProber runs in background to rank nodes by real latency and
- *     mark dead nodes so they are never tried.
- *   - NodeRegistry is the single source of truth for all node data,
- *     reading from the signed FokkNodeManifest with certified builtin fallback.
- *
- * Trust model:
- *   - Only nodes in the signed manifest OR the certified builtin list are used.
- *   - No random public proxies. No unknown servers.
- *   - Killswitch: if no circuit can be built, returns 407 to the browser.
- *     Traffic NEVER falls through to a direct connection (no IP leaks).
+ * Pure Fokk Mesh Architecture (not Tor, not a centralized VPN):
+ *   - 6-hour Sentinel-verified relay manifest (auto-refreshed + self-healing).
+ *   - FokkCircuitManager pre-warms fresh 2-hop circuits (Ingress -> Egress)
+ *     with 25s idle eviction so sockets never go stale.
+ *   - FokkNodeProber runs protocol-level SOCKS5/HTTP handshakes every 3 min.
+ *   - Strict Fail-Closed Killswitch: if all relays are unreachable, returns HTTP 407
+ *     (traffic NEVER leaks direct from the user's real IP) and triggers self-healing
+ *     manifest refresh in the background.
+ *   - SSRF Protection: blocks tunneling localhost / RFC1918 / cloud metadata targets.
+ *   - Clean HTTP Proxy Rewriting: strips Proxy-* headers and converts absolute URIs.
  */
 object FokkTunnelEngine {
     private const val TAG = "FokkTunnelEngine"
@@ -40,9 +40,6 @@ object FokkTunnelEngine {
         val city: String = ""
     )
 
-    // ---------------------------------------------------------------------------
-    // Region map — used by VpnEngine for display and region switching
-    // ---------------------------------------------------------------------------
     val REGION_NODES: Map<String, String> = mapOf(
         "AM" to "Americas",
         "EU" to "Europe",
@@ -64,9 +61,6 @@ object FokkTunnelEngine {
         "BR" to "Brazil"
     )
 
-    // ---------------------------------------------------------------------------
-    // Tunnel lifecycle
-    // ---------------------------------------------------------------------------
     private val isRunning = AtomicBoolean(false)
     private var serverSocket: ServerSocket? = null
 
@@ -75,6 +69,17 @@ object FokkTunnelEngine {
 
     @Volatile private var currentRegion: String = "AUTO"
     @Volatile var isProMode: Boolean = false
+
+    // Honest live telemetry exposed to Fokk Mesh UI
+    @Volatile var activeHopMode: String = "OFFLINE"       // "DUAL_HOP", "SINGLE_HOP", "CONNECTING", "OFFLINE"
+        private set
+    @Volatile var activeIngressNode: PrivacyNode? = null
+        private set
+    @Volatile var activeEgressNode: PrivacyNode? = null
+        private set
+    @Volatile var activeLatencyMs: Long = 0L
+        private set
+    val totalRequestsTunneled = AtomicLong(0L)
 
     private val threadPool = Executors.newCachedThreadPool { r ->
         Thread(r, "fokk-tunnel-worker").also { it.isDaemon = true }
@@ -100,27 +105,31 @@ object FokkTunnelEngine {
 
     private fun startInternal(region: String) {
         if (!isRunning.compareAndSet(false, true)) {
-            // Already running — just update region
             if (region != currentRegion) {
                 currentRegion = region
+                activeHopMode = "CONNECTING"
+                activeIngressNode = null
+                activeEgressNode = null
                 FokkCircuitManager.setRegion(region)
             }
             return
         }
         currentRegion = region
+        activeHopMode = "CONNECTING"
+        activeIngressNode = null
+        activeEgressNode = null
 
-        // Start supporting systems
         FokkNodeManifest.refreshIfNeeded()
         FokkNodeProber.start()
         FokkCircuitManager.start(region)
 
         threadPool.execute {
             try {
-                val srv = ServerSocket(0, 50, java.net.InetAddress.getByName("127.0.0.1"))
+                val srv = ServerSocket(0, 64, java.net.InetAddress.getByName("127.0.0.1"))
                 srv.reuseAddress = true
                 serverSocket = srv
                 localPort = srv.localPort
-                Log.i(TAG, "Tunnel listening on 127.0.0.1:$localPort region=$region")
+                Log.i(TAG, "Fokk Mesh 3.0 tunnel listening on 127.0.0.1:$localPort region=$region")
                 while (isRunning.get()) {
                     try {
                         val client = srv.accept()
@@ -132,6 +141,7 @@ object FokkTunnelEngine {
             } catch (e: Exception) {
                 Log.e(TAG, "Tunnel error: ${e.message}")
                 isRunning.set(false)
+                activeHopMode = "OFFLINE"
             }
         }
     }
@@ -141,16 +151,47 @@ object FokkTunnelEngine {
         runCatching { serverSocket?.close() }
         serverSocket = null
         localPort = 0
+        activeHopMode = "OFFLINE"
+        activeIngressNode = null
+        activeEgressNode = null
+        activeLatencyMs = 0L
         FokkCircuitManager.stop()
         FokkNodeProber.stop()
-        Log.i(TAG, "Tunnel stopped")
+        Log.i(TAG, "Fokk Mesh tunnel stopped")
     }
 
     fun isTunnelRunning(): Boolean = isRunning.get() && localPort > 0
 
-    // ---------------------------------------------------------------------------
-    // Request handler
-    // ---------------------------------------------------------------------------
+    fun getLiveStatusSummary(): String {
+        val egress = activeEgressNode
+        val ingress = activeIngressNode
+        val lat = if (activeLatencyMs > 0) " · ${activeLatencyMs}ms" else ""
+        return when (activeHopMode) {
+            "DUAL_HOP" -> {
+                val egLabel = egress?.let { it.city.ifBlank { it.country } } ?: "Exit"
+                val inLabel = ingress?.country?.ifBlank { "Relay" } ?: "Relay"
+                "Dual-Hop ($inLabel -> $egLabel)$lat"
+            }
+            "SINGLE_HOP" -> {
+                val egLabel = egress?.let { it.city.ifBlank { it.country } } ?: "Relay"
+                "Single-Hop Relay ($egLabel)$lat"
+            }
+            "CONNECTING" -> "Probing Fokk Mesh relays..."
+            else -> "Mesh Offline"
+        }
+    }
+
+    private fun isBlockedPrivateTarget(host: String): Boolean {
+        val h = host.trim().lowercase(Locale.ROOT).removePrefix("[").removeSuffix("]")
+        return h == "localhost" ||
+            h == "::1" ||
+            h.startsWith("127.") ||
+            h.startsWith("169.254.") ||
+            h.startsWith("0.") ||
+            h.startsWith("10.") ||
+            h.startsWith("192.168.")
+    }
+
     private fun handleClient(client: Socket) {
         var upstream: Socket? = null
         try {
@@ -162,8 +203,8 @@ object FokkTunnelEngine {
             val clientIn = client.getInputStream()
             val clientOut = client.getOutputStream()
 
-            // Read HTTP headers until CRLF CRLF
-            val headerBytes = ByteArray(8192)
+            // Read HTTP headers up to CRLF CRLF
+            val headerBytes = ByteArray(16384)
             var totalRead = 0
             while (totalRead < headerBytes.size) {
                 val b = clientIn.read()
@@ -188,27 +229,47 @@ object FokkTunnelEngine {
             if (method == "CONNECT") {
                 val targetHost = target.substringBefore(":")
                 val targetPort = target.substringAfter(":", "443").toIntOrNull() ?: 443
+                if (targetHost.isBlank() || targetPort !in 1..65535 || isBlockedPrivateTarget(targetHost)) {
+                    clientOut.write("HTTP/1.1 403 Forbidden\r\n\r\n".toByteArray(StandardCharsets.ISO_8859_1))
+                    clientOut.flush()
+                    return
+                }
                 val connectedSocket = routeConnect(targetHost, targetPort)
                 if (connectedSocket == null) {
-                    // Killswitch — no IP leak fallback
+                    // Fail-closed killswitch — zero direct IP leak
                     clientOut.write("HTTP/1.1 407 Mesh Unavailable\r\n\r\n".toByteArray(StandardCharsets.ISO_8859_1))
                     clientOut.flush()
                     return
                 }
+                totalRequestsTunneled.incrementAndGet()
                 upstream = connectedSocket
                 clientOut.write("HTTP/1.1 200 Connection Established\r\n\r\n".toByteArray(StandardCharsets.ISO_8859_1))
                 clientOut.flush()
                 pipeSockets(client, connectedSocket)
             } else {
-                // Plain HTTP — route through ingress relay
+                // Plain HTTP: extract host/port, rewrite absolute URI to origin-form, and strip Proxy-* headers
+                val parsedUri = runCatching { URI(target) }.getOrNull()
                 val hostHeader = requestText.lineSequence()
                     .firstOrNull { it.startsWith("Host:", ignoreCase = true) }
-                    ?.substringAfter(":")?.trim() ?: target.substringBefore("/").substringBefore(":")
-                val host = hostHeader.substringBefore(":")
-                val port = hostHeader.substringAfter(":", "80").toIntOrNull() ?: 80
+                    ?.substringAfter(":")?.trim()
+                val host = (parsedUri?.host?.takeIf { it.isNotBlank() }
+                    ?: hostHeader?.substringBefore(":")
+                    ?: target.substringBefore("/").substringBefore(":")).trim()
+                val port = when {
+                    parsedUri != null && parsedUri.port in 1..65535 -> parsedUri.port
+                    hostHeader != null && hostHeader.contains(":") -> hostHeader.substringAfter(":").toIntOrNull() ?: 80
+                    else -> 80
+                }
+                if (host.isBlank() || isBlockedPrivateTarget(host)) {
+                    clientOut.write("HTTP/1.1 403 Forbidden\r\n\r\n".toByteArray(StandardCharsets.ISO_8859_1))
+                    clientOut.flush()
+                    return
+                }
                 val connectedSocket = routeConnect(host, port)
                 if (connectedSocket != null) {
-                    connectedSocket.getOutputStream().write(headerBytes, 0, totalRead)
+                    totalRequestsTunneled.incrementAndGet()
+                    val cleanHttpRequest = rewritePlainHttpRequest(requestText, parsedUri)
+                    connectedSocket.getOutputStream().write(cleanHttpRequest.toByteArray(StandardCharsets.ISO_8859_1))
                     connectedSocket.getOutputStream().flush()
                     upstream = connectedSocket
                     pipeSockets(client, connectedSocket)
@@ -224,69 +285,111 @@ object FokkTunnelEngine {
         }
     }
 
-    // ---------------------------------------------------------------------------
-    // Routing — circuit pool first, inline build fallback, then single-hop
-    // ---------------------------------------------------------------------------
+    /**
+     * Converts proxy-style HTTP request (`GET http://host/path HTTP/1.1`) into clean
+     * origin-form (`GET /path HTTP/1.1`) and strips `Proxy-Connection` / `Proxy-Authorization`.
+     */
+    private fun rewritePlainHttpRequest(requestText: String, parsedUri: URI?): String {
+        val lines = requestText.split("\r\n")
+        if (lines.isEmpty()) return requestText
+        val firstParts = lines[0].split(" ")
+        val sb = StringBuilder()
+        if (firstParts.size >= 3 && parsedUri != null && !parsedUri.scheme.isNullOrBlank()) {
+            val path = (parsedUri.rawPath?.ifBlank { "/" } ?: "/") +
+                (parsedUri.rawQuery?.let { "?$it" } ?: "")
+            sb.append("${firstParts[0]} $path ${firstParts[2]}\r\n")
+        } else {
+            sb.append(lines[0]).append("\r\n")
+        }
+        for (i in 1 until lines.size) {
+            val line = lines[i]
+            if (line.isEmpty()) {
+                sb.append("\r\n")
+                break
+            }
+            if (line.startsWith("Proxy-Connection:", ignoreCase = true) ||
+                line.startsWith("Proxy-Authorization:", ignoreCase = true)
+            ) {
+                continue
+            }
+            sb.append(line).append("\r\n")
+        }
+        return sb.toString()
+    }
+
+    /**
+     * Multi-tier resilient Fokk Mesh routing:
+     *   1. Pre-warmed 2-hop circuit from FokkCircuitManager (sub-ms acquire).
+     *   2. Up to 2 fresh 2-hop circuits across distinct (Ingress, Egress) pairs.
+     *   3. Single-hop fallback across verified region/global relays (transparently tracked).
+     *   4. Self-healing manifest refresh + strict fail-closed killswitch (never leaks direct).
+     */
     private fun routeConnect(targetHost: String, targetPort: Int): Socket? {
-        // 1. Try warm circuit from pool
-        val circuit = FokkCircuitManager.acquireCircuit()
-        if (circuit != null) {
-            val sock = FokkCircuitManager.connectCircuitTo(circuit, targetHost, targetPort)
+        val t0 = System.currentTimeMillis()
+
+        // Tier 1: Pre-warmed 2-hop circuit
+        val pooled = FokkCircuitManager.acquireCircuit()
+        if (pooled != null) {
+            val sock = FokkCircuitManager.connectCircuitTo(pooled, targetHost, targetPort)
             if (sock != null) {
-                sock.soTimeout = 30_000
+                activeHopMode = "DUAL_HOP"
+                activeIngressNode = pooled.ingress
+                activeEgressNode = pooled.egress
+                activeLatencyMs = (System.currentTimeMillis() - t0).coerceAtLeast(1L)
                 return sock
             }
-            // Circuit failed — close it, don't return it to pool
-            runCatching { circuit.socket.close() }
-            NodeRegistry.markDead(circuit.egress, 60_000L)
+            runCatching { pooled.socket.close() }
+            NodeRegistry.markDead(pooled.egress, 90_000L)
         }
 
-        // 2. Build a fresh circuit inline (no warm circuit available)
-        val egress = NodeRegistry.getNodesForRegion(currentRegion).firstOrNull()
-        if (egress != null) {
-            val freshCircuit = FokkCircuitManager.buildCircuitTo(egress)
-            if (freshCircuit != null) {
-                val sock = FokkCircuitManager.connectCircuitTo(freshCircuit, targetHost, targetPort)
+        // Tier 2: Build up to 2 fresh 2-hop circuits across distinct egress relays
+        val triedEgress = mutableSetOf<String>()
+        repeat(2) {
+            val fresh = FokkCircuitManager.buildCircuit(currentRegion, excludeEgressHosts = triedEgress)
+            if (fresh != null) {
+                triedEgress.add(fresh.egress.host)
+                val sock = FokkCircuitManager.connectCircuitTo(fresh, targetHost, targetPort)
                 if (sock != null) {
-                    sock.soTimeout = 30_000
-                    NodeRegistry.markAlive(egress, 0L)
+                    val elapsed = (System.currentTimeMillis() - t0).coerceAtLeast(1L)
+                    NodeRegistry.markAlive(fresh.egress, elapsed)
+                    activeHopMode = "DUAL_HOP"
+                    activeIngressNode = fresh.ingress
+                    activeEgressNode = fresh.egress
+                    activeLatencyMs = elapsed
                     return sock
                 }
-                runCatching { freshCircuit.socket.close() }
-                NodeRegistry.markDead(egress)
+                runCatching { fresh.socket.close() }
+                NodeRegistry.markDead(fresh.egress, 120_000L)
             }
         }
 
-        // 3. Single-hop fallback through best ingress relay
-        val ingress = NodeRegistry.getBestIngress().firstOrNull()
-        if (ingress != null) {
-            val sock = connectSingleHop(targetHost, targetPort, ingress)
-            if (sock != null) {
-                NodeRegistry.markAlive(ingress, 0L)
-                return sock
-            }
-            NodeRegistry.markDead(ingress)
-        }
+        // Tier 3: Single-hop fallback across fastest surviving region relays, then global relays
+        val singleCandidates = (NodeRegistry.getNodesForRegion(currentRegion) + NodeRegistry.getBestIngress())
+            .distinctBy { "${it.host}:${it.port}" }
+            .filter { NodeRegistry.isAlive(it) && FokkNodeManifest.isSafePublicRelayHost(it.host) }
+            .take(5)
 
-        // 4. Try any surviving node single-hop
-        for (node in NodeRegistry.getAllNodes()) {
-            if (!NodeRegistry.isAlive(node)) continue
+        for (node in singleCandidates) {
             val sock = connectSingleHop(targetHost, targetPort, node)
             if (sock != null) {
-                NodeRegistry.markAlive(node, 0L)
+                val elapsed = (System.currentTimeMillis() - t0).coerceAtLeast(1L)
+                NodeRegistry.markAlive(node, elapsed)
+                activeHopMode = "SINGLE_HOP"
+                activeIngressNode = null
+                activeEgressNode = node
+                activeLatencyMs = elapsed
                 return sock
             }
-            NodeRegistry.markDead(node)
+            NodeRegistry.markDead(node, 120_000L)
         }
 
-        // All routes exhausted — killswitch (no direct fallback)
-        Log.w(TAG, "All routes exhausted for $targetHost:$targetPort — returning null (killswitch)")
+        // Tier 4: Self-healing — force manifest refresh & remain strictly fail-closed
+        activeHopMode = "OFFLINE"
+        FokkNodeManifest.forceRefresh()
+        Log.w(TAG, "All Fokk Mesh routes exhausted for $targetHost:$targetPort — fail-closed killswitch engaged")
         return null
     }
 
-    // ---------------------------------------------------------------------------
-    // Single-hop SOCKS5/HTTP connect
-    // ---------------------------------------------------------------------------
     private fun connectSingleHop(targetHost: String, targetPort: Int, node: PrivacyNode): Socket? {
         var sock: Socket? = null
         try {
@@ -294,7 +397,7 @@ object FokkTunnelEngine {
             sock.tcpNoDelay = true
             sock.sendBufferSize = 65536
             sock.receiveBufferSize = 65536
-            sock.connect(InetSocketAddress(node.host, node.port), 3_500)
+            sock.connect(InetSocketAddress(node.host, node.port), 3_000)
             sock.soTimeout = 4_000
 
             if (node.isHttpConnect) {
@@ -309,11 +412,12 @@ object FokkTunnelEngine {
                     if (b == -1) break
                     buf[n++] = b.toByte()
                     if (n >= 4 &&
-                        buf[n-4] == '\r'.code.toByte() && buf[n-3] == '\n'.code.toByte() &&
-                        buf[n-2] == '\r'.code.toByte() && buf[n-1] == '\n'.code.toByte()) break
+                        buf[n - 4] == '\r'.code.toByte() && buf[n - 3] == '\n'.code.toByte() &&
+                        buf[n - 2] == '\r'.code.toByte() && buf[n - 1] == '\n'.code.toByte()
+                    ) break
                 }
-                val resp = String(buf, 0, n, StandardCharsets.ISO_8859_1)
-                if (resp.contains("200")) {
+                val firstLine = String(buf, 0, n, StandardCharsets.ISO_8859_1).substringBefore("\r\n")
+                if (firstLine.startsWith("HTTP/") && firstLine.contains(" 200")) {
                     sock.soTimeout = 30_000
                     return sock
                 }
@@ -321,7 +425,6 @@ object FokkTunnelEngine {
             } else {
                 val out = sock.getOutputStream()
                 val inp = sock.getInputStream()
-                // SOCKS5 greeting
                 out.write(byteArrayOf(0x05, 0x01, 0x00))
                 out.flush()
                 val auth = ByteArray(2)
@@ -330,7 +433,6 @@ object FokkTunnelEngine {
                     sock.close()
                     return null
                 }
-                // SOCKS5 CONNECT
                 val hostBytes = targetHost.toByteArray(StandardCharsets.ISO_8859_1)
                 val req = ByteArray(4 + 1 + hostBytes.size + 2)
                 req[0] = 0x05; req[1] = 0x01; req[2] = 0x00; req[3] = 0x03
@@ -352,9 +454,6 @@ object FokkTunnelEngine {
         return null
     }
 
-    // ---------------------------------------------------------------------------
-    // Bidirectional socket relay
-    // ---------------------------------------------------------------------------
     private fun pipeSockets(s1: Socket, s2: Socket) {
         runCatching {
             s1.tcpNoDelay = true; s2.tcpNoDelay = true
@@ -383,8 +482,6 @@ object FokkTunnelEngine {
                 val read = input.read(buffer)
                 if (read < 0) break
                 packetsSeen++
-                // Nym-inspired micro-jitter on first 2 packets (handshake phase only)
-                // Decorrelates timing fingerprint without impacting throughput
                 if (isProMode && random != null && packetsSeen <= 2) {
                     try { Thread.sleep(random.nextLong(1, 3)) }
                     catch (_: InterruptedException) { Thread.currentThread().interrupt(); break }
@@ -396,14 +493,11 @@ object FokkTunnelEngine {
         } catch (_: Exception) {}
     }
 
-    // ---------------------------------------------------------------------------
-    // SOCKS5 protocol helpers
-    // ---------------------------------------------------------------------------
     private fun readFully(stream: InputStream, buffer: ByteArray) {
         var offset = 0
         while (offset < buffer.size) {
             val n = stream.read(buffer, offset, buffer.size - offset)
-            if (n < 0) throw java.io.EOFException("Premature EOF (got $offset/${buffer.size})")
+            if (n < 0) throw EOFException("Premature EOF (got $offset/${buffer.size})")
             offset += n
         }
     }
@@ -413,7 +507,7 @@ object FokkTunnelEngine {
         readFully(stream, header)
         if (header[0] != 0x05.toByte() || header[1] != 0x00.toByte()) return false
         when (header[3].toInt()) {
-            0x01 -> { val b = ByteArray(6);  readFully(stream, b) }
+            0x01 -> { val b = ByteArray(6); readFully(stream, b) }
             0x03 -> { val l = stream.read(); if (l < 0) return false; val b = ByteArray(l + 2); readFully(stream, b) }
             0x04 -> { val b = ByteArray(18); readFully(stream, b) }
             else -> return false

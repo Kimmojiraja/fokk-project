@@ -3283,6 +3283,29 @@ open class MediaHubActivity : AppCompatActivity() {
                     )
                 }
                 setBridgeEnabled(view, pageUrl)
+                // WebRTC IP-Leak Shield: suppress STUN/host IP discovery while Fokk Mesh is active
+                if (view != null && com.adshield.app.engine.VpnEngine.getActiveMode(this@MediaHubActivity) != com.adshield.app.engine.VpnEngine.VpnMode.OFF) {
+                    view.evaluateJavascript(
+                        """
+                        (function(){
+                            if(window.__fokkMeshWebRtcShield) return;
+                            window.__fokkMeshWebRtcShield = true;
+                            try {
+                                var OrigPC = window.RTCPeerConnection || window.webkitRTCPeerConnection;
+                                if (!OrigPC) return;
+                                var GuardedPC = function(cfg, constraints) {
+                                    var safeCfg = Object.assign({}, cfg || {}, { iceServers: [], iceTransportPolicy: 'relay' });
+                                    return new OrigPC(safeCfg, constraints);
+                                };
+                                GuardedPC.prototype = OrigPC.prototype;
+                                window.RTCPeerConnection = GuardedPC;
+                                if (window.webkitRTCPeerConnection) window.webkitRTCPeerConnection = GuardedPC;
+                            } catch(_) {}
+                        })();
+                        """.trimIndent(),
+                        null
+                    )
+                }
                 loadingTab?.filteredRequests = 0
                 loadingTab?.filteredRequestHosts?.clear()
                 loadingTab?.thirdPartyRequests = 0
@@ -3377,6 +3400,29 @@ open class MediaHubActivity : AppCompatActivity() {
                 super.onPageFinished(view, pageUrl)
                 if (view != null && pageUrl != null) pageUrlsByWebView[view] = pageUrl
                 setBridgeEnabled(view, pageUrl)
+                // WebRTC IP-Leak Shield: suppress STUN/host IP discovery while Fokk Mesh is active
+                if (view != null && com.adshield.app.engine.VpnEngine.getActiveMode(this@MediaHubActivity) != com.adshield.app.engine.VpnEngine.VpnMode.OFF) {
+                    view.evaluateJavascript(
+                        """
+                        (function(){
+                            if(window.__fokkMeshWebRtcShield) return;
+                            window.__fokkMeshWebRtcShield = true;
+                            try {
+                                var OrigPC = window.RTCPeerConnection || window.webkitRTCPeerConnection;
+                                if (!OrigPC) return;
+                                var GuardedPC = function(cfg, constraints) {
+                                    var safeCfg = Object.assign({}, cfg || {}, { iceServers: [], iceTransportPolicy: 'relay' });
+                                    return new OrigPC(safeCfg, constraints);
+                                };
+                                GuardedPC.prototype = OrigPC.prototype;
+                                window.RTCPeerConnection = GuardedPC;
+                                if (window.webkitRTCPeerConnection) window.webkitRTCPeerConnection = GuardedPC;
+                            } catch(_) {}
+                        })();
+                        """.trimIndent(),
+                        null
+                    )
+                }
                 if (view == activeWebView) {
                     binding.progressBar.visibility = View.GONE
                     binding.swipeRefreshLayout.isRefreshing = false
@@ -4058,6 +4104,7 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
         applyWebViewVisibility()
+        com.adshield.app.engine.VpnEngine.syncProxyForTabPrivacy(this, current.isPrivate)
         checkAndHibernateBackgroundTabs()
         if (current.shouldLoadOnSelect) {
             current.shouldLoadOnSelect = false
@@ -7053,14 +7100,18 @@ open class MediaHubActivity : AppCompatActivity() {
             val entireDeviceActive = com.adshield.app.engine.VpnEngine.isEntireDeviceEnabled(this)
 
             if (isConnected) {
+                val liveSummary = com.adshield.app.engine.FokkTunnelEngine.getLiveStatusSummary()
+                val aliveNodes = com.adshield.app.engine.FokkNodeProber.lastAliveCount
+                val totalNodes = com.adshield.app.engine.FokkNodeProber.lastTotalCount
                 b.textVpnPowerLabel.text = "Protected"
                 b.textVpnPowerLabel.setTextColor(android.graphics.Color.parseColor("#10B981"))
-                b.textVpnPowerSub.text = if (entireDeviceActive) "Entire device routing active" else "Oblivious Split-Trust active"
+                b.textVpnPowerSub.text = if (entireDeviceActive) "Device-wide Fokk Mesh · $liveSummary" else liveSummary
                 b.vpnRadarRing.backgroundTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#10B981"))
                 b.btnVpnPower.imageTintList = ColorStateList.valueOf(android.graphics.Color.parseColor("#10B981"))
-                b.textVpnStatusPill.text = if (entireDeviceActive) "DEVICE-WIDE MESH ACTIVE" else "IN-BROWSER MESH ACTIVE"
+                b.textVpnStatusPill.text = if (entireDeviceActive) "DEVICE-WIDE MESH ACTIVE" else "FOKK MESH ACTIVE"
                 b.textVpnStatusPill.setTextColor(android.graphics.Color.parseColor("#10B981"))
-                b.textVpnExitIp.text = "Oblivious Tunnel Active"
+                val nodeStat = if (totalNodes > 0) " ($aliveNodes/$totalNodes live)" else ""
+                b.textVpnExitIp.text = "$liveSummary$nodeStat"
                 b.textVpnExitIp.setTextColor(android.graphics.Color.parseColor("#10B981"))
             } else {
                 b.textVpnPowerLabel.text = "Disconnected"
@@ -7151,6 +7202,14 @@ open class MediaHubActivity : AppCompatActivity() {
 
         b.checkPrivateTabsOnly.setOnCheckedChangeListener { _, isChecked ->
             com.adshield.app.engine.VpnEngine.setPrivateOnlyEnabled(this, isChecked)
+            val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
+            if (activeMode != com.adshield.app.engine.VpnEngine.VpnMode.OFF) {
+                if (isChecked) {
+                    com.adshield.app.engine.VpnEngine.syncProxyForTabPrivacy(this, activeTab?.isPrivate == true)
+                } else {
+                    com.adshield.app.engine.VpnEngine.applyVpnMode(this, activeMode)
+                }
+            }
         }
         b.rowPrivateTabsOnly.setOnClickListener {
             b.checkPrivateTabsOnly.isChecked = !b.checkPrivateTabsOnly.isChecked
