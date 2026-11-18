@@ -110,7 +110,16 @@ object NodeRegistry {
             "AUTO" -> all
             else   -> all.filter { it.country == region }
         }
-        val pool = candidates.ifEmpty { all }
+        val pool = candidates.ifEmpty {
+            val cont = continentOf(region)
+            val contPool = when (cont) {
+                "AM" -> all.filter { it.country in AM_COUNTRIES }
+                "EU" -> all.filter { it.country in EU_COUNTRIES }
+                "AS" -> all.filter { it.country in AS_COUNTRIES }
+                else -> all
+            }
+            contPool.ifEmpty { all }
+        }
         return pool.filter { isAlive(it) }.sortedBy { getLatency(it) }.ifEmpty { pool }
     }
 

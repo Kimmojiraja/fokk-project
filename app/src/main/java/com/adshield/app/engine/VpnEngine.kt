@@ -162,6 +162,7 @@ object VpnEngine {
         "HK" -> com.adshield.app.R.drawable.ic_flag_hk
         "IN" -> com.adshield.app.R.drawable.ic_flag_in
         "FR" -> com.adshield.app.R.drawable.ic_flag_fr
+        "SE" -> com.adshield.app.R.drawable.ic_flag_se
         "BR" -> com.adshield.app.R.drawable.ic_flag_br
         "CH" -> com.adshield.app.R.drawable.ic_flag_ch
         "IT" -> com.adshield.app.R.drawable.ic_flag_it

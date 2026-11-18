@@ -58,7 +58,10 @@ object FokkTunnelEngine {
         "KR" to "South Korea",
         "SG" to "Singapore",
         "HK" to "Hong Kong",
-        "IN" to "India"
+        "IN" to "India",
+        "CH" to "Switzerland",
+        "IT" to "Italy",
+        "BR" to "Brazil"
     )
 
     // ---------------------------------------------------------------------------
