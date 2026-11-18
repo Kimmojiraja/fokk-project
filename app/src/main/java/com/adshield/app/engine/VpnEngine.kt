@@ -200,22 +200,18 @@ object VpnEngine {
     val REGION_AMERICAS = listOf(
         "socks5://45.61.188.134:44499",
         "socks5://69.55.49.177:38182",
-        "socks5://159.203.61.169:1080",
-        "socks5://198.199.86.11:1080",
-        "socks5://184.170.251.30:11288"
+        "socks5://184.75.221.82:3118"
     )
 
     val REGION_EUROPE = listOf(
         "socks5://5.75.133.113:10802",
         "socks5://193.218.118.128:1080",
-        "socks5://134.209.29.120:1080",
         "socks5://49.13.22.249:10805",
         "socks5://171.25.158.95:1080"
     )
 
     val REGION_ASIA = listOf(
         "socks5://188.166.178.163:1088",
-        "socks5://128.199.202.122:1080",
         "socks5://101.36.104.239:10808",
         "socks5://123.58.219.171:10808",
         "socks5://183.87.145.150:2080"
@@ -223,7 +219,6 @@ object VpnEngine {
 
     val FAST_GLOBAL_CLUSTER = listOf(
         "socks5://45.61.188.134:44499",
-        "socks5://134.209.29.120:1080",
         "socks5://5.75.133.113:10802",
         "socks5://188.166.178.163:1088",
         "socks5://101.36.104.239:10808"
@@ -536,8 +531,6 @@ object VpnEngine {
                                 if (saved in FokkTunnelEngine.REGION_NODES.keys) saved else "AM"
                             } else "AUTO"
                             FokkMeshVpnService.start(context, activeRegion)
-                        } else {
-                            FokkMeshVpnService.stop(context)
                         }
 
                         onComplete?.invoke(true, routeDesc)

@@ -35,7 +35,6 @@ object FokkTunnelEngine {
     val INGRESS_RELAYS = listOf(
         PrivacyNode("45.61.188.134", 44499, false, "US", "Miami"),
         PrivacyNode("69.55.49.177", 38182, false, "US", "North Bergen"),
-        PrivacyNode("134.209.29.120", 1080, false, "GB", "Slough"),
         PrivacyNode("49.13.22.249", 10802, false, "DE", "Frankfurt"),
         PrivacyNode("188.166.178.163", 1088, false, "SG", "Singapore")
     )
@@ -44,11 +43,9 @@ object FokkTunnelEngine {
     // Americas (10)
     val US_NODES = listOf(
         PrivacyNode("45.61.188.134", 44499, false, "US", "Miami"),
-        PrivacyNode("69.55.49.177", 38182, false, "US", "North Bergen"),
-        PrivacyNode("159.203.61.169", 1080, false, "US", "New York")
+        PrivacyNode("69.55.49.177", 38182, false, "US", "North Bergen")
     )
     val CA_NODES = listOf(
-        PrivacyNode("184.170.251.30", 11288, false, "CA", "Toronto"),
         PrivacyNode("184.75.221.82", 3118, true, "CA", "Montreal")
     )
     val MX_NODES = listOf(PrivacyNode("189.240.60.166", 9050, false, "MX", "Mexico City"))
@@ -62,7 +59,6 @@ object FokkTunnelEngine {
 
     // Europe (18)
     val GB_NODES = listOf(
-        PrivacyNode("134.209.29.120", 1080, false, "GB", "Slough"),
         PrivacyNode("77.91.90.27", 1082, false, "GB", "London")
     )
     val DE_NODES = listOf(
@@ -106,8 +102,7 @@ object FokkTunnelEngine {
         PrivacyNode("211.188.50.146", 80, true, "KR", "Seoul")
     )
     val SG_NODES = listOf(
-        PrivacyNode("188.166.178.163", 1088, false, "SG", "Singapore"),
-        PrivacyNode("128.199.202.122", 1080, false, "SG", "Singapore")
+        PrivacyNode("188.166.178.163", 1088, false, "SG", "Singapore")
     )
     val HK_NODES = listOf(
         PrivacyNode("123.58.219.171", 10808, false, "HK", "Hong Kong"),
