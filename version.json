@@ -1,8 +1,8 @@
 {
-  "versionCode": 271,
-  "versionName": "2.7.1",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.7.1/app-debug.apk",
-  "changelog": "- Bottom-Pinned Command Card: Anchored the Ask AI command card to the bottom of the screen with automatic keyboard insets adjustment so the keyboard never obscures input.\n- Action Row Redesign: Removed redundant plus and verify pills, positioned the circular voice input button on the left, and added the enter/send button on the right.\n- Independent Chat Scroll View: Added dedicated scroll container for Ask AI responses ensuring seamless scrolling above the pinned bottom command card.\n- Build Fixes: Resolved Kotlin destructuring component count and forward-reference function calls."
+  "versionCode": 272,
+  "versionName": "2.7.2",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.7.2/app-debug.apk",
+  "changelog": "- Device-Wide Fokk Mesh: Added system-wide routing support via VpnService, routing all device apps and background traffic through the encrypted Fokk Mesh oblivious network.\n- Device Mesh Toggle: Added 'Fokk Mesh for entire device' option in the Fokk Mesh control sheet.\n- Persistent Notification and 1-Tap Disconnect: Added persistent foreground notification displaying active location with a single-tap Disconnect action that instantly reverts all traffic to direct.\n- Node Speed and Connection Stability: Overhauled connection timeouts, socket handshakes, and buffer throughput in FokkTunnelEngine to eliminate page loading stalls across all global nodes."
 }
 
 
