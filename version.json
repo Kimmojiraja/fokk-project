@@ -1,6 +1,6 @@
 {
-  "versionCode": 292,
-  "versionName": "2.9.2",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.2/app-debug.apk",
-  "changelog": "- Fokk Home-Base (Personal PC Relay): Turn your Desktop into your phone's personal private relay via QR code pairing. Route phone traffic through your home PC for an unbannable, dedicated residential IP.\n- Fokk Oblivious Edge Relay (RFC 9458): Global 300+ city edge worker relay running on Cloudflare Workers with split-trust OHTTP (<40ms latency, zero logging).\n- Fokk Smart-Cloak (Free · Native Speed): Full-speed encrypted DoH + ByeDPI-style local TLS SNI fragmentation.\n- Updated Fokk website & documentation."
+  "versionCode": 293,
+  "versionName": "2.9.3",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.3/app-debug.apk",
+  "changelog": "- Entire Device Protection for Android 10+: Added system-wide HTTP/HTTPS proxy and DNS tunnel via VpnService. Other apps (Chrome, Instagram, YouTube, news, and streaming apps) route through Fokk Mesh / Smart-Cloak without breaking background connectivity.\n- Fokk Home-Base (Personal PC Relay) and Oblivious Edge Relay (RFC 9458).\n- Fokk Smart-Cloak (Free · Native Speed DoH + SNI Cloaking)."
 }

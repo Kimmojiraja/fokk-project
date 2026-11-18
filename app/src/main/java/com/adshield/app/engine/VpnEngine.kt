@@ -51,24 +51,30 @@ object VpnEngine {
     }
 
     fun isEntireDeviceEnabled(context: Context): Boolean {
-        // Device-wide 0.0.0.0/0 TUN is disabled until native Layer-3 tun2socks is bundled,
-        // preventing non-HTTP apps (WhatsApp, banking, games, VoIP) from losing connectivity.
-        return false
+        val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_ENTIRE_DEVICE, false)
     }
 
     fun setEntireDeviceEnabled(context: Context, enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_ENTIRE_DEVICE, false).apply()
-        runCatching { FokkMeshVpnService.stop(context) }
+        prefs.edit().putBoolean(KEY_ENTIRE_DEVICE, enabled).apply()
+        if (enabled) {
+            val activeMode = getActiveMode(context)
+            val custom = getCustomProxy(context)
+            val region = when (activeMode) {
+                VpnMode.SMART_CLOAK -> "SMART_CLOAK"
+                VpnMode.CUSTOM -> if (custom in FokkTunnelEngine.REGION_NODES.keys) custom else "AUTO"
+                else -> "AUTO"
+            }
+            FokkMeshVpnService.start(context, region)
+        } else {
+            runCatching { FokkMeshVpnService.stop(context) }
+        }
     }
 
     fun onDeviceMeshStopped(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_VPN, Context.MODE_PRIVATE)
-        prefs.edit().putString(KEY_VPN_MODE, VpnMode.OFF.id).apply()
-        runCatching { FokkTunnelEngine.stop() }
-        runCatching {
-            ProxyController.getInstance().clearProxyOverride(executor) {}
-        }
+        prefs.edit().putBoolean(KEY_ENTIRE_DEVICE, false).apply()
     }
 
     fun isBypassSearchEnabled(context: Context): Boolean {
