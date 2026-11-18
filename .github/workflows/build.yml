@@ -14,6 +14,7 @@ on:
       - 'build.gradle.kts'
       - 'gradle/**'
       - 'version.json'
+      - '.github/workflows/build.yml'
   workflow_dispatch:
 
 jobs:
@@ -74,14 +75,46 @@ jobs:
         run: |
           VERSION=$(grep versionName app/build.gradle.kts | head -n 1 | awk -F'"' '{print $2}')
           TAG="v$VERSION"
-          echo "Deploying release for $TAG"
-          EXTRA_FLAG=""
+          IS_MAIN=false
+          EXTRA_FLAG="--prerelease"
           if [ "${{ github.ref_name }}" = "main" ]; then
+            IS_MAIN=true
             EXTRA_FLAG="--latest"
-          else
-            EXTRA_FLAG="--prerelease"
           fi
-          gh release create "$TAG" app/build/outputs/apk/debug/*.apk \
-            --title "Fokk Shield Android $TAG" \
-            --notes-file version.json \
-            $EXTRA_FLAG || gh release upload "$TAG" app/build/outputs/apk/debug/*.apk --clobber
+          echo "Deploying release $TAG (branch=${{ github.ref_name }}, is_main=$IS_MAIN)"
+
+          deploy_release() {
+            if gh release view "$TAG" >/dev/null 2>&1; then
+              echo "Release $TAG exists — uploading updated APK and syncing metadata..."
+              gh release upload "$TAG" app/build/outputs/apk/debug/*.apk --clobber
+              if [ "$IS_MAIN" = "true" ]; then
+                gh release edit "$TAG" \
+                  --title "Fokk Shield Android $TAG" \
+                  --notes-file version.json \
+                  --prerelease=false \
+                  --latest
+              else
+                gh release edit "$TAG" \
+                  --title "Fokk Shield Android $TAG" \
+                  --notes-file version.json
+              fi
+            else
+              echo "Creating new release $TAG..."
+              gh release create "$TAG" app/build/outputs/apk/debug/*.apk \
+                --title "Fokk Shield Android $TAG" \
+                --notes-file version.json \
+                $EXTRA_FLAG
+            fi
+          }
+
+          # Retry up to 3 times on transient GitHub API 502/503 blips
+          for attempt in 1 2 3; do
+            if deploy_release; then
+              echo "Release $TAG deployed successfully on attempt $attempt."
+              exit 0
+            fi
+            echo "Release attempt $attempt failed — retrying in 8s..."
+            sleep 8
+          done
+          echo "ERROR: Failed to deploy release $TAG after 3 attempts."
+          exit 1
