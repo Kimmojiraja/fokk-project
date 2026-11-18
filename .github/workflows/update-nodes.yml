@@ -44,15 +44,11 @@ jobs:
           if ! git diff --staged --quiet; then
             REMOVED=$(git diff --staged nodes_manifest.json | grep '^-.*"host"' | wc -l || echo 0)
             ADDED=$(git diff --staged nodes_manifest.json | grep '^+.*"host"' | wc -l || echo 0)
-            git commit -m "chore(sentinel): update verified node manifest [skip ci]
-
-Removed: $REMOVED dead/MITM nodes
-Added:   $ADDED replacement verified nodes
-Scan time: $(date -u '+%Y-%m-%d %H:%M UTC')"
+            git commit -m "chore(sentinel): update verified node manifest [skip ci]"
             git push
             echo "Manifest updated and pushed."
           else
-            echo "All nodes healthy — no manifest changes needed."
+            echo "All nodes healthy - no manifest changes needed."
           fi
 
       - name: Fail build if node count critically low
