@@ -65,12 +65,12 @@
                 android:contentDescription="Close" />
         </RelativeLayout>
 
-        <!-- SECTION 1: PRIVACY MESH GATEWAYS -->
+        <!-- SECTION 1: OPTIMAL ROUTING (FREE) -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:text="PRIVACY MESH GATEWAYS"
+            android:text="OPTIMAL ROUTING (FREE)"
             android:textColor="#64748B"
             android:textSize="11.5sp"
             android:textStyle="bold"
@@ -89,7 +89,8 @@
             <ImageView
                 android:layout_width="36dp"
                 android:layout_height="36dp"
-                android:src="@drawable/ic_flag_optimal" />
+                android:src="@drawable/ic_flag_optimal"
+                android:contentDescription="Optimal Location" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -139,7 +140,8 @@
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:src="@drawable/ic_check"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:contentDescription="Selected" />
         </LinearLayout>
 
         <View
@@ -147,213 +149,23 @@
             android:layout_height="1dp"
             android:background="#1E293B" />
 
-        <!-- 2. Americas -->
+        <!-- SECTION 2: VERIFIED PRIVACY COUNTRIES (PRO) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="8dp"
+            android:text="VERIFIED PRIVACY COUNTRIES"
+            android:textColor="#64748B"
+            android:textSize="11.5sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08" />
+
         <LinearLayout
-            android:id="@+id/rowLocationAm"
+            android:id="@+id/countryLocationsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="12dp">
-
-            <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_flag_us" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Americas Gateway"
-                        android:textColor="#F8FAFC"
-                        android:textSize="14.5sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_stat_chip"
-                        android:paddingHorizontal="6dp"
-                        android:paddingVertical="2dp"
-                        android:text="PRO"
-                        android:textColor="#38BDF8"
-                        android:textSize="9.5sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Oblivious ingress • North America backbone"
-                    android:textColor="#94A3B8"
-                    android:textSize="11.5sp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/checkLocationAm"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_check"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#1E293B" />
-
-        <!-- 3. Europe -->
-        <LinearLayout
-            android:id="@+id/rowLocationEu"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="12dp">
-
-            <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_flag_gb" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Europe Gateway"
-                        android:textColor="#F8FAFC"
-                        android:textSize="14.5sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_stat_chip"
-                        android:paddingHorizontal="6dp"
-                        android:paddingVertical="2dp"
-                        android:text="PRO"
-                        android:textColor="#38BDF8"
-                        android:textSize="9.5sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Oblivious ingress • European backbone"
-                    android:textColor="#94A3B8"
-                    android:textSize="11.5sp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/checkLocationEu"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_check"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#1E293B" />
-
-        <!-- 4. Asia & Pacific -->
-        <LinearLayout
-            android:id="@+id/rowLocationAs"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingVertical="12dp">
-
-            <ImageView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_flag_jp" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Asia &amp; Pacific Gateway"
-                        android:textColor="#F8FAFC"
-                        android:textSize="14.5sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_stat_chip"
-                        android:paddingHorizontal="6dp"
-                        android:paddingVertical="2dp"
-                        android:text="PRO"
-                        android:textColor="#38BDF8"
-                        android:textSize="9.5sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Oblivious ingress • Asia-Pacific backbone"
-                    android:textColor="#94A3B8"
-                    android:textSize="11.5sp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/checkLocationAs"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_check"
-                android:visibility="gone" />
-        </LinearLayout>
+            android:orientation="vertical" />
 
         <!-- SECTION 2: ADVANCED & ENTERPRISE -->
         <TextView

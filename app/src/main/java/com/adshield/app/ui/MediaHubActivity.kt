@@ -7161,31 +7161,37 @@ open class MediaHubActivity : AppCompatActivity() {
         val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
         val activeCode = if (activeMode == com.adshield.app.engine.VpnEngine.VpnMode.FAST) "AUTO" else currentSaved
 
-        val checkMap = mapOf(
-            "AUTO" to b.checkLocationAuto,
-            "AM" to b.checkLocationAm,
-            "EU" to b.checkLocationEu,
-            "AS" to b.checkLocationAs
+        data class MeshCountryItem(
+            val code: String,
+            val name: String,
+            val subtitle: String,
+            val flagRes: Int
         )
 
-        checkMap.values.forEach { it.visibility = View.GONE }
-        b.checkLocationCustom.visibility = View.GONE
-
-        if (activeCode in checkMap) {
-            checkMap[activeCode]?.visibility = View.VISIBLE
-        } else if (activeCode.isNotBlank()) {
-            b.checkLocationCustom.visibility = View.VISIBLE
-            b.textCustomServerSub.text = "Active: $activeCode"
-        } else {
-            b.checkLocationAuto.visibility = View.VISIBLE
-        }
+        val countries = listOf(
+            MeshCountryItem("US", "United States", "Miami & North Bergen • Dual-Hop Ingress", com.adshield.app.R.drawable.ic_flag_us),
+            MeshCountryItem("GB", "United Kingdom", "London • Oblivious dual-hop backbone", com.adshield.app.R.drawable.ic_flag_gb),
+            MeshCountryItem("DE", "Germany", "Frankfurt & Falkenstein • Low-latency core", com.adshield.app.R.drawable.ic_flag_de),
+            MeshCountryItem("CA", "Canada", "Montreal • North America privacy relay", com.adshield.app.R.drawable.ic_flag_ca),
+            MeshCountryItem("NL", "Netherlands", "Amsterdam • High-throughput privacy cluster", com.adshield.app.R.drawable.ic_flag_nl),
+            MeshCountryItem("FR", "France", "Paris • European oblivious gateway", com.adshield.app.R.drawable.ic_flag_fr),
+            MeshCountryItem("SE", "Sweden", "Stockholm • Strict privacy jurisdiction", com.adshield.app.R.drawable.ic_flag_se),
+            MeshCountryItem("SG", "Singapore", "Singapore • Asia-Pacific high-speed hub", com.adshield.app.R.drawable.ic_flag_sg),
+            MeshCountryItem("IN", "India", "Mumbai • South Asia low-latency node", com.adshield.app.R.drawable.ic_flag_in),
+            MeshCountryItem("JP", "Japan", "Tokyo • East Asia oblivious gateway", com.adshield.app.R.drawable.ic_flag_jp),
+            MeshCountryItem("KR", "South Korea", "Suwon • Low-latency Pacific node", com.adshield.app.R.drawable.ic_flag_kr),
+            MeshCountryItem("HK", "Hong Kong", "Hong Kong • East Asia fast transit", com.adshield.app.R.drawable.ic_flag_hk),
+            MeshCountryItem("CH", "Switzerland", "Zurich • Alpine privacy routing", com.adshield.app.R.drawable.ic_flag_ch),
+            MeshCountryItem("IT", "Italy", "Milan • Southern Europe relay", com.adshield.app.R.drawable.ic_flag_it),
+            MeshCountryItem("BR", "Brazil", "Sao Paulo • South America privacy cluster", com.adshield.app.R.drawable.ic_flag_br)
+        )
 
         fun select(code: String) {
             val isPro = com.adshield.app.engine.VpnEngine.isProModeEnabled(this)
             if (code != "AUTO" && !isPro) {
                 sheetDialog.dismiss()
                 showVpnProDialog()
-                Toast.makeText(this, "Regional Gateway choice is a Fokk Pro feature. Optimal Location is free.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Dedicated Country routing is a Fokk Pro feature. Optimal Location is free.", Toast.LENGTH_LONG).show()
                 return
             }
             sheetDialog.dismiss()
@@ -7193,12 +7199,41 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         b.btnCloseLocationSheet.setOnClickListener { sheetDialog.dismiss() }
-
-        // Privacy Mesh regional gateways
         b.rowLocationAuto.setOnClickListener { select("AUTO") }
-        b.rowLocationAm.setOnClickListener { select("AM") }
-        b.rowLocationEu.setOnClickListener { select("EU") }
-        b.rowLocationAs.setOnClickListener { select("AS") }
+
+        val countryCheckViews = mutableMapOf<String, View>()
+        val inflater = layoutInflater
+
+        for (country in countries) {
+            val itemBinding = com.adshield.app.databinding.ItemVpnLocationBinding.inflate(inflater, b.countryLocationsContainer, false)
+            itemBinding.imgFlag.setImageResource(country.flagRes)
+            itemBinding.textTitle.text = country.name
+            itemBinding.textSubtitle.text = country.subtitle
+            itemBinding.badgePro.visibility = View.VISIBLE
+            itemBinding.rowLocation.setOnClickListener { select(country.code) }
+            countryCheckViews[country.code] = itemBinding.imgCheck
+            b.countryLocationsContainer.addView(itemBinding.root)
+        }
+
+        b.checkLocationAuto.visibility = View.GONE
+        b.checkLocationCustom.visibility = View.GONE
+        countryCheckViews.values.forEach { it.visibility = View.GONE }
+
+        val normalizedActiveCode = when (activeCode) {
+            "AM" -> "US"
+            "EU" -> "DE"
+            "AS" -> "SG"
+            else -> activeCode
+        }
+
+        if (normalizedActiveCode == "AUTO" || normalizedActiveCode.isBlank()) {
+            b.checkLocationAuto.visibility = View.VISIBLE
+        } else if (normalizedActiveCode in countryCheckViews) {
+            countryCheckViews[normalizedActiveCode]?.visibility = View.VISIBLE
+        } else {
+            b.checkLocationCustom.visibility = View.VISIBLE
+            b.textCustomServerSub.text = "Active: $activeCode"
+        }
 
         b.rowLocationCustom.setOnClickListener {
             val isPro = com.adshield.app.engine.VpnEngine.isProModeEnabled(this)
