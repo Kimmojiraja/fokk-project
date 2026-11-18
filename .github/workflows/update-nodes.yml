@@ -1,42 +1,65 @@
-name: Fokk Sentinel Node Scanner
+name: Fokk Mesh Sentinel — Node Health & Manifest Update
 
+# Runs every 6 hours to catch dead nodes fast.
+# Also runs on every push to main (so manual node additions are tested immediately).
 on:
   schedule:
-    - cron: '0 2 * * *'  # Runs daily at 02:00 UTC
-  workflow_dispatch:
+    - cron: '0 */6 * * *'   # Every 6 hours: 00:00, 06:00, 12:00, 18:00 UTC
+  push:
+    branches: [main, master, feature/fokk-ai-truth-engine-hybrid-and-logo]
+    paths:
+      - 'nodes_manifest.json'
+      - 'scripts/sentinel_node_scanner.py'
+  workflow_dispatch:          # Manual trigger from GitHub UI
 
 jobs:
-  update-nodes:
+  node-health-check:
+    name: Scan, Verify & Update Node Manifest
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install PySocks
-
-      - name: Scan & Verify Privacy Nodes
+      - name: Run Fokk Sentinel Node Scanner
+        id: scan
         run: |
           python3 scripts/sentinel_node_scanner.py
+        # Script writes to $GITHUB_STEP_SUMMARY automatically
 
-      - name: Commit & Push Updated Nodes
+      - name: Commit updated manifests
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add nodes.json
+          git config user.name "fokk-sentinel[bot]"
+          git config user.email "sentinel@fokk.app"
+          git add nodes_manifest.json nodes.json
           if ! git diff --staged --quiet; then
-            git commit -m "chore(sentinel): auto-update verified privacy nodes [skip ci]"
+            REMOVED=$(git diff --staged nodes_manifest.json | grep '^-.*"host"' | wc -l || echo 0)
+            ADDED=$(git diff --staged nodes_manifest.json | grep '^+.*"host"' | wc -l || echo 0)
+            git commit -m "chore(sentinel): update verified node manifest [skip ci]
+
+Removed: $REMOVED dead/MITM nodes
+Added:   $ADDED replacement verified nodes
+Scan time: $(date -u '+%Y-%m-%d %H:%M UTC')"
             git push
+            echo "Manifest updated and pushed."
           else
-            echo "No node changes detected; all nodes healthy."
+            echo "All nodes healthy — no manifest changes needed."
+          fi
+
+      - name: Fail build if node count critically low
+        run: |
+          COUNT=$(python3 -c "import json; m=json.load(open('nodes_manifest.json')); print(len(m.get('nodes', [])))")
+          echo "Verified node count: $COUNT"
+          if [ "$COUNT" -lt 5 ]; then
+            echo "CRITICAL: Only $COUNT nodes verified. Minimum is 5."
+            exit 1
           fi

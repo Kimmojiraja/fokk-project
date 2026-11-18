@@ -196,55 +196,17 @@ object VpnEngine {
         VpnMode.values().firstOrNull { it.id == id } ?: VpnMode.OFF
     }.getOrDefault(VpnMode.OFF)
 
-    // Curated high-performance regional privacy clusters
-    val REGION_AMERICAS = listOf(
-        "socks5://45.61.188.134:44499",
-        "socks5://69.55.49.177:38182",
-        "socks5://184.75.221.82:3118"
-    )
-
-    val REGION_EUROPE = listOf(
-        "socks5://5.75.133.113:10802",
-        "socks5://193.218.118.128:1080",
-        "socks5://49.13.22.249:10805",
-        "socks5://171.25.158.95:1080"
-    )
-
-    val REGION_ASIA = listOf(
-        "socks5://188.166.178.163:1088",
-        "socks5://101.36.104.239:10808",
-        "socks5://123.58.219.171:10808",
-        "socks5://183.87.145.150:2080"
-    )
-
-    val FAST_GLOBAL_CLUSTER = listOf(
-        "socks5://45.61.188.134:44499",
-        "socks5://5.75.133.113:10802",
-        "socks5://188.166.178.163:1088",
-        "socks5://101.36.104.239:10808"
-    )
-
+    // ---------------------------------------------------------------------------
+    // Regional node access — delegated to NodeRegistry (signed manifest + certified builtin)
+    // ---------------------------------------------------------------------------
     fun getFastPrivacyEndpoint(region: String? = null): String {
-        val pool = when (region) {
-            "EU" -> REGION_EUROPE
-            "AS" -> REGION_ASIA
-            "AM" -> REGION_AMERICAS
-            else -> FAST_GLOBAL_CLUSTER
-        }
-        for (node in pool) {
-            try {
-                val uri = URI(node)
-                val host = uri.host ?: continue
-                val port = uri.port
-                if (checkSocketOpen(host, port, 300)) {
-                    return node
-                }
-            } catch (_: Exception) {}
-        }
-        return pool.first()
+        val nodes = NodeRegistry.getNodesForRegion(region ?: "AUTO")
+        val best = nodes.firstOrNull() ?: NodeRegistry.BUILTIN_INGRESS.first()
+        val scheme = if (best.isHttpConnect) "http" else "socks5"
+        return "$scheme://${best.host}:${best.port}"
     }
 
-    // Compatibility aliases mapping to fast privacy routing
+    // Compatibility aliases
     fun isTorListening(): Boolean = true
     fun getTorPort(): Int = 1080
     fun getTorEndpoint(): String = getFastPrivacyEndpoint()
@@ -253,6 +215,7 @@ object VpnEngine {
     fun launchOrbot(context: Context): Boolean = false
     fun startEmbeddedTor(context: Context) {}
     fun stopEmbeddedTor(context: Context) {}
+
 
     private fun checkSocketOpen(host: String, port: Int, timeoutMs: Int = 400): Boolean = try {
         Socket().use {
@@ -485,8 +448,14 @@ object VpnEngine {
                         if (saved in FokkTunnelEngine.REGION_NODES.keys) saved else "AM"
                     } else "AUTO"
 
-                    val isPro = isProModeEnabled(context)
-                    val port = FokkTunnelEngine.start(region, isPro)
+                    FokkTunnelEngine.isProMode = isProModeEnabled(context)
+                    FokkTunnelEngine.start(context, region)
+                    // Wait up to 2 s for the tunnel to bind a port
+                    val deadline = System.currentTimeMillis() + 2_000
+                    while (FokkTunnelEngine.localPort <= 0 && System.currentTimeMillis() < deadline) {
+                        Thread.sleep(50)
+                    }
+                    val port = FokkTunnelEngine.localPort
                     if (port <= 0) {
                         onComplete?.invoke(false, "Could not start Fokk Privacy Tunnel.")
                         return@execute
@@ -494,9 +463,9 @@ object VpnEngine {
                     endpoint = "http://127.0.0.1:$port"
                     val regionLabel = getRegionDisplayName(region)
                     routeDesc = if (mode == VpnMode.CUSTOM) {
-                        "Connected to Fokk Oblivious Gateway ($regionLabel) via Dual-Hop Split-Trust. Identity and traffic cryptographically separated."
+                        "Connected to Fokk Oblivious Gateway ($regionLabel) via Pre-Warmed Circuit Pool. Identity and traffic cryptographically separated."
                     } else {
-                        "Connected to Fokk Oblivious Network ($regionLabel) via Dual-Hop Split-Trust. Identity and traffic cryptographically separated."
+                        "Connected to Fokk Oblivious Network ($regionLabel) via Pre-Warmed Circuit Pool. Identity and traffic cryptographically separated."
                     }
                 }
 

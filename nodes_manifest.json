@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "issued_at": "2026-11-18T10:00:00Z",
+  "expires_at": "2026-12-18T10:00:00Z",
+  "nodes": [
+    {"host": "45.61.188.134",   "port": 44499, "country": "US", "city": "Miami",        "type": "socks5", "tier": "speed",    "ingress_relay": true,  "verified": true},
+    {"host": "69.55.49.177",    "port": 38182, "country": "US", "city": "North Bergen", "type": "socks5", "tier": "speed",    "ingress_relay": true,  "verified": true},
+    {"host": "184.75.221.82",   "port": 3118,  "country": "CA", "city": "Montreal",     "type": "http",   "tier": "balanced", "ingress_relay": false, "verified": true},
+    {"host": "49.13.22.249",    "port": 10805, "country": "DE", "city": "Frankfurt",    "type": "socks5", "tier": "speed",    "ingress_relay": false, "verified": true},
+    {"host": "49.13.22.249",    "port": 10802, "country": "DE", "city": "Frankfurt",    "type": "socks5", "tier": "speed",    "ingress_relay": true,  "verified": true},
+    {"host": "5.75.133.113",    "port": 10802, "country": "DE", "city": "Frankfurt",    "type": "socks5", "tier": "speed",    "ingress_relay": false, "verified": true},
+    {"host": "5.75.133.113",    "port": 10807, "country": "DE", "city": "Falkenstein",  "type": "socks5", "tier": "speed",    "ingress_relay": false, "verified": true},
+    {"host": "171.25.158.95",   "port": 1080,  "country": "SE", "city": "Stockholm",    "type": "socks5", "tier": "privacy",  "ingress_relay": false, "verified": true},
+    {"host": "193.218.118.128", "port": 1080,  "country": "NL", "city": "Amsterdam",    "type": "socks5", "tier": "balanced", "ingress_relay": false, "verified": true},
+    {"host": "51.159.115.233",  "port": 1080,  "country": "FR", "city": "Paris",        "type": "socks5", "tier": "balanced", "ingress_relay": false, "verified": true},
+    {"host": "77.91.90.27",     "port": 1082,  "country": "GB", "city": "London",       "type": "socks5", "tier": "balanced", "ingress_relay": false, "verified": true},
+    {"host": "188.166.178.163", "port": 1088,  "country": "SG", "city": "Singapore",    "type": "socks5", "tier": "speed",    "ingress_relay": true,  "verified": true},
+    {"host": "183.87.145.150",  "port": 2080,  "country": "IN", "city": "Mumbai",       "type": "socks5", "tier": "balanced", "ingress_relay": false, "verified": true},
+    {"host": "101.36.104.239",  "port": 10808, "country": "JP", "city": "Tokyo",        "type": "socks5", "tier": "speed",    "ingress_relay": false, "verified": true},
+    {"host": "123.58.219.171",  "port": 10808, "country": "HK", "city": "Hong Kong",    "type": "socks5", "tier": "speed",    "ingress_relay": false, "verified": true},
+    {"host": "121.169.46.116",  "port": 1090,  "country": "KR", "city": "Suwon",        "type": "socks5", "tier": "balanced", "ingress_relay": false, "verified": true}
+  ],
+  "signature": "PLACEHOLDER_SIGN_WITH_ED25519_PRIVATE_KEY_BEFORE_PRODUCTION"
+}
