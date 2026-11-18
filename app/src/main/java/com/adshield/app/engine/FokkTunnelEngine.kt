@@ -86,10 +86,11 @@ object FokkTunnelEngine {
     }
 
     fun init(context: Context) {
-        FokkNodeManifest.refreshIfNeeded()
+        FokkNodeManifest.init(context)
     }
 
     fun start(context: Context, region: String = "AUTO") {
+        FokkNodeManifest.init(context)
         startInternal(region)
     }
 
@@ -119,7 +120,7 @@ object FokkTunnelEngine {
         activeIngressNode = null
         activeEgressNode = null
 
-        FokkNodeManifest.refreshIfNeeded()
+        FokkNodeManifest.ensureLoadedBlocking(3_500L)
         FokkNodeProber.start()
         FokkCircuitManager.start(region)
 

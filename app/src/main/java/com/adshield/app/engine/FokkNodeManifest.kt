@@ -1,5 +1,7 @@
 package com.adshield.app.engine
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.util.Base64
 import android.util.Log
 import org.json.JSONArray
@@ -10,41 +12,40 @@ import java.net.URL
 import java.security.KeyFactory
 import java.security.Signature
 import java.security.spec.X509EncodedKeySpec
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
 
 /**
- * Fokk Mesh 3.0 Node Manifest — downloads, validates, and verifies the live
- * relay manifest published every 6 hours by Fokk Mesh Sentinel.
+ * Fokk Mesh 3.0 Live Node Manifest — ZERO hardcoded relay IPs in the binary.
  *
- * Security & Reliability Guarantees:
- *   - Primary feed: dedicated `mesh-manifest` live branch + CDN release asset
- *     (never blocked by `main` PR branch protection).
- *   - 3-hour cache TTL + on-demand `forceRefresh()` self-healing when nodes fail.
- *   - Strict bogon/SSRF filter: rejects any loopback, RFC1918 private, link-local,
- *     or metadata IP so a tampered manifest can never pivot into the device/LAN.
- *   - Fail-closed Ed25519 signature verification once a production public key is set
- *     (never silently catches exceptions and returns true).
+ * Architecture:
+ *   - Loads the last verified manifest from local SharedPreferences disk cache immediately on boot.
+ *   - Refreshes automatically from the 6-hour Sentinel feeds (`mesh-manifest` live branch,
+ *     `mesh-manifest-live` CDN release, and `main` fallback) every 3 hours or on self-healing trigger.
+ *   - Rejects any private/loopback/link-local/CGNAT/reserved IP (bogon & SSRF guard).
+ *   - Verifies a deterministic cross-platform canonical payload via Ed25519 (strictly fail-closed
+ *     once a production public key is provisioned).
  */
 object FokkNodeManifest {
     private const val TAG = "FokkNodeManifest"
+    private const val PREFS_CACHE = "fokk_mesh_manifest_cache"
+    private const val KEY_CACHED_RAW_JSON = "cached_manifest_raw_json"
 
-    // Ordered manifest feeds: live Sentinel branch -> live release CDN -> main fallback
     private val MANIFEST_URLS = listOf(
         "https://raw.githubusercontent.com/Kimmojiraja/fokk-project/mesh-manifest/nodes_manifest.json",
         "https://github.com/Kimmojiraja/fokk-project/releases/download/mesh-manifest-live/nodes_manifest.json",
         "https://raw.githubusercontent.com/Kimmojiraja/fokk-project/main/nodes_manifest.json"
     )
 
-    // 3-hour TTL aligned with 6-hour Sentinel refresh cadence
     private const val CACHE_TTL_MS = 3 * 60 * 60 * 1000L
-
-    // Cooldown for forced self-healing refreshes (prevent hammer loops)
     private const val FORCE_REFRESH_COOLDOWN_MS = 60_000L
 
-    // Replace with real Base64 DER-encoded Ed25519 public key once FOKK_MESH_ED25519_PRIVKEY is added to CI secrets
+    // Generate production keypair via: python3 scripts/sentinel_node_scanner.py --gen-key
+    // Store private key in GitHub Secret FOKK_MESH_ED25519_PRIVKEY and paste DER public key below.
     private const val SIGNING_PUBLIC_KEY_B64 =
         "MCowBQYDK2VwAyEAFokkMeshPublicKeyPlaceholder000000000000000000000000="
 
@@ -52,30 +53,57 @@ object FokkNodeManifest {
         !SIGNING_PUBLIC_KEY_B64.contains("Placeholder", ignoreCase = true)
 
     private val lock = ReentrantReadWriteLock()
+    private var appPrefs: SharedPreferences? = null
     private var cachedNodes: List<FokkTunnelEngine.PrivacyNode> = emptyList()
     private var cachedIngress: List<FokkTunnelEngine.PrivacyNode> = emptyList()
     private val cacheExpiry = AtomicLong(0L)
     private val lastForceRefresh = AtomicLong(0L)
+
     @Volatile var lastIssuedAt: String = ""
         private set
     @Volatile var lastVerifiedSigned: Boolean = false
         private set
+
     private var fetchInProgress = false
+    @Volatile private var activeFetchLatch: CountDownLatch? = null
+
+    fun init(context: Context) {
+        if (appPrefs == null) {
+            appPrefs = context.applicationContext.getSharedPreferences(PREFS_CACHE, Context.MODE_PRIVATE)
+            // Warm from last verified on-disk manifest immediately (zero hardcoded IPs)
+            val savedRaw = appPrefs?.getString(KEY_CACHED_RAW_JSON, null)
+            if (!savedRaw.isNullOrBlank() && cachedNodes.isEmpty()) {
+                if (parseAndVerify(savedRaw, persistToDisk = false)) {
+                    // Keep expiry at 0 so a fresh background sync still runs on startup
+                    cacheExpiry.set(0L)
+                    Log.i(TAG, "Restored ${cachedNodes.size} cached relays from local disk")
+                }
+            }
+        }
+        refreshIfNeeded()
+    }
 
     fun getNodes(): List<FokkTunnelEngine.PrivacyNode> = lock.read { cachedNodes }
     fun getIngressNodes(): List<FokkTunnelEngine.PrivacyNode> = lock.read { cachedIngress }
 
-    /**
-     * Fetch and verify the manifest in the background if TTL has expired.
-     */
     fun refreshIfNeeded() {
         if (System.currentTimeMillis() < cacheExpiry.get() && cachedNodes.isNotEmpty()) return
         triggerFetchAsync()
     }
 
     /**
-     * Immediate self-healing refresh triggered when runtime nodes are unreachable.
+     * On first-ever launch (before any disk cache exists), waits briefly for the
+     * live Sentinel manifest fetch so circuits have live relays right away.
      */
+    fun ensureLoadedBlocking(timeoutMs: Long = 3_500L) {
+        if (cachedNodes.isNotEmpty()) {
+            refreshIfNeeded()
+            return
+        }
+        val latch = triggerFetchAsync()
+        runCatching { latch?.await(timeoutMs, TimeUnit.MILLISECONDS) }
+    }
+
     fun forceRefresh() {
         val now = System.currentTimeMillis()
         if (now - lastForceRefresh.get() < FORCE_REFRESH_COOLDOWN_MS) return
@@ -84,21 +112,29 @@ object FokkNodeManifest {
         triggerFetchAsync()
     }
 
-    private fun triggerFetchAsync() {
+    private fun triggerFetchAsync(): CountDownLatch? {
+        val latch: CountDownLatch
         synchronized(this) {
-            if (fetchInProgress) return
+            if (fetchInProgress) return activeFetchLatch
             fetchInProgress = true
+            latch = CountDownLatch(1)
+            activeFetchLatch = latch
         }
         Thread({
             try {
                 fetchAndApply()
             } finally {
-                synchronized(this) { fetchInProgress = false }
+                synchronized(this) {
+                    fetchInProgress = false
+                    activeFetchLatch = null
+                }
+                latch.countDown()
             }
         }, "fokk-manifest-fetch").apply {
             isDaemon = true
             start()
         }
+        return latch
     }
 
     private fun fetchAndApply() {
@@ -117,8 +153,8 @@ object FokkNodeManifest {
                     continue
                 }
                 val raw = conn.inputStream.bufferedReader().use { it.readText() }
-                if (parseAndVerify(raw)) {
-                    Log.i(TAG, "Loaded verified Fokk Mesh manifest from $urlStr")
+                if (parseAndVerify(raw, persistToDisk = true)) {
+                    Log.i(TAG, "Loaded live Fokk Mesh manifest from $urlStr")
                     return
                 }
             } catch (e: Exception) {
@@ -130,7 +166,7 @@ object FokkNodeManifest {
     }
 
     /**
-     * Rejects loopback, RFC1918 private, link-local, multicast, or cloud-metadata IPs.
+     * Rejects loopback, RFC1918 private, link-local, CGNAT, multicast, or metadata IPs.
      */
     fun isSafePublicRelayHost(host: String): Boolean {
         val clean = host.trim().lowercase()
@@ -143,7 +179,6 @@ object FokkNodeManifest {
             clean == "::1"
         ) return false
 
-        // Check 172.16.0.0/12 and 100.64.0.0/10 (CGNAT)
         val parts = clean.split(".")
         if (parts.size == 4) {
             val a = parts[0].toIntOrNull() ?: return false
@@ -153,7 +188,7 @@ object FokkNodeManifest {
             if (a !in 1..255 || b !in 0..255 || c !in 0..255 || d !in 0..255) return false
             if (a == 172 && b in 16..31) return false
             if (a == 100 && b in 64..127) return false
-            if (a >= 224) return false // multicast / reserved
+            if (a >= 224) return false
             return true
         }
 
@@ -166,17 +201,34 @@ object FokkNodeManifest {
         }
     }
 
-    private fun parseAndVerify(raw: String): Boolean {
+    /**
+     * Cross-platform deterministic canonical signing payload (identical across Python, Kotlin, and Node.js):
+     *   v2|<issued_at>|<host>:<port>:<type>:<country>:<1|0>;...
+     */
+    private fun buildCanonicalPayload(issuedAt: String, nodesArray: JSONArray): String {
+        val entries = mutableListOf<String>()
+        for (i in 0 until nodesArray.length()) {
+            val n = nodesArray.optJSONObject(i) ?: continue
+            val host = n.optString("host", "").trim()
+            val port = n.optInt("port", -1)
+            val type = if (n.optString("type", "socks5").equals("http", ignoreCase = true)) "http" else "socks5"
+            val country = n.optString("country", "").trim().uppercase()
+            val ingressFlag = if (n.optBoolean("ingress_relay", false)) "1" else "0"
+            entries.add("$host:$port:$type:$country:$ingressFlag")
+        }
+        return "v2|$issuedAt|${entries.joinToString(";")}"
+    }
+
+    private fun parseAndVerify(raw: String, persistToDisk: Boolean): Boolean {
         return try {
             val json = JSONObject(raw)
             val nodesArray = json.optJSONArray("nodes") ?: return false
             if (nodesArray.length() == 0) return false
+            val issuedAt = json.optString("issued_at", "").trim()
             val signatureB64 = json.optString("signature", "").trim()
 
-            // Verify Ed25519 signature strictly fail-closed when real public key is configured
-            val sigVerified = verifySignature(nodesArray, signatureB64)
-            if (!sigVerified) {
-                Log.e(TAG, "Manifest signature verification FAILED — discarding untrusted payload")
+            if (!verifySignature(issuedAt, nodesArray, signatureB64)) {
+                Log.e(TAG, "Manifest Ed25519 signature verification FAILED — discarding untrusted payload")
                 return false
             }
 
@@ -205,10 +257,15 @@ object FokkNodeManifest {
                 cachedNodes = nodes
                 cachedIngress = ingress
             }
-            lastIssuedAt = json.optString("issued_at", "")
+            lastIssuedAt = issuedAt
             lastVerifiedSigned = isRealSigningKeyConfigured() && json.optBoolean("signed", false)
-            cacheExpiry.set(System.currentTimeMillis() + CACHE_TTL_MS)
-            Log.i(TAG, "Manifest applied: ${nodes.size} safe nodes (${ingress.size} dual-hop ingress relays, issued=$lastIssuedAt)")
+            if (persistToDisk) {
+                cacheExpiry.set(System.currentTimeMillis() + CACHE_TTL_MS)
+                runCatching {
+                    appPrefs?.edit()?.putString(KEY_CACHED_RAW_JSON, raw)?.apply()
+                }
+            }
+            Log.i(TAG, "Manifest applied: ${nodes.size} safe relays (${ingress.size} dual-hop ingress, issued=$lastIssuedAt)")
             true
         } catch (e: Exception) {
             Log.e(TAG, "Manifest parse error: ${e.message}")
@@ -216,26 +273,25 @@ object FokkNodeManifest {
         }
     }
 
-    private fun verifySignature(nodesArray: JSONArray, signatureB64: String): Boolean {
+    private fun verifySignature(issuedAt: String, nodesArray: JSONArray, signatureB64: String): Boolean {
         if (!isRealSigningKeyConfigured()) {
-            // Until production Ed25519 keypair is provisioned, rely on strict HTTPS origin + bogon/schema filter.
             return true
         }
         if (signatureB64.isBlank() || signatureB64.startsWith("PLACEHOLDER") || signatureB64.startsWith("UNSIGNED")) {
             return false
         }
         return try {
+            val canonicalBytes = buildCanonicalPayload(issuedAt, nodesArray).toByteArray(Charsets.UTF_8)
             val pubKeyBytes = Base64.decode(SIGNING_PUBLIC_KEY_B64, Base64.DEFAULT)
             val keySpec = X509EncodedKeySpec(pubKeyBytes)
             val kf = KeyFactory.getInstance("Ed25519")
             val pubKey = kf.generatePublic(keySpec)
             val sig = Signature.getInstance("Ed25519")
             sig.initVerify(pubKey)
-            sig.update(nodesArray.toString().toByteArray(Charsets.UTF_8))
+            sig.update(canonicalBytes)
             val sigBytes = Base64.decode(signatureB64, Base64.DEFAULT)
             sig.verify(sigBytes)
         } catch (e: Exception) {
-            // Strictly FAIL-CLOSED when production signing key is configured
             Log.e(TAG, "Ed25519 verification error (fail-closed): ${e.message}")
             false
         }

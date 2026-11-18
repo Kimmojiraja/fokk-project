@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const net = require('net');
 const https = require('https');
+const crypto = require('crypto');
 const { spawn } = require('child_process');
 
 /**
@@ -115,25 +116,43 @@ for (const c of MESH_COUNTRIES) {
     };
 }
 
-// Certified Fokk Mesh nodes (parity with Android NodeRegistry.kt & nodes_manifest.json)
-const BUILTIN_MESH_NODES = [
-    { host: '45.61.188.134',   port: 44499, type: 'socks5', country: 'US', city: 'Miami' },
-    { host: '69.55.49.177',    port: 38182, type: 'socks5', country: 'US', city: 'North Bergen' },
-    { host: '184.75.221.82',   port: 3118,  type: 'http',   country: 'CA', city: 'Montreal' },
-    { host: '49.13.22.249',    port: 10805, type: 'socks5', country: 'DE', city: 'Frankfurt' },
-    { host: '49.13.22.249',    port: 10802, type: 'socks5', country: 'DE', city: 'Frankfurt' },
-    { host: '5.75.133.113',    port: 10802, type: 'socks5', country: 'DE', city: 'Frankfurt' },
-    { host: '5.75.133.113',    port: 10807, type: 'socks5', country: 'DE', city: 'Falkenstein' },
-    { host: '171.25.158.95',   port: 1080,  type: 'socks5', country: 'SE', city: 'Stockholm' },
-    { host: '193.218.118.128', port: 1080,  type: 'socks5', country: 'NL', city: 'Amsterdam' },
-    { host: '51.159.115.233',  port: 1080,  type: 'socks5', country: 'FR', city: 'Paris' },
-    { host: '77.91.90.27',     port: 1082,  type: 'socks5', country: 'GB', city: 'London' },
-    { host: '188.166.178.163', port: 1088,  type: 'socks5', country: 'SG', city: 'Singapore' },
-    { host: '183.87.145.150',  port: 2080,  type: 'socks5', country: 'IN', city: 'Mumbai' },
-    { host: '101.36.104.239',  port: 10808, type: 'socks5', country: 'JP', city: 'Tokyo' },
-    { host: '123.58.219.171',  port: 10808, type: 'socks5', country: 'HK', city: 'Hong Kong' },
-    { host: '121.169.46.116',  port: 1090,  type: 'socks5', country: 'KR', city: 'Suwon' }
-];
+// ZERO hardcoded relay IPs in Desktop binary: relays are fetched exclusively from the
+// 6-hour Sentinel live manifest feeds and persisted locally in fokk_mesh_manifest_cache.json.
+const SIGNING_PUBLIC_KEY_B64 =
+    'MCowBQYDK2VwAyEAFokkMeshPublicKeyPlaceholder000000000000000000000000=';
+
+function isRealSigningKeyConfigured() {
+    return !SIGNING_PUBLIC_KEY_B64.toLowerCase().includes('placeholder');
+}
+
+function buildCanonicalManifestPayload(issuedAt, nodes) {
+    const entries = nodes.map(n => {
+        const host = String(n.host || '').trim();
+        const port = Number(n.port) || 0;
+        const type = String(n.type || 'socks5').toLowerCase() === 'http' ? 'http' : 'socks5';
+        const country = String(n.country || '').trim().toUpperCase();
+        const ingress = n.ingress_relay ? '1' : '0';
+        return `${host}:${port}:${type}:${country}:${ingress}`;
+    });
+    return Buffer.from(`v2|${String(issuedAt || '').trim()}|${entries.join(';')}`, 'utf8');
+}
+
+function verifyManifestSignature(parsed) {
+    if (!isRealSigningKeyConfigured()) return true;
+    const sigB64 = String(parsed.signature || '').trim();
+    if (!sigB64 || sigB64.startsWith('PLACEHOLDER') || sigB64.startsWith('UNSIGNED')) return false;
+    try {
+        const keyObj = crypto.createPublicKey({
+            key: Buffer.from(SIGNING_PUBLIC_KEY_B64, 'base64'),
+            format: 'der',
+            type: 'spki'
+        });
+        const payload = buildCanonicalManifestPayload(parsed.issued_at, parsed.nodes || []);
+        return crypto.verify(null, payload, keyObj, Buffer.from(sigB64, 'base64'));
+    } catch (_) {
+        return false; // Strictly fail-closed when real signing key is configured
+    }
+}
 
 const MESH_MANIFEST_URLS = [
     'https://raw.githubusercontent.com/Kimmojiraja/fokk-project/mesh-manifest/nodes_manifest.json',
@@ -379,6 +398,7 @@ class VpnEngine extends EventEmitter {
         super();
         this.userDataPath = userDataPath || path.join(process.cwd(), 'tor_data');
         this.configFile = path.join(this.userDataPath, 'fokk_vpn_config.json');
+        this.manifestCacheFile = path.join(this.userDataPath, 'fokk_mesh_manifest_cache.json');
 
         this.state = 'disconnected'; // 'disconnected' | 'connecting' | 'connected' | 'error'
         this.activeMode = 'relay_auto';
@@ -407,11 +427,46 @@ class VpnEngine extends EventEmitter {
         this.deadUntilMap = new Map();
 
         this.loadConfig();
+        this.loadCachedManifestFromDisk();
         this.refreshManifestIfNeeded();
         process.on('exit', () => {
             this.stopMeshTunnel();
             this.stopEmbeddedTor();
         });
+    }
+
+    parseSafeManifestNodes(parsed) {
+        if (!parsed || !Array.isArray(parsed.nodes) || parsed.nodes.length === 0) return [];
+        if (!verifyManifestSignature(parsed)) return [];
+        return parsed.nodes
+            .filter(n => n && n.host && Number(n.port) >= 1 && Number(n.port) <= 65535 && isSafePublicRelayHost(n.host))
+            .map(n => ({
+                host: String(n.host).trim(),
+                port: Number(n.port),
+                type: n.type === 'http' ? 'http' : 'socks5',
+                country: String(n.country || '').toUpperCase(),
+                city: String(n.city || ''),
+                ingress_relay: !!n.ingress_relay && n.type !== 'http',
+                supports_dual_hop: !!n.supports_dual_hop
+            }));
+    }
+
+    loadCachedManifestFromDisk() {
+        try {
+            if (!fs.existsSync(this.manifestCacheFile)) return;
+            const parsed = JSON.parse(fs.readFileSync(this.manifestCacheFile, 'utf8'));
+            const clean = this.parseSafeManifestNodes(parsed);
+            if (clean.length > 0) {
+                this.manifestNodes = clean;
+            }
+        } catch (_) {}
+    }
+
+    saveCachedManifestToDisk(parsed) {
+        try {
+            if (!fs.existsSync(this.userDataPath)) fs.mkdirSync(this.userDataPath, { recursive: true });
+            fs.writeFileSync(this.manifestCacheFile, JSON.stringify(parsed, null, 2), 'utf8');
+        } catch (_) {}
     }
 
     fetchJsonUrl(urlStr, redirectsLeft = 3) {
@@ -445,23 +500,12 @@ class VpnEngine extends EventEmitter {
         for (const url of MESH_MANIFEST_URLS) {
             try {
                 const parsed = await this.fetchJsonUrl(url);
-                if (Array.isArray(parsed.nodes) && parsed.nodes.length > 0) {
-                    const cleanNodes = parsed.nodes
-                        .filter(n => n && n.host && Number(n.port) >= 1 && Number(n.port) <= 65535 && isSafePublicRelayHost(n.host))
-                        .map(n => ({
-                            host: String(n.host).trim(),
-                            port: Number(n.port),
-                            type: n.type === 'http' ? 'http' : 'socks5',
-                            country: String(n.country || '').toUpperCase(),
-                            city: String(n.city || ''),
-                            ingress_relay: !!n.ingress_relay && n.type !== 'http',
-                            supports_dual_hop: !!n.supports_dual_hop
-                        }));
-                    if (cleanNodes.length > 0) {
-                        this.manifestNodes = cleanNodes;
-                        this.manifestExpiry = Date.now() + 3 * 60 * 60 * 1000; // 3h TTL aligned with 6h Sentinel
-                        return;
-                    }
+                const cleanNodes = this.parseSafeManifestNodes(parsed);
+                if (cleanNodes.length > 0) {
+                    this.manifestNodes = cleanNodes;
+                    this.manifestExpiry = Date.now() + 3 * 60 * 60 * 1000;
+                    this.saveCachedManifestToDisk(parsed);
+                    return;
                 }
             } catch (_) {}
         }
@@ -472,7 +516,8 @@ class VpnEngine extends EventEmitter {
     markNodeDead(n, ms = 120_000) { this.deadUntilMap.set(this.nodeKey(n), Date.now() + ms); }
 
     getMeshPoolForRegion(region) {
-        const all = this.manifestNodes.length > 0 ? this.manifestNodes : BUILTIN_MESH_NODES;
+        const all = this.manifestNodes;
+        if (!all || all.length === 0) return [];
         if (!region || region === 'AUTO') return all;
         let filtered = [];
         if (region === 'EU') filtered = all.filter(n => EU_COUNTRIES.has(n.country));
@@ -502,7 +547,7 @@ class VpnEngine extends EventEmitter {
         const regionPool = this.aliveMeshNodes.length > 0
             ? this.aliveMeshNodes.map(x => x.node).filter(n => this.isNodeAlive(n))
             : this.getMeshPoolForRegion(this.meshRegion).filter(n => this.isNodeAlive(n));
-        const allPool = (this.manifestNodes.length > 0 ? this.manifestNodes : BUILTIN_MESH_NODES).filter(n => this.isNodeAlive(n));
+        const allPool = this.manifestNodes.filter(n => this.isNodeAlive(n));
         const egressList = (regionPool.length > 0 ? regionPool : allPool).slice(0, 4);
         const ingressList = allPool.filter(n => n.type === 'socks5' && (n.ingress_relay || n.supports_dual_hop));
         const fallbackIngress = ingressList.length > 0 ? ingressList : allPool.filter(n => n.type === 'socks5');
@@ -705,7 +750,7 @@ class VpnEngine extends EventEmitter {
             activeIngressNode: this.activeIngressNode,
             activeHopMode: this.activeHopMode,
             aliveMeshCount: this.aliveMeshNodes.length,
-            meshNodeCount: (this.manifestNodes.length > 0 ? this.manifestNodes : BUILTIN_MESH_NODES).length
+            meshNodeCount: this.manifestNodes.length
         };
     }
 

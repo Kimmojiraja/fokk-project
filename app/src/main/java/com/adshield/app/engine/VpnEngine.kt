@@ -255,7 +255,7 @@ object VpnEngine {
     // ---------------------------------------------------------------------------
     fun getFastPrivacyEndpoint(region: String? = null): String {
         val nodes = NodeRegistry.getNodesForRegion(region ?: "AUTO")
-        val best = nodes.firstOrNull() ?: NodeRegistry.BUILTIN_INGRESS.first()
+        val best = nodes.firstOrNull() ?: return ""
         val scheme = if (best.isHttpConnect) "http" else "socks5"
         return "$scheme://${best.host}:${best.port}"
     }

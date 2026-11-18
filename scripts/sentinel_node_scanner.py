@@ -299,9 +299,47 @@ def test_dual_hop_chain(ingress: dict, egress: dict) -> bool:
             pass
 
 
-def sign_nodes_ed25519(nodes_json_bytes: bytes) -> tuple:
+def build_canonical_payload(issued_at: str, verified_nodes: list) -> bytes:
     """
-    Sign canonical nodes JSON bytes with Ed25519 if FOKK_MESH_ED25519_PRIVKEY is set.
+    Deterministic cross-platform canonical signing payload (identical across Python, Kotlin, and Node.js):
+      v2|<issued_at>|<host>:<port>:<type>:<country>:<1|0>;...
+    """
+    entries = []
+    for n in verified_nodes:
+        host = str(n.get("host", "")).strip()
+        port = int(n.get("port", 0))
+        ntype = "http" if str(n.get("type", "socks5")).lower() == "http" else "socks5"
+        country = str(n.get("country", "")).strip().upper()
+        ingress = "1" if n.get("ingress_relay", False) else "0"
+        entries.append(f"{host}:{port}:{ntype}:{country}:{ingress}")
+    return f"v2|{issued_at}|{';'.join(entries)}".encode("utf-8")
+
+
+def generate_ed25519_keypair() -> None:
+    """One-command helper (`--gen-key`) to generate a production Ed25519 signing keypair."""
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography.hazmat.primitives import serialization
+
+    priv = Ed25519PrivateKey.generate()
+    priv_der = priv.private_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    pub_der = priv.public_key().public_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    print("=== FOKK MESH ED25519 KEYPAIR ===")
+    print("1) Add as GitHub Repo Secret `FOKK_MESH_ED25519_PRIVKEY` (NEVER commit!):")
+    print(base64.b64encode(priv_der).decode("ascii"))
+    print("\n2) Paste into SIGNING_PUBLIC_KEY_B64 in FokkNodeManifest.kt and desktop/src/vpn_engine.js:")
+    print(base64.b64encode(pub_der).decode("ascii"))
+
+
+def sign_nodes_ed25519(canonical_bytes: bytes) -> tuple:
+    """
+    Sign canonical payload bytes with Ed25519 if FOKK_MESH_ED25519_PRIVKEY is set.
     Returns (signature_b64, is_real_signature).
     """
     priv_b64 = os.environ.get("FOKK_MESH_ED25519_PRIVKEY", "").strip()
@@ -316,7 +354,7 @@ def sign_nodes_ed25519(nodes_json_bytes: bytes) -> tuple:
             key = Ed25519PrivateKey.from_private_bytes(raw)
         else:
             key = serialization.load_der_private_key(raw, password=None)
-        sig = key.sign(nodes_json_bytes)
+        sig = key.sign(canonical_bytes)
         return base64.b64encode(sig).decode("ascii"), True
     except Exception as e:
         print(f"WARNING: Ed25519 signing failed ({e}); keeping unsigned marker.")
@@ -330,12 +368,11 @@ def load_manifest() -> dict:
         return json.load(f)
 
 
-def save_manifest(verified_nodes: list, signed_sig: str, is_signed: bool) -> None:
-    now = datetime.now(timezone.utc)
+def save_manifest(verified_nodes: list, issued_at: str, expires_at: str, signed_sig: str, is_signed: bool) -> None:
     manifest = {
         "version": 2,
-        "issued_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "expires_at": (now + timedelta(hours=48)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "issued_at": issued_at,
+        "expires_at": expires_at,
         "signed": is_signed,
         "nodes": verified_nodes,
         "signature": signed_sig,
@@ -484,15 +521,21 @@ def main() -> None:
     for r in results:
         r["supports_dual_hop"] = dh_lookup.get((r["host"], r["port"]), False)
 
-    # Sign canonical compact JSON representation of nodes array
-    canonical_nodes_bytes = json.dumps(verified, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    sig_b64, is_signed = sign_nodes_ed25519(canonical_nodes_bytes)
+    # Sign deterministic cross-platform canonical payload
+    now = datetime.now(timezone.utc)
+    issued_at = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    expires_at = (now + timedelta(hours=48)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    canonical_bytes = build_canonical_payload(issued_at, verified)
+    sig_b64, is_signed = sign_nodes_ed25519(canonical_bytes)
 
-    save_manifest(verified, sig_b64, is_signed)
+    save_manifest(verified, issued_at, expires_at, sig_b64, is_signed)
     sync_nodes_json(verified)
     write_job_summary(results, failed, dual_hop_verified)
     print(f"Done. Verified={len(verified)}, DualHopIngress={dual_hop_verified}, Signed={is_signed}")
 
 
 if __name__ == "__main__":
-    main()
+    if "--gen-key" in sys.argv:
+        generate_ed25519_keypair()
+    else:
+        main()
