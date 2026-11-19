@@ -191,9 +191,9 @@
                     app:buttonTint="@color/fokk_cyan" />
             </LinearLayout>
 
-            <!-- Brave Search -->
+            <!-- Yahoo -->
             <LinearLayout
-                android:id="@+id/rowEngineBrave"
+                android:id="@+id/rowEngineYahoo"
                 android:layout_width="match_parent"
                 android:layout_height="44dp"
                 android:background="?attr/selectableItemBackground"
@@ -206,19 +206,19 @@
                 <ImageView
                     android:layout_width="20dp"
                     android:layout_height="20dp"
-                    android:src="@drawable/ic_engine_brave" />
+                    android:src="@drawable/ic_engine_yahoo" />
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     android:layout_weight="1"
-                    android:text="Brave Search (Independent)"
+                    android:text="Yahoo Search"
                     android:textColor="@color/text_primary"
                     android:textSize="13.5sp" />
 
                 <RadioButton
-                    android:id="@+id/radioEngineBrave"
+                    android:id="@+id/radioEngineYahoo"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:clickable="false"
@@ -259,39 +259,6 @@
                     app:buttonTint="@color/fokk_cyan" />
             </LinearLayout>
 
-            <!-- Startpage -->
-            <LinearLayout
-                android:id="@+id/rowEngineStartpage"
-                android:layout_width="match_parent"
-                android:layout_height="44dp"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingHorizontal="4dp">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_engine_startpage" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:layout_weight="1"
-                    android:text="Startpage (Google results privately)"
-                    android:textColor="@color/text_primary"
-                    android:textSize="13.5sp" />
-
-                <RadioButton
-                    android:id="@+id/radioEngineStartpage"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:clickable="false"
-                    app:buttonTint="@color/fokk_cyan" />
-            </LinearLayout>
 
             <!-- Microsoft Bing -->
             <LinearLayout
@@ -431,6 +398,50 @@
                     app:trackTint="#1E2A3E" />
             </RelativeLayout>
 
+            <!-- System Theme Sync -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingVertical="8dp"
+                android:paddingHorizontal="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@id/switchSystemThemeSync"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="System Theme Sync"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textSystemThemeSyncDesc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Auto-match Android system light/dark theme"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchSystemThemeSync"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:checked="true"
+                    app:thumbTint="@color/fokk_cyan"
+                    app:trackTint="#1E2A3E" />
+            </RelativeLayout>
+
             <!-- Daylight Mode (Light Theme) -->
             <RelativeLayout
                 android:layout_width="match_parent"
@@ -459,7 +470,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Switch to bright pearl appearance"
+                        android:text="Manual bright pearl appearance"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -470,6 +481,50 @@
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
+                    app:thumbTint="@color/fokk_cyan"
+                    app:trackTint="#1E2A3E" />
+            </RelativeLayout>
+
+            <!-- Pull-to-Refresh Gestures -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingVertical="8dp"
+                android:paddingHorizontal="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@id/switchPullToRefresh"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Pull-to-Refresh Gestures"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textPullToRefreshDesc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Pull down at top of page to reload (Paused on Reels &amp; Shorts)"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchPullToRefresh"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:checked="true"
                     app:thumbTint="@color/fokk_cyan"
                     app:trackTint="#1E2A3E" />
             </RelativeLayout>

@@ -621,42 +621,23 @@
                             android:src="@drawable/ic_engine_duckduckgo" />
                     </FrameLayout>
 
-                    <!-- Brave -->
+                    <!-- Yahoo -->
                     <FrameLayout
-                        android:id="@+id/btnQuickEngineBrave"
+                        android:id="@+id/btnQuickEngineYahoo"
                         android:layout_width="34dp"
                         android:layout_height="34dp"
                         android:layout_marginStart="4dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:clickable="true"
                         android:focusable="true"
-                        android:contentDescription="Search with Brave">
+                        android:contentDescription="Search with Yahoo">
 
                         <ImageView
-                            android:id="@+id/imgQuickEngineBrave"
+                            android:id="@+id/imgQuickEngineYahoo"
                             android:layout_width="22dp"
                             android:layout_height="22dp"
                             android:layout_gravity="center"
-                            android:src="@drawable/ic_engine_brave" />
-                    </FrameLayout>
-
-                    <!-- Startpage -->
-                    <FrameLayout
-                        android:id="@+id/btnQuickEngineStartpage"
-                        android:layout_width="34dp"
-                        android:layout_height="34dp"
-                        android:layout_marginStart="4dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:contentDescription="Search with Startpage">
-
-                        <ImageView
-                            android:id="@+id/imgQuickEngineStartpage"
-                            android:layout_width="22dp"
-                            android:layout_height="22dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_engine_startpage" />
+                            android:src="@drawable/ic_engine_yahoo" />
                     </FrameLayout>
                 </LinearLayout>
             </LinearLayout>

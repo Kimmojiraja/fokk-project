@@ -1,6 +1,6 @@
 {
-  "versionCode": 296,
-  "versionName": "2.9.6",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.6/app-debug.apk",
-  "changelog": "- Enhanced Article Video Playback: Resolved CNN Business and news media video player stalls by whitelisting WarnerMedia/Turner/Freewheel streaming delivery infrastructure, enabling seamless third-party cookies for media authentication, allowing mixed content streaming chunks, and auto-granting protected media playback.\n- Glitch-Free Pull-to-Refresh: Re-engineered SwipeRefreshLayout with dynamic on-scroll child detection, preventing touch interception and scrolling jank while reading mid-page, and smoothly activating pull-down refresh strictly when at the top of the webpage.\n- Find in Page: Added floating in-page text search bar with real-time match counter, up/down match navigation, and back-press dismissal.\n- Quick Copy Link: Added 1-tap Copy Link item in Daily Essentials to easily share current page URLs."
+  "versionCode": 297,
+  "versionName": "2.9.7",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.7/app-debug.apk",
+  "changelog": "- Search Engine Suite Overhaul: Replaced Brave Search and Startpage with official Yahoo Search across Android and Desktop. Added authentic vector brand logos for Yahoo, DuckDuckGo, and Ecosia.\n- Reels & Shorts Pull-to-Refresh Glitch Prevention: Automatically pauses pull-to-refresh on vertical video feeds (YouTube Shorts, Instagram Reels, TikTok, Facebook Reels, Stories) so dragging down smoothly returns to previous videos without triggering unintended page reloads.\n- Premium Light Theme & System Sync: Added System Theme Sync to auto-adapt light or dark appearance based on device settings, alongside manual Daylight Mode controls. Enhanced bottom menu with dynamic daylight/night theme switcher and sun/moon icons.\n- Light Theme Sailboat Wallpapers: Introduced high-definition sunlit sailboat and coastal yacht wallpapers designed specifically to complement the light pearl interface while keeping dark themes intact."
 }

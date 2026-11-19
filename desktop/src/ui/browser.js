@@ -162,20 +162,15 @@ const OMNIBOX_ENGINES = {
         searchUrl: 'https://www.bing.com/search?q=',
         iconSvg: '<svg width="18" height="18" viewBox="0 0 32 32"><defs><linearGradient id="bingLg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00BCF2"/><stop offset="100%" stop-color="#0078D4"/></linearGradient></defs><path fill="url(#bingLg)" d="M8 3v21.5c0 1.2 1 2.2 2.2 2.3 3.5.3 8.5.5 12.5-3.2 3.6-3.4 3.7-8.8 1-12.8L16.5 6v9.5c0 .8-.7 1.5-1.5 1.5-.7 0-1.3-.5-1.5-1.2l-.5-1.6V3c0-.8-.7-1.5-1.5-1.5S8 2.2 8 3z"/></svg>'
     },
-    brave: {
-        name: 'Brave',
-        searchUrl: 'https://search.brave.com/search?q=',
-        iconSvg: '<svg width="18" height="18" viewBox="0 0 32 32"><path fill="#FF3300" d="M16 2l-10 4.2v8.5c0 7.2 4.3 13.8 10 16.3 5.7-2.5 10-9.1 10-16.3V6.2L16 2z"/><path fill="#FFF" d="M16 8l-4.5 2.5 1.4 6 3.1-1.5 3.1 1.5 1.4-6L16 8zm0 10.5l-3.2 2 1.2 4 2-1.2 2 1.2 1.2-4-3.2-2z"/><path fill="#FF7700" d="M12.5 13.5l3.5-1.8 3.5 1.8-1 4.5-2.5-1.2-2.5 1.2-1-4.5z"/></svg>'
+    yahoo: {
+        name: 'Yahoo',
+        searchUrl: 'https://search.yahoo.com/search?p=',
+        iconSvg: '<svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#6001D2"/><path fill="#FFFFFF" d="M5.5 6.5h3.3l2.2 5 2.2-5h3.3l-4 8v4h-3v-4z"/><path fill="#FFFFFF" d="M17.5 6.5h1.7l-.4 7.7h-1z"/><circle cx="18.3" cy="17.3" r="1.1" fill="#FFFFFF"/></svg>'
     },
     duckduckgo: {
         name: 'DuckDuckGo',
         searchUrl: 'https://duckduckgo.com/?q=',
         iconSvg: '<svg width="18" height="18" viewBox="0 0 32 32"><circle cx="16" cy="16" r="15" fill="#DE5833"/><path fill="#FFFFFF" d="M16 6c-3.9 0-7 3.1-7 7 0 2.2 1 4.1 2.6 5.4-.1.6-.4 1.9-1.6 3.1 1.8.1 3.5-.7 4.6-2 .5.1.9.1 1.4.1 3.9 0 7-3.1 7-7s-3.1-6.6-7-6.6z"/><circle cx="13.5" cy="11.5" r="1.5" fill="#333333"/><path fill="#F9A825" d="M17.5 14.5c0 0 3.5.5 5 2.5-1.5 1-4 1.5-6.5 1 0 0 2.5-1 1.5-3.5z"/><path fill="#4CAF50" d="M14 23.5l2-1.5 2 1.5-2 1.5-2-1.5z"/></svg>'
-    },
-    startpage: {
-        name: 'Startpage',
-        searchUrl: 'https://www.startpage.com/sp/search?q=',
-        iconSvg: '<svg width="18" height="18" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#1A1C24"/><path fill="#3661FF" d="M7 14c0-4.4 3.6-8 8-8s8 3.6 8 8-3.6 8-8 8c-1.8 0-3.5-.6-4.8-1.7l-4.5 4.5-1.4-1.4 4.5-4.5C7.6 17.5 7 15.8 7 14zm8-5.5c-3 0-5.5 2.5-5.5 5.5s2.5 5.5 5.5 5.5 5.5-2.5 5.5-5.5-2.5-5.5-5.5-5.5z"/><path d="M7 25.5c3.5-1.8 8.5-1.8 12 0" stroke="#6366F1" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg>'
     },
     ecosia: {
         name: 'Ecosia',
@@ -2475,9 +2470,8 @@ function openFeatureHub(hubId) {
                 <select id="selDefaultEngine" class="modal-select">
                     <option value="google" ${currentEngine==='google'?'selected':''}>Google</option>
                     <option value="bing" ${currentEngine==='bing'?'selected':''}>Bing</option>
-                    <option value="brave" ${currentEngine==='brave'?'selected':''}>Brave</option>
+                    <option value="yahoo" ${currentEngine==='yahoo'?'selected':''}>Yahoo</option>
                     <option value="duckduckgo" ${currentEngine==='duckduckgo'?'selected':''}>DuckDuckGo</option>
-                    <option value="startpage" ${currentEngine==='startpage'?'selected':''}>Startpage</option>
                     <option value="ecosia" ${currentEngine==='ecosia'?'selected':''}>Ecosia</option>
                 </select>
             </div>

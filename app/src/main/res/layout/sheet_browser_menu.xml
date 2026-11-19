@@ -265,7 +265,7 @@
                     android:textSize="9.5sp" />
             </LinearLayout>
 
-            <!-- 4. Night Mode Quick Squircle -->
+            <!-- 4. Night Mode / Theme Quick Squircle -->
             <LinearLayout
                 android:id="@+id/btnMenuQuickNight"
                 android:layout_width="0dp"
@@ -280,16 +280,18 @@
                 android:padding="6dp">
 
                 <ImageView
+                    android:id="@+id/imgMenuNightIcon"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@drawable/ic_dark_mode"
                     app:tint="#FFFFFF" />
 
                 <TextView
+                    android:id="@+id/textMenuQuickNightTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="5dp"
-                    android:text="Night mode"
+                    android:text="Theme"
                     android:textColor="@color/text_primary"
                     android:textSize="12sp"
                     android:textStyle="bold" />
@@ -298,7 +300,7 @@
                     android:id="@+id/textMenuQuickNightStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Off"
+                    android:text="Dark"
                     android:textColor="@color/text_secondary"
                     android:textSize="9.5sp" />
             </LinearLayout>
