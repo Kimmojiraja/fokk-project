@@ -6508,6 +6508,9 @@ open class MediaHubActivity : AppCompatActivity() {
                             else -> colorText
                         })
                     }
+                    if (v.text == "PRO" || v.text == "ACTIVE" || v.text == "NEW") {
+                        v.setBackgroundResource(R.drawable.bg_badge_pill_light)
+                    }
                 }
                 is android.widget.ImageButton -> {
                     val tl = v.imageTintList
@@ -6553,6 +6556,10 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
             }
 
+            if (v is androidx.cardview.widget.CardView) {
+                v.setCardBackgroundColor(colorCard)
+            }
+
             // Background theming
             val bg = v.background
             if (bg is android.graphics.drawable.ColorDrawable) {
@@ -6569,6 +6576,22 @@ open class MediaHubActivity : AppCompatActivity() {
                         v.setBackgroundColor(colorBg)
                     } else {
                         v.setBackgroundColor(colorCard)
+                    }
+                }
+            } else if (bg is android.graphics.drawable.GradientDrawable) {
+                if (v.layoutParams?.height?.let { it in 1..6 } == true &&
+                    v.layoutParams?.width?.let { it in 20..80 } == true) {
+                    v.setBackgroundResource(R.drawable.bg_ai_handle_light)
+                } else if (v.id == R.id.viewAiDragHandle) {
+                    v.setBackgroundResource(R.drawable.bg_ai_handle_light)
+                } else if (v.id == R.id.layoutAiTabsContainer) {
+                    v.setBackgroundResource(R.drawable.bg_ai_tab_track_light)
+                } else {
+                    val h = v.layoutParams?.height ?: 0
+                    if (h in 20..42) {
+                        v.setBackgroundResource(R.drawable.bg_ai_pill_light)
+                    } else {
+                        v.setBackgroundResource(R.drawable.bg_ai_card_light)
                     }
                 }
             } else if (bg != null) {
@@ -6876,11 +6899,12 @@ open class MediaHubActivity : AppCompatActivity() {
                 .show()
         }
 
+        val isSystemSync = prefs.getBoolean(PREF_THEME_SYSTEM_SYNC, true)
         val isCurrentLight = isAppInLightMode()
         sheetBinding.imgMenuNightIcon.setImageResource(if (isCurrentLight) R.drawable.ic_light_mode else R.drawable.ic_dark_mode)
         sheetBinding.imgMenuNightIcon.imageTintList = ColorStateList.valueOf(Color.parseColor(if (isCurrentLight) "#F59E0B" else "#818CF8"))
-        sheetBinding.textMenuQuickNightTitle.text = if (isCurrentLight) "Light mode" else "Night mode"
-        sheetBinding.textMenuQuickNightStatus.text = if (isCurrentLight) "Day" else "Night"
+        sheetBinding.textMenuQuickNightTitle.text = if (isSystemSync) "Theme mode" else if (isCurrentLight) "Light mode" else "Night mode"
+        sheetBinding.textMenuQuickNightStatus.text = if (isSystemSync) "Auto (System)" else if (isCurrentLight) "Day" else "Night"
         sheetBinding.textMenuQuickNightStatus.setTextColor(Color.parseColor(if (isCurrentLight) "#F59E0B" else "#818CF8"))
         sheetBinding.btnMenuQuickNight.setOnClickListener {
             val nextLight = !isAppInLightMode()
@@ -6889,6 +6913,14 @@ open class MediaHubActivity : AppCompatActivity() {
             applyAppTheme(nextLight, animated = true)
             dialog.dismiss()
             Toast.makeText(this, if (nextLight) "Daylight Mode Activated" else "Dark Theme Activated", Toast.LENGTH_SHORT).show()
+        }
+        sheetBinding.btnMenuQuickNight.setOnLongClickListener {
+            val newSync = !prefs.getBoolean(PREF_THEME_SYSTEM_SYNC, true)
+            prefs.edit().putBoolean(PREF_THEME_SYSTEM_SYNC, newSync).apply()
+            applyAppTheme(isAppInLightMode(), animated = true)
+            dialog.dismiss()
+            Toast.makeText(this, if (newSync) "System Theme Sync Enabled (Auto Light/Dark)" else "System Theme Sync Disabled", Toast.LENGTH_SHORT).show()
+            true
         }
         sheetBinding.btnMenuNightInfo.setOnClickListener {
             AlertDialog.Builder(this)
@@ -8735,25 +8767,15 @@ open class MediaHubActivity : AppCompatActivity() {
                 applyLightThemeToSheet(sheetBinding.root, sheetDialog)
                 sheetBinding.layoutAiComposerDock.setBackgroundColor(Color.parseColor("#FAF9F6"))
                 sheetBinding.layoutAiTopFixedArea.setBackgroundColor(Color.parseColor("#FAF9F6"))
-                sheetBinding.cardAiComposerBox.setBackgroundResource(R.drawable.bg_ai_composer_light)
-                sheetBinding.layoutAiTabTrack.setBackgroundResource(R.drawable.bg_ai_tab_track_light)
+                sheetBinding.layoutAiTabsContainer.setBackgroundResource(R.drawable.bg_ai_tab_track_light)
+                sheetBinding.btnTabAiSummary.setBackgroundResource(R.drawable.bg_ai_tab_selected_light)
+                sheetBinding.btnTabAiSummary.setTextColor(Color.parseColor("#0F172A"))
+                sheetBinding.btnTabAiChat.setTextColor(Color.parseColor("#475569"))
+                sheetBinding.btnTabAiAudit.setTextColor(Color.parseColor("#475569"))
                 sheetBinding.editAiUserQuestion.setTextColor(Color.parseColor("#0F172A"))
                 sheetBinding.editAiUserQuestion.setHintTextColor(Color.parseColor("#64748B"))
-                sheetBinding.btnVoiceAiPrompt.imageTintList = ColorStateList.valueOf(Color.parseColor("#0F172A"))
-                sheetBinding.btnSendAiPrompt.imageTintList = ColorStateList.valueOf(Color.parseColor("#0F172A"))
-                listOf(
-                    sheetBinding.cardSummaryBrief,
-                    sheetBinding.cardAuditScore,
-                    sheetBinding.cardBiasSpectrum,
-                    sheetBinding.cardSensationalismSpectrum,
-                    sheetBinding.cardDomainAuthenticity,
-                    sheetBinding.cardEditorialStance,
-                    sheetBinding.cardEvidenceDepth,
-                    sheetBinding.cardCounterPerspective,
-                    sheetBinding.cardWhatsMissing
-                ).forEach { card ->
-                    card.setBackgroundResource(R.drawable.bg_ai_card_light)
-                }
+                sheetBinding.btnAiVoiceInput.imageTintList = ColorStateList.valueOf(Color.parseColor("#0F172A"))
+                sheetBinding.btnSendAiQuestion.imageTintList = ColorStateList.valueOf(Color.parseColor("#0F172A"))
             }
 
             val density = resources.displayMetrics.density
