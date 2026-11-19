@@ -302,8 +302,12 @@ object FokkSearchAggregator {
                 if (src.sourceType == "NEWS") score += 25
                 if (src.sourceType == "FACT_DB") score += 15
 
-                // Recency bonus: reward articles mentioning recent years (2025, 2026) or current terms
-                if (haystack.contains("2026") || haystack.contains("2025") || haystack.contains("current") || haystack.contains("latest")) {
+                // Dynamic recency bonus: automatically adapts to the system's current year and relative timestamps
+                val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                val prevYear = currentYear - 1
+                if (haystack.contains(currentYear.toString()) || haystack.contains(prevYear.toString()) ||
+                    haystack.contains("current") || haystack.contains("latest") ||
+                    src.timestamp.contains("ago") || src.timestamp.contains("hour") || src.timestamp.contains("minute")) {
                     score += 20
                 }
 

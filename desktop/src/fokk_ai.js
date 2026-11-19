@@ -463,12 +463,14 @@ async function aggregateSources(query, pageTitle = '', pageHost = '', maxResults
         if (isReputableDomain(normDomain)) score += 35;
         if (src.sourceType === 'NEWS') score += 25;
 
-        // Recency bonus for modern facts
+        // Dynamic recency bonus for live/current facts (adapts dynamically to any future year)
         const tsLower = (src.timestamp || '').toLowerCase();
         const snipLower = (src.snippet || '').toLowerCase();
-        if (tsLower.includes('2026') || snipLower.includes('2026') || tsLower.includes('ago') || tsLower.includes('hour') || tsLower.includes('minute')) {
+        const currentYear = new Date().getFullYear();
+        const prevYear = currentYear - 1;
+        if (tsLower.includes(String(currentYear)) || snipLower.includes(String(currentYear)) || tsLower.includes('ago') || tsLower.includes('hour') || tsLower.includes('minute')) {
             score += 25;
-        } else if (tsLower.includes('2025') || snipLower.includes('2025')) {
+        } else if (tsLower.includes(String(prevYear)) || snipLower.includes(String(prevYear))) {
             score += 10;
         }
 
