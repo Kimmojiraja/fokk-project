@@ -1,6 +1,6 @@
 {
-  "versionCode": 293,
-  "versionName": "2.9.3",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.3/app-debug.apk",
-  "changelog": "- Entire Device Protection for Android 10+: Added system-wide HTTP/HTTPS proxy and DNS tunnel via VpnService. Other apps (Chrome, Instagram, YouTube, news, and streaming apps) route through Fokk Mesh / Smart-Cloak without breaking background connectivity.\n- Fokk Home-Base (Personal PC Relay) and Oblivious Edge Relay (RFC 9458).\n- Fokk Smart-Cloak (Free · Native Speed DoH + SNI Cloaking)."
+  "versionCode": 294,
+  "versionName": "2.9.4",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.4/app-debug.apk",
+  "changelog": "- AI Experience Overhaul: Unboxed magazine-quality editorial layout for Explore Further questions (clean typography, hairline separators, responsive touch ripple).\n- AI Navigation Back-Stack: Clicking any source chip, image, or web search from Fokk AI (Summary, Ask AI, Truth & Bias) preserves AI state so pressing Back seamlessly returns to the exact AI tab where you left off.\n- Truth & Bias Executive View: Removed bulky horizontal meter bars and replaced with sleek editorial leaning badges, verified fact-density pills, and sensationalism ratings.\n- Dynamic Real-Time Web Intelligence: Ask AI queries from the homepage or general topics dynamically fetch and synthesize live Google News, Wikipedia, and web sources with modern temporal grounding, citing actual web sources instead of internal screens.\n- Curated Bottom Menu Quality Tools: Added Translate Page and Save as PDF to Daily Essentials, plus Media Grabber and Read Aloud (TTS) to Advanced Tools."
 }

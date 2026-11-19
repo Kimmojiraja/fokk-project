@@ -177,6 +177,14 @@ data class AiChatSession(
     val turns: MutableList<AiChatTurn> = mutableListOf()
 )
 
+data class AiSourceReturnState(
+    val originalTabIndex: Int,
+    val openedNewTab: Boolean,
+    val summaryJson: String,
+    val activeAiTab: Int,
+    val sessionKey: String
+)
+
 open class MediaHubActivity : AppCompatActivity() {
 
     protected open val isIsolatedPrivateProfile: Boolean = false
@@ -265,6 +273,7 @@ open class MediaHubActivity : AppCompatActivity() {
     private var activeAiSummarySheetDialog: BottomSheetDialog? = null
     private val aiChatSessions = LinkedHashMap<String, AiChatSession>()
     private var lastChatSessionLeftForSource: AiChatSession? = null
+    private var pendingAiReturnState: AiSourceReturnState? = null
     private var textToSpeech: TextToSpeech? = null
     private var isTtsReady = false
     private var pendingTtsText: String? = null
@@ -6294,6 +6303,62 @@ open class MediaHubActivity : AppCompatActivity() {
             showShieldSettingsDialog()
         }
 
+        sheetBinding.btnToolMediaGrabber.setOnClickListener {
+            dialog.dismiss()
+            val stream = currentDetectedVideoStream
+            if (stream != null && stream.url.isNotBlank()) {
+                val tabIsPrivate = activeTab?.isPrivate == true
+                showDownloadOptions(
+                    downloadUrl = stream.url,
+                    userAgent = cleanMobileUa,
+                    contentDisposition = null,
+                    mimeType = "video/*",
+                    isPrivate = tabIsPrivate,
+                    sourceUrl = activeWebView?.url.orEmpty(),
+                    allowThirdPartyCookies = true
+                )
+            } else {
+                activeWebView?.evaluateJavascript("""
+                    (function() {
+                        let video = document.querySelector('video');
+                        let src = video ? (video.currentSrc || video.src || (video.querySelector('source') ? video.querySelector('source').src : '')) : '';
+                        if (src && window.FokkVideoBridge) {
+                            window.FokkVideoBridge.onVideoFound(src, document.title || 'Media Stream');
+                        }
+                    })();
+                """.trimIndent(), null)
+                Toast.makeText(this, "Scanning page for media streams...", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        sheetBinding.btnToolReadAloud.setOnClickListener {
+            dialog.dismiss()
+            if (ttsPlaybackState == 1) {
+                stopTextToSpeech()
+                Toast.makeText(this, "Stopped Read Aloud", Toast.LENGTH_SHORT).show()
+            } else {
+                val currentUrl = activeTab?.url
+                if (!currentUrl.isNullOrBlank() && !currentUrl.contains("fokk_start.html")) {
+                    activeWebView?.evaluateJavascript("""
+                        (function() {
+                            let text = document.querySelector('article') ? document.querySelector('article').innerText : document.body.innerText;
+                            return text ? text.substring(0, 5000) : '';
+                        })();
+                    """.trimIndent()) { result ->
+                        val cleanText = result?.trim('"', ' ', '\n', '\r')?.replace("\\n", "\n")?.replace("\\\"", "\"")
+                        if (!cleanText.isNullOrBlank()) {
+                            startTextToSpeech(cleanText, "page_read_aloud")
+                            Toast.makeText(this, "Reading page aloud...", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this, "No readable text found on page", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else {
+                    Toast.makeText(this, "Open a website to read aloud", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
         val activeVpnMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
         val isVpnActive = activeVpnMode != com.adshield.app.engine.VpnEngine.VpnMode.OFF
         sheetBinding.textMenuVpnStatus.text = if (isVpnActive) "PROTECTED" else "OFF"
@@ -6560,6 +6625,24 @@ open class MediaHubActivity : AppCompatActivity() {
                 Toast.makeText(this, "Open a website to translate", Toast.LENGTH_SHORT).show()
             }
             dialog.dismiss()
+        }
+
+        sheetBinding.rowSavePdf.setOnClickListener {
+            dialog.dismiss()
+            val currentUrl = activeTab?.url
+            val webView = activeWebView
+            if (webView != null && !currentUrl.isNullOrBlank() && !currentUrl.contains("fokk_start.html")) {
+                val printManager = getSystemService(Context.PRINT_SERVICE) as? android.print.PrintManager
+                val docName = "Fokk_" + (activeTab?.title?.take(30)?.replace(Regex("[^a-zA-Z0-9_-]"), "_") ?: "Document")
+                val printAdapter = webView.createPrintDocumentAdapter(docName)
+                if (printManager != null) {
+                    printManager.print(docName, printAdapter, android.print.PrintAttributes.Builder().build())
+                } else {
+                    Toast.makeText(this, "Print / PDF service not available", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(this, "Open a website to export as PDF", Toast.LENGTH_SHORT).show()
+            }
         }
 
         sheetBinding.rowReaderMode.setOnClickListener {
@@ -8446,9 +8529,11 @@ open class MediaHubActivity : AppCompatActivity() {
 
             // Forward reference for interactive Ask AI
             var askAiQuestionFunc: ((String) -> Unit)? = null
+            var currentAiMode = initialTab
 
             // Clean 3-tab switching (Summary / Ask AI / Truth & Bias)
             fun switchAiMode(mode: Int) {
+                currentAiMode = mode
                 sheetBinding.layoutAiSummarySection.visibility = if (mode == 0) View.VISIBLE else View.GONE
                 sheetBinding.layoutAiChatSection.visibility = if (mode == 1) View.VISIBLE else View.GONE
                 sheetBinding.layoutAiRealityAuditSection.visibility = if (mode == 2) View.VISIBLE else View.GONE
@@ -8618,17 +8703,28 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
             }
 
-            // Unified clean tap-to-ask prompt card renderer
+            // Unboxed premium editorial prompt row renderer
             fun renderPromptCard(question: String, container: LinearLayout, switchToChat: Boolean) {
-                val card = LinearLayout(this@MediaHubActivity).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                    background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_ai_card)
-                    setPadding((14 * density).toInt(), (12 * density).toInt(), (12 * density).toInt(), (12 * density).toInt())
+                val typedVal = android.util.TypedValue()
+                theme.resolveAttribute(android.R.attr.selectableItemBackground, typedVal, true)
+
+                val itemWrapper = LinearLayout(this@MediaHubActivity).apply {
+                    orientation = LinearLayout.VERTICAL
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply { bottomMargin = (8 * density).toInt() }
+                    )
+                }
+
+                val row = LinearLayout(this@MediaHubActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setBackgroundResource(typedVal.resourceId)
+                    setPadding((4 * density).toInt(), (12 * density).toInt(), (4 * density).toInt(), (12 * density).toInt())
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
                     isClickable = true
                     isFocusable = true
                     setOnClickListener {
@@ -8637,11 +8733,18 @@ open class MediaHubActivity : AppCompatActivity() {
                     }
                 }
 
+                val bulletTv = TextView(this@MediaHubActivity).apply {
+                    text = "•"
+                    setTextColor(Color.parseColor("#38BDF8"))
+                    textSize = 14f
+                    setPadding(0, 0, (8 * density).toInt(), 0)
+                }
+
                 val qTv = TextView(this@MediaHubActivity).apply {
                     text = question
-                    setTextColor(Color.parseColor("#E2E8F0"))
+                    setTextColor(Color.parseColor("#F1F5F9"))
                     textSize = 13.5f
-                    setLineSpacing(2 * density, 1f)
+                    setLineSpacing(2.5f * density, 1f)
                     layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                 }
 
@@ -8649,12 +8752,24 @@ open class MediaHubActivity : AppCompatActivity() {
                     text = "›"
                     setTextColor(Color.parseColor("#64748B"))
                     textSize = 18f
-                    setPadding((10 * density).toInt(), 0, (2 * density).toInt(), 0)
+                    setPadding((8 * density).toInt(), 0, (4 * density).toInt(), 0)
                 }
 
-                card.addView(qTv)
-                card.addView(chevronTv)
-                container.addView(card)
+                row.addView(bulletTv)
+                row.addView(qTv)
+                row.addView(chevronTv)
+                itemWrapper.addView(row)
+
+                val divider = View(this@MediaHubActivity).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        (0.75f * density).toInt().coerceAtLeast(1)
+                    )
+                    setBackgroundColor(Color.parseColor("#172033"))
+                }
+                itemWrapper.addView(divider)
+
+                container.addView(itemWrapper)
             }
 
             fun renderFollowUpSection(questions: List<String>) {
@@ -8823,6 +8938,13 @@ open class MediaHubActivity : AppCompatActivity() {
                         isClickable = true
                         isFocusable = true
                         setOnClickListener {
+                            pendingAiReturnState = AiSourceReturnState(
+                                originalTabIndex = activeTabIndex,
+                                openedNewTab = true,
+                                summaryJson = persistedSummaryJson,
+                                activeAiTab = 2,
+                                sessionKey = sessionKey
+                            )
                             if (chatSession.turns.isNotEmpty()) lastChatSessionLeftForSource = chatSession
                             sheetDialog.dismiss()
                             addNewTab(item.sourceUrl, isPrivate = activeTab?.isPrivate == true)
@@ -8893,29 +9015,36 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
             }
 
-            // Update Bias Spectrum dot, Sensationalism gauge, Fact/Claim/Opinion ratio bar, and Counter-Perspective
+            // Update Editorial Leaning badge, Sensationalism gauge, Fact Density pill, and Counter-Perspective
             fun renderBiasSpectrumAndRatios(
                 biasPos: Int,
                 sensationalism: Int,
                 counterPerspective: String,
                 claims: List<String>
             ) {
-                val clampedPos = biasPos.coerceIn(5, 95)
-                sheetBinding.frameBiasSpectrumTrack.post {
-                    val trackWidth = sheetBinding.frameBiasSpectrumTrack.width
-                    val dotWidth = sheetBinding.viewBiasIndicatorDot.width.coerceAtLeast((14 * density).toInt())
-                    if (trackWidth > dotWidth) {
-                        val tx = ((trackWidth - dotWidth) * (clampedPos / 100f))
-                        sheetBinding.viewBiasIndicatorDot.translationX = tx
-                    }
+                val leaningLabel = when {
+                    biasPos in 40..60 -> "Center · Balanced"
+                    biasPos in 25..39 -> "Leans Center-Left"
+                    biasPos < 25 -> "Left-Leaning"
+                    biasPos in 61..75 -> "Leans Center-Right"
+                    else -> "Right-Leaning"
                 }
+                val leaningColor = when {
+                    biasPos in 40..60 -> "#38BDF8"
+                    biasPos in 25..39 -> "#818CF8"
+                    biasPos < 25 -> "#A78BFA"
+                    biasPos in 61..75 -> "#F59E0B"
+                    else -> "#FB923C"
+                }
+                sheetBinding.textBiasLeaningBadge.text = leaningLabel
+                sheetBinding.textBiasLeaningBadge.setTextColor(Color.parseColor(leaningColor))
 
                 val sensLevel = when {
                     sensationalism >= 60 -> "High"
                     sensationalism >= 30 -> "Moderate"
                     else -> "Low"
                 }
-                sheetBinding.textSensationalismLabel.text = "Sensationalism: $sensLevel ($sensationalism%)"
+                sheetBinding.textSensationalismLabel.text = "$sensLevel ($sensationalism%)"
                 sheetBinding.textSensationalismLabel.setTextColor(
                     Color.parseColor(
                         when {
@@ -8931,14 +9060,19 @@ open class MediaHubActivity : AppCompatActivity() {
                 val opinionCount = claims.count { FokkAiEngine.classifyBullet(it) == "OPINION" }
                 val claimCount = (total - factCount - opinionCount).coerceAtLeast(0)
                 val fPct = (factCount * 100) / total
-                val oPct = (opinionCount * 100) / total
-                val cPct = (100 - fPct - oPct).coerceAtLeast(0)
 
-                sheetBinding.textRatioSummary.text = "$fPct% Fact  ·  $cPct% Claim  ·  $oPct% Opinion"
-                (sheetBinding.barRatioFact.layoutParams as LinearLayout.LayoutParams).weight = fPct.coerceAtLeast(if (factCount > 0) 6 else 0).toFloat()
-                (sheetBinding.barRatioClaim.layoutParams as LinearLayout.LayoutParams).weight = cPct.coerceAtLeast(if (claimCount > 0) 6 else 0).toFloat()
-                (sheetBinding.barRatioOpinion.layoutParams as LinearLayout.LayoutParams).weight = oPct.coerceAtLeast(if (opinionCount > 0) 6 else 0).toFloat()
-                sheetBinding.barRatioFact.requestLayout()
+                sheetBinding.textFactDensityPill.text = "$fPct% Verified"
+                sheetBinding.textFactDensityPill.setTextColor(Color.parseColor(if (fPct >= 70) "#34D399" else if (fPct >= 40) "#FBBF24" else "#F87171"))
+
+                sheetBinding.textRatioSummary.text = "$factCount Fact · $claimCount Claim"
+
+                sheetBinding.textBiasAssessment.text = when {
+                    sensationalism < 30 && biasPos in 35..65 -> "High factual density with calm, objective editorial framing."
+                    sensationalism >= 60 -> "Loaded or emotive tone detected. Corroborate claims against primary records."
+                    biasPos < 35 -> "Perspective leans left with progressive framing of key claims."
+                    biasPos > 65 -> "Perspective leans right with conservative framing of key claims."
+                    else -> "Balanced multi-source reporting across independent news outlets."
+                }
 
                 if (counterPerspective.isNotBlank()) {
                     sheetBinding.layoutCounterPerspectiveCard.visibility = View.VISIBLE
@@ -9184,6 +9318,13 @@ open class MediaHubActivity : AppCompatActivity() {
                 actionRow.addView(listenChip)
 
                 actionRow.addView(makeActionChip("Web Search") {
+                    pendingAiReturnState = AiSourceReturnState(
+                        originalTabIndex = activeTabIndex,
+                        openedNewTab = true,
+                        summaryJson = persistedSummaryJson,
+                        activeAiTab = 1,
+                        sessionKey = sessionKey
+                    )
                     if (chatSession.turns.isNotEmpty()) lastChatSessionLeftForSource = chatSession
                     sheetDialog.dismiss()
                     val searchUrl = currentSearchEngine.searchUrl + Uri.encode(question)
@@ -9231,10 +9372,18 @@ open class MediaHubActivity : AppCompatActivity() {
                 sourcesContainer.addView(sourcesScroll)
 
                 val allSources = mutableListOf<BrowserSearchResult>()
-                if (pageSourceHost.isNotBlank() && pageSourceUrl.isNotBlank()) {
+                val isInternalUrl = pageSourceUrl.contains("fokk_start.html") || pageSourceUrl.contains("fokk_about.html") || pageSourceUrl.startsWith("file://") || pageSourceUrl.isBlank()
+                val isInternalTitle = pageSourceHost.contains("fokk") || title.equals("Fokk", ignoreCase = true) || title.equals("Fokk AI", ignoreCase = true)
+                if (pageSourceHost.isNotBlank() && pageSourceUrl.isNotBlank() && !isInternalUrl && !isInternalTitle) {
                     allSources.add(BrowserSearchResult(title.ifBlank { pageSourceHost }, pageSourceUrl, pageSourceHost, ""))
                 }
                 allSources.addAll(searchSources.filter { it.url != pageSourceUrl && it.url.isNotBlank() })
+
+                if (allSources.isNotEmpty()) {
+                    sourcesContainer.visibility = View.VISIBLE
+                } else {
+                    sourcesContainer.visibility = View.GONE
+                }
 
                 for (s in allSources.take(5)) {
                     val pill = LinearLayout(this@MediaHubActivity).apply {
@@ -9249,6 +9398,13 @@ open class MediaHubActivity : AppCompatActivity() {
                         isClickable = true
                         isFocusable = true
                         setOnClickListener {
+                            pendingAiReturnState = AiSourceReturnState(
+                                originalTabIndex = activeTabIndex,
+                                openedNewTab = true,
+                                summaryJson = persistedSummaryJson,
+                                activeAiTab = 1,
+                                sessionKey = sessionKey
+                            )
                             if (chatSession.turns.isNotEmpty()) lastChatSessionLeftForSource = chatSession
                             sheetDialog.dismiss()
                             addNewTab(s.url, isPrivate = activeTab?.isPrivate == true)
@@ -9628,6 +9784,13 @@ open class MediaHubActivity : AppCompatActivity() {
                                     isClickable = true
                                     isFocusable = true
                                     setOnClickListener {
+                                        pendingAiReturnState = AiSourceReturnState(
+                                            originalTabIndex = activeTabIndex,
+                                            openedNewTab = true,
+                                            summaryJson = persistedSummaryJson,
+                                            activeAiTab = 0,
+                                            sessionKey = sessionKey
+                                        )
                                         if (chatSession.turns.isNotEmpty()) lastChatSessionLeftForSource = chatSession
                                         sheetDialog.dismiss()
                                         addNewTab(src.url, isPrivate = activeTab?.isPrivate == true)
@@ -10966,6 +11129,19 @@ open class MediaHubActivity : AppCompatActivity() {
         }
         if (customView != null) {
             hideCustomView()
+        } else if (pendingAiReturnState != null) {
+            val returnState = pendingAiReturnState!!
+            if (activeWebView?.canGoBack() == true) {
+                activeWebView?.goBack()
+            } else {
+                pendingAiReturnState = null
+                if (returnState.openedNewTab && tabs.size > 1 && activeTabIndex != returnState.originalTabIndex) {
+                    closeTab(activeTabIndex)
+                }
+                mainHandler.postDelayed({
+                    showAiSummarySheet(returnState.summaryJson, initialTab = returnState.activeAiTab)
+                }, 180L)
+            }
         } else if (activeWebView?.canGoBack() == true) {
             activeWebView?.goBack()
         } else if (isIsolatedPrivateProfile) {

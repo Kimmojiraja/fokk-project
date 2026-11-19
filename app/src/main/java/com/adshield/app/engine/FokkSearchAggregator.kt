@@ -149,18 +149,24 @@ object FokkSearchAggregator {
         val cleanQuery = query.trim()
         if (cleanQuery.isBlank()) return@withContext emptyList()
 
-        // Extract meaningful topic keywords for strict relevance filtering
-        val anchorText = if (pageTitle.isNotBlank()) "$pageTitle $cleanQuery" else cleanQuery
+        val isInternalPage = pageTitle.equals("Fokk", ignoreCase = true) ||
+                pageTitle.equals("Fokk AI", ignoreCase = true) ||
+                pageHost.contains("localhost") ||
+                pageHost.contains("fokk") ||
+                pageTitle.startsWith("New Tab", ignoreCase = true)
+
+        // Extract meaningful topic keywords for relevance filtering (allow 3+ letter terms like gta, ai, war)
+        val anchorText = if (pageTitle.isNotBlank() && !isInternalPage) "$pageTitle $cleanQuery" else cleanQuery
         val topicKeywords = anchorText.lowercase(Locale.ROOT)
             .split(Regex("[^a-z0-9]+"))
-            .filter { it.length >= 4 && !QUERY_STOP_WORDS.contains(it) }
+            .filter { it.length >= 3 && !QUERY_STOP_WORDS.contains(it) }
             .distinct()
             .take(12)
 
         coroutineScope {
             val newsDeferred = async { fetchGoogleNews(cleanQuery, max = 5) }
             val ddgDeferred = async { fetchDuckDuckGoHtml(cleanQuery, max = 6) }
-            val wikiDeferred = async { fetchWikipedia(cleanQuery, max = 2) }
+            val wikiDeferred = async { fetchWikipedia(cleanQuery, max = 3) }
             val wikidataDeferred = async { fetchWikidata(cleanQuery, max = 1) }
 
             val newsResults = runCatching { newsDeferred.await() }.getOrDefault(emptyList())
@@ -171,7 +177,7 @@ object FokkSearchAggregator {
             val candidates = mutableListOf<Pair<CorroboratedSource, Int>>()
             val seenUrls = mutableSetOf<String>()
             val seenDomains = mutableSetOf<String>()
-            val normalizedPageHost = pageHost.lowercase(Locale.ROOT).removePrefix("www.")
+            val normalizedPageHost = if (isInternalPage) "" else pageHost.lowercase(Locale.ROOT).removePrefix("www.")
 
             fun evaluateAndAdd(src: CorroboratedSource, baseScore: Int, strictRelevance: Boolean) {
                 val normUrl = src.url.trim().lowercase(Locale.ROOT)
@@ -184,9 +190,10 @@ object FokkSearchAggregator {
                 val haystack = "${src.title} ${src.snippet}".lowercase(Locale.ROOT)
                 val keywordHits = topicKeywords.count { kw -> haystack.contains(kw) }
 
-                if (strictRelevance && topicKeywords.isNotEmpty()) {
-                    val minHits = if (topicKeywords.size >= 4) 2 else 1
-                    if (keywordHits < minHits) return
+                // Google News results are already query-targeted; don't discard if exact acronym didn't hit full text
+                if (strictRelevance && topicKeywords.isNotEmpty() && src.sourceType != "NEWS") {
+                    val hasHit = topicKeywords.any { kw -> haystack.contains(kw) }
+                    if (!hasHit) return
                 }
 
                 var score = baseScore + (keywordHits * 10)
@@ -201,19 +208,19 @@ object FokkSearchAggregator {
             newsResults.forEach { evaluateAndAdd(it, baseScore = 40, strictRelevance = true) }
             ddgResults.forEach { evaluateAndAdd(it, baseScore = 20, strictRelevance = true) }
 
-            // Only include Wikipedia/Wikidata when title closely matches key query terms
+            // Include Wikipedia/Wikidata when query matches topic
             wikiResults.forEach { w ->
-                val titleLower = w.title.lowercase(Locale.ROOT)
-                val titleHits = topicKeywords.count { kw -> titleLower.contains(kw) }
-                if (titleHits >= 1) {
-                    evaluateAndAdd(w, baseScore = 15, strictRelevance = false)
+                val haystack = "${w.title} ${w.snippet}".lowercase(Locale.ROOT)
+                val hasHit = topicKeywords.isEmpty() || topicKeywords.any { kw -> haystack.contains(kw) }
+                if (hasHit) {
+                    evaluateAndAdd(w, baseScore = 30, strictRelevance = false)
                 }
             }
             wikidataResults.forEach { wd ->
-                val titleLower = wd.title.lowercase(Locale.ROOT)
-                val titleHits = topicKeywords.count { kw -> titleLower.contains(kw) }
-                if (titleHits >= 1) {
-                    evaluateAndAdd(wd, baseScore = 10, strictRelevance = false)
+                val haystack = "${wd.title} ${wd.snippet}".lowercase(Locale.ROOT)
+                val hasHit = topicKeywords.isEmpty() || topicKeywords.any { kw -> haystack.contains(kw) }
+                if (hasHit) {
+                    evaluateAndAdd(wd, baseScore = 15, strictRelevance = false)
                 }
             }
 
