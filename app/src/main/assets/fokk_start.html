@@ -5944,7 +5944,10 @@
         function updateGhostModeStatus() {
             try {
                 let isGhost = false;
-                if (window.FokkShieldBridge && typeof window.FokkShieldBridge.isGhostModeActive === 'function') {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('incognito') === 'true' || urlParams.get('incognito') === '1' || window.location.hash.includes('incognito')) {
+                    isGhost = true;
+                } else if (window.FokkShieldBridge && typeof window.FokkShieldBridge.isGhostModeActive === 'function') {
                     isGhost = window.FokkShieldBridge.isGhostModeActive();
                 } else {
                     isGhost = localStorage.getItem('fokk_ghost_mode') === 'true';
