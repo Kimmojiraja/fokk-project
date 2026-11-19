@@ -641,7 +641,15 @@ btnReload.onclick = () => {
 
 btnHome.onclick = () => {
     const active = getActiveWebview();
-    if (active) active.loadURL(START_PAGE_URL);
+    if (active) {
+        const activeTab = tabs.find(t => t.id === activeTabId);
+        const isPrivate = activeTab ? activeTab.isPrivate : false;
+        if (isPrivate) {
+            active.loadURL(START_PAGE_URL + (START_PAGE_URL.includes('?') ? '&' : '?') + 'incognito=1');
+        } else {
+            active.loadURL(START_PAGE_URL);
+        }
+    }
 };
 
 btnNewTab.onclick = () => createTab(START_PAGE_URL);

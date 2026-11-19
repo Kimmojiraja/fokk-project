@@ -1376,7 +1376,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 if (!isFinishing) {
                     privateProfileReady = true
                     if (tabs.isEmpty()) {
-                        addNewTab(initialUrl?.takeIf(::isWebUrl) ?: "file:///android_asset/fokk_start.html", isPrivate = true)
+                        addNewTab(initialUrl?.takeIf(::isWebUrl) ?: "file:///android_asset/fokk_start.html?incognito=true", isPrivate = true)
                     }
                     pendingPrivateUrls.toList().forEach { addNewTab(it, isPrivate = true) }
                     pendingPrivateUrls.clear()
@@ -2072,7 +2072,7 @@ open class MediaHubActivity : AppCompatActivity() {
                         activity.showingPrivateTabs = true
                         activity.showTabSwitcherDialog()
                     } else {
-                        activity.openIsolatedPrivateBrowser("file:///android_asset/fokk_start.html")
+                        activity.openIsolatedPrivateBrowser("file:///android_asset/fokk_start.html?incognito=true")
                     }
                 }
             }
@@ -3072,11 +3072,15 @@ open class MediaHubActivity : AppCompatActivity() {
         val tab = tabs.firstOrNull { it.webView === webView }
         tab?.isOfflineReader = false
 
+        val tabIsPrivate = isIsolatedPrivateProfile || tab?.isPrivate == true
+        if (tabIsPrivate && targetUrl == "file:///android_asset/fokk_start.html") {
+            targetUrl = "file:///android_asset/fokk_start.html?incognito=true"
+        }
+
         // Auto-Stealth Search: Strip personalization & history attachment on Google queries
         if (targetUrl.contains("google.") && targetUrl.contains("/search") && !targetUrl.contains("pws=0")) {
             targetUrl = if (targetUrl.contains("?")) "$targetUrl&pws=0" else "$targetUrl?pws=0"
         }
-        val tabIsPrivate = tab?.isPrivate == true
         CookieManager.getInstance().setAcceptThirdPartyCookies(
             webView,
             true
@@ -4235,7 +4239,7 @@ open class MediaHubActivity : AppCompatActivity() {
         } else {
             authenticateForPrivateTabs {
                 Toast.makeText(this, "Ghost Mode: ON • Zero cookies & history saved", Toast.LENGTH_SHORT).show()
-                openIsolatedPrivateBrowser("file:///android_asset/fokk_start.html")
+                openIsolatedPrivateBrowser("file:///android_asset/fokk_start.html?incognito=true")
             }
         }
     }
@@ -4269,12 +4273,17 @@ open class MediaHubActivity : AppCompatActivity() {
             return
         }
         val tabIsPrivate = isPrivate || isIsolatedPrivateProfile
-        val tab = createTab(url, tabIsPrivate).apply { this.isDesktop = isDesktop }
+        val initialUrl = if (tabIsPrivate && url == "file:///android_asset/fokk_start.html") {
+            "file:///android_asset/fokk_start.html?incognito=true"
+        } else {
+            url
+        }
+        val tab = createTab(initialUrl, tabIsPrivate).apply { this.isDesktop = isDesktop }
         val webView = tab.webView ?: return
         applyDesktopMode(webView, tab.isDesktop)
         tabs.add(tab)
         switchToTab(tabs.size - 1)
-        loadUrlInWebView(webView, url)
+        loadUrlInWebView(webView, initialUrl)
         updateTabCounter()
         persistSession()
     }
@@ -6057,7 +6066,7 @@ open class MediaHubActivity : AppCompatActivity() {
                     showingPrivateTabs = true
                     updateTabsView()
                 } else {
-                    openIsolatedPrivateBrowser("file:///android_asset/fokk_start.html")
+                    openIsolatedPrivateBrowser("file:///android_asset/fokk_start.html?incognito=true")
                     dialog.dismiss()
                 }
             }
@@ -6635,14 +6644,13 @@ open class MediaHubActivity : AppCompatActivity() {
         val isPrivateProfile = isIsolatedPrivateProfile
 
         // 1. Back button
-        val canGoBack = activeWebView?.canGoBack() == true
-        sheetBinding.btnMenuBack.alpha = if (canGoBack) 1.0f else 0.35f
-        sheetBinding.btnMenuBack.isEnabled = canGoBack
+        val canGoBackInHistory = activeWebView?.canGoBack() == true
+        val canNavigateBack = canGoBackInHistory || tabs.size > 1 || !isHomePageUrl(activeWebView?.url)
+        sheetBinding.btnMenuBack.alpha = if (canNavigateBack) 1.0f else 0.35f
+        sheetBinding.btnMenuBack.isEnabled = canNavigateBack
         sheetBinding.btnMenuBack.setOnClickListener {
-            if (activeWebView?.canGoBack() == true) {
-                activeWebView?.goBack()
-                dialog.dismiss()
-            }
+            dialog.dismiss()
+            onBackPressed()
         }
 
         // 2. Forward button
@@ -6665,7 +6673,12 @@ open class MediaHubActivity : AppCompatActivity() {
         // 3. Home button
         sheetBinding.btnMenuHome.alpha = if (isStartPage) 0.45f else 1.0f
         sheetBinding.btnMenuHome.setOnClickListener {
-            loadUrlInActiveWebView("file:///android_asset/fokk_start.html")
+            val isPrivate = isIsolatedPrivateProfile || activeTab?.isPrivate == true
+            if (isPrivate) {
+                loadUrlInActiveWebView("file:///android_asset/fokk_start.html?incognito=true")
+            } else {
+                loadUrlInActiveWebView("file:///android_asset/fokk_start.html")
+            }
             dialog.dismiss()
         }
 
@@ -11698,21 +11711,32 @@ open class MediaHubActivity : AppCompatActivity() {
                 }, 180L)
             }
         } else if (activeWebView?.canGoBack() == true) {
-            activeWebView?.goBack()
-        } else if (isIsolatedPrivateProfile) {
-            closePrivateBrowser()
+            val backList = activeWebView?.copyBackForwardList()
+            val currentIndex = backList?.currentIndex ?: 0
+            val prevUrl = if (currentIndex > 0) backList?.getItemAtIndex(currentIndex - 1)?.url else null
+            val isPrevBlank = prevUrl == null || prevUrl == "about:blank" || prevUrl.isBlank()
+
+            if (tabs.size > 1 && currentIndex == 1 && isPrevBlank) {
+                // The current tab was opened as a popup/new window from about:blank (e.g. ad or video popup).
+                // Instead of navigating back into about:blank, close this tab and return to the previous tab!
+                closeTab(activeTabIndex)
+            } else {
+                activeWebView?.goBack()
+            }
         } else if (tabs.size > 1) {
             closeTab(activeTabIndex)
         } else {
             val currentUrl = activeTab?.url.orEmpty()
-            val isPrivateTab = activeTab?.isPrivate == true
-            if (currentUrl.isNotBlank() && !currentUrl.contains("fokk_start.html")) {
+            val isPrivateTab = isIsolatedPrivateProfile || activeTab?.isPrivate == true
+            if (currentUrl.isNotBlank() && !isHomePageUrl(currentUrl)) {
                 // Return to the correct home page — private tabs go back to incognito home, not normal home
                 if (isPrivateTab) {
                     loadUrlInActiveWebView("file:///android_asset/fokk_start.html?incognito=true")
                 } else {
                     loadUrlInActiveWebView("file:///android_asset/fokk_start.html")
                 }
+            } else if (isIsolatedPrivateProfile) {
+                closePrivateBrowser()
             } else {
                 moveTaskToBack(true)
             }
