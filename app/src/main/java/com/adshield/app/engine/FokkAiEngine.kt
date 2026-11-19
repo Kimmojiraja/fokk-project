@@ -245,9 +245,16 @@ object FokkAiEngine {
         val currentDateStr = java.text.SimpleDateFormat("MMMM yyyy", Locale.US).format(java.util.Date())
 
         val systemPrompt = buildString {
-            append("You are Fokk AI, a sharp, helpful, premium AI assistant built into Fokk Browser.\n")
-            append("TEMPORAL GROUNDING: The current date is $currentDateStr (Year $currentYear). Always synthesize your answer using modern, up-to-date facts grounded in the live web sources provided below. Never claim your knowledge is cutoff at mid-2024 or earlier when addressing real-world queries.\n\n")
-            append("Answer the user's EXACT question directly, naturally, and concisely — like Perplexity or Claude.\n\n")
+            append("You are Fokk AI, an advanced real-time AI research assistant built into Fokk Browser.\n")
+            append("TEMPORAL BASELINE: Today is $currentDateStr (Year $currentYear).\n\n")
+            append("CORE COGNITIVE ARCHITECTURE & GROUNDING RULES:\n")
+            append("1. REAL-TIME WORLD EVOLUTION:\n")
+            append("   - The real world changes dynamically: government leadership, heads of state, election results, corporate executives, sports champions, geopolitical developments, scientific findings, and cultural events evolve continuously.\n")
+            append("   - Whenever addressing real-world factual inquiries, ALWAYS prioritize the LIVE WEB SOURCES provided below over your static pretraining weights.\n")
+            append("   - If live web sources report a recent transition, appointment, election victory, or ongoing event, faithfully report the up-to-date reality from the sources. Never revert to outdated pretraining memory.\n\n")
+            append("2. DYNAMIC INTENT & CONTEXT DISCRIMINATION:\n")
+            append("   - [OPEN-DOMAIN / OUT-OF-BOX INQUIRIES]: If the user asks an open-domain or general knowledge question (asking who an official is, asking about an external event, scientific or factual question while browsing an unrelated webpage), synthesize your answer directly and exclusively from the LIVE WEB SOURCES and modern knowledge. NEVER contaminate or hallucinate facts from the ACTIVE WEBPAGE CONTEXT into an unrelated open-domain question.\n")
+            append("   - [WEBPAGE REFERENTIAL INQUIRIES]: If the user specifically asks about the active webpage (summaries, author arguments, claims, page facts), ground your answer in the ACTIVE WEBPAGE CONTEXT and corroborate with external sources.\n\n")
             if (!isInternalPage) {
                 append("ACTIVE WEBPAGE CONTEXT:\n")
                 if (pageTitle.isNotBlank()) append("Title: $pageTitle\n")
@@ -259,10 +266,10 @@ object FokkAiEngine {
                     append("\nPage Content:\n${cleanContext.take(7500)}\n")
                 }
             } else {
-                append("CONTEXT: The user is asking a general web or knowledge question.\n\n")
+                append("CONTEXT: The user is asking an open-domain web / knowledge question.\n\n")
             }
             if (externalSources.isNotEmpty()) {
-                append("\nLIVE WEB SOURCES (News, Journalism & Social Media):\n")
+                append("\nLIVE WEB SOURCES (News, Journalism & Real-time Web):\n")
                 externalSources.forEachIndexed { i, s ->
                     val typeTag = when (s.sourceType) {
                         "NEWS" -> "[News]"
@@ -275,18 +282,16 @@ object FokkAiEngine {
                     append("\n")
                 }
             }
-            append("\nSTYLE & QUALITY RULES:\n")
-            append("- Directly answer what the user asked in the very first sentence. Never open with boilerplate like 'Credibly documented across newsrooms'.\n")
-            append("- Always check the LIVE WEB SOURCES carefully for recent breaking news, bilateral summits, press conferences, photo ops, viral moments, or quotes (for example, PM Modi attempting to wrap up a photo op with Donald Trump at the Quad summit in Manila, saying 'shall we move?'). If the user's question relates to an incident reported in the live sources, accurately and directly explain what occurred, where, who was involved, and what took place.\n")
-            append("- Prioritize verified journalism (Bloomberg, Reuters, AP, BBC, etc.) for core factual grounding, and use social media posts (Reddit, X, Bluesky, YouTube, etc.) to capture viral quotes, public sentiment, trending discussions, and eyewitness clips without mistaking social chatter for confirmed official policy.\n")
-            append("- Never dismiss a real-world query with 'there is no recorded incident' if live web sources describe the event or interaction.\n")
-            append("- If the user asks 'what is this' or 'summarize', give a crisp, clear synthesis in your own words (never copy-paste raw article paragraphs).\n")
+            append("\nSTYLE & SYNTHESIS STANDARDS:\n")
+            append("- Directly answer what the user asked in the very first sentence. Be direct, authoritative, and concise.\n")
+            append("- Prioritize verified journalism and primary reporting for core factual grounding, capturing eyewitness details and public discourse without mistaking social speculation for confirmed official policy.\n")
+            append("- Never dismiss a real-world query with 'there is no record' if live web sources describe the event or entity.\n")
+            append("- If the user asks 'what is this' or 'summarize', give a crisp, clear synthesis in your own words.\n")
             append("- If the user asks 'who posted it' or 'who wrote this', clearly state the publisher/site, author/byline (if known), and who/what the piece is about.\n")
-            append("- If the user asks a general knowledge question unrelated to the page, answer it helpfully using your knowledge and the web sources.\n")
-            append("- Never cite 'Fokk' or internal browser pages as an external source for real-world topics.\n")
+            append("- Never cite internal browser pages as an external source for real-world topics.\n")
             append("- Use clean, readable markdown: short paragraphs, **bold key phrases**, and concise bullet points only when helpful.\n")
             append("- Cite external web sources naturally with [1], [2] only when actually drawing from them.\n")
-            append("- Keep the tone calm, intelligent, and concise. Avoid robotic jargon or repeating previous answers.\n")
+            append("- Keep the tone calm, intelligent, and concise. Avoid repeating previous answers.\n")
             append("- Strictly ZERO emojis anywhere in your response.\n")
             append("- On the very last line, write: SUGGESTED_FOLLOWUPS: followed by 2 concise, relevant next questions separated by |")
         }
@@ -1067,37 +1072,60 @@ object FokkAiEngine {
                 sb.append("- **Corroboration:** ${assessment.layer3}\n")
             }
             else -> {
-                // Keyword-matched passages tailored to the query
-                val stopWords = setOf("what", "this", "that", "about", "article", "explain", "tell", "page", "news", "post", "posted", "does", "have", "with", "from", "they", "their")
-                val words = qLower.split(Regex("\\W+")).filter { it.length > 3 && !stopWords.contains(it) }.distinct()
-                val relevant = if (words.isNotEmpty()) {
+                // Dynamic Multi-Source Relevance Scoring (Objective TF / Keyword Coverage)
+                val queryWords = qLower.split(Regex("[^a-z0-9]+"))
+                    .filter { it.isNotBlank() && !FokkSearchAggregator.isFunctionalStopWord(it) }
+
+                val scoredSentences = if (queryWords.isNotEmpty()) {
                     sentences.map { s ->
                         val lowerS = s.lowercase(Locale.ROOT)
-                        Pair(s, words.count { lowerS.contains(it) })
-                    }.filter { it.second > 0 }
-                        .sortedByDescending { it.second }
-                        .map { it.first }
-                        .take(3)
+                        val hits = queryWords.count { lowerS.contains(it) }
+                        Pair(s, hits)
+                    }.filter { it.second > 0 }.sortedByDescending { it.second }
                 } else {
                     emptyList()
                 }
 
-                if (relevant.isNotEmpty()) {
+                val scoredSources = if (queryWords.isNotEmpty()) {
+                    sources.map { src ->
+                        val text = "${src.title} ${src.snippet}".lowercase(Locale.ROOT)
+                        val hits = queryWords.count { text.contains(it) }
+                        Pair(src, hits)
+                    }.sortedByDescending { it.second }
+                } else {
+                    sources.map { Pair(it, 0) }
+                }
+
+                val bestPageHits = scoredSentences.firstOrNull()?.second ?: 0
+                val bestSourceHits = scoredSources.firstOrNull()?.second ?: 0
+
+                // If external live sources match more query keywords than the active page context,
+                // or if page context has zero matches for the query, prioritize live web sources!
+                val preferLiveSources = sources.isNotEmpty() && (bestSourceHits > bestPageHits || bestPageHits == 0)
+
+                if (preferLiveSources) {
+                    sb.append("Based on live sources:\n\n")
+                    scoredSources.map { it.first }.take(3).forEachIndexed { i, src ->
+                        sb.append("- **${src.title}** (${FokkSearchAggregator.cleanPublisherName(src.domain)}) [${i + 1}]")
+                        if (src.snippet.isNotBlank()) sb.append(": ${src.snippet}")
+                        sb.append("\n")
+                    }
+                } else if (scoredSentences.isNotEmpty()) {
                     sb.append("Based on **$publisher**:\n\n")
-                    relevant.forEach { s -> sb.append("- ${s.trimEnd('.')}.\n") }
+                    scoredSentences.map { it.first }.take(3).forEach { s -> sb.append("- ${s.trimEnd('.')}.\n") }
+                } else if (sources.isNotEmpty()) {
+                    sb.append("Based on live sources:\n\n")
+                    sources.take(3).forEachIndexed { i, src ->
+                        sb.append("- **${src.title}** (${FokkSearchAggregator.cleanPublisherName(src.domain)}) [${i + 1}]")
+                        if (src.snippet.isNotBlank()) sb.append(": ${src.snippet}")
+                        sb.append("\n")
+                    }
                 } else if (sentences.isNotEmpty()) {
                     if (pageTitle.isNotBlank()) {
                         sb.append("**$pageTitle** (*$publisher*)\n\n")
                     }
                     sb.append(sentences.first().trimEnd('.')).append(".\n\n")
                     sentences.drop(1).take(2).forEach { s -> sb.append("- ${s.trimEnd('.')}.\n") }
-                } else if (sources.isNotEmpty()) {
-                    sb.append("Here is what live web sources report:\n\n")
-                    sources.take(3).forEachIndexed { i, src ->
-                        sb.append("- **${src.title}** (${FokkSearchAggregator.cleanPublisherName(src.domain)}) [${i + 1}]")
-                        if (src.snippet.isNotBlank()) sb.append(": ${src.snippet}")
-                        sb.append("\n")
-                    }
                 } else {
                     sb.append("I couldn't reach live AI servers right now and there isn't enough text on this page to answer that fully. Try again in a moment.")
                 }

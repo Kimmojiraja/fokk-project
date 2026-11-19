@@ -10192,30 +10192,28 @@ open class MediaHubActivity : AppCompatActivity() {
                 val pageCtx = lastAiPageContext.take(8000)
                 val historySnapshot = chatHistory.toList()
 
-                // Smart search query builder: never search filler like "what is the post about who posted it"
-                val fillerWords = setOf(
-                    "what", "is", "this", "the", "post", "about", "who", "posted", "it",
-                    "article", "page", "summary", "summarize", "explain", "tell", "me",
-                    "wrote", "author", "published", "when", "was", "did", "can", "you",
-                    "please", "give", "brief", "key", "takeaways", "bullets", "points"
-                )
-                val meaningfulTerms = cleanQuery.lowercase(Locale.ROOT)
+                // Advanced Semantic Intent Analysis: Disentangle substantive factual queries from referential page requests
+                val substantiveKeywords = cleanQuery.lowercase(Locale.ROOT)
                     .split(Regex("[^a-z0-9]+"))
-                    .filter { it.length >= 3 && !fillerWords.contains(it) }
+                    .filter { it.isNotBlank() && !FokkSearchAggregator.isFunctionalStopWord(it) }
 
-                val searchQuery = when {
-                    meaningfulTerms.size >= 2 -> cleanQuery.take(120)
-                    title.isNotBlank() -> title.take(110)
-                    else -> cleanQuery.take(120)
+                val isSubstantiveQuery = substantiveKeywords.size >= 2 || (substantiveKeywords.size == 1 && cleanQuery.length > 5)
+
+                val (searchQuery, anchorTitle, anchorHost) = if (isSubstantiveQuery) {
+                    Triple(cleanQuery.take(120), "", "")
+                } else if (title.isNotBlank()) {
+                    Triple(title.take(110), title, sourceHost)
+                } else {
+                    Triple(cleanQuery.take(120), "", "")
                 }
 
                 lifecycleScope.launch(Dispatchers.IO) {
                     val sources = if (searchQuery.isNotBlank()) {
                         FokkSearchAggregator.aggregate(
                             query = searchQuery,
-                            pageTitle = if (meaningfulTerms.size < 2) title else "",
-                            pageHost = sourceHost,
-                            maxResults = 5
+                            pageTitle = anchorTitle,
+                            pageHost = anchorHost,
+                            maxResults = 6
                         )
                     } else {
                         emptyList()

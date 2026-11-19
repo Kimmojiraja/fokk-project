@@ -74,14 +74,28 @@ object FokkSearchAggregator {
         "thehindu.com", "indianexpress.com", "ndtv.com", "en.wikipedia.org"
     )
 
-    private val QUERY_STOP_WORDS = setOf(
-        "what", "this", "that", "about", "news", "page", "article", "post",
-        "posted", "who", "where", "when", "why", "how", "tell", "explain",
-        "summary", "summarize", "latest", "video", "from", "with", "into",
-        "does", "have", "been", "were", "they", "their", "there", "here",
-        "just", "more", "some", "also", "very", "much", "make", "made",
-        "said", "says", "over", "after", "before", "under", "between"
+    private val FUNCTIONAL_STOP_WORDS = setOf(
+        "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't",
+        "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by",
+        "can", "can't", "cannot", "could", "couldn't", "did", "didn't", "do", "does", "doesn't", "doing",
+        "don't", "down", "during", "each", "few", "for", "from", "further", "had", "hadn't", "has", "hasn't",
+        "have", "haven't", "having", "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself",
+        "him", "himself", "his", "how", "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is",
+        "isn't", "it", "it's", "its", "itself", "let's", "me", "more", "most", "mustn't", "my", "myself", "no",
+        "nor", "not", "of", "off", "on", "once", "only", "or", "other", "ought", "our", "ours", "ourselves",
+        "out", "over", "own", "same", "shan't", "she", "she'd", "she'll", "she's", "should", "shouldn't", "so",
+        "some", "such", "than", "that", "that's", "the", "their", "theirs", "them", "themselves", "then", "there",
+        "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this", "those", "through", "to",
+        "too", "under", "until", "up", "very", "was", "wasn't", "we", "we'd", "we'll", "we're", "we've", "were",
+        "weren't", "what", "what's", "when", "when's", "where", "where's", "which", "while", "who", "who's", "whom",
+        "why", "why's", "with", "won't", "would", "wouldn't", "you", "you'd", "you'll", "you're", "you've", "your",
+        "yours", "yourself", "yourselves", "tell", "explain", "summarize", "page", "article", "post", "posted",
+        "brief", "give", "just", "make", "made", "said", "says", "like"
     )
+
+    fun isFunctionalStopWord(term: String): Boolean {
+        return FUNCTIONAL_STOP_WORDS.contains(term.lowercase(Locale.ROOT))
+    }
 
     fun isBlockedDomain(domain: String): Boolean {
         val d = domain.lowercase(Locale.ROOT).removePrefix("www.")
@@ -154,60 +168,49 @@ object FokkSearchAggregator {
     }
 
     /**
-     * Intelligently strips conversational filler ("no something i have seen that", "i saw that", etc.),
-     * corrects common entity transliterations/typos (e.g. "mode" -> "modi"), and generates targeted
-     * search queries (distilled query, entity focus query, raw query) for multi-faceted news fetching.
+     * Advanced Universal Search Query Formulator:
+     * Strips conversational filler, extracts core substantive keywords without dropping
+     * short terms, and generates multi-faceted natural and distilled search queries.
      */
     fun extractSearchQueries(rawQuery: String): List<String> {
         val q = rawQuery.trim()
         if (q.isBlank()) return emptyList()
 
         // 1. Strip conversational preamble/fillers
-        var cleaned = q
-        val conversationalPatterns = listOf(
-            Regex("""^(?:no\s+|yes\s+)?(?:something\s+)?(?:i\s+have\s+seen|i\s+saw|i\s+heard|i\s+think|i\s+read)\s+(?:that\s+)?""", RegexOption.IGNORE_CASE),
-            Regex("""^(?:can\s+you\s+tell\s+me|tell\s+me|do\s+you\s+know|what\s+about|what\s+is|what\s+happened\s+with)\s+""", RegexOption.IGNORE_CASE),
-            Regex("""^(?:is\s+it\s+true\s+that|there\s+was\s+(?:an?\s+)?incident\s+where)\s+""", RegexOption.IGNORE_CASE)
+        val conversationalPrefix = Regex(
+            """^(?:(?:please\s+)?(?:can\s+you\s+)?(?:tell\s+me|show\s+me|explain|what\s+about|do\s+you\s+know\s+about)|(?:i\s+(?:want\s+to\s+know|saw|heard|read)\s+(?:that\s+)?)|(?:is\s+it\s+true\s+that))\s+""",
+            RegexOption.IGNORE_CASE
         )
-        for (pattern in conversationalPatterns) {
-            cleaned = cleaned.replace(pattern, "")
-        }
-
-        // 2. Normalize geopolitical/news entities and common typos
-        cleaned = cleaned.replace(Regex("""\bmode\b""", RegexOption.IGNORE_CASE), "modi")
-        cleaned = cleaned.replace(Regex("""\bgta6\b""", RegexOption.IGNORE_CASE), "gta 6")
-        cleaned = cleaned.replace(Regex("""\bgta v\b""", RegexOption.IGNORE_CASE), "gta 5")
-
-        // 3. Extract key topical terms
-        val conversationalStopWords = setOf(
-            "don't", "dont", "want", "while", "is", "are", "the", "a", "an",
-            "and", "in", "on", "at", "for", "with", "that", "this",
-            "just", "something", "have", "seen", "like", "from"
-        )
-        val meaningfulTokens = cleaned.lowercase(Locale.ROOT)
-            .split(Regex("[^a-z0-9]+"))
-            .filter { it.length >= 3 && !conversationalStopWords.contains(it) }
+        val cleaned = q.replace(conversationalPrefix, "").trim()
 
         val variants = mutableListOf<String>()
 
-        // Variant 1: Distilled topical terms (e.g. "modi stand trump answering journalist")
-        if (meaningfulTokens.size >= 2) {
-            variants.add(meaningfulTokens.take(6).joinToString(" "))
-        }
-
-        // Variant 2: Specific high-signal entity pairs (e.g. if modi and trump both present)
-        val tokenSet = meaningfulTokens.toSet()
-        if (tokenSet.contains("modi") && tokenSet.contains("trump")) {
-            variants.add("modi trump photo op")
-            variants.add("modi trump")
-        } else if (meaningfulTokens.size >= 2) {
-            variants.add(meaningfulTokens.take(2).joinToString(" "))
-        }
-
-        // Variant 3: Cleaned query (without conversational opening)
+        // 1. Cleaned natural question query (e.g. "who is the cm of tamil nadu")
         val cleanedOneLine = cleaned.replace(Regex("""\s+"""), " ").trim()
-        if (cleanedOneLine.isNotBlank() && !variants.contains(cleanedOneLine)) {
-            variants.add(cleanedOneLine.take(90))
+        if (cleanedOneLine.isNotBlank()) {
+            variants.add(cleanedOneLine.take(100))
+        }
+
+        // 2. Distilled substantive keywords (zero arbitrary short-term filtering)
+        val keywords = cleanedOneLine.lowercase(Locale.ROOT)
+            .split(Regex("[^a-z0-9]+"))
+            .filter { it.isNotBlank() && !isFunctionalStopWord(it) }
+
+        if (keywords.isNotEmpty()) {
+            val distilled = keywords.take(8).joinToString(" ")
+            if (!variants.contains(distilled)) {
+                variants.add(distilled)
+            }
+
+            // 3. Temporal / Modern query if the query seeks current facts / leadership / updates
+            val isStatusInquiry = Regex("""^(?:who|what|where|when|which|latest|current|who's|whats|how)\b""", RegexOption.IGNORE_CASE)
+                .containsMatchIn(q)
+            if (isStatusInquiry && keywords.size >= 2) {
+                val modernQuery = "current $distilled"
+                if (!variants.contains(modernQuery)) {
+                    variants.add(modernQuery)
+                }
+            }
         }
 
         return variants.distinct().filter { it.isNotBlank() }
@@ -235,34 +238,45 @@ object FokkSearchAggregator {
         val searchVariants = extractSearchQueries(cleanQuery)
         val primaryQuery = searchVariants.firstOrNull() ?: cleanQuery
 
-        // Extract meaningful topic keywords for relevance filtering (allow 3+ letter terms like gta, ai, war)
-        val anchorText = if (pageTitle.isNotBlank() && !isInternalPage) "$pageTitle $primaryQuery" else "$primaryQuery $cleanQuery"
+        val tokens = cleanQuery.lowercase(Locale.ROOT)
+            .split(Regex("[^a-z0-9]+"))
+            .filter { it.isNotBlank() && !isFunctionalStopWord(it) }
+
+        // If the query has independent topical terms (2+), evaluate relevance against the query
+        // rather than contaminating it with words from the active webpage!
+        val isIndependentQuery = tokens.size >= 2
+        val anchorText = if (isIndependentQuery || isInternalPage || pageTitle.isBlank()) {
+            "$cleanQuery $primaryQuery"
+        } else {
+            "$pageTitle $primaryQuery $cleanQuery"
+        }
+
         val topicKeywords = anchorText.lowercase(Locale.ROOT)
             .split(Regex("[^a-z0-9]+"))
-            .filter { it.length >= 3 && !QUERY_STOP_WORDS.contains(it) }
+            .filter { it.isNotBlank() && !isFunctionalStopWord(it) }
             .distinct()
-            .take(12)
+            .take(14)
 
         coroutineScope {
-            val newsDeferreds = searchVariants.take(3).map { q ->
+            val googleNewsDeferreds = searchVariants.take(3).map { q ->
                 async { fetchGoogleNews(q, max = 5) }
             }
-            val ddgDeferred = async { fetchDuckDuckGoHtml(primaryQuery, max = 6) }
-            val socialDeferred = async {
-                fetchDuckDuckGoHtml("$primaryQuery (site:reddit.com OR site:x.com OR site:bsky.app OR site:youtube.com)", max = 4)
+            val bingNewsDeferreds = searchVariants.take(2).map { q ->
+                async { fetchBingNews(q, max = 5) }
             }
+            val ddgInstantDeferred = async { fetchDuckDuckGoInstant(primaryQuery) }
             val wikiDeferred = async { fetchWikipedia(searchVariants.getOrNull(1) ?: primaryQuery, max = 3) }
             val wikidataDeferred = async { fetchWikidata(searchVariants.getOrNull(1) ?: primaryQuery, max = 1) }
 
-            val newsResults = newsDeferreds.flatMap { runCatching { it.await() }.getOrDefault(emptyList()) }
-            val ddgResults = runCatching { ddgDeferred.await() }.getOrDefault(emptyList())
-            val socialResults = runCatching { socialDeferred.await() }.getOrDefault(emptyList())
+            val googleNewsResults = googleNewsDeferreds.flatMap { runCatching { it.await() }.getOrDefault(emptyList()) }
+            val bingNewsResults = bingNewsDeferreds.flatMap { runCatching { it.await() }.getOrDefault(emptyList()) }
+            val ddgInstantResults = runCatching { ddgInstantDeferred.await() }.getOrDefault(emptyList())
             val wikiResults = runCatching { wikiDeferred.await() }.getOrDefault(emptyList())
             val wikidataResults = runCatching { wikidataDeferred.await() }.getOrDefault(emptyList())
 
             val candidates = mutableListOf<Pair<CorroboratedSource, Int>>()
             val seenUrls = mutableSetOf<String>()
-            val seenDomains = mutableSetOf<String>()
+            val domainCounts = mutableMapOf<String, Int>()
             val normalizedPageHost = if (isInternalPage) "" else pageHost.lowercase(Locale.ROOT).removePrefix("www.")
 
             fun evaluateAndAdd(src: CorroboratedSource, baseScore: Int, strictRelevance: Boolean) {
@@ -271,12 +285,13 @@ object FokkSearchAggregator {
                 if (normUrl.isBlank() || seenUrls.contains(normUrl)) return
                 if (normDomain == normalizedPageHost && normalizedPageHost.isNotBlank()) return
                 if (isBlockedDomain(normDomain)) return
-                if (seenDomains.contains(normDomain)) return
+
+                val count = domainCounts.getOrDefault(normDomain, 0)
+                if (count >= 2) return
 
                 val haystack = "${src.title} ${src.snippet}".lowercase(Locale.ROOT)
                 val keywordHits = topicKeywords.count { kw -> haystack.contains(kw) }
 
-                // Google News results are already query-targeted; don't discard if exact acronym didn't hit full text
                 if (strictRelevance && topicKeywords.isNotEmpty() && src.sourceType != "NEWS") {
                     val hasHit = topicKeywords.any { kw -> haystack.contains(kw) }
                     if (!hasHit) return
@@ -284,27 +299,28 @@ object FokkSearchAggregator {
 
                 var score = baseScore + (keywordHits * 10)
                 if (isReputableDomain(normDomain)) score += 35
-                if (src.sourceType == "NEWS") score += 20
-                if (src.sourceType == "SOCIAL") {
-                    // Social posts provide viral/community context; score reasonably with keyword relevance
-                    score = baseScore + (keywordHits * 8)
+                if (src.sourceType == "NEWS") score += 25
+                if (src.sourceType == "FACT_DB") score += 15
+
+                // Recency bonus: reward articles mentioning recent years (2025, 2026) or current terms
+                if (haystack.contains("2026") || haystack.contains("2025") || haystack.contains("current") || haystack.contains("latest")) {
+                    score += 20
                 }
 
                 seenUrls.add(normUrl)
-                seenDomains.add(normDomain)
+                domainCounts[normDomain] = count + 1
                 candidates.add(Pair(src, score))
             }
 
-            newsResults.forEach { evaluateAndAdd(it, baseScore = 40, strictRelevance = true) }
-            ddgResults.forEach { evaluateAndAdd(it, baseScore = 20, strictRelevance = true) }
-            socialResults.forEach { evaluateAndAdd(it, baseScore = 15, strictRelevance = true) }
+            googleNewsResults.forEach { evaluateAndAdd(it, baseScore = 45, strictRelevance = true) }
+            bingNewsResults.forEach { evaluateAndAdd(it, baseScore = 45, strictRelevance = true) }
+            ddgInstantResults.forEach { evaluateAndAdd(it, baseScore = 30, strictRelevance = false) }
 
-            // Include Wikipedia/Wikidata when query matches topic
             wikiResults.forEach { w ->
                 val haystack = "${w.title} ${w.snippet}".lowercase(Locale.ROOT)
                 val hasHit = topicKeywords.isEmpty() || topicKeywords.any { kw -> haystack.contains(kw) }
                 if (hasHit) {
-                    evaluateAndAdd(w, baseScore = 30, strictRelevance = false)
+                    evaluateAndAdd(w, baseScore = 25, strictRelevance = false)
                 }
             }
             wikidataResults.forEach { wd ->
@@ -320,6 +336,136 @@ object FokkSearchAggregator {
                 .map { it.first }
                 .take(maxResults)
         }
+    }
+
+    /**
+     * Fetches real-time headlines and snippets from Bing News RSS feed.
+     */
+    fun fetchBingNews(query: String, max: Int = 5): List<CorroboratedSource> {
+        val results = mutableListOf<CorroboratedSource>()
+        try {
+            val encodedQuery = Uri.encode(query)
+            val rssUrl = "https://www.bing.com/news/search?q=$encodedQuery&format=rss"
+            val conn = (URL(rssUrl).openConnection() as HttpURLConnection).apply {
+                setRequestProperty("User-Agent", USER_AGENT)
+                connectTimeout = CONNECT_TIMEOUT_MS
+                readTimeout = READ_TIMEOUT_MS
+            }
+
+            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
+                val xml = conn.inputStream.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+                val itemRegex = Regex("<item>(.*?)</item>", RegexOption.DOT_MATCHES_ALL)
+                val titleRegex = Regex("<title>(.*?)</title>", RegexOption.DOT_MATCHES_ALL)
+                val linkRegex = Regex("<link>(.*?)</link>", RegexOption.DOT_MATCHES_ALL)
+                val descRegex = Regex("<description>(.*?)</description>", RegexOption.DOT_MATCHES_ALL)
+                val pubDateRegex = Regex("<pubDate>(.*?)</pubDate>", RegexOption.DOT_MATCHES_ALL)
+                val sourceRegex = Regex("<News:Source>(.*?)</News:Source>", RegexOption.DOT_MATCHES_ALL)
+
+                for (match in itemRegex.findAll(xml)) {
+                    val itemContent = match.groupValues[1]
+                    val rawTitle = titleRegex.find(itemContent)?.groupValues?.get(1).orEmpty()
+                    val rawLink = linkRegex.find(itemContent)?.groupValues?.get(1).orEmpty()
+                    val rawDesc = descRegex.find(itemContent)?.groupValues?.get(1).orEmpty()
+                    val pubDate = pubDateRegex.find(itemContent)?.groupValues?.get(1).orEmpty()
+                    val sourceName = sourceRegex.find(itemContent)?.groupValues?.get(1).orEmpty()
+
+                    val targetUrl = if (rawLink.contains("url=")) {
+                        val parsed = runCatching { Uri.parse(rawLink) }.getOrNull()
+                        parsed?.getQueryParameter("url") ?: rawLink
+                    } else {
+                        rawLink
+                    }
+
+                    val domain = runCatching { Uri.parse(targetUrl).host }.getOrNull().orEmpty().removePrefix("www.")
+                    if (domain.isBlank() || isBlockedDomain(domain)) continue
+
+                    val cleanTitle = cleanHtmlText(rawTitle)
+                    val cleanDesc = cleanHtmlText(rawDesc)
+                    if (cleanTitle.isNotBlank() && targetUrl.startsWith("http")) {
+                        val formattedDate = pubDate.take(16).trim()
+                        val snippet = when {
+                            cleanDesc.isNotBlank() && sourceName.isNotBlank() -> "$cleanDesc ($sourceName)"
+                            cleanDesc.isNotBlank() -> cleanDesc
+                            sourceName.isNotBlank() -> sourceName
+                            else -> cleanPublisherName(domain)
+                        }
+
+                        results.add(
+                            CorroboratedSource(
+                                title = cleanTitle,
+                                url = targetUrl,
+                                domain = domain,
+                                snippet = snippet,
+                                sourceType = "NEWS",
+                                timestamp = formattedDate
+                            )
+                        )
+                        if (results.size >= max) break
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+        return results
+    }
+
+    /**
+     * Fetches real-time instant encyclopedic / web abstract from DuckDuckGo API.
+     */
+    fun fetchDuckDuckGoInstant(query: String): List<CorroboratedSource> {
+        val results = mutableListOf<CorroboratedSource>()
+        try {
+            val encodedQuery = Uri.encode(query)
+            val apiUrl = "https://api.duckduckgo.com/?q=$encodedQuery&format=json&no_html=1&skip_disambig=1"
+            val conn = (URL(apiUrl).openConnection() as HttpURLConnection).apply {
+                setRequestProperty("User-Agent", USER_AGENT)
+                connectTimeout = CONNECT_TIMEOUT_MS
+                readTimeout = READ_TIMEOUT_MS
+            }
+
+            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
+                val jsonText = conn.inputStream.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+                val root = JSONObject(jsonText)
+                val heading = root.optString("Heading", "").trim()
+                val abstractText = root.optString("AbstractText", "").trim()
+                val abstractUrl = root.optString("AbstractURL", "").trim()
+                val abstractSource = root.optString("AbstractSource", "Web").trim()
+
+                if (heading.isNotBlank() && abstractText.isNotBlank()) {
+                    val domain = runCatching { Uri.parse(abstractUrl).host }.getOrNull().orEmpty().removePrefix("www.")
+                    results.add(
+                        CorroboratedSource(
+                            title = "$heading - $abstractSource",
+                            url = abstractUrl.ifBlank { "https://duckduckgo.com/?q=$encodedQuery" },
+                            domain = domain.ifBlank { "duckduckgo.com" },
+                            snippet = abstractText,
+                            sourceType = "FACT_DB"
+                        )
+                    )
+                }
+
+                val relatedArr = root.optJSONArray("RelatedTopics")
+                if (relatedArr != null) {
+                    for (i in 0 until minOf(relatedArr.length(), 2)) {
+                        val topic = relatedArr.optJSONObject(i) ?: continue
+                        val text = topic.optString("Text", "").trim()
+                        val firstUrl = topic.optString("FirstURL", "").trim()
+                        if (text.isNotBlank() && firstUrl.isNotBlank()) {
+                            val domain = runCatching { Uri.parse(firstUrl).host }.getOrNull().orEmpty().removePrefix("www.")
+                            results.add(
+                                CorroboratedSource(
+                                    title = text.take(60),
+                                    url = firstUrl,
+                                    domain = domain.ifBlank { "duckduckgo.com" },
+                                    snippet = text,
+                                    sourceType = "WEB"
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+        return results
     }
 
     /**

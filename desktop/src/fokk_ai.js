@@ -63,14 +63,28 @@ const KNOWN_OUTLETS = [
     'Ars Technica', 'Al Jazeera', 'LBC', 'ESPN', 'Forbes', 'Wired'
 ];
 
-const QUERY_STOP_WORDS = new Set([
-    'what', 'this', 'that', 'about', 'news', 'page', 'article', 'post',
-    'posted', 'who', 'where', 'when', 'why', 'how', 'tell', 'explain',
-    'summary', 'summarize', 'latest', 'video', 'from', 'with', 'into',
-    'does', 'have', 'been', 'were', 'they', 'their', 'there', 'here',
-    'just', 'more', 'some', 'also', 'very', 'much', 'make', 'made',
-    'said', 'says', 'over', 'after', 'before', 'under', 'between'
+const FUNCTIONAL_STOP_WORDS = new Set([
+    'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', "aren't",
+    'as', 'at', 'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by',
+    'can', "can't", 'cannot', 'could', "couldn't", 'did', "didn't", 'do', 'does', "doesn't", 'doing',
+    "don't", 'down', 'during', 'each', 'few', 'for', 'from', 'further', 'had', "hadn't", 'has', "hasn't",
+    'have', "haven't", 'having', 'he', "he'd", "he'll", "he's", 'her', 'here', "here's", 'hers', 'herself',
+    'him', 'himself', 'his', 'how', "how's", 'i', "i'd", "i'll", "i'm", "i've", 'if', 'in', 'into', 'is',
+    "isn't", 'it', "it's", 'its', 'itself', "let's", 'me', 'more', 'most', "mustn't", 'my', 'myself', 'no',
+    'nor', 'not', 'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours', 'ourselves',
+    'out', 'over', 'own', 'same', "shan't", 'she', "she'd", "she'll", "she's", 'should', "shouldn't", 'so',
+    'some', 'such', 'than', 'that', "that's", 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there',
+    "there's", 'these', 'they', "they'd", "they'll", "they're", "they've", 'this', 'those', 'through', 'to',
+    'too', 'under', 'until', 'up', 'very', 'was', "wasn't", 'we', "we'd", "we'll", "we're", "we've", 'were',
+    "weren't", 'what', "what's", 'when', "when's", 'where', "where's", 'which', 'while', 'who', "who's", 'whom',
+    'why', "why's", 'with', "won't", 'would', "wouldn't", 'you', "you'd", "you'll", "you're", "you've", 'your',
+    'yours', 'yourself', 'yourselves', 'tell', 'explain', 'summarize', 'page', 'article', 'post', 'posted',
+    'brief', 'give', 'just', 'make', 'made', 'said', 'says', 'like'
 ]);
+
+function isFunctionalStopWord(word) {
+    return FUNCTIONAL_STOP_WORDS.has(String(word || '').toLowerCase());
+}
 
 function stripEmojis(text) {
     if (!text) return '';
@@ -240,6 +254,101 @@ async function fetchGoogleNews(query, max = 5) {
     return results;
 }
 
+async function fetchBingNews(query, max = 5) {
+    const results = [];
+    const rssUrl = `https://www.bing.com/news/search?q=${encodeURIComponent(query)}&format=rss`;
+    const res = await httpsRequest(rssUrl, {
+        headers: { 'Accept': 'application/rss+xml, text/xml, */*' }
+    }, null, 4500);
+    if (res.status !== 200 || !res.body) return results;
+
+    const itemRegex = /<item>([\s\S]*?)<\/item>/gi;
+    let m;
+    while ((m = itemRegex.exec(res.body)) !== null && results.length < max) {
+        const block = m[1];
+        const rawTitle = (block.match(/<title>([\s\S]*?)<\/title>/i) || [])[1] || '';
+        const rawLink = (block.match(/<link>([\s\S]*?)<\/link>/i) || [])[1] || '';
+        const rawDesc = (block.match(/<description>([\s\S]*?)<\/description>/i) || [])[1] || '';
+        const pubDate = (block.match(/<pubDate>([\s\S]*?)<\/pubDate>/i) || [])[1] || '';
+        const srcMatch = block.match(/<News:Source>([\s\S]*?)<\/News:Source>/i);
+
+        let domain = '';
+        try { domain = new URL(rawLink).hostname.replace(/^www\./, ''); } catch (_) {}
+        if (!domain || isBlockedDomain(domain)) continue;
+
+        const cleanTitle = cleanHtmlText(rawTitle);
+        const cleanDesc = cleanHtmlText(rawDesc);
+        const sourceName = cleanHtmlText(srcMatch ? srcMatch[1] : '') || cleanPublisherName(domain);
+        const formattedDate = pubDate.slice(0, 16).trim();
+        const snippet = cleanDesc || (formattedDate ? `${sourceName} (${formattedDate})` : sourceName);
+
+        if (cleanTitle && rawLink) {
+            results.push({
+                title: cleanTitle,
+                url: rawLink.trim(),
+                domain,
+                snippet,
+                sourceType: 'NEWS',
+                timestamp: formattedDate
+            });
+        }
+    }
+    return results;
+}
+
+async function fetchDuckDuckGoInstant(query) {
+    const results = [];
+    const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
+    const res = await httpsRequest(url, { headers: { 'Accept': 'application/json' } }, null, 3500);
+    if (res.status !== 200 || !res.body) return results;
+    try {
+        const data = JSON.parse(res.body);
+        const heading = (data.Heading || '').trim();
+        const abstract = (data.AbstractText || '').trim();
+        const abstractUrl = (data.AbstractURL || '').trim();
+        const source = (data.AbstractSource || 'DuckDuckGo').trim();
+        if (abstract && abstractUrl) {
+            let domain = 'duckduckgo.com';
+            try { domain = new URL(abstractUrl).hostname.replace(/^www\./, ''); } catch (_) {}
+            results.push({
+                title: heading ? `${heading} (${source})` : source,
+                url: abstractUrl,
+                domain,
+                snippet: abstract.slice(0, 300),
+                sourceType: 'WIKI',
+                timestamp: ''
+            });
+        }
+    } catch (_) {}
+    return results;
+}
+
+function extractSearchQueries(rawQuery) {
+    const q = String(rawQuery || '').trim();
+    if (!q) return [];
+
+    const conversationalPrefix = /^(?:(?:please\s+)?(?:can\s+you\s+)?(?:tell\s+me|show\s+me|explain|what\s+about|do\s+you\s+know\s+about)|(?:i\s+(?:want\s+to\s+know|saw|heard|read)\s+(?:that\s+)?)|(?:is\s+it\s+true\s+that))\s+/i;
+    const cleaned = q.replace(conversationalPrefix, '').trim();
+
+    const variants = [];
+    const cleanOneLine = cleaned.replace(/\s+/g, ' ').trim();
+    if (cleanOneLine) variants.push(cleanOneLine.slice(0, 100));
+
+    const keywords = cleanOneLine.toLowerCase().split(/[^a-z0-9]+/).filter(w => w && !isFunctionalStopWord(w));
+    if (keywords.length > 0) {
+        const distilled = keywords.slice(0, 8).join(' ');
+        if (!variants.includes(distilled)) variants.push(distilled);
+
+        const isStatusInquiry = /^(?:who|what|where|when|which|latest|current|who's|whats|how)\b/i.test(q);
+        if (isStatusInquiry && keywords.length >= 2) {
+            const modernQuery = `current ${distilled}`;
+            if (!variants.includes(modernQuery)) variants.push(modernQuery);
+        }
+    }
+
+    return Array.from(new Set(variants)).slice(0, 3);
+}
+
 async function fetchDuckDuckGoHtml(query, max = 6) {
     const results = [];
     const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
@@ -313,20 +422,26 @@ async function aggregateSources(query, pageTitle = '', pageHost = '', maxResults
     const cleanQuery = String(query || '').trim();
     if (!cleanQuery) return [];
 
-    const anchorText = pageTitle ? `${pageTitle} ${cleanQuery}` : cleanQuery;
+    const isIndependentQuery = !pageTitle || pageTitle.trim().length === 0;
+    const anchorText = isIndependentQuery ? cleanQuery : `${pageTitle} ${cleanQuery}`;
     const topicKeywords = Array.from(new Set(
-        anchorText.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !QUERY_STOP_WORDS.has(w))
-    )).slice(0, 12);
+        anchorText.toLowerCase().split(/[^a-z0-9]+/).filter(w => w && !isFunctionalStopWord(w))
+    )).slice(0, 14);
 
-    const [newsRes, ddgRes, wikiRes] = await Promise.all([
-        fetchGoogleNews(cleanQuery, 5).catch(() => []),
-        fetchDuckDuckGoHtml(cleanQuery, 6).catch(() => []),
+    const searchVariants = extractSearchQueries(cleanQuery);
+    const primaryQuery = searchVariants[0] || cleanQuery;
+
+    const [newsRes, bingRes, ddgInstant, ddgRes, wikiRes] = await Promise.all([
+        fetchGoogleNews(primaryQuery, 5).catch(() => []),
+        fetchBingNews(primaryQuery, 5).catch(() => []),
+        fetchDuckDuckGoInstant(cleanQuery).catch(() => []),
+        fetchDuckDuckGoHtml(primaryQuery, 5).catch(() => []),
         fetchWikipedia(cleanQuery, 2).catch(() => [])
     ]);
 
     const candidates = [];
     const seenUrls = new Set();
-    const seenDomains = new Set();
+    const seenDomainCounts = {};
     const normPageHost = String(pageHost || '').toLowerCase().replace(/^www\./, '');
 
     function evaluateAndAdd(src, baseScore, strictRelevance) {
@@ -334,25 +449,37 @@ async function aggregateSources(query, pageTitle = '', pageHost = '', maxResults
         const normDomain = (src.domain || '').trim().toLowerCase().replace(/^www\./, '');
         if (!normUrl || seenUrls.has(normUrl)) return;
         if (normPageHost && normDomain === normPageHost) return;
-        if (isBlockedDomain(normDomain) || seenDomains.has(normDomain)) return;
+        if (isBlockedDomain(normDomain)) return;
+        if ((seenDomainCounts[normDomain] || 0) >= 2) return;
 
         const haystack = `${src.title} ${src.snippet}`.toLowerCase();
         const hits = topicKeywords.filter(kw => haystack.includes(kw)).length;
         if (strictRelevance && topicKeywords.length > 0) {
-            const minHits = topicKeywords.length >= 4 ? 2 : 1;
+            const minHits = topicKeywords.length >= 4 ? 1 : 1;
             if (hits < minHits) return;
         }
 
-        let score = baseScore + hits * 10;
+        let score = baseScore + hits * 12;
         if (isReputableDomain(normDomain)) score += 35;
-        if (src.sourceType === 'NEWS') score += 20;
+        if (src.sourceType === 'NEWS') score += 25;
+
+        // Recency bonus for modern facts
+        const tsLower = (src.timestamp || '').toLowerCase();
+        const snipLower = (src.snippet || '').toLowerCase();
+        if (tsLower.includes('2026') || snipLower.includes('2026') || tsLower.includes('ago') || tsLower.includes('hour') || tsLower.includes('minute')) {
+            score += 25;
+        } else if (tsLower.includes('2025') || snipLower.includes('2025')) {
+            score += 10;
+        }
 
         seenUrls.add(normUrl);
-        seenDomains.add(normDomain);
+        seenDomainCounts[normDomain] = (seenDomainCounts[normDomain] || 0) + 1;
         candidates.push({ src, score });
     }
 
-    newsRes.forEach(s => evaluateAndAdd(s, 40, true));
+    newsRes.forEach(s => evaluateAndAdd(s, 45, true));
+    bingRes.forEach(s => evaluateAndAdd(s, 45, true));
+    ddgInstant.forEach(s => evaluateAndAdd(s, 30, false));
     ddgRes.forEach(s => evaluateAndAdd(s, 20, true));
     wikiRes.forEach(w => {
         const titleLower = (w.title || '').toLowerCase();
@@ -822,32 +949,49 @@ class FokkAiService {
         if (!cleanQuery) return { answer: '', followUps: [], sources: [] };
         const cleanContext = cleanDropCaps(pageContext);
 
-        // Smart search query builder (never search filler words like "what is the post about who posted it")
-        const filler = new Set(['what', 'is', 'this', 'the', 'post', 'about', 'who', 'posted', 'it', 'article', 'page', 'summary', 'summarize', 'explain', 'tell', 'me', 'wrote', 'author', 'published', 'when', 'was', 'did', 'can', 'you', 'please', 'give', 'brief', 'key', 'takeaways', 'bullets', 'points']);
-        const meaningful = cleanQuery.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 3 && !filler.has(w));
-        const searchQuery = meaningful.length >= 2 ? cleanQuery.slice(0, 120) : (pageTitle ? pageTitle.slice(0, 110) : cleanQuery.slice(0, 120));
+        // Advanced Semantic Intent Analysis: Disentangle substantive factual queries from referential page requests
+        const substantive = cleanQuery.toLowerCase().split(/[^a-z0-9]+/).filter(w => w && !isFunctionalStopWord(w));
+        const isSubstantiveQuery = substantive.length >= 2 || (substantive.length === 1 && cleanQuery.length > 5);
+        const searchQuery = isSubstantiveQuery ? cleanQuery.slice(0, 120) : (pageTitle ? pageTitle.slice(0, 110) : cleanQuery.slice(0, 120));
 
         const sources = searchQuery
-            ? await aggregateSources(searchQuery, meaningful.length < 2 ? pageTitle : '', pageHost, 5)
+            ? await aggregateSources(searchQuery, isSubstantiveQuery ? '' : pageTitle, isSubstantiveQuery ? '' : pageHost, 6)
             : [];
 
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentDateStr = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
         const systemPrompt = [
-            'You are Fokk AI, a sharp, helpful, premium AI assistant built into Fokk Browser.',
-            "Answer the user's EXACT question directly, naturally, and concisely — like Perplexity or Claude.",
+            'You are Fokk AI, an advanced real-time AI research assistant built into Fokk Browser.',
+            `TEMPORAL BASELINE: Today is ${currentDateStr} (Year ${currentYear}).`,
             '',
-            'ACTIVE WEBPAGE CONTEXT:',
+            'CORE COGNITIVE ARCHITECTURE & GROUNDING RULES:',
+            '1. REAL-TIME WORLD EVOLUTION:',
+            '   - The real world changes dynamically: government leadership, heads of state, election results, corporate executives, sports champions, geopolitical developments, scientific findings, and cultural events evolve continuously.',
+            '   - Whenever addressing real-world factual inquiries, ALWAYS prioritize the LIVE WEB SOURCES provided below over your static pretraining weights.',
+            '   - If live web sources report a recent transition, appointment, election victory, or ongoing event, faithfully report the up-to-date reality from the sources. Never revert to outdated pretraining memory.',
+            '',
+            '2. DYNAMIC INTENT & CONTEXT DISCRIMINATION:',
+            '   - [OPEN-DOMAIN / OUT-OF-BOX INQUIRIES]: If the user asks an open-domain or general knowledge question (asking who an official is, asking about an external event, scientific or factual question while browsing an unrelated webpage), synthesize your answer directly and exclusively from the LIVE WEB SOURCES and modern knowledge. NEVER contaminate or hallucinate facts from the ACTIVE WEBPAGE CONTEXT into an unrelated open-domain question.',
+            '   - [WEBPAGE REFERENTIAL INQUIRIES]: If the user specifically asks about the active webpage (summaries, author arguments, claims, page facts), ground your answer in the ACTIVE WEBPAGE CONTEXT and corroborate with external sources.',
+            '',
+            pageTitle && !isSubstantiveQuery ? 'ACTIVE WEBPAGE CONTEXT:' : (isSubstantiveQuery ? 'CONTEXT: The user is asking an open-domain web / knowledge question.' : ''),
             pageTitle ? `Title: ${pageTitle}` : '',
             pageHost ? `Publisher / Site: ${cleanPublisherName(pageHost)} (${pageHost})` : '',
             pageAuthor ? `Author / Byline: ${pageAuthor}` : '',
             pagePublished ? `Published Date: ${pagePublished}` : '',
             pageUrl ? `URL: ${pageUrl}` : '',
             cleanContext ? `\nPage Content:\n${cleanContext.slice(0, 7500)}` : '',
-            sources.length > 0 ? '\nLIVE WEB SOURCES:\n' + sources.map((s, i) => `[${i + 1}] ${s.title} (${s.domain})${s.snippet ? ' — ' + s.snippet : ''}`).join('\n') : '',
+            sources.length > 0 ? '\nLIVE WEB SOURCES (News, Journalism & Real-time Web):\n' + sources.map((s, i) => `[${i + 1}] ${s.title} (${s.domain})${s.snippet ? ' — ' + s.snippet : ''}`).join('\n') : '',
             '',
-            'STYLE & QUALITY RULES:',
-            "- Directly answer what the user asked in the very first sentence. Never open with boilerplate like 'Credibly documented across newsrooms'.",
+            'STYLE & SYNTHESIS STANDARDS:',
+            "- Directly answer what the user asked in the very first sentence. Be direct, authoritative, and concise.",
+            "- Prioritize verified journalism and primary reporting for core factual grounding, capturing eyewitness details and public discourse without mistaking social speculation for confirmed official policy.",
+            "- Never dismiss a real-world query with 'there is no record' if live web sources describe the event or entity.",
             "- If the user asks 'what is this' or 'summarize', give a crisp, clear synthesis in your own words.",
             "- If the user asks 'who posted it' or 'who wrote this', clearly state the publisher/site, author/byline (if known), and what the piece is about.",
+            "- Never cite internal browser pages as an external source for real-world topics.",
             '- Use clean, readable markdown: short paragraphs, **bold key phrases**, and concise bullet points only when helpful.',
             '- Cite external web sources naturally with [1], [2] only when actually drawing from them.',
             '- Keep the tone calm, intelligent, and concise. Avoid repeating previous answers.',
@@ -903,15 +1047,40 @@ class FokkAiService {
             return `**Assessment:** ${ev.verdict} (${ev.score}%)\n\n${ev.reason}\n\n- **Source:** ${ev.layer1}\n- **Framing:** ${ev.layer2}\n- **Corroboration:** ${ev.layer3}`;
         }
 
-        const stop = new Set(['what', 'this', 'that', 'about', 'article', 'explain', 'tell', 'page', 'news', 'post', 'posted', 'does', 'have', 'with', 'from', 'they', 'their']);
-        const words = Array.from(new Set(qLower.split(/\W+/).filter(w => w.length > 3 && !stop.has(w))));
-        const relevant = words.length > 0
-            ? sentences.map(s => ({ s, hits: words.filter(w => s.toLowerCase().includes(w)).length }))
-                .filter(x => x.hits > 0).sort((a, b) => b.hits - a.hits).slice(0, 3).map(x => x.s)
+        // Dynamic Multi-Source Relevance Scoring (Objective TF / Keyword Coverage)
+        const queryWords = Array.from(new Set(qLower.split(/[^a-z0-9]+/).filter(w => w && !isFunctionalStopWord(w))));
+
+        const scoredSentences = queryWords.length > 0
+            ? sentences.map(s => {
+                const lowerS = s.toLowerCase();
+                const hits = queryWords.filter(w => lowerS.includes(w)).length;
+                return { s, hits };
+            }).filter(x => x.hits > 0).sort((a, b) => b.hits - a.hits)
             : [];
 
-        if (relevant.length > 0) {
-            return `Based on **${publisher}**:\n\n` + relevant.map(s => `- ${s.replace(/\.$/, '')}.`).join('\n');
+        const scoredSources = queryWords.length > 0
+            ? sources.map(src => {
+                const text = `${src.title} ${src.snippet}`.toLowerCase();
+                const hits = queryWords.filter(w => text.includes(w)).length;
+                return { src, hits };
+            }).sort((a, b) => b.hits - a.hits)
+            : sources.map(src => ({ src, hits: 0 }));
+
+        const bestPageHits = scoredSentences[0] ? scoredSentences[0].hits : 0;
+        const bestSourceHits = scoredSources[0] ? scoredSources[0].hits : 0;
+
+        // If external live sources match more query keywords than the active page context,
+        // or if page context has zero matches for the query, prioritize live web sources!
+        const preferLiveSources = sources.length > 0 && (bestSourceHits > bestPageHits || bestPageHits === 0);
+
+        if (preferLiveSources) {
+            return 'Based on live sources:\n\n' + scoredSources.slice(0, 3).map(x => `- **${x.src.title}** (${cleanPublisherName(x.src.domain)})${x.src.snippet ? ' — ' + x.src.snippet : ''}`).join('\n');
+        }
+        if (scoredSentences.length > 0) {
+            return `Based on **${publisher}**:\n\n` + scoredSentences.slice(0, 3).map(x => `- ${x.s.replace(/\.$/, '')}.`).join('\n');
+        }
+        if (sources.length > 0) {
+            return 'Based on live sources:\n\n' + sources.slice(0, 3).map(s => `- **${s.title}** (${cleanPublisherName(s.domain)})${s.snippet ? ' — ' + s.snippet : ''}`).join('\n');
         }
         if (sentences.length > 0) {
             return `${pageTitle ? `**${pageTitle}** (*${publisher}*)\n\n` : ''}${sentences[0].replace(/\.$/, '')}.\n\n` +
@@ -924,6 +1093,8 @@ class FokkAiService {
 module.exports = {
     FokkAiService,
     aggregateSources,
+    extractSearchQueries,
+    isFunctionalStopWord,
     classifyBullet,
     cleanPublisherName,
     cleanDropCaps,
