@@ -94,6 +94,82 @@
             android:max="100"
             android:progressTint="#34D399"
             android:visibility="gone" />
+
+        <!-- Find in Page Floating Bar -->
+        <LinearLayout
+            android:id="@+id/layoutFindInPage"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_gravity="top"
+            android:layout_marginHorizontal="12dp"
+            android:layout_marginTop="36dp"
+            android:background="@drawable/bg_ai_pill"
+            android:elevation="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ic_search"
+                app:tint="#38BDF8" />
+
+            <EditText
+                android:id="@+id/inputFindQuery"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:background="@null"
+                android:hint="Find in page..."
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:maxLines="1"
+                android:singleLine="true"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#64748B"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/textFindMatches"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="6dp"
+                android:text="0/0"
+                android:textColor="#94A3B8"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <ImageButton
+                android:id="@+id/btnFindPrev"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Previous match"
+                android:src="@drawable/ic_expand"
+                app:tint="#CBD5E1" />
+
+            <ImageButton
+                android:id="@+id/btnFindNext"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Next match"
+                android:src="@drawable/ic_collapse"
+                app:tint="#CBD5E1" />
+
+            <ImageButton
+                android:id="@+id/btnFindClose"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Close find in page"
+                android:src="@drawable/ic_close"
+                app:tint="#94A3B8" />
+        </LinearLayout>
     </FrameLayout>
 
     <!-- Modern Cyber Floating Command Input Bar -->

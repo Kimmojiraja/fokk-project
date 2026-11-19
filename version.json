@@ -1,6 +1,6 @@
 {
-  "versionCode": 295,
-  "versionName": "2.9.5",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.5/app-debug.apk",
-  "changelog": "- Advanced Real-Time Intelligence & Social Media Aggregation: Ask AI queries now capture and prioritize both verified journalism and breaking social media posts (Reddit, X, Bluesky, Threads, Instagram, YouTube clips) with intelligent query distillation and entity typo correction.\n- Master Ad Blocker Toggle on Bottom Menu: The Ad Blocker button beside Fokk Mesh now acts as an instant master switch controlling the whole ad blocker. Easily toggle off when encountering anti-adblock warnings or site breakage, and re-enable with full Brave Rust shield power.\n- Streamlined UI: Completely removed Media, Gestures & PiP hub from menu and eliminated the video logo and PiP icon from the command card bar for a cleaner, clutter-free browsing experience."
+  "versionCode": 296,
+  "versionName": "2.9.6",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.6/app-debug.apk",
+  "changelog": "- Enhanced Article Video Playback: Resolved CNN Business and news media video player stalls by whitelisting WarnerMedia/Turner/Freewheel streaming delivery infrastructure, enabling seamless third-party cookies for media authentication, allowing mixed content streaming chunks, and auto-granting protected media playback.\n- Glitch-Free Pull-to-Refresh: Re-engineered SwipeRefreshLayout with dynamic on-scroll child detection, preventing touch interception and scrolling jank while reading mid-page, and smoothly activating pull-down refresh strictly when at the top of the webpage.\n- Find in Page: Added floating in-page text search bar with real-time match counter, up/down match navigation, and back-press dismissal.\n- Quick Copy Link: Added 1-tap Copy Link item in Daily Essentials to easily share current page URLs."
 }
