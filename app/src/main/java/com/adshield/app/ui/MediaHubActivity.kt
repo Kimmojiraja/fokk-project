@@ -1512,9 +1512,13 @@ open class MediaHubActivity : AppCompatActivity() {
             binding.urlInput.setHintTextColor(Color.parseColor("#94A3B8"))
         }
 
-        val themeKey = if (isLight) "pearl_light" else "default"
+        val savedTheme = prefs.getString(PREF_ACTIVE_THEME, "default") ?: "default"
+        val customData = if (savedTheme == "custom") getCustomWallpaperDataUri() else ""
         tabs.forEach { tab ->
-            tab.webView?.evaluateJavascript("if (typeof applyThemeFromNative === 'function') applyThemeFromNative('$themeKey', '');", null)
+            tab.webView?.evaluateJavascript(
+                "if (typeof applyThemeFromNative === 'function') applyThemeFromNative('$savedTheme', '$customData', $isLight);",
+                null
+            )
         }
     }
 
@@ -1539,7 +1543,8 @@ open class MediaHubActivity : AppCompatActivity() {
         val currentUrl = wv?.url.orEmpty()
         val isGesturesEnabled = prefs.getBoolean(PREF_PULL_TO_REFRESH, true)
         val isFeed = isVerticalVideoFeedUrl(currentUrl) || customView != null
-        val atTop = !isFeed && isGesturesEnabled && (wv?.scrollY ?: 0) <= 0 && (wv?.canScrollVertically(-1) != true)
+        val isStart = currentUrl.contains("fokk_start.html") || currentUrl.isBlank() || currentUrl == "about:blank"
+        val atTop = !isFeed && !isStart && isGesturesEnabled && (wv?.scrollY ?: 0) <= 0 && (wv?.canScrollVertically(-1) != true)
         if (binding.swipeRefreshLayout.isEnabled != atTop) {
             binding.swipeRefreshLayout.isEnabled = atTop
         }
@@ -1559,7 +1564,11 @@ open class MediaHubActivity : AppCompatActivity() {
         binding.swipeRefreshLayout.setOnChildScrollUpCallback { _, _ ->
             val wv = activeWebView ?: return@setOnChildScrollUpCallback false
             val currentUrl = wv.url.orEmpty()
-            if (!prefs.getBoolean(PREF_PULL_TO_REFRESH, true) || isVerticalVideoFeedUrl(currentUrl) || customView != null) {
+            if (!prefs.getBoolean(PREF_PULL_TO_REFRESH, true) ||
+                isVerticalVideoFeedUrl(currentUrl) ||
+                customView != null ||
+                currentUrl.contains("fokk_start.html") ||
+                currentUrl.isBlank()) {
                 return@setOnChildScrollUpCallback true
             }
             wv.scrollY > 0 || wv.canScrollVertically(-1)
@@ -1893,13 +1902,19 @@ open class MediaHubActivity : AppCompatActivity() {
             activity.runOnUiThread {
                 activity.prefs.edit().putString(PREF_ACTIVE_THEME, theme).apply()
                 val customData = if (theme == "custom") activity.getCustomWallpaperDataUri() else ""
+                val isLight = activity.isAppInLightMode()
                 activity.tabs.forEach { tab ->
                     tab.webView?.evaluateJavascript(
-                        "if (typeof applyThemeFromNative === 'function') applyThemeFromNative('$theme', '$customData');",
+                        "if (typeof applyThemeFromNative === 'function') applyThemeFromNative('$theme', '$customData', $isLight);",
                         null
                     )
                 }
             }
+        }
+
+        @JavascriptInterface
+        fun isLightMode(): Boolean {
+            return activity.isAppInLightMode()
         }
 
         @JavascriptInterface
@@ -3612,10 +3627,11 @@ open class MediaHubActivity : AppCompatActivity() {
                         loadedTab?.url = loadedUrl
                         if (loadedUrl.contains("fokk_start.html")) {
                             loadedTab?.title = "New Tab"
+                            val isLight = isAppInLightMode()
                             val theme = prefs.getString(PREF_ACTIVE_THEME, "default") ?: "default"
                             val customData = if (theme == "custom") getCustomWallpaperDataUri() else ""
                             view?.evaluateJavascript(
-                                "if (typeof applyThemeFromNative === 'function') applyThemeFromNative('$theme', '$customData');",
+                                "if (typeof applyThemeFromNative === 'function') applyThemeFromNative('$theme', '$customData', $isLight);",
                                 null
                             )
                         } else if (loadedTab != null) {
@@ -6296,6 +6312,97 @@ open class MediaHubActivity : AppCompatActivity() {
             </main></body></html>""".trimIndent()
     }
 
+    private fun applyThemeToBrowserMenu(b: SheetBrowserMenuBinding, isLight: Boolean) {
+        if (!isLight) return
+        val bgSheet = Color.parseColor("#FAF9F6")
+        val textPrimary = Color.parseColor("#0F172A")
+        val textSecondary = Color.parseColor("#64748B")
+        val iconTint = ColorStateList.valueOf(Color.parseColor("#0F172A"))
+
+        b.root.setBackgroundColor(bgSheet)
+
+        b.textMenuProfileName.setTextColor(textPrimary)
+        b.rowMenuProfile.setBackgroundResource(R.drawable.bg_menu_grid_item_light)
+
+        b.layoutMenuQuickNav.setBackgroundResource(R.drawable.bg_menu_nav_bar_light)
+        listOf(b.btnMenuBack, b.btnMenuForward, b.btnMenuRefresh, b.btnMenuHome, b.btnMenuHistory, b.btnMenuDownloads)
+            .forEach { it.imageTintList = iconTint }
+
+        listOf(b.btnMenuQuickVpn, b.btnMenuQuickShield, b.btnMenuQuickReader, b.btnMenuQuickNight).forEach { card ->
+            card.setBackgroundResource(R.drawable.bg_menu_squircle_light)
+            for (i in 0 until card.childCount) {
+                val child = card.getChildAt(i)
+                if (child is TextView && child.id != R.id.textMenuQuickVpnStatus && child.id != R.id.textMenuQuickShieldStatus && child.id != R.id.textMenuQuickNightStatus) {
+                    child.setTextColor(textPrimary)
+                }
+            }
+        }
+
+        b.btnMenuAskAi.setBackgroundResource(R.drawable.bg_menu_ai_pill_light)
+        for (i in 0 until b.btnMenuAskAi.childCount) {
+            val child = b.btnMenuAskAi.getChildAt(i)
+            if (child is LinearLayout) {
+                for (j in 0 until child.childCount) {
+                    val sub = child.getChildAt(j)
+                    if (sub is TextView) {
+                        if (j == 0) sub.setTextColor(textPrimary) else sub.setTextColor(textSecondary)
+                    }
+                }
+            }
+        }
+
+        listOf(
+            b.rowNewTab, b.rowPrivateTab, b.rowDesktopSite, b.rowShare,
+            b.rowAddToHomeScreen, b.rowAddToStartpageShortcuts, b.rowTranslate,
+            b.rowSavePdf, b.rowFindInPage, b.rowCopyLink
+        ).forEach { row ->
+            row.setBackgroundResource(R.drawable.bg_menu_grid_item_light)
+            for (i in 0 until row.childCount) {
+                val child = row.getChildAt(i)
+                if (child is ImageView) child.imageTintList = iconTint
+                if (child is TextView) child.setTextColor(textPrimary)
+            }
+        }
+
+        b.btnMenuMoreRow.setBackgroundResource(R.drawable.bg_menu_grid_item_light)
+        for (i in 0 until b.btnMenuMoreRow.childCount) {
+            val child = b.btnMenuMoreRow.getChildAt(i)
+            if (child is ImageView) child.imageTintList = iconTint
+            if (child is TextView) child.setTextColor(textPrimary)
+        }
+
+        listOf(
+            b.btnToolSavedSummaries, b.rowBurnSession, b.btnToolDualScreen,
+            b.btnToolThemes, b.btnToolAiSummary, b.btnToolAiBlocker,
+            b.btnToolDiagnostics, b.btnToolDnsShield, b.btnToolMediaGrabber,
+            b.btnToolReadAloud
+        ).forEach { row ->
+            row.setBackgroundResource(R.drawable.bg_menu_grid_item_light)
+            for (i in 0 until row.childCount) {
+                val child = row.getChildAt(i)
+                if (child is ImageView && child.id != R.id.imgAiBlockerIcon) child.imageTintList = iconTint
+                if (child is TextView && child.id != R.id.textAiBlockerStatus && row != b.rowBurnSession) child.setTextColor(textPrimary)
+            }
+        }
+
+        listOf(
+            b.rowNavFundraising, b.rowNavGeneral, b.rowNavShield,
+            b.rowNavVault, b.rowNavExtensions, b.rowNavShieldStatus,
+            b.rowNavAbout
+        ).forEach { row ->
+            for (i in 0 until row.childCount) {
+                val child = row.getChildAt(i)
+                if (child is TextView) child.setTextColor(textPrimary)
+                if (child is LinearLayout) {
+                    for (j in 0 until child.childCount) {
+                        val sub = child.getChildAt(j)
+                        if (sub is TextView && sub.id != R.id.badgeSocialShield) sub.setTextColor(textPrimary)
+                    }
+                }
+            }
+        }
+    }
+
     fun showBrowserMenuDialog() {
         flushFilteredRequestCounts()
         val dialog = BottomSheetDialog(this)
@@ -7004,6 +7111,7 @@ open class MediaHubActivity : AppCompatActivity() {
             showFundraisingContributingDialog()
         }
 
+        applyThemeToBrowserMenu(sheetBinding, isAppInLightMode())
         dialog.show()
     }
 
@@ -7011,6 +7119,9 @@ open class MediaHubActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this)
         val b = SheetGeneralSettingsBinding.inflate(layoutInflater)
         dialog.setContentView(b.root)
+        if (isAppInLightMode()) {
+            b.root.setBackgroundColor(Color.parseColor("#FAF9F6"))
+        }
 
         b.btnCloseGeneralSettings.setOnClickListener { dialog.dismiss() }
 
@@ -7104,6 +7215,9 @@ open class MediaHubActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this)
         val b = SheetShieldSettingsBinding.inflate(layoutInflater)
         dialog.setContentView(b.root)
+        if (isAppInLightMode()) {
+            b.root.setBackgroundColor(Color.parseColor("#FAF9F6"))
+        }
 
         b.btnCloseShieldSettings.setOnClickListener { dialog.dismiss() }
 

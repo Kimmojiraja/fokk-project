@@ -1,6 +1,6 @@
 {
-  "versionCode": 297,
-  "versionName": "2.9.7",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.7/app-debug.apk",
-  "changelog": "- Search Engine Suite Overhaul: Replaced Brave Search and Startpage with official Yahoo Search across Android and Desktop. Added authentic vector brand logos for Yahoo, DuckDuckGo, and Ecosia.\n- Reels & Shorts Pull-to-Refresh Glitch Prevention: Automatically pauses pull-to-refresh on vertical video feeds (YouTube Shorts, Instagram Reels, TikTok, Facebook Reels, Stories) so dragging down smoothly returns to previous videos without triggering unintended page reloads.\n- Premium Light Theme & System Sync: Added System Theme Sync to auto-adapt light or dark appearance based on device settings, alongside manual Daylight Mode controls. Enhanced bottom menu with dynamic daylight/night theme switcher and sun/moon icons.\n- Light Theme Sailboat Wallpapers: Introduced high-definition sunlit sailboat and coastal yacht wallpapers designed specifically to complement the light pearl interface while keeping dark themes intact."
+  "versionCode": 298,
+  "versionName": "2.9.8",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.8/app-debug.apk",
+  "changelog": "- Premium Light Theme Overhaul: Full Opera-inspired light styling across home screen, bottom menu, Live Pulse news briefing, top hero buttons, command search bar, dropdowns, and settings.\n- Start Page & Horizontal Feed Touch Fix: Completely disabled pull-to-refresh interference on the home start page and horizontal trending news carousels, guaranteeing 100% smooth, glitch-free horizontal scrolling.\n- Theme & Wallpaper Decoupling: Fully decoupled light/dark mode from background wallpapers so switching themes preserves user-selected wallpapers without blank screen resets.\n- Search Bar Visibility: Restored dark text and contrast in search input, voice search, tab badge, and 3-dots menu under light mode."
 }
