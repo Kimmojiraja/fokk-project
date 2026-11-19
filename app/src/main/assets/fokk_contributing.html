@@ -18,6 +18,54 @@
   --pill-bg: rgba(255, 255, 255, 0.04);
 }
 
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-color: #F8FAFC;
+    --fokk-cyan: #0284C7;
+    --fokk-purple: #7C3AED;
+    --fokk-green: #059669;
+    --fokk-gold: #D97706;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #64748B;
+    --hairline: rgba(15, 23, 42, 0.08);
+    --pill-bg: rgba(15, 23, 42, 0.04);
+  }
+}
+
+body.theme-light, body.light-theme {
+  --bg-color: #F8FAFC;
+  --fokk-cyan: #0284C7;
+  --fokk-purple: #7C3AED;
+  --fokk-green: #059669;
+  --fokk-gold: #D97706;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --hairline: rgba(15, 23, 42, 0.08);
+  --pill-bg: rgba(15, 23, 42, 0.04);
+  background: #F8FAFC !important;
+  color: #0F172A !important;
+}
+
+body.theme-light .tier-card, body.light-theme .tier-card,
+body.theme-light .crypto-box, body.light-theme .crypto-box,
+body.theme-light .supporter-item, body.light-theme .supporter-item,
+body.theme-light .input-box, body.light-theme .input-box {
+  background: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04) !important;
+}
+
+body.theme-light .tier-header, body.light-theme .tier-header,
+body.theme-light .title, body.light-theme .title {
+  color: #0F172A !important;
+}
+
+body.theme-light .tier-price, body.light-theme .tier-price {
+  color: #0284C7 !important;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -558,6 +606,40 @@ function copyCrypto(addr, symbol, btnEl) {
     prompt('Copy ' + symbol + ' address:', addr);
   }
 }
+
+// Realtime theme synchronization
+(function() {
+  function syncTheme() {
+    var isLight = false;
+    if (window.FokkShieldBridge && typeof window.FokkShieldBridge.isLightMode === 'function') {
+      isLight = window.FokkShieldBridge.isLightMode();
+    } else {
+      const saved = localStorage.getItem('fokk_theme');
+      isLight = saved === 'light' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+    }
+    if (isLight) {
+      document.body.classList.add('theme-light', 'light-theme');
+    } else {
+      document.body.classList.remove('theme-light', 'light-theme');
+    }
+  }
+  window.applyThemeFromNative = function(themeType, customData, isLightExplicit) {
+    if (typeof isLightExplicit === 'boolean') {
+      if (isLightExplicit) {
+        document.body.classList.add('theme-light', 'light-theme');
+      } else {
+        document.body.classList.remove('theme-light', 'light-theme');
+      }
+    } else {
+      syncTheme();
+    }
+  };
+  syncTheme();
+  window.addEventListener('storage', syncTheme);
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', syncTheme);
+  }
+})();
 </script>
 </body>
 </html>

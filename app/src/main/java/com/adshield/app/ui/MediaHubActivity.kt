@@ -1498,6 +1498,9 @@ open class MediaHubActivity : AppCompatActivity() {
         insetsController.isAppearanceLightStatusBars = isLight
         insetsController.isAppearanceLightNavigationBars = isLight
 
+        // Set system navigation bar color so the device bottom bar matches the theme
+        window.navigationBarColor = Color.parseColor(if (isLight) "#FFFFFF" else "#090D14")
+
         val toolbarPos = prefs.getString(PREF_TOOLBAR_POSITION, "bottom") ?: "bottom"
         val isTop = toolbarPos.equals("top", ignoreCase = true)
         if (isLight) {
@@ -2836,6 +2839,9 @@ open class MediaHubActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this)
         val sheetView = layoutInflater.inflate(R.layout.sheet_magnet_handler, null)
         dialog.setContentView(sheetView)
+        if (isAppInLightMode()) {
+            applyLightThemeToSheet(sheetView, dialog)
+        }
 
         sheetView.findViewById<TextView>(R.id.textMagnetName)?.text = displayName
         sheetView.findViewById<TextView>(R.id.textMagnetHash)?.text = "Hash: ${exactTopic.take(24)}..."
@@ -3632,6 +3638,12 @@ open class MediaHubActivity : AppCompatActivity() {
                             val customData = if (theme == "custom") getCustomWallpaperDataUri() else ""
                             view?.evaluateJavascript(
                                 "if (typeof applyThemeFromNative === 'function') applyThemeFromNative('$theme', '$customData', $isLight);",
+                                null
+                            )
+                        } else if (loadedUrl.contains("fokk_about.html") || loadedUrl.contains("fokk_contributing.html") || loadedUrl.contains("fokk_webtorrent.html")) {
+                            val isLight = isAppInLightMode()
+                            view?.evaluateJavascript(
+                                "if (typeof applyThemeFromNative === 'function') applyThemeFromNative('default', '', $isLight);",
                                 null
                             )
                         } else if (loadedTab != null) {
@@ -5487,6 +5499,9 @@ open class MediaHubActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this)
         val sheetBinding = SheetExtensionsManagerBinding.inflate(layoutInflater)
         dialog.setContentView(sheetBinding.root)
+        if (isAppInLightMode()) {
+            applyLightThemeToSheet(sheetBinding.root, dialog)
+        }
 
         sheetBinding.switchStrictAdblock.isChecked = prefs.getBoolean(PREF_STRICT_ADBLOCK, true)
         sheetBinding.switchSocialWidgets.isChecked = prefs.getBoolean(PREF_SOCIAL_WIDGETS, false)
@@ -5574,23 +5589,31 @@ open class MediaHubActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this)
         val sheetBinding = SheetHistoryBinding.inflate(layoutInflater)
         dialog.setContentView(sheetBinding.root)
+        val isLight = isAppInLightMode()
+        if (isLight) {
+            applyLightThemeToSheet(sheetBinding.root, dialog)
+        }
 
         var currentTab = initialTab
         val density = resources.displayMetrics.density
 
         fun updateTabIndicators() {
+            val selBg = if (isLight) R.drawable.bg_ai_tab_selected_light else R.drawable.bg_engine_capsule
+            val selTxt = if (isLight) Color.parseColor("#0F172A") else Color.WHITE
+            val unselTxt = if (isLight) Color.parseColor("#64748B") else getColor(R.color.text_secondary)
+
             if (currentTab == 0) {
-                sheetBinding.btnTabBrowsingHistory.setBackgroundResource(R.drawable.bg_engine_capsule)
-                sheetBinding.btnTabBrowsingHistory.setTextColor(Color.WHITE)
+                sheetBinding.btnTabBrowsingHistory.setBackgroundResource(selBg)
+                sheetBinding.btnTabBrowsingHistory.setTextColor(selTxt)
                 sheetBinding.btnTabAiHistory.background = null
-                sheetBinding.btnTabAiHistory.setTextColor(getColor(R.color.text_secondary))
+                sheetBinding.btnTabAiHistory.setTextColor(unselTxt)
                 sheetBinding.editHistorySearch.hint = "Search visited sites..."
                 sheetBinding.textHistoryEmpty.text = "No browsing history yet"
             } else {
-                sheetBinding.btnTabAiHistory.setBackgroundResource(R.drawable.bg_engine_capsule)
-                sheetBinding.btnTabAiHistory.setTextColor(Color.WHITE)
+                sheetBinding.btnTabAiHistory.setBackgroundResource(selBg)
+                sheetBinding.btnTabAiHistory.setTextColor(selTxt)
                 sheetBinding.btnTabBrowsingHistory.background = null
-                sheetBinding.btnTabBrowsingHistory.setTextColor(getColor(R.color.text_secondary))
+                sheetBinding.btnTabBrowsingHistory.setTextColor(unselTxt)
                 sheetBinding.editHistorySearch.hint = "Search Fokk AI checks..."
                 sheetBinding.textHistoryEmpty.text = "No Fokk AI history yet"
             }
@@ -5884,6 +5907,22 @@ open class MediaHubActivity : AppCompatActivity() {
             cardBinding.layoutCardHeader.setBackgroundColor(android.graphics.Color.parseColor("#18181B"))
         }
 
+        val isLight = isAppInLightMode()
+        if (isLight) {
+            cardBinding.cardTab.setCardBackgroundColor(Color.parseColor("#FFFFFF"))
+            cardBinding.layoutCardHeader.setBackgroundColor(if (tab.isPrivate) Color.parseColor("#F5F3FF") else Color.parseColor("#F1F5F9"))
+            cardBinding.textTabTitle.setTextColor(Color.parseColor("#0F172A"))
+            cardBinding.textTabUrl.setTextColor(Color.parseColor("#64748B"))
+            cardBinding.btnCloseTab.imageTintList = ColorStateList.valueOf(Color.parseColor("#0F172A"))
+            if (globalIndex == activeTabIndex) {
+                cardBinding.cardTab.strokeColor = Color.parseColor("#0284C7")
+                cardBinding.cardTab.strokeWidth = (2f * resources.displayMetrics.density).toInt()
+            } else {
+                cardBinding.cardTab.strokeColor = Color.parseColor("#E2E8F0")
+                cardBinding.cardTab.strokeWidth = (1 * resources.displayMetrics.density).toInt()
+            }
+        }
+
         cardBinding.cardTab.setOnClickListener {
             switchToTab(globalIndex)
             dialog.dismiss()
@@ -5902,9 +5941,13 @@ open class MediaHubActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this)
         val sheetBinding = SheetTabSwitcherBinding.inflate(layoutInflater)
         dialog.setContentView(sheetBinding.root)
+        val isLight = isAppInLightMode()
         dialog.window?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.setBackgroundColor(
-            android.graphics.Color.parseColor("#0A0A0A")
+            if (isLight) Color.parseColor("#FAF9F6") else Color.parseColor("#0A0A0A")
         )
+        if (isLight) {
+            applyLightThemeToSheet(sheetBinding.root, dialog)
+        }
 
         var tabSearchQuery = ""
 
@@ -6321,13 +6364,18 @@ open class MediaHubActivity : AppCompatActivity() {
 
         b.root.setBackgroundColor(bgSheet)
 
+        // Profile row
         b.textMenuProfileName.setTextColor(textPrimary)
         b.rowMenuProfile.setBackgroundResource(R.drawable.bg_menu_grid_item_light)
+        // Profile avatar: light rounded background
+        b.imgMenuProfileAvatar.setBackgroundResource(R.drawable.bg_menu_grid_item_light)
 
+        // Navigation bar
         b.layoutMenuQuickNav.setBackgroundResource(R.drawable.bg_menu_nav_bar_light)
         listOf(b.btnMenuBack, b.btnMenuForward, b.btnMenuRefresh, b.btnMenuHome, b.btnMenuHistory, b.btnMenuDownloads)
             .forEach { it.imageTintList = iconTint }
 
+        // Quick action squircles
         listOf(b.btnMenuQuickVpn, b.btnMenuQuickShield, b.btnMenuQuickReader, b.btnMenuQuickNight).forEach { card ->
             card.setBackgroundResource(R.drawable.bg_menu_squircle_light)
             for (i in 0 until card.childCount) {
@@ -6338,6 +6386,7 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
 
+        // Ask AI bar
         b.btnMenuAskAi.setBackgroundResource(R.drawable.bg_menu_ai_pill_light)
         for (i in 0 until b.btnMenuAskAi.childCount) {
             val child = b.btnMenuAskAi.getChildAt(i)
@@ -6351,6 +6400,7 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
 
+        // Daily Essentials grid rows
         listOf(
             b.rowNewTab, b.rowPrivateTab, b.rowDesktopSite, b.rowShare,
             b.rowAddToHomeScreen, b.rowAddToStartpageShortcuts, b.rowTranslate,
@@ -6364,6 +6414,7 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
 
+        // More row
         b.btnMenuMoreRow.setBackgroundResource(R.drawable.bg_menu_grid_item_light)
         for (i in 0 until b.btnMenuMoreRow.childCount) {
             val child = b.btnMenuMoreRow.getChildAt(i)
@@ -6371,6 +6422,7 @@ open class MediaHubActivity : AppCompatActivity() {
             if (child is TextView) child.setTextColor(textPrimary)
         }
 
+        // Advanced Pro Suite grid
         listOf(
             b.btnToolSavedSummaries, b.rowBurnSession, b.btnToolDualScreen,
             b.btnToolThemes, b.btnToolAiSummary, b.btnToolAiBlocker,
@@ -6385,6 +6437,7 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
 
+        // Feature Hub rows: text color + light circle icon backgrounds
         listOf(
             b.rowNavFundraising, b.rowNavGeneral, b.rowNavShield,
             b.rowNavVault, b.rowNavExtensions, b.rowNavShieldStatus,
@@ -6392,6 +6445,10 @@ open class MediaHubActivity : AppCompatActivity() {
         ).forEach { row ->
             for (i in 0 until row.childCount) {
                 val child = row.getChildAt(i)
+                // The circle icon ImageView is the first child in each hub row
+                if (child is ImageView) {
+                    child.setBackgroundResource(R.drawable.bg_circle_icon_button_light)
+                }
                 if (child is TextView) child.setTextColor(textPrimary)
                 if (child is LinearLayout) {
                     for (j in 0 until child.childCount) {
@@ -6403,11 +6460,163 @@ open class MediaHubActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Recursively walks the full view tree of any bottom sheet or dialog root and
+     * applies the premium light theme palette to every surface, text, icon, and
+     * divider it finds — without touching accent or status colours (green, cyan, amber).
+     * Call this immediately after setContentView / inflate in every show*Dialog function
+     * when isAppInLightMode() is true.
+     */
+    private fun applyLightThemeToSheet(root: android.view.View, dialog: BottomSheetDialog? = null) {
+        if (!isAppInLightMode()) return
+        val colorBg       = Color.parseColor("#FAF9F6")
+        val colorCard     = Color.parseColor("#FFFFFF")
+        val colorBorder   = Color.parseColor("#E2E8F0")
+        val colorText     = Color.parseColor("#0F172A")
+        val colorSub      = Color.parseColor("#475569")
+        val colorMuted    = Color.parseColor("#64748B")
+        val colorHandle   = Color.parseColor("#CBD5E1")
+        val tintDark      = ColorStateList.valueOf(colorText)
+
+        // Set the sheet container and root background to clean ivory
+        dialog?.window?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.setBackgroundColor(colorBg)
+        root.setBackgroundColor(colorBg)
+
+        fun walk(v: android.view.View) {
+            when (v) {
+                is android.widget.EditText -> {
+                    v.setTextColor(colorText)
+                    v.setHintTextColor(colorMuted)
+                }
+                is android.widget.TextView -> {
+                    val cur = v.currentTextColor
+                    val isAccent = cur == Color.parseColor("#34D399") ||
+                                   cur == Color.parseColor("#00E5FF") ||
+                                   cur == Color.parseColor("#38BDF8") ||
+                                   cur == Color.parseColor("#F59E0B") ||
+                                   cur == Color.parseColor("#EF4444") ||
+                                   cur == Color.parseColor("#10B981") ||
+                                   cur == Color.parseColor("#0284C7") ||
+                                   cur == Color.parseColor("#818CF8") ||
+                                   cur == Color.parseColor("#00E676") ||
+                                   cur == Color.parseColor("#FF5252")
+                    if (!isAccent) {
+                        v.setTextColor(when {
+                            cur == Color.WHITE || cur == Color.parseColor("#F8FAFC") || cur == Color.parseColor("#F3F4F6") -> colorText
+                            cur == Color.parseColor("#94A3B8") || cur == Color.parseColor("#8E9CAE") || cur == Color.parseColor("#9CA3AF") -> colorSub
+                            cur == Color.parseColor("#64748B") || cur == Color.parseColor("#5A687D") -> colorMuted
+                            else -> colorText
+                        })
+                    }
+                    if (v.text == "PRO" || v.text == "ACTIVE" || v.text == "NEW") {
+                        v.setBackgroundResource(R.drawable.bg_badge_pill_light)
+                    }
+                }
+                is android.widget.ImageButton -> {
+                    val tl = v.imageTintList
+                    if (tl == null || tl.defaultColor == Color.WHITE ||
+                        tl.defaultColor == Color.parseColor("#94A3B8") ||
+                        tl.defaultColor == Color.parseColor("#64748B") ||
+                        tl.defaultColor == Color.parseColor("#8E9CAE") ||
+                        tl.defaultColor == Color.parseColor("#CBD5E1") ||
+                        tl.defaultColor == Color.parseColor("#F8FAFC")) {
+                        v.imageTintList = tintDark
+                    }
+                }
+                is android.widget.ImageView -> {
+                    if (v.id != R.id.imgMenuProfileAvatar &&
+                        v.id != R.id.imgAccountAvatar &&
+                        v.id != R.id.imgAiBlockerIcon &&
+                        v.id != R.id.imgMenuEngine) {
+                        val tl = v.imageTintList
+                        if (tl != null && (tl.defaultColor == Color.WHITE ||
+                            tl.defaultColor == Color.parseColor("#94A3B8") ||
+                            tl.defaultColor == Color.parseColor("#64748B") ||
+                            tl.defaultColor == Color.parseColor("#8E9CAE") ||
+                            tl.defaultColor == Color.parseColor("#CBD5E1") ||
+                            tl.defaultColor == Color.parseColor("#F8FAFC"))) {
+                            v.imageTintList = tintDark
+                        }
+                    }
+                }
+                is com.google.android.material.materialswitch.MaterialSwitch -> {
+                    v.thumbTintList = ColorStateList(
+                        arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                        intArrayOf(Color.parseColor("#0284C7"), Color.WHITE)
+                    )
+                    v.trackTintList = ColorStateList(
+                        arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                        intArrayOf(Color.parseColor("#BAE6FD"), Color.parseColor("#CBD5E1"))
+                    )
+                }
+                is com.google.android.material.button.MaterialButton -> {
+                    v.setTextColor(colorText)
+                    v.iconTint = tintDark
+                    v.strokeColor = ColorStateList.valueOf(colorBorder)
+                }
+            }
+
+            if (v is androidx.cardview.widget.CardView) {
+                v.setCardBackgroundColor(colorCard)
+            }
+
+            // Background theming
+            val bg = v.background
+            if (bg is android.graphics.drawable.ColorDrawable) {
+                val c = bg.color
+                val r = Color.red(c)
+                val g = Color.green(c)
+                val b = Color.blue(c)
+                val luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
+                if (luminance < 0.25) {
+                    if (v.layoutParams?.height?.let { it in 1..6 } == true &&
+                        v.layoutParams?.width != android.view.ViewGroup.LayoutParams.WRAP_CONTENT) {
+                        v.setBackgroundColor(colorHandle)
+                    } else if (v === root) {
+                        v.setBackgroundColor(colorBg)
+                    } else {
+                        v.setBackgroundColor(colorCard)
+                    }
+                }
+            } else if (bg is android.graphics.drawable.GradientDrawable) {
+                if (v.layoutParams?.height?.let { it in 1..6 } == true &&
+                    v.layoutParams?.width?.let { it in 20..80 } == true) {
+                    v.setBackgroundResource(R.drawable.bg_ai_handle_light)
+                } else if (v.id == R.id.viewAiDragHandle) {
+                    v.setBackgroundResource(R.drawable.bg_ai_handle_light)
+                } else if (v.id == R.id.layoutAiTabsContainer) {
+                    v.setBackgroundResource(R.drawable.bg_ai_tab_track_light)
+                } else {
+                    val h = v.layoutParams?.height ?: 0
+                    if (h in 20..42) {
+                        v.setBackgroundResource(R.drawable.bg_ai_pill_light)
+                    } else {
+                        v.setBackgroundResource(R.drawable.bg_ai_card_light)
+                    }
+                }
+            } else if (bg != null) {
+                if (v.layoutParams?.height?.let { it in 1..6 } == true &&
+                    v.layoutParams?.width?.let { it in 20..80 } == true) {
+                    v.setBackgroundResource(R.drawable.bg_ai_handle_light)
+                }
+            }
+
+            if (v is android.view.ViewGroup) {
+                for (i in 0 until v.childCount) walk(v.getChildAt(i))
+            }
+        }
+
+        walk(root)
+    }
+
     fun showBrowserMenuDialog() {
         flushFilteredRequestCounts()
         val dialog = BottomSheetDialog(this)
         val sheetBinding = SheetBrowserMenuBinding.inflate(layoutInflater)
         dialog.setContentView(sheetBinding.root)
+        if (isAppInLightMode()) {
+            applyLightThemeToSheet(sheetBinding.root, dialog)
+        }
 
         val userAlias = prefs.getString(PREF_USER_ALIAS, "Fokk User") ?: "Fokk User"
         sheetBinding.textMenuProfileName.text = userAlias
@@ -6690,11 +6899,12 @@ open class MediaHubActivity : AppCompatActivity() {
                 .show()
         }
 
+        val isSystemSync = prefs.getBoolean(PREF_THEME_SYSTEM_SYNC, true)
         val isCurrentLight = isAppInLightMode()
         sheetBinding.imgMenuNightIcon.setImageResource(if (isCurrentLight) R.drawable.ic_light_mode else R.drawable.ic_dark_mode)
         sheetBinding.imgMenuNightIcon.imageTintList = ColorStateList.valueOf(Color.parseColor(if (isCurrentLight) "#F59E0B" else "#818CF8"))
-        sheetBinding.textMenuQuickNightTitle.text = if (isCurrentLight) "Light mode" else "Night mode"
-        sheetBinding.textMenuQuickNightStatus.text = if (isCurrentLight) "Day" else "Night"
+        sheetBinding.textMenuQuickNightTitle.text = if (isSystemSync) "Theme mode" else if (isCurrentLight) "Light mode" else "Night mode"
+        sheetBinding.textMenuQuickNightStatus.text = if (isSystemSync) "Auto (System)" else if (isCurrentLight) "Day" else "Night"
         sheetBinding.textMenuQuickNightStatus.setTextColor(Color.parseColor(if (isCurrentLight) "#F59E0B" else "#818CF8"))
         sheetBinding.btnMenuQuickNight.setOnClickListener {
             val nextLight = !isAppInLightMode()
@@ -6703,6 +6913,14 @@ open class MediaHubActivity : AppCompatActivity() {
             applyAppTheme(nextLight, animated = true)
             dialog.dismiss()
             Toast.makeText(this, if (nextLight) "Daylight Mode Activated" else "Dark Theme Activated", Toast.LENGTH_SHORT).show()
+        }
+        sheetBinding.btnMenuQuickNight.setOnLongClickListener {
+            val newSync = !prefs.getBoolean(PREF_THEME_SYSTEM_SYNC, true)
+            prefs.edit().putBoolean(PREF_THEME_SYSTEM_SYNC, newSync).apply()
+            applyAppTheme(isAppInLightMode(), animated = true)
+            dialog.dismiss()
+            Toast.makeText(this, if (newSync) "System Theme Sync Enabled (Auto Light/Dark)" else "System Theme Sync Disabled", Toast.LENGTH_SHORT).show()
+            true
         }
         sheetBinding.btnMenuNightInfo.setOnClickListener {
             AlertDialog.Builder(this)
@@ -7120,7 +7338,7 @@ open class MediaHubActivity : AppCompatActivity() {
         val b = SheetGeneralSettingsBinding.inflate(layoutInflater)
         dialog.setContentView(b.root)
         if (isAppInLightMode()) {
-            b.root.setBackgroundColor(Color.parseColor("#FAF9F6"))
+            applyLightThemeToSheet(b.root, dialog)
         }
 
         b.btnCloseGeneralSettings.setOnClickListener { dialog.dismiss() }
@@ -7216,7 +7434,7 @@ open class MediaHubActivity : AppCompatActivity() {
         val b = SheetShieldSettingsBinding.inflate(layoutInflater)
         dialog.setContentView(b.root)
         if (isAppInLightMode()) {
-            b.root.setBackgroundColor(Color.parseColor("#FAF9F6"))
+            applyLightThemeToSheet(b.root, dialog)
         }
 
         b.btnCloseShieldSettings.setOnClickListener { dialog.dismiss() }
@@ -7272,6 +7490,9 @@ open class MediaHubActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this)
         val b = SheetMediaHubSettingsBinding.inflate(layoutInflater)
         dialog.setContentView(b.root)
+        if (isAppInLightMode()) {
+            applyLightThemeToSheet(b.root, dialog)
+        }
 
         b.btnCloseMediaSettings.setOnClickListener { dialog.dismiss() }
 
@@ -7309,6 +7530,9 @@ open class MediaHubActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this)
         val b = SheetVaultSettingsBinding.inflate(layoutInflater)
         dialog.setContentView(b.root)
+        if (isAppInLightMode()) {
+            applyLightThemeToSheet(b.root, dialog)
+        }
 
         b.btnCloseVaultSettings.setOnClickListener { dialog.dismiss() }
 
@@ -7396,6 +7620,9 @@ open class MediaHubActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this)
         val b = SheetAboutCommunityBinding.inflate(layoutInflater)
         dialog.setContentView(b.root)
+        if (isAppInLightMode()) {
+            applyLightThemeToSheet(b.root, dialog)
+        }
 
         b.btnCloseAboutCommunity.setOnClickListener { dialog.dismiss() }
 
@@ -7443,6 +7670,9 @@ open class MediaHubActivity : AppCompatActivity() {
         val sheetDialog = BottomSheetDialog(this)
         val b = SheetVpnGatewayBinding.inflate(layoutInflater)
         sheetDialog.setContentView(b.root)
+        if (isAppInLightMode()) {
+            applyLightThemeToSheet(b.root, sheetDialog)
+        }
 
         b.btnCloseVpnSheet.setOnClickListener { sheetDialog.dismiss() }
 
@@ -7642,6 +7872,9 @@ open class MediaHubActivity : AppCompatActivity() {
         val sheetDialog = BottomSheetDialog(this)
         val b = com.adshield.app.databinding.SheetVpnProBinding.inflate(layoutInflater)
         sheetDialog.setContentView(b.root)
+        if (isAppInLightMode()) {
+            applyLightThemeToSheet(b.root, sheetDialog)
+        }
 
         val isPro = com.adshield.app.engine.VpnEngine.isProModeEnabled(this)
         b.switchProActivation.isChecked = isPro
@@ -7857,6 +8090,9 @@ open class MediaHubActivity : AppCompatActivity() {
         val sheetDialog = BottomSheetDialog(this)
         val b = com.adshield.app.databinding.SheetVpnLocationPickerBinding.inflate(layoutInflater)
         sheetDialog.setContentView(b.root)
+        if (isAppInLightMode()) {
+            applyLightThemeToSheet(b.root, sheetDialog)
+        }
 
         val currentSaved = com.adshield.app.engine.VpnEngine.getCustomProxy(this)
         val activeMode = com.adshield.app.engine.VpnEngine.getActiveMode(this)
@@ -8526,6 +8762,22 @@ open class MediaHubActivity : AppCompatActivity() {
             sheetDialog.setContentView(sheetBinding.root)
             sheetDialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
+            val isLight = isAppInLightMode()
+            if (isLight) {
+                applyLightThemeToSheet(sheetBinding.root, sheetDialog)
+                sheetBinding.layoutAiComposerDock.setBackgroundColor(Color.parseColor("#FAF9F6"))
+                sheetBinding.layoutAiTopFixedArea.setBackgroundColor(Color.parseColor("#FAF9F6"))
+                sheetBinding.layoutAiTabsContainer.setBackgroundResource(R.drawable.bg_ai_tab_track_light)
+                sheetBinding.btnTabAiSummary.setBackgroundResource(R.drawable.bg_ai_tab_selected_light)
+                sheetBinding.btnTabAiSummary.setTextColor(Color.parseColor("#0F172A"))
+                sheetBinding.btnTabAiChat.setTextColor(Color.parseColor("#475569"))
+                sheetBinding.btnTabAiAudit.setTextColor(Color.parseColor("#475569"))
+                sheetBinding.editAiUserQuestion.setTextColor(Color.parseColor("#0F172A"))
+                sheetBinding.editAiUserQuestion.setHintTextColor(Color.parseColor("#64748B"))
+                sheetBinding.btnAiVoiceInput.imageTintList = ColorStateList.valueOf(Color.parseColor("#0F172A"))
+                sheetBinding.btnSendAiQuestion.imageTintList = ColorStateList.valueOf(Color.parseColor("#0F172A"))
+            }
+
             val density = resources.displayMetrics.density
 
             // Show "Resume Chat" banner if user opened this source tab from an active Ask AI chat
@@ -8844,14 +9096,18 @@ open class MediaHubActivity : AppCompatActivity() {
                 sheetBinding.layoutAiChatSection.visibility = if (mode == 1) View.VISIBLE else View.GONE
                 sheetBinding.layoutAiRealityAuditSection.visibility = if (mode == 2) View.VISIBLE else View.GONE
 
-                sheetBinding.btnTabAiSummary.setBackgroundResource(if (mode == 0) R.drawable.bg_ai_tab_selected else 0)
-                sheetBinding.btnTabAiSummary.setTextColor(Color.parseColor(if (mode == 0) "#FFFFFF" else "#8B95A5"))
+                val selBg = if (isLight) R.drawable.bg_ai_tab_selected_light else R.drawable.bg_ai_tab_selected
+                val selTxt = if (isLight) "#0F172A" else "#FFFFFF"
+                val unselTxt = if (isLight) "#64748B" else "#8B95A5"
 
-                sheetBinding.btnTabAiChat.setBackgroundResource(if (mode == 1) R.drawable.bg_ai_tab_selected else 0)
-                sheetBinding.btnTabAiChat.setTextColor(Color.parseColor(if (mode == 1) "#FFFFFF" else "#8B95A5"))
+                sheetBinding.btnTabAiSummary.setBackgroundResource(if (mode == 0) selBg else 0)
+                sheetBinding.btnTabAiSummary.setTextColor(Color.parseColor(if (mode == 0) selTxt else unselTxt))
 
-                sheetBinding.btnTabAiAudit.setBackgroundResource(if (mode == 2) R.drawable.bg_ai_tab_selected else 0)
-                sheetBinding.btnTabAiAudit.setTextColor(Color.parseColor(if (mode == 2) "#FFFFFF" else "#8B95A5"))
+                sheetBinding.btnTabAiChat.setBackgroundResource(if (mode == 1) selBg else 0)
+                sheetBinding.btnTabAiChat.setTextColor(Color.parseColor(if (mode == 1) selTxt else unselTxt))
+
+                sheetBinding.btnTabAiAudit.setBackgroundResource(if (mode == 2) selBg else 0)
+                sheetBinding.btnTabAiAudit.setTextColor(Color.parseColor(if (mode == 2) selTxt else unselTxt))
             }
 
             // Render clean takeaway / claim row with subtle micro-tag and markdown bold support
@@ -9098,12 +9354,15 @@ open class MediaHubActivity : AppCompatActivity() {
             var deepCachedText: String? = null
 
             fun styleDepthButtons(mode: String) {
-                sheetBinding.btnDepthBrief.setBackgroundResource(if (mode == "BRIEF") R.drawable.bg_ai_tab_selected else 0)
-                sheetBinding.btnDepthBrief.setTextColor(Color.parseColor(if (mode == "BRIEF") "#FFFFFF" else "#8B95A5"))
-                sheetBinding.btnDepthEli5.setBackgroundResource(if (mode == "ELI5") R.drawable.bg_ai_tab_selected else 0)
-                sheetBinding.btnDepthEli5.setTextColor(Color.parseColor(if (mode == "ELI5") "#FFFFFF" else "#8B95A5"))
-                sheetBinding.btnDepthDeep.setBackgroundResource(if (mode == "DEEP") R.drawable.bg_ai_tab_selected else 0)
-                sheetBinding.btnDepthDeep.setTextColor(Color.parseColor(if (mode == "DEEP") "#FFFFFF" else "#8B95A5"))
+                val selBg = if (isLight) R.drawable.bg_ai_tab_selected_light else R.drawable.bg_ai_tab_selected
+                val selTxt = if (isLight) "#0F172A" else "#FFFFFF"
+                val unselTxt = if (isLight) "#64748B" else "#8B95A5"
+                sheetBinding.btnDepthBrief.setBackgroundResource(if (mode == "BRIEF") selBg else 0)
+                sheetBinding.btnDepthBrief.setTextColor(Color.parseColor(if (mode == "BRIEF") selTxt else unselTxt))
+                sheetBinding.btnDepthEli5.setBackgroundResource(if (mode == "ELI5") selBg else 0)
+                sheetBinding.btnDepthEli5.setTextColor(Color.parseColor(if (mode == "ELI5") selTxt else unselTxt))
+                sheetBinding.btnDepthDeep.setBackgroundResource(if (mode == "DEEP") selBg else 0)
+                sheetBinding.btnDepthDeep.setTextColor(Color.parseColor(if (mode == "DEEP") selTxt else unselTxt))
             }
 
             fun switchSummaryDepth(mode: String) {
@@ -9549,7 +9808,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 val aiTitleTv = TextView(this@MediaHubActivity).apply {
                     text = "Fokk AI"
-                    setTextColor(Color.parseColor("#F8FAFC"))
+                    setTextColor(Color.parseColor(if (isLight) "#0F172A" else "#F8FAFC"))
                     textSize = 13.5f
                     setTypeface(null, Typeface.BOLD)
                 }
@@ -9560,7 +9819,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 // 2. Crisp Answer TextView
                 val aTv = TextView(this@MediaHubActivity).apply {
-                    setTextColor(Color.parseColor("#E2E8F0"))
+                    setTextColor(Color.parseColor(if (isLight) "#0F172A" else "#E2E8F0"))
                     textSize = 14.5f
                     setLineSpacing(5 * density, 1f)
                     setTextIsSelectable(true)
@@ -9853,9 +10112,12 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
                 val qPill = TextView(this@MediaHubActivity).apply {
                     text = queryText
-                    setTextColor(Color.parseColor("#F8FAFC"))
+                    setTextColor(Color.parseColor(if (isLight) "#0F172A" else "#F8FAFC"))
                     textSize = 14f
-                    background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_ai_user_bubble)
+                    background = ContextCompat.getDrawable(
+                        this@MediaHubActivity,
+                        if (isLight) R.drawable.bg_ai_user_bubble_light else R.drawable.bg_ai_user_bubble
+                    )
                     setPadding((14 * density).toInt(), (10 * density).toInt(), (14 * density).toInt(), (10 * density).toInt())
                     maxWidth = (resources.displayMetrics.widthPixels * 0.80f).toInt()
                 }
@@ -10489,6 +10751,10 @@ open class MediaHubActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this)
         val b = SheetSavedSummariesBinding.inflate(layoutInflater)
         dialog.setContentView(b.root)
+        val isLight = isAppInLightMode()
+        if (isLight) {
+            applyLightThemeToSheet(b.root, dialog)
+        }
 
         b.btnCloseSavedSummaries.setOnClickListener { dialog.dismiss() }
 
@@ -10503,7 +10769,10 @@ open class MediaHubActivity : AppCompatActivity() {
             summaries.forEach { item ->
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
-                    background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_stat_chip)
+                    background = ContextCompat.getDrawable(
+                        this@MediaHubActivity,
+                        if (isLight) R.drawable.bg_stat_chip_light else R.drawable.bg_stat_chip
+                    )
                     setPadding((14 * density).toInt(), (12 * density).toInt(), (14 * density).toInt(), (12 * density).toInt())
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -10534,7 +10803,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 val readTimeTv = TextView(this).apply {
                     text = item.readingTime
-                    setTextColor(ContextCompat.getColor(this@MediaHubActivity, R.color.text_secondary))
+                    setTextColor(if (isLight) Color.parseColor("#64748B") else ContextCompat.getColor(this@MediaHubActivity, R.color.text_secondary))
                     textSize = 11f
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -10546,9 +10815,12 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 val deleteBtn = ImageButton(this).apply {
                     layoutParams = LinearLayout.LayoutParams((28 * density).toInt(), (28 * density).toInt())
-                    background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_circle_icon_button)
+                    background = ContextCompat.getDrawable(
+                        this@MediaHubActivity,
+                        if (isLight) R.drawable.bg_circle_icon_button_light else R.drawable.bg_circle_icon_button
+                    )
                     setImageResource(R.drawable.ic_delete)
-                    setColorFilter(ContextCompat.getColor(this@MediaHubActivity, R.color.text_secondary))
+                    setColorFilter(if (isLight) Color.parseColor("#64748B") else ContextCompat.getColor(this@MediaHubActivity, R.color.text_secondary))
                     contentDescription = "Delete Summary"
                     setOnClickListener {
                         savedSummariesStore.delete(item.id)
@@ -10564,7 +10836,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 val titleTv = TextView(this).apply {
                     text = item.title
-                    setTextColor(ContextCompat.getColor(this@MediaHubActivity, R.color.text_primary))
+                    setTextColor(if (isLight) Color.parseColor("#0F172A") else ContextCompat.getColor(this@MediaHubActivity, R.color.text_primary))
                     textSize = 14.5f
                     typeface = android.graphics.Typeface.DEFAULT_BOLD
                     maxLines = 2
@@ -10579,7 +10851,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 val snippetTv = TextView(this).apply {
                     text = item.executiveSummary.ifBlank { item.bullets.firstOrNull().orEmpty() }
-                    setTextColor(ContextCompat.getColor(this@MediaHubActivity, R.color.text_secondary))
+                    setTextColor(if (isLight) Color.parseColor("#475569") else ContextCompat.getColor(this@MediaHubActivity, R.color.text_secondary))
                     textSize = 12.5f
                     maxLines = 2
                     ellipsize = TextUtils.TruncateAt.END
@@ -11527,6 +11799,18 @@ open class MediaHubActivity : AppCompatActivity() {
         val sheetBinding = SheetPrivacyAccountBinding.inflate(layoutInflater)
         dialog.setContentView(sheetBinding.root)
         activeAccountDialogBinding = sheetBinding
+        val isLight = isAppInLightMode()
+        if (isLight) {
+            applyLightThemeToSheet(sheetBinding.root, dialog)
+            listOf(
+                sheetBinding.optAvatarFalcon,
+                sheetBinding.optAvatarAegis,
+                sheetBinding.optAvatarTerminal,
+                sheetBinding.optAvatarVault,
+                sheetBinding.optAvatarValkyrie,
+                sheetBinding.optAvatarSpectre
+            ).forEach { it.setBackgroundResource(R.drawable.bg_stat_chip_light) }
+        }
 
         fun refreshProfileHeader() {
             val alias = prefs.getString(PREF_USER_ALIAS, "Fokk User") ?: "Fokk User"

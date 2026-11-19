@@ -34,7 +34,7 @@
         }
 
         body.light-theme {
-            --bg-color: #F8FAFC;
+            --bg-color: #FAF9F6;
             --surface-card: #FFFFFF;
             --card-border: rgba(226, 232, 240, 0.9);
             --text-primary: #0F172A;
@@ -42,7 +42,18 @@
             --text-muted: #64748B;
             --tile-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
             color: #0F172A;
-            background: #F8FAFC !important;
+            background: #FAF9F6;
+        }
+
+        /* When NO custom wallpaper is active, light theme body uses warm ivory */
+        body.light-theme#pageBody:not(.has-custom-wp) {
+            background: #FAF9F6 !important;
+            background-image: none !important;
+        }
+
+        /* Luminous light scrim overlay for wallpapers in light mode */
+        body.light-theme.has-custom-wp::before {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.28) 100%) !important;
         }
 
         body.light-theme .hero-top-bar {
@@ -231,22 +242,53 @@
             background: #E2E8F0 !important;
         }
 
+        body.light-theme .dial-card,
         body.light-theme .speed-dial-card {
             background: #FFFFFF !important;
-            border-color: rgba(226, 232, 240, 0.9) !important;
+            border: 1px solid #E2E8F0 !important;
             box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05) !important;
         }
 
+        body.light-theme .dial-card:hover,
+        body.light-theme .dial-card:active {
+            background: #F8FAFC !important;
+            border-color: #CBD5E1 !important;
+        }
+
+        body.light-theme .dial-icon-box {
+            background: #F1F5F9 !important;
+            border: 1px solid #E2E8F0 !important;
+        }
+
+        body.light-theme .dial-title,
         body.light-theme .speed-dial-title {
             color: #0F172A !important;
         }
 
+        body.light-theme .dial-subtitle,
+        body.light-theme .dial-url,
         body.light-theme .speed-dial-url {
             color: #64748B !important;
         }
 
+        body.light-theme .shortcut-dot {
+            background: #CBD5E1 !important;
+        }
+
+        body.light-theme .shortcut-dot.active {
+            background: #0284C7 !important;
+        }
+
+        body.light-theme .shortcuts-manage-row {
+            color: #64748B !important;
+        }
+
+        body.light-theme .shortcuts-manage-row svg path {
+            stroke: #64748B !important;
+        }
+
         body.light-theme .live-pulse-screen {
-            background: #F8FAFC !important;
+            background: #FAF9F6 !important;
         }
 
         body.light-theme .pulse-app-bar {
@@ -420,6 +462,185 @@
             background: #00E5FF22 !important;
             border-color: #00E5FF !important;
             color: #0284C7 !important;
+        }
+
+        /* Live Briefing (Pulse) full light theme — comprehensive override */
+        body.light-theme .live-pulse-screen {
+            background: #F8FAFC !important;
+            color: #0F172A !important;
+        }
+
+        body.light-theme .pulse-app-bar {
+            background: #FFFFFF !important;
+            border-bottom: 1px solid #E2E8F0 !important;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
+            color: #0F172A !important;
+        }
+
+        body.light-theme .pulse-bar-title {
+            color: #0F172A !important;
+        }
+
+        body.light-theme .pulse-back-btn {
+            color: #0F172A !important;
+        }
+
+        body.light-theme .pulse-back-btn:active {
+            background: rgba(15, 23, 42, 0.06) !important;
+        }
+
+        body.light-theme .pulse-scroll-content {
+            background: transparent !important;
+        }
+
+        body.light-theme .pulse-context {
+            color: #64748B !important;
+        }
+
+        body.light-theme .pulse-country-select {
+            color: #0284C7 !important;
+        }
+
+        body.light-theme .pulse-country-arrow {
+            color: #0284C7 !important;
+        }
+
+        body.light-theme .pulse-intro {
+            background: #FFFFFF !important;
+            border: 1px solid #E2E8F0 !important;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05) !important;
+        }
+
+        body.light-theme .pulse-intro-kicker {
+            color: #0284C7 !important;
+        }
+
+        body.light-theme .pulse-intro-title {
+            color: #0F172A !important;
+        }
+
+        body.light-theme .pulse-intro-copy {
+            color: #475569 !important;
+        }
+
+        body.light-theme .pulse-section-header {
+            color: #0F172A !important;
+        }
+
+        body.light-theme .pulse-header-sub {
+            color: #0284C7 !important;
+        }
+
+        body.light-theme .pulse-segments {
+            background: transparent !important;
+        }
+
+        body.light-theme .pulse-seg-btn {
+            background: #F1F5F9 !important;
+            border: 1px solid #E2E8F0 !important;
+            color: #475569 !important;
+        }
+
+        body.light-theme .pulse-seg-btn.active {
+            background: #EFF6FF !important;
+            border-color: #BFDBFE !important;
+            color: #0284C7 !important;
+            box-shadow: 0 3px 10px rgba(2, 132, 199, 0.12) !important;
+        }
+
+        body.light-theme .pulse-news-card {
+            border-bottom: 1px solid #E2E8F0 !important;
+            background: transparent !important;
+        }
+
+        body.light-theme .pulse-news-card:hover,
+        body.light-theme .pulse-news-card:active {
+            background: #F1F5F9 !important;
+        }
+
+        body.light-theme .pulse-news-title {
+            color: #0F172A !important;
+        }
+
+        body.light-theme .pulse-news-meta,
+        body.light-theme .pulse-news-publisher,
+        body.light-theme .pulse-news-source,
+        body.light-theme .pulse-news-time {
+            color: #64748B !important;
+        }
+
+        body.light-theme .pulse-news-img {
+            background: #E2E8F0 !important;
+        }
+
+        body.light-theme .pulse-news-list {
+            background: transparent !important;
+        }
+
+        body.light-theme .ticker-pill {
+            background: #FFFFFF !important;
+            border: 1px solid #E2E8F0 !important;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05) !important;
+        }
+
+        body.light-theme .ticker-val {
+            color: #0F172A !important;
+        }
+
+        body.light-theme .ticker-symbol {
+            color: #0284C7 !important;
+        }
+
+        body.light-theme .pulse-weather-card {
+            background: #FFFFFF !important;
+            border: 1px solid #E2E8F0 !important;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05) !important;
+        }
+
+        body.light-theme .weather-city-badge,
+        body.light-theme .weather-temp,
+        body.light-theme .weather-feels,
+        body.light-theme .weather-desc {
+            color: #0F172A !important;
+        }
+
+        body.light-theme .weather-sub {
+            color: #64748B !important;
+        }
+
+        body.light-theme .pulse-home-btn {
+            border: 1.5px solid #E2E8F0 !important;
+            color: #0284C7 !important;
+        }
+
+        body.light-theme .live-pulse-section,
+        body.light-theme .trending-pulse-section {
+            background: transparent !important;
+        }
+
+        /* Home page hero buttons in light mode */
+        body.light-theme .home-essential svg path[stroke] {
+            stroke: #0F172A !important;
+        }
+
+        /* Speed dial container bg */
+        body.light-theme .speed-dial-section {
+            background: transparent !important;
+        }
+
+        /* Manage shortcuts button */
+        body.light-theme .manage-shortcuts-btn {
+            color: #64748B !important;
+        }
+
+        /* Section headers */
+        body.light-theme .section-header,
+        body.light-theme .home-section-title {
+            color: #0F172A !important;
+        }
+
+        body.light-theme .section-sub {
+            color: #64748B !important;
         }
 
         * {
@@ -2290,14 +2511,34 @@
             min-width: 0;
             overflow: hidden;
             border-radius: 16px;
-            background: #171b27 !important;
-            border: 1px solid rgba(148, 163, 184, 0.18) !important;
+            background: #171b27;
+            border: 1px solid rgba(148, 163, 184, 0.18);
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
             transition: transform 0.15s ease, border-color 0.15s ease;
         }
         .pulse-news-card:active {
             transform: scale(0.985);
             border-color: rgba(0, 229, 255, 0.4) !important;
+        }
+        body.light-theme .pulse-news-card,
+        body.light-theme .pulse-news-list .pulse-news-card {
+            background: #FFFFFF !important;
+            border: 1px solid #E2E8F0 !important;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06) !important;
+        }
+        body.light-theme .pulse-news-card:active,
+        body.light-theme .pulse-news-list .pulse-news-card:active {
+            background: #F8FAFC !important;
+            border-color: #CBD5E1 !important;
+        }
+        body.light-theme .pulse-news-title {
+            color: #0F172A !important;
+        }
+        body.light-theme .pulse-news-footer {
+            color: #64748B !important;
+        }
+        body.light-theme .pulse-news-img {
+            background: #E2E8F0 !important;
         }
         .pulse-news-img {
             width: 100%;
@@ -4453,6 +4694,12 @@
                 <div class="wallpaper-card" onclick="setWallpaper('sail_pearl')" style="background-image: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=400&q=80');">
                     <span class="wp-title">Coastal Mist</span>
                 </div>
+                <div class="wallpaper-card" onclick="setWallpaper('sail_sunlit')" style="background-image: url('https://images.unsplash.com/photo-1516815231560-8f41ec531527?auto=format&fit=crop&w=400&q=80');">
+                    <span class="wp-title">Sunlit Regatta</span>
+                </div>
+                <div class="wallpaper-card" onclick="setWallpaper('sail_breeze')" style="background-image: url('https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&w=400&q=80');">
+                    <span class="wp-title">Aegean Breeze</span>
+                </div>
             </div>
             <input type="file" id="wallpaperFileInput" accept="image/*" style="display:none;" onchange="handleWallpaperFileSelected(event)">
             <button class="modal-btn" onclick="closeThemeModal()" style="margin-top: 10px;">Done</button>
@@ -5598,6 +5845,16 @@
                 body.style.backgroundImage = "url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=85')";
                 body.style.backgroundSize = 'cover';
                 body.style.backgroundPosition = 'center';
+            } else if (effectiveTheme === 'sail_sunlit') {
+                body.classList.add('has-custom-wp');
+                body.style.backgroundImage = "url('https://images.unsplash.com/photo-1516815231560-8f41ec531527?auto=format&fit=crop&w=1200&q=85')";
+                body.style.backgroundSize = 'cover';
+                body.style.backgroundPosition = 'center';
+            } else if (effectiveTheme === 'sail_breeze') {
+                body.classList.add('has-custom-wp');
+                body.style.backgroundImage = "url('https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&w=1200&q=85')";
+                body.style.backgroundSize = 'cover';
+                body.style.backgroundPosition = 'center';
             } else if (effectiveTheme === 'twilight_ocean') {
                 body.classList.add('has-custom-wp');
                 body.style.backgroundImage = "url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=85')";
@@ -5613,7 +5870,7 @@
                 body.style.backgroundColor = '#11131C';
             } else {
                 body.style.backgroundImage = 'none';
-                body.style.backgroundColor = isLight ? '#F8FAFC' : '';
+                body.style.backgroundColor = isLight ? '#FAF9F6' : '#0B0F19';
             }
 
             if (themeType && themeType !== 'default' && themeType !== 'pearl_light') {
