@@ -1498,6 +1498,9 @@ open class MediaHubActivity : AppCompatActivity() {
         insetsController.isAppearanceLightStatusBars = isLight
         insetsController.isAppearanceLightNavigationBars = isLight
 
+        // Set system navigation bar color so the device bottom bar matches the theme
+        window.navigationBarColor = Color.parseColor(if (isLight) "#FFFFFF" else "#090D14")
+
         val toolbarPos = prefs.getString(PREF_TOOLBAR_POSITION, "bottom") ?: "bottom"
         val isTop = toolbarPos.equals("top", ignoreCase = true)
         if (isLight) {
@@ -6321,13 +6324,18 @@ open class MediaHubActivity : AppCompatActivity() {
 
         b.root.setBackgroundColor(bgSheet)
 
+        // Profile row
         b.textMenuProfileName.setTextColor(textPrimary)
         b.rowMenuProfile.setBackgroundResource(R.drawable.bg_menu_grid_item_light)
+        // Profile avatar: light rounded background
+        b.imgMenuProfileAvatar.setBackgroundResource(R.drawable.bg_menu_grid_item_light)
 
+        // Navigation bar
         b.layoutMenuQuickNav.setBackgroundResource(R.drawable.bg_menu_nav_bar_light)
         listOf(b.btnMenuBack, b.btnMenuForward, b.btnMenuRefresh, b.btnMenuHome, b.btnMenuHistory, b.btnMenuDownloads)
             .forEach { it.imageTintList = iconTint }
 
+        // Quick action squircles
         listOf(b.btnMenuQuickVpn, b.btnMenuQuickShield, b.btnMenuQuickReader, b.btnMenuQuickNight).forEach { card ->
             card.setBackgroundResource(R.drawable.bg_menu_squircle_light)
             for (i in 0 until card.childCount) {
@@ -6338,6 +6346,7 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
 
+        // Ask AI bar
         b.btnMenuAskAi.setBackgroundResource(R.drawable.bg_menu_ai_pill_light)
         for (i in 0 until b.btnMenuAskAi.childCount) {
             val child = b.btnMenuAskAi.getChildAt(i)
@@ -6351,6 +6360,7 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
 
+        // Daily Essentials grid rows
         listOf(
             b.rowNewTab, b.rowPrivateTab, b.rowDesktopSite, b.rowShare,
             b.rowAddToHomeScreen, b.rowAddToStartpageShortcuts, b.rowTranslate,
@@ -6364,6 +6374,7 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
 
+        // More row
         b.btnMenuMoreRow.setBackgroundResource(R.drawable.bg_menu_grid_item_light)
         for (i in 0 until b.btnMenuMoreRow.childCount) {
             val child = b.btnMenuMoreRow.getChildAt(i)
@@ -6371,6 +6382,7 @@ open class MediaHubActivity : AppCompatActivity() {
             if (child is TextView) child.setTextColor(textPrimary)
         }
 
+        // Advanced Pro Suite grid
         listOf(
             b.btnToolSavedSummaries, b.rowBurnSession, b.btnToolDualScreen,
             b.btnToolThemes, b.btnToolAiSummary, b.btnToolAiBlocker,
@@ -6385,6 +6397,7 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
 
+        // Feature Hub rows: text color + light circle icon backgrounds
         listOf(
             b.rowNavFundraising, b.rowNavGeneral, b.rowNavShield,
             b.rowNavVault, b.rowNavExtensions, b.rowNavShieldStatus,
@@ -6392,6 +6405,10 @@ open class MediaHubActivity : AppCompatActivity() {
         ).forEach { row ->
             for (i in 0 until row.childCount) {
                 val child = row.getChildAt(i)
+                // The circle icon ImageView is the first child in each hub row
+                if (child is ImageView) {
+                    child.setBackgroundResource(R.drawable.bg_circle_icon_button_light)
+                }
                 if (child is TextView) child.setTextColor(textPrimary)
                 if (child is LinearLayout) {
                     for (j in 0 until child.childCount) {

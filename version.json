@@ -1,6 +1,6 @@
 {
-  "versionCode": 298,
-  "versionName": "2.9.8",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.8/app-debug.apk",
-  "changelog": "- Premium Light Theme Overhaul: Full Opera-inspired light styling across home screen, bottom menu, Live Pulse news briefing, top hero buttons, command search bar, dropdowns, and settings.\n- Start Page & Horizontal Feed Touch Fix: Completely disabled pull-to-refresh interference on the home start page and horizontal trending news carousels, guaranteeing 100% smooth, glitch-free horizontal scrolling.\n- Theme & Wallpaper Decoupling: Fully decoupled light/dark mode from background wallpapers so switching themes preserves user-selected wallpapers without blank screen resets.\n- Search Bar Visibility: Restored dark text and contrast in search input, voice search, tab badge, and 3-dots menu under light mode."
+  "versionCode": 299,
+  "versionName": "2.9.9",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.9/app-debug.apk",
+  "changelog": "- Light Theme Polish: Feature Hub icon circles now use a clean light (#F1F5F9) background with subtle border in light mode instead of dark circles.\n- System Nav Bar: Device bottom navigation bar now correctly turns white in light mode and dark in dark mode.\n- Live Briefing Light Theme: Comprehensive CSS overrides for all pulse screen elements (segments, news cards, weather card, section headers, back button, publisher meta) now render correctly in light mode.\n- Home Background Fix: Explicitly clears dark radial gradient in light mode to ensure the pearl white (#F8FAFC) background is always applied.\n- Profile Avatar: Light rounded background applied to the profile avatar in the browser menu when in light mode.\n- Fokk AI Accuracy: Improved system prompt to never dismiss real-world incidents (e.g. the Modi 'shall we move?' photo-op moment) when live web sources describe the event."
 }
