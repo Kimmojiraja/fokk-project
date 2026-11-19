@@ -1518,13 +1518,6 @@ open class MediaHubActivity : AppCompatActivity() {
         }
     }
 
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        if (prefs.getBoolean(PREF_THEME_SYSTEM_SYNC, true)) {
-            applyAppTheme(isAppInLightMode(), animated = true)
-        }
-    }
-
     private fun isVerticalVideoFeedUrl(url: String?): Boolean {
         if (url.isNullOrBlank()) return false
         val lower = url.lowercase(Locale.ROOT)
@@ -11101,6 +11094,9 @@ open class MediaHubActivity : AppCompatActivity() {
         if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE && !(isMediaPlaying && hasActiveVideo)) {
             collapseCommandBar(animated = true)
         }
+        if (prefs.getBoolean(PREF_THEME_SYSTEM_SYNC, true)) {
+            applyAppTheme(isAppInLightMode(), animated = true)
+        }
     }
 
     override fun onUserLeaveHint() {
@@ -11983,7 +11979,6 @@ open class MediaHubActivity : AppCompatActivity() {
         private const val PREF_HTTPS_ONLY = "fokk_https_only_enabled"
         private const val PREF_FOKKO_AI = "fokk_fokko_ai_enabled"
         private const val PREF_THEME_SYSTEM_SYNC = "fokk_theme_system_sync"
-        private const val PREF_LIGHT_THEME = "fokk_light_theme"
         private const val PREF_PULL_TO_REFRESH = "fokk_pull_to_refresh"
         private const val PREF_ACTIVE_THEME = "fokk_active_theme"
         private const val PREF_USER_AVATAR = "fokk_user_avatar"
