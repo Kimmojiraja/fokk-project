@@ -34,21 +34,21 @@
         }
 
         body.light-theme {
-            --bg-color: #F1F5F9;
+            --bg-color: #F8FAFC;
             --surface-card: #FFFFFF;
-            --card-border: rgba(0, 0, 0, 0.08);
+            --card-border: rgba(226, 232, 240, 0.9);
             --text-primary: #0F172A;
             --text-secondary: #475569;
             --text-muted: #64748B;
-            --tile-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+            --tile-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
             color: #0F172A;
-            background: #F1F5F9 !important;
+            background: #F8FAFC !important;
         }
 
         body.light-theme .start-command-card {
             background: #FFFFFF !important;
-            border-color: rgba(0, 0, 0, 0.12) !important;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+            border: 1px solid #E2E8F0 !important;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08) !important;
         }
 
         body.light-theme .start-command-input {
@@ -80,14 +80,19 @@
 
         body.light-theme .home-essential {
             background: rgba(255, 255, 255, 0.96) !important;
-            border-color: rgba(0, 0, 0, 0.08) !important;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06) !important;
+            border-color: rgba(226, 232, 240, 0.9) !important;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
+            color: #0F172A !important;
+        }
+
+        body.light-theme .home-essential span {
+            color: #0F172A !important;
         }
 
         body.light-theme .speed-dial-card {
             background: #FFFFFF !important;
-            border-color: rgba(0, 0, 0, 0.06) !important;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
+            border-color: rgba(226, 232, 240, 0.9) !important;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05) !important;
         }
 
         body.light-theme .speed-dial-title {
@@ -96,6 +101,62 @@
 
         body.light-theme .speed-dial-url {
             color: #64748B !important;
+        }
+
+        body.light-theme .pulse-card,
+        body.light-theme .news-card,
+        body.light-theme .feed-card {
+            background: #FFFFFF !important;
+            border-color: #E2E8F0 !important;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
+            color: #0F172A !important;
+        }
+
+        body.light-theme .pulse-card-title,
+        body.light-theme .news-card-title,
+        body.light-theme .feed-title {
+            color: #0F172A !important;
+        }
+
+        body.light-theme .pulse-card-desc,
+        body.light-theme .news-card-snippet,
+        body.light-theme .feed-snippet {
+            color: #475569 !important;
+        }
+
+        body.light-theme .pulse-source,
+        body.light-theme .news-source,
+        body.light-theme .feed-meta {
+            color: #64748B !important;
+        }
+
+        body.light-theme .modal-content,
+        body.light-theme .sheet-container {
+            background: #FFFFFF !important;
+            border-color: #E2E8F0 !important;
+            color: #0F172A !important;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12) !important;
+        }
+
+        body.light-theme .modal-header,
+        body.light-theme .modal-title {
+            color: #0F172A !important;
+        }
+
+        body.light-theme .modal-close {
+            color: #64748B !important;
+        }
+
+        body.light-theme .quick-engine-pill {
+            background: #F1F5F9 !important;
+            border-color: #E2E8F0 !important;
+            color: #334155 !important;
+        }
+
+        body.light-theme .quick-engine-pill.active {
+            background: #00E5FF22 !important;
+            border-color: #00E5FF !important;
+            color: #0284C7 !important;
         }
 
         * {
@@ -138,7 +199,12 @@
         body.incognito-stealth-mode .home-live-music-card,
         body.incognito-stealth-mode .hero-spacer,
         body.incognito-stealth-mode .shortcuts-bottom-section,
-        body.incognito-stealth-mode .live-pulse-section {
+        body.incognito-stealth-mode .live-pulse-section,
+        body.incognito-stealth-mode .home-trending-section,
+        body.incognito-stealth-mode .home-trending-scroll,
+        body.incognito-stealth-mode #homeTrendingSection,
+        body.incognito-stealth-mode .trending-pulse-section,
+        body.incognito-stealth-mode .pulse-news-list {
             display: none !important;
         }
         body.incognito-stealth-mode .incognito-stealth-hero {
@@ -241,11 +307,85 @@
             box-sizing: border-box;
         }
 
-        .start-command-card:focus-within,
-        .start-command-card:hover {
-            background: #0E1424;
-            border-color: rgba(56, 189, 248, 0.55);
-            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.9), 0 0 16px rgba(56, 189, 248, 0.22);
+        /* Expanding command card when focused / typing */
+        .start-command-card.typing-active .engine-caret,
+        .start-command-card.typing-active #commandVoiceBtn,
+        .start-command-card.typing-active .command-action-divider,
+        .start-command-card.typing-active #commandMenuBtn {
+            display: none !important;
+        }
+
+        .start-command-card.typing-active {
+            border-color: #00E5FF;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.95), 0 0 20px rgba(0, 229, 255, 0.3);
+        }
+
+        .start-command-card.typing-active .start-command-input {
+            font-size: 16px;
+            padding: 0 8px;
+        }
+
+        /* Search suggestions dropdown */
+        .search-suggestions-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: #0B0F19;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1.5px solid rgba(255, 255, 255, 0.16);
+            border-radius: 22px;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1000;
+            padding: 6px;
+        }
+
+        .search-suggestions-dropdown.active {
+            display: flex;
+        }
+
+        .suggestion-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            color: #F8FAFC;
+            font-size: 14.5px;
+            font-weight: 500;
+        }
+
+        .suggestion-item:active, .suggestion-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #00E5FF;
+        }
+
+        .suggestion-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94A3B8;
+            flex-shrink: 0;
+        }
+
+        .suggestion-text {
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .suggestion-arrow {
+            color: #64748B;
+            font-size: 16px;
+            padding: 2px 6px;
         }
 
 
@@ -485,11 +625,20 @@
             -webkit-user-select: none;
         }
 
+        .popover-menu-item svg {
+            stroke: #E2E8F0 !important;
+            flex-shrink: 0;
+            transition: stroke 0.14s ease;
+        }
+
         .engine-option-item:active,
         .popover-menu-item:active {
             background: rgba(255, 255, 255, 0.16);
             color: #00E5FF;
             transform: scale(0.98);
+        }
+        .popover-menu-item:active svg {
+            stroke: #00E5FF !important;
         }
 
         @media (hover: hover) and (pointer: fine) {
@@ -497,6 +646,9 @@
             .popover-menu-item:hover {
                 background: rgba(255, 255, 255, 0.08);
                 color: #00E5FF;
+            }
+            .popover-menu-item:hover svg {
+                stroke: #00E5FF !important;
             }
         }
 
@@ -1035,14 +1187,14 @@
             width: 42px;
             height: 42px;
             min-width: 42px;
-            background: #FFFFFF !important;
-            border: none !important;
+            background: #141720 !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
             outline: none !important;
             border-radius: 50% !important;
             padding: 0;
-            color: #000000 !important;
+            color: #FFFFFF !important;
             cursor: pointer;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
             transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
@@ -1218,11 +1370,16 @@
         .pulse-app-bar {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 14px 16px;
-            background: var(--surface-card);
-            border-bottom: 1px solid var(--card-border);
+            justify-content: flex-start;
+            gap: 8px;
+            padding: 10px 14px;
+            background: rgba(11, 16, 25, 0.96);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
             flex-shrink: 0;
+            box-sizing: border-box;
+            width: 100%;
+            overflow: visible;
         }
 
         .pulse-back-btn {
@@ -1232,13 +1389,14 @@
             background: transparent !important;
             border: none !important;
             box-shadow: none !important;
-            padding: 6px 10px;
+            padding: 6px 8px;
             color: var(--text-primary);
             font-size: 14px;
             font-weight: 700;
             cursor: pointer;
             border-radius: 9999px;
             transition: background 0.15s ease;
+            flex-shrink: 0;
         }
         .pulse-back-btn:active {
             background: rgba(255, 255, 255, 0.08) !important;
@@ -1250,28 +1408,120 @@
             color: var(--text-primary);
         }
 
+        .pulse-context {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-right: auto;
+            color: #CBD5E1;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pulse-country-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            position: relative;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
         .pulse-country-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
             background: transparent !important;
             border: none !important;
             box-shadow: none !important;
             color: var(--fokk-cyan) !important;
             font-size: 12.5px;
             font-weight: 700;
-            padding: 6px 8px;
+            padding: 4px 1px 4px 4px;
+            margin: 0;
             outline: none;
             cursor: pointer;
+            width: auto;
+        }
+
+        .pulse-country-arrow {
+            color: var(--fokk-cyan);
+            flex-shrink: 0;
+            pointer-events: none;
+            margin-left: 1px;
+            opacity: 0.9;
         }
 
         .pulse-scroll-content {
             flex: 1;
             overflow-y: auto;
-            padding: 16px 18px 40px 18px;
+            padding: 18px 18px 40px 18px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 14px;
             max-width: 600px;
             width: 100%;
             margin: 0 auto;
+        }
+
+        .pulse-intro {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            padding: 18px 18px 16px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 18px;
+            background: linear-gradient(135deg, rgba(21, 33, 48, 0.98), rgba(15, 23, 42, 0.92));
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+        }
+
+        .pulse-intro-kicker {
+            color: #38BDF8;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .pulse-intro-title {
+            color: #F8FAFC;
+            font-size: 21px;
+            line-height: 1.15;
+            font-weight: 850;
+            letter-spacing: -0.02em;
+        }
+
+        .pulse-intro-copy {
+            max-width: 34em;
+            color: #94A3B8;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .pulse-intro-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 3px;
+            color: #64748B;
+            font-size: 10.5px;
+            font-weight: 700;
+        }
+
+        .pulse-intro-action {
+            border: 0;
+            padding: 0;
+            color: #7DD3FC;
+            background: transparent;
+            font: inherit;
+            cursor: pointer;
         }
 
         .weather-meta-row {
@@ -1320,11 +1570,11 @@
         }
 
         .pulse-seg-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--card-border);
+            background: rgba(148, 163, 184, 0.08);
+            border: 1px solid rgba(148, 163, 184, 0.18);
             color: var(--text-secondary);
-            border-radius: 14px;
-            padding: 6px 14px;
+            border-radius: 10px;
+            padding: 7px 12px;
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
@@ -1333,21 +1583,21 @@
         }
 
         .pulse-seg-btn.active {
-            background: var(--fokk-purple);
-            color: #FFFFFF;
-            border-color: var(--fokk-purple);
-            box-shadow: 0 2px 10px rgba(91, 72, 238, 0.35);
+            background: #E0F2FE;
+            color: #0F172A;
+            border-color: #E0F2FE;
+            box-shadow: 0 3px 12px rgba(56, 189, 248, 0.18);
         }
 
         .pulse-weather-card {
-            background: #171b27;
-            border: 1px solid rgba(148, 163, 184, 0.28);
-            border-radius: 18px;
+            background: rgba(20, 29, 42, 0.94);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
             padding: 16px 18px;
             display: flex;
             flex-direction: column;
             gap: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
         }
 
         .weather-meta-row {
@@ -1430,7 +1680,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 6px;
+            margin-top: 10px;
+            padding: 0 2px;
         }
 
         .pulse-header-sub {
@@ -1544,6 +1795,42 @@
             background: rgba(255, 255, 255, 0.03);
         }
 
+        .pulse-news-skeleton {
+            display: flex;
+            gap: 14px;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            animation: pulseShimmer 1.5s infinite ease-in-out;
+        }
+
+        .skeleton-img {
+            width: 100px;
+            height: 76px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            flex-shrink: 0;
+        }
+
+        .skeleton-lines {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .skeleton-line {
+            height: 12px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        @keyframes pulseShimmer {
+            0% { opacity: 0.35; }
+            50% { opacity: 0.8; }
+            100% { opacity: 0.35; }
+        }
+
         .pulse-news-img {
             width: 100px;
             height: 76px;
@@ -1654,7 +1941,7 @@
         }
 
         .start-command-input { min-width: 0; width: 100%; }
-        .tabs-badge-btn, .menu-dots-btn { width: 34px; min-width: 34px; height: 34px; padding: 0; }
+        .tabs-badge-btn, .menu-dots-btn { width: 44px; min-width: 44px; height: 44px; padding: 0; touch-action: manipulation; -webkit-tap-highlight-color: transparent; cursor: pointer; }
         .tabs-badge-btn .tab-badge-num { width: 24px; height: 24px; font-size: 11px; }
 
         .home-essentials-strip {
@@ -1675,10 +1962,10 @@
             align-items: center;
             justify-content: center;
             padding: 0;
-            color: #000000;
-            background: rgba(255, 255, 255, 0.95);
-            border: 1.5px solid rgba(255, 255, 255, 0.4);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.32);
+            color: #FFFFFF;
+            background: #141720;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             touch-action: manipulation;
@@ -1690,14 +1977,14 @@
         .home-essential svg { width: 22px; height: 22px; flex: 0 0 auto; pointer-events: none; }
         .home-essential:active {
             transform: translateY(1px) scale(0.94);
-            background: rgba(240, 240, 240, 1);
+            background: #1c212d;
         }
 
         @media (hover: hover) and (pointer: fine) {
             .home-essential:hover {
                 transform: translateY(-2px) scale(1.05);
-                background: #FFFFFF;
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+                background: #1e2433;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
             }
         }
 
@@ -1722,36 +2009,45 @@
             align-items: center;
             justify-content: center;
             border-radius: 50% !important;
-            background: #FFFFFF !important;
-            border: none !important;
+            background: #141720 !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
             outline: none !important;
-            color: #000000;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+            color: #FFFFFF;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
             cursor: pointer;
         }
 
         .hero-livepulse-btn { order: 1; }
         .hero-privacy-btn { order: 2; }
 
-        .pulse-news-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .pulse-news-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
         .pulse-news-card {
             display: flex !important;
             flex-direction: column !important;
             min-width: 0;
             overflow: hidden;
-            border-radius: 14px;
+            border-radius: 16px;
             background: #171b27 !important;
             border: 1px solid rgba(148, 163, 184, 0.18) !important;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
             transition: transform 0.15s ease, border-color 0.15s ease;
         }
         .pulse-news-card:active {
-            transform: scale(0.98);
+            transform: scale(0.985);
             border-color: rgba(0, 229, 255, 0.4) !important;
         }
-        .pulse-news-img { width: 100%; height: 124px; object-fit: cover; display: block; background: #0f131f; }
-        .pulse-news-body { padding: 10px 11px 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
-        .pulse-news-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; line-height: 1.35; font-size: 13px; font-weight: 700; color: #FFFFFF; }
+        .pulse-news-img {
+            width: 100%;
+            height: 190px;
+            object-fit: cover;
+            display: block;
+            background: #0f131f;
+        }
+        @media (min-width: 500px) {
+            .pulse-news-img { height: 145px; }
+        }
+        .pulse-news-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .pulse-news-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; line-height: 1.36; font-size: 14.5px; font-weight: 750; color: #FFFFFF; }
         .pulse-news-tag {
             background: rgba(0, 229, 255, 0.12) !important;
             color: var(--fokk-cyan) !important;
@@ -1762,7 +2058,7 @@
             font-weight: 700 !important;
             display: inline-block !important;
         }
-        .pulse-news-footer { gap: 5px; flex-wrap: wrap; line-height: 1.3; font-size: 11px; color: var(--text-secondary); margin-top: auto; }
+        .pulse-news-footer { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; line-height: 1.3; font-size: 11.5px; color: var(--text-secondary); margin-top: auto; }
         .pulse-customize-btn {
             border: none !important;
             background: transparent !important;
@@ -1781,11 +2077,311 @@
         .pulse-custom-panel { display: none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 10px 0; }
         .pulse-custom-panel.active { display: grid; }
         .pulse-custom-panel label { display: flex; align-items: center; gap: 7px; color: var(--text-secondary); font-size: 12px; }
+
+        /* PULSE APP BAR HOME TRENDING TOGGLE BUTTON (COMPACT ICON BUTTON - NO OVERLAP) */
+        .pulse-home-toggle-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            min-height: 32px;
+            padding: 0;
+            border-radius: 9px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.08);
+            color: #94A3B8;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            transition: all 0.18s ease;
+            touch-action: manipulation;
+            flex-shrink: 0;
+            margin: 0;
+        }
+        .pulse-home-toggle-btn:active {
+            transform: scale(0.94);
+        }
+        .pulse-home-toggle-btn.active {
+            background: rgba(0, 229, 255, 0.16);
+            color: #00E5FF;
+            border-color: rgba(0, 229, 255, 0.45);
+        }
+
+        /* HOME SCREEN TRENDING ARTICLES TRACK (PROFESSIONAL SCROLLABLE STRIP - NO EMOJIS, NO HEAVY HEADINGS) */
+        .home-trending-section {
+            width: 100%;
+            max-width: 520px;
+            margin: 10px auto 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 0 4px;
+            box-sizing: border-box;
+            transition: opacity 0.25s ease, max-height 0.25s ease;
+        }
+        .home-trending-section.hidden {
+            display: none !important;
+        }
+        .home-trending-scroll {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            padding: 2px 2px 6px 2px;
+        }
+        .home-trending-scroll::-webkit-scrollbar {
+            display: none;
+        }
+        .home-trending-card {
+            flex: 0 0 280px;
+            max-width: 280px;
+            min-height: 98px;
+            scroll-snap-align: start;
+            display: flex;
+            gap: 11px;
+            background: rgba(18, 24, 38, 0.88);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 14px;
+            padding: 10px 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+            box-sizing: border-box;
+        }
+        .home-trending-card:active {
+            transform: scale(0.975);
+            border-color: rgba(0, 229, 255, 0.4);
+            background: rgba(26, 34, 52, 0.95);
+        }
+        .home-trending-img {
+            width: 78px;
+            height: 78px;
+            min-width: 78px;
+            min-height: 78px;
+            border-radius: 10px;
+            object-fit: cover;
+            flex-shrink: 0;
+            background: #0D121F;
+        }
+        .home-trending-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-width: 0;
+            flex: 1;
+            min-height: 78px;
+        }
+        .home-trending-meta {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            color: var(--text-secondary);
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .home-trending-title {
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.34;
+            color: #F8FAFC;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3;
+            overflow: hidden;
+            margin-top: 2px;
+        }
+
+        /* AUTHENTIC BRAND LOGOS FOR NEWS SOURCES */
+        .source-brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 700;
+            font-size: 11px;
+            color: #F1F5F9;
+            line-height: 1;
+            max-width: 135px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .brand-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 10.5px;
+        }
+        .bbc-blocks {
+            display: inline-flex;
+            align-items: center;
+            gap: 1.5px;
+            flex-shrink: 0;
+        }
+        .bbc-block {
+            background: #000000;
+            color: #FFFFFF;
+            font-weight: 900;
+            font-size: 8.5px;
+            padding: 1px 3px;
+            border-radius: 2px;
+            line-height: 1;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            border: 0.5px solid rgba(255,255,255,0.3);
+        }
+        .abc-roundel {
+            background: #0B0E14;
+            color: #FFFFFF;
+            border: 1px solid #F59E0B;
+            font-weight: 900;
+            font-size: 8.5px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            font-family: sans-serif;
+            flex-shrink: 0;
+        }
+        .cnn-badge {
+            background: #CC0000;
+            color: #FFFFFF;
+            font-weight: 900;
+            font-size: 9px;
+            letter-spacing: -0.5px;
+            padding: 1.5px 4.5px;
+            border-radius: 3px;
+            line-height: 1;
+            font-family: sans-serif;
+            flex-shrink: 0;
+        }
+        .guardian-roundel {
+            background: #052962;
+            color: #FFE500;
+            font-family: Georgia, serif;
+            font-weight: 900;
+            font-size: 11px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .npr-badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 2px;
+            overflow: hidden;
+            font-weight: 900;
+            font-size: 7.5px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .npr-n { background: #237BBF; color: #FFF; padding: 1.5px 2.5px; }
+        .npr-p { background: #111; color: #FFF; padding: 1.5px 2.5px; }
+        .npr-r { background: #D8232A; color: #FFF; padding: 1.5px 2.5px; }
+        .ndtv-badge {
+            background: #E50914;
+            color: #FFFFFF;
+            font-weight: 900;
+            font-size: 8.5px;
+            padding: 1.5px 4px;
+            border-radius: 3px;
+            letter-spacing: -0.3px;
+            flex-shrink: 0;
+        }
+        .hindu-badge {
+            background: #5B1E31;
+            color: #FFFFFF;
+            font-weight: 800;
+            font-size: 8px;
+            padding: 1.5px 4px;
+            border-radius: 3px;
+            letter-spacing: 0.2px;
+            flex-shrink: 0;
+        }
+        .toi-badge {
+            background: #D32F2F;
+            color: #FFFFFF;
+            font-weight: 900;
+            font-size: 8.5px;
+            padding: 1.5px 4px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        .spiegel-badge {
+            background: #E64415;
+            color: #FFFFFF;
+            font-weight: 900;
+            font-size: 8px;
+            padding: 1.5px 4px;
+            border-radius: 2px;
+            letter-spacing: 0.3px;
+            flex-shrink: 0;
+        }
+        .dw-badge {
+            background: #0094D8;
+            color: #FFFFFF;
+            font-weight: 900;
+            font-size: 8.5px;
+            padding: 1.5px 4px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        .smh-badge {
+            background: #0C2340;
+            color: #50E3C2;
+            border: 1px solid rgba(80, 227, 194, 0.4);
+            font-weight: 900;
+            font-size: 8px;
+            padding: 1px 3.5px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        .verge-badge {
+            background: #E91E63;
+            color: #FFFFFF;
+            font-weight: 900;
+            font-size: 8px;
+            padding: 1.5px 4px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        .wired-badge {
+            background: #000000;
+            color: #FFFFFF;
+            border: 0.8px solid #FFF;
+            font-weight: 900;
+            font-size: 7.5px;
+            padding: 1px 3px;
+            letter-spacing: 0.4px;
+            flex-shrink: 0;
+        }
+        .generic-brand-badge {
+            background: rgba(255, 255, 255, 0.1);
+            color: #E2E8F0;
+            font-weight: 800;
+            font-size: 8.5px;
+            padding: 1.5px 4px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
         @media (max-width: 380px) { .pulse-news-list { grid-template-columns: 1fr; } }
 
         @media (max-width: 360px) {
             .start-command-card { gap: 4px; padding: 0 8px; }
-            .tabs-badge-btn, .menu-dots-btn { width: 30px; min-width: 30px; }
+            .tabs-badge-btn, .menu-dots-btn { width: 40px; min-width: 40px; }
             .home-essentials-strip { gap: 10px; }
             .home-essential { width: 46px; height: 46px; min-width: 46px; min-height: 46px; }
         }
@@ -1883,15 +2479,16 @@
             color: #000000;
             font-weight: 800;
         }
-        /* PINTEREST 2-COLUMN MASONRY & CARD STYLING */
+        /* STABLE ZERO-GLITCH 2-COLUMN GRID & CARD STYLING */
         .visual-grid {
-            column-count: 2;
-            column-gap: 10px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
             width: 100%;
         }
         .visual-card {
-            break-inside: avoid;
-            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
             border-radius: 16px;
             overflow: hidden;
             background: #141824;
@@ -1899,6 +2496,7 @@
             position: relative;
             transition: transform 0.18s ease;
             box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            contain: paint;
         }
         .visual-card:active {
             transform: scale(0.98);
@@ -1906,7 +2504,8 @@
         .visual-card img {
             width: 100%;
             height: auto;
-            min-height: 120px;
+            aspect-ratio: 9 / 14;
+            background: #1e2436;
             border-radius: 16px 16px 0 0;
             object-fit: cover;
             display: block;
@@ -2212,12 +2811,12 @@
         /* LIVE PLAYING MUSIC CARD ON HOME SCREEN */
         .home-live-music-card {
             display: flex;
-            align-items: center;
-            gap: 12px;
-            background: rgba(18, 18, 18, 0.92);
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(18, 18, 18, 0.94);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 16px;
             padding: 10px 14px;
             margin: 12px auto 0 auto;
@@ -2231,6 +2830,12 @@
         @keyframes fadeInCard {
             from { opacity: 0; transform: translateY(-8px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+        .live-music-top-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
         }
         .live-music-art {
             width: 44px;
@@ -2297,11 +2902,51 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .live-music-actions {
+        .live-music-progress-row {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .live-music-time-row {
+            display: flex;
+            justify-content: flex-end;
+            width: 100%;
+        }
+        .audio-time-label {
+            font-size: 10px;
+            color: #94A3B8;
+            font-variant-numeric: tabular-nums;
+            font-family: ui-monospace, monospace;
+        }
+        .audio-progress-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+            margin: 2px 0;
+            accent-color: #1DB954;
+        }
+        .audio-progress-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #1DB954;
+            cursor: pointer;
+            box-shadow: 0 0 6px rgba(29, 185, 84, 0.6);
+        }
+        .live-music-controls-row {
             display: flex;
             align-items: center;
-            gap: 6px;
-            flex-shrink: 0;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
         }
         .live-music-btn {
             width: 32px;
@@ -2319,6 +2964,13 @@
         .live-music-btn:active {
             transform: scale(0.92);
             background: rgba(255, 255, 255, 0.2);
+        }
+        .live-music-btn.primary {
+            background: #1DB954;
+            color: #000000;
+            border-color: #1DB954;
+            width: 36px;
+            height: 36px;
         }
         .live-music-btn.close {
             color: #94A3B8;
@@ -2483,19 +3135,34 @@
             bottom: 0;
             left: 0;
             right: 0;
-            height: 62px;
+            height: 68px;
             background: #181818;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
-            padding: 0 16px;
-            gap: 12px;
+            padding: 0 12px;
+            gap: 10px;
             z-index: 10001;
             box-shadow: 0 -4px 16px rgba(0,0,0,0.5);
         }
+        .audio-mini-progress-wrap {
+            position: absolute;
+            top: -3px;
+            left: 0;
+            right: 0;
+            height: 6px;
+            cursor: pointer;
+        }
+        .audio-mini-progress-wrap .audio-progress-slider {
+            width: 100%;
+            margin: 0;
+            height: 3px;
+            border-radius: 0;
+            background: rgba(255, 255, 255, 0.2);
+        }
         .mini-player-artwork {
-            width: 42px;
-            height: 42px;
+            width: 44px;
+            height: 44px;
             border-radius: 6px;
             object-fit: cover;
             background: #282828;
@@ -2507,6 +3174,7 @@
             display: flex;
             flex-direction: column;
             gap: 2px;
+            cursor: pointer;
         }
         .mini-player-title {
             font-size: 12.5px;
@@ -2516,17 +3184,46 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .mini-player-artist {
+        .mini-player-sub-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
             font-size: 11px;
+        }
+        .mini-player-artist {
             color: #1DB954;
             font-weight: 600;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        .mini-player-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .mini-ctrl-btn {
+            background: transparent;
+            border: none;
+            color: #CBD5E1;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .mini-ctrl-btn:active {
+            transform: scale(0.9);
+            color: #1DB954;
+        }
         .mini-player-play-btn {
-            width: 38px;
-            height: 38px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             background: #FFFFFF;
             color: #000000;
@@ -2688,7 +3385,7 @@
         }
         .visual-infinite-spinner {
             text-align: center;
-            padding: 18px 0;
+            padding: 12px 0;
             color: var(--fokk-cyan);
             font-size: 12px;
             font-weight: 700;
@@ -2696,6 +3393,10 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            height: 44px;
+            box-sizing: border-box;
+            opacity: 0;
+            transition: opacity 0.2s ease;
         }
         .visual-card-info {
             padding: 8px 10px;
@@ -2788,10 +3489,10 @@
         <!-- Prominent top controls: Cyber Ghost and Truth Pulse with distinctive icons matching reference image -->
         <div class="hero-top-bar">
             <button class="hero-livepulse-btn" onclick="openLivePulseHub()" title="Truth Pulse News Hub" aria-label="Open Truth Pulse">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v16H6.5a2.5 2.5 0 0 0-2.5 2.5z"/>
                     <path d="M6 2v17.5a2.5 2.5 0 0 0 2.5 2.5H20"/>
-                    <rect x="9.5" y="5.5" width="3.5" height="3.5" fill="#000000" stroke="none"/>
+                    <rect x="9.5" y="5.5" width="3.5" height="3.5" fill="#FFFFFF" stroke="none"/>
                     <line x1="15" y1="6" x2="18" y2="6"/>
                     <line x1="15" y1="8.5" x2="18" y2="8.5"/>
                     <line x1="9.5" y1="11.5" x2="18" y2="11.5"/>
@@ -2802,15 +3503,15 @@
             <button class="hero-privacy-btn" id="heroGhostBtn" onclick="toggleGhostMode()" title="Toggle Ghost Mode" aria-label="Toggle Ghost Mode">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                     <!-- Fedora Crown -->
-                    <path d="M6 11.5 L7.8 4.8 C8.2 3.8 9.5 3.8 12 3.8 C14.5 3.8 15.8 3.8 16.2 4.8 L18 11.5 Z" fill="#000000" stroke="none"/>
+                    <path d="M6 11.5 L7.8 4.8 C8.2 3.8 9.5 3.8 12 3.8 C14.5 3.8 15.8 3.8 16.2 4.8 L18 11.5 Z" fill="#FFFFFF" stroke="none"/>
                     <!-- Fedora Brim -->
-                    <path d="M2.5 12 C6.5 10.5 17.5 10.5 21.5 12" stroke="#000000" stroke-width="2.2" stroke-linecap="round"/>
+                    <path d="M2.5 12 C6.5 10.5 17.5 10.5 21.5 12" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"/>
                     <!-- Left Glass -->
-                    <circle cx="8" cy="16.5" r="2.8" stroke="#000000" stroke-width="2" fill="none"/>
+                    <circle cx="8" cy="16.5" r="2.8" stroke="#FFFFFF" stroke-width="2" fill="none"/>
                     <!-- Right Glass -->
-                    <circle cx="16" cy="16.5" r="2.8" stroke="#000000" stroke-width="2" fill="none"/>
+                    <circle cx="16" cy="16.5" r="2.8" stroke="#FFFFFF" stroke-width="2" fill="none"/>
                     <!-- Bridge -->
-                    <path d="M10.8 16.5 Q12 15.2 13.2 16.5" stroke="#000000" stroke-width="2" fill="none"/>
+                    <path d="M10.8 16.5 Q12 15.2 13.2 16.5" stroke="#FFFFFF" stroke-width="2" fill="none"/>
                 </svg>
             </button>
         </div>
@@ -2838,6 +3539,8 @@
                 <input type="text" class="start-command-input" id="startCommandInput"
                        placeholder="Search or enter address"
                        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                       onfocus="onCommandInputFocus()"
+                       onblur="onCommandInputBlur()"
                        onkeydown="onCommandInputKey(event)"
                        oninput="onCommandInputChange(this.value)">
 
@@ -2861,12 +3564,12 @@
                 <div class="command-action-divider"></div>
 
                 <!-- Tabs Badge -->
-                <button class="command-icon-btn tabs-badge-btn" id="commandTabsBtn" onclick="triggerTabsAction(event)" title="Open Tabs">
+                <button class="command-icon-btn tabs-badge-btn" id="commandTabsBtn" ontouchstart="triggerTabsAction(event)" onclick="triggerTabsAction(event)" title="Open Tabs">
                     <span class="tab-badge-num" id="tabBadgeNumber">1</span>
                 </button>
 
                 <!-- Three-Dots Menu (Triangular 3-dots matching reference image) -->
-                <button class="command-icon-btn menu-dots-btn" id="commandMenuBtn" onclick="toggleCommandMenu(event)" title="Options Menu">
+                <button class="command-icon-btn menu-dots-btn" id="commandMenuBtn" ontouchstart="toggleCommandMenu(event)" onclick="toggleCommandMenu(event)" title="Options Menu">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFFFFF">
                         <circle cx="12" cy="6.5" r="2.8" fill="#FFFFFF"/>
                         <circle cx="6.5" cy="16.5" r="2.8" fill="#FFFFFF"/>
@@ -2878,38 +3581,45 @@
             <!-- Search Engine Dropdown Popover -->
             <div class="engine-dropdown-popover" id="engineDropdownPopover"></div>
 
+            <!-- Search Suggestions & Autocomplete Dropdown -->
+            <div class="search-suggestions-dropdown" id="searchSuggestionsDropdown"></div>
+
             <!-- Three-Dots Quick Menu Popover -->
             <div class="command-menu-popover" id="commandMenuPopover">
+                <div class="popover-menu-item" onclick="openNativeMenuAction(event)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    <span>Browser Menu &amp; Features</span>
+                </div>
                 <div class="popover-menu-item" onclick="openFavoritesAction(event)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     <span>Favorites</span>
                 </div>
                 <div class="popover-menu-item" onclick="openHistoryAction(event)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     <span>Browsing History</span>
                 </div>
                 <div class="popover-menu-item" onclick="openShieldAction(event)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     <span>AdShield Defense</span>
                 </div>
                 <div class="popover-menu-item" onclick="openWallpapersCustomizer(event)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EC4899" stroke-width="2"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/></svg>
-                    <span>Wallpapers & Themes</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/></svg>
+                    <span>Wallpapers &amp; Themes</span>
                 </div>
                 <div class="popover-menu-item" onclick="triggerBurnSessionAction(event)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
                     <span>Burn Session</span>
                 </div>
                 <div class="popover-menu-item" onclick="triggerDownloadsAction(event)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     <span>Downloads</span>
                 </div>
                 <div class="popover-menu-item" onclick="openSettingsAction(event)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     <span>Settings</span>
                 </div>
                 <div class="popover-menu-item" onclick="triggerNewTabAction(event)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     <span>New Tab</span>
                 </div>
             </div>
@@ -2989,61 +3699,79 @@
         <!-- FOUR HOME ESSENTIALS: sleek circular action discs with strictly black icons matching reference image -->
         <div class="home-essentials-strip" aria-label="Quick actions">
             <button class="home-essential" onclick="openFavoritesAction(event)" title="Favorites" aria-label="Favorites">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="#000000">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="#FFFFFF">
                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
             </button>
-            <button class="home-essential" onclick="openVisualHub(event)" title="Visuals & Wallpapers" aria-label="Images">
+            <button class="home-essential" onclick="openShieldAction(event)" title="Fokk Shield Defense" aria-label="Fokk Shield">
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
-                    <rect x="2.5" y="3.5" width="19" height="17" rx="4" stroke="#000000" stroke-width="2.2"/>
-                    <circle cx="16.5" cy="8.5" r="1.6" fill="#000000"/>
-                    <path d="M 3.5 17.5 L 9 11.5 L 13.5 16 L 16 13.5 L 20.5 18 C 20.5 19.5 19.5 20.5 18 20.5 L 6 20.5 C 4.5 20.5 3.5 19.5 3.5 18 Z" fill="#000000"/>
+                    <path d="M12 2L4 5.5v6c0 5.5 3.4 10.7 8 12.5 4.6-1.8 8-7 8-12.5v-6L12 2z" stroke="#FFFFFF" stroke-width="2.2" stroke-linejoin="round"/>
+                    <path d="M9 12.2l2.2 2.3 4.3-4.5" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </button>
-            <button class="home-essential" onclick="openMediaVideoHub(event)" title="Trending Videos" aria-label="Videos">
+            <button class="home-essential" onclick="openNativeMenuAction(event)" title="Browser Menu & Features" aria-label="Browser Menu">
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="#000000" stroke-width="2.2"/>
-                    <polygon points="10,8 17,12 10,16" fill="#000000"/>
-                </svg>
-            </button>
-            <button class="home-essential" onclick="openAudioHub(event)" title="Music & Audio" aria-label="Audio">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#000000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 14v-2a8 8 0 0 1 16 0v2"/>
-                    <rect x="2.5" y="13.5" width="3" height="6.5" rx="1.5" fill="#000000" stroke="none"/>
-                    <rect x="18.5" y="13.5" width="3" height="6.5" rx="1.5" fill="#000000" stroke="none"/>
-                    <line x1="8.5" y1="12" x2="8.5" y2="16"/>
-                    <line x1="10.25" y1="10" x2="10.25" y2="18"/>
-                    <line x1="12" y1="8.5" x2="12" y2="19.5"/>
-                    <line x1="13.75" y1="10" x2="13.75" y2="18"/>
-                    <line x1="15.5" y1="12" x2="15.5" y2="16"/>
+                    <circle cx="6" cy="6" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="12" cy="6" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="18" cy="6" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="6" cy="12" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="12" cy="12" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="18" cy="12" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="6" cy="18" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="12" cy="18" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="18" cy="18" r="2.2" fill="#FFFFFF"/>
                 </svg>
             </button>
         </div>
 
+        <!-- HOME TRENDING ARTICLES STRIP (SCROLLABLE, CLEAN, PROFESSIONAL, NO EMOJIS) -->
+        <div class="home-trending-section" id="homeTrendingSection">
+            <div class="home-trending-scroll" id="homeTrendingScroll">
+                <!-- Dynamically populated trending articles -->
+            </div>
+        </div>
+
         <!-- LIVE PLAYING MUSIC CARD ON HOME SCREEN -->
         <div class="home-live-music-card" id="homeLiveMusicCard" style="display:none;">
-            <img class="live-music-art" id="homeLiveMusicArt" src="" alt="Album Art">
-            <div class="live-music-meta" onclick="openAudioHub()">
-                <div class="live-music-header">
-                    <span class="live-music-tag">NOW PLAYING</span>
-                    <div class="equalizer-bars paused" id="homeEqualizerBars">
-                        <div class="eq-bar"></div>
-                        <div class="eq-bar"></div>
-                        <div class="eq-bar"></div>
+            <div class="live-music-top-row">
+                <img class="live-music-art" id="homeLiveMusicArt" src="" alt="Album Art">
+                <div class="live-music-meta" onclick="openAudioHub()">
+                    <div class="live-music-header">
+                        <span class="live-music-tag">NOW PLAYING</span>
+                        <div class="equalizer-bars paused" id="homeEqualizerBars">
+                            <div class="eq-bar"></div>
+                            <div class="eq-bar"></div>
+                            <div class="eq-bar"></div>
+                        </div>
                     </div>
+                    <span class="live-music-title" id="homeLiveMusicTitle">Track Title</span>
+                    <span class="live-music-artist" id="homeLiveMusicArtist">Artist Name</span>
                 </div>
-                <span class="live-music-title" id="homeLiveMusicTitle">Track Title</span>
-                <span class="live-music-artist" id="homeLiveMusicArtist">Artist Name</span>
-            </div>
-            <div class="live-music-actions">
-                <button class="live-music-btn" id="homeLivePlayBtn" onclick="toggleAudioPlayState(event)" title="Play / Pause">
-                    <svg id="homeLivePlayIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                </button>
-                <button class="live-music-btn" onclick="stopAudioPlayback(event)" title="Stop">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
-                </button>
                 <button class="live-music-btn close" onclick="dismissLiveMusicCard(event)" title="Close">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="live-music-progress-row">
+                <input type="range" class="audio-progress-slider" id="homeProgressSlider" min="0" max="100" value="0" step="0.1" oninput="seekAudioToPercent(this.value)" onclick="event.stopPropagation()">
+                <div class="live-music-time-row">
+                    <span class="audio-time-label" id="homeTimeLabel">00:00 / 00:00</span>
+                </div>
+            </div>
+            <div class="live-music-controls-row">
+                <button class="live-music-btn" onclick="playPreviousTrack(event)" title="Previous Track">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                </button>
+                <button class="live-music-btn" onclick="seekAudioRelative(-10, event)" title="Rewind 10s">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><text x="12" y="15" font-size="8" font-family="sans-serif" font-weight="900" fill="currentColor" stroke="none" text-anchor="middle">10</text></svg>
+                </button>
+                <button class="live-music-btn primary" id="homeLivePlayBtn" onclick="toggleAudioPlayState(event)" title="Play / Pause">
+                    <svg id="homeLivePlayIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </button>
+                <button class="live-music-btn" onclick="seekAudioRelative(10, event)" title="Forward 10s">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.8 1.04 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><text x="12" y="15" font-size="8" font-family="sans-serif" font-weight="900" fill="currentColor" stroke="none" text-anchor="middle">10</text></svg>
+                </button>
+                <button class="live-music-btn" onclick="playNextTrack(event)" title="Next Track">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
                 </button>
             </div>
         </div>
@@ -3075,33 +3803,6 @@
     </div>
 
     <!-- Modals -->
-    <!-- TAB SWITCHER MODAL FOR DESKTOP & WEB -->
-    <div class="modal-overlay" id="tabSwitcherModal" onclick="closeModalOnBg(event)">
-        <div class="modal-card" style="max-width: 380px;">
-            <div class="modal-title">
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <span class="tab-badge-num" style="border-color:#00E5FF;color:#00E5FF;">1</span>
-                    <span>Active Tabs</span>
-                </div>
-                <button class="modal-close" onclick="closeTabSwitcherModal()">✕</button>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(255,255,255,0.06);border:1.5px solid #00E5FF;border-radius:12px;">
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <img src="fokk_logo.png" style="width:26px;height:26px;border-radius:6px;" onerror="this.src='ic_fokk_logo.png'">
-                        <div>
-                            <div style="font-size:13.5px;font-weight:700;color:#FFF;">Fokk Start Page</div>
-                            <div style="font-size:11px;color:#8E9CAE;">Home • Protected by AdShield</div>
-                        </div>
-                    </div>
-                    <span style="font-size:10px;font-weight:700;background:rgba(0,229,255,0.2);color:#00E5FF;padding:3px 8px;border-radius:6px;">ACTIVE</span>
-                </div>
-                <button class="modal-btn" onclick="triggerNewTabAction()" style="background:linear-gradient(135deg,#00E5FF,#00B4D8);color:#0A0F1D;font-weight:700;margin-top:4px;">
-                    + Open New Tab
-                </button>
-            </div>
-        </div>
-    </div>
 
     <div class="modal-overlay" id="shortcutsModal" onclick="closeModalOnBg(event)">
         <div class="modal-card" style="max-height: 85vh; overflow-y: auto;">
@@ -3132,8 +3833,14 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 <span>Back</span>
             </button>
-            <span class="pulse-bar-title">Unlimited Visuals &amp; 4K</span>
-            <button class="pulse-customize-btn" onclick="openDialUrl('https://unsplash.com')" title="Explore 4K Library">Unsplash 4K</button>
+            <span class="pulse-bar-title">Visuals &amp; Wallpapers</span>
+            <div style="display:flex; align-items:center; gap:6px; margin-left:auto;">
+                <button class="pulse-customize-btn" onclick="triggerCustomWallpaperUpload()" style="display:inline-flex; align-items:center; gap:5px; background:rgba(0,229,255,0.16) !important; color:#00E5FF !important; border:1px solid rgba(0,229,255,0.35) !important;" title="Upload image from device to set as wallpaper">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span>Upload Image</span>
+                </button>
+                <button class="pulse-customize-btn" onclick="openDialUrl('https://unsplash.com')" title="Explore 4K Library">Unsplash 4K</button>
+            </div>
         </div>
         <div class="visual-scroll-content" id="visualScrollContent">
             <div class="visual-search-box">
@@ -3141,7 +3848,11 @@
                 <button class="visual-search-go" onclick="searchVisuals()">Search</button>
             </div>
             <div class="visual-tags-strip">
+                <button class="visual-tag-btn" onclick="triggerCustomWallpaperUpload()" style="background: linear-gradient(135deg, rgba(0, 229, 255, 0.22), rgba(59, 130, 246, 0.18)); border-color: rgba(0, 229, 255, 0.45); color: #E0F2FE;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload from Device
+                </button>
                 <button class="visual-tag-btn active" onclick="filterVisuals('all', this)">All Feeds</button>
+                <button class="visual-tag-btn" onclick="filterVisuals('sailboats', this)">⛵ Sail &amp; Horizon</button>
                 <button class="visual-tag-btn" onclick="filterVisuals('wallpapers', this)">4K Wallpapers</button>
                 <button class="visual-tag-btn" onclick="filterVisuals('cyberpunk', this)">Cyberpunk &amp; Neon</button>
                 <button class="visual-tag-btn" onclick="filterVisuals('nature', this)">Ethereal Nature</button>
@@ -3154,7 +3865,7 @@
             <div class="visual-grid" id="visualGridContainer">
                 <!-- Staggered Pinterest masonry cards dynamically loaded -->
             </div>
-            <div id="visualInfiniteLoader" class="visual-infinite-spinner" style="display:none;">
+            <div id="visualInfiniteLoader" class="visual-infinite-spinner" style="opacity:0;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
                 <span>Loading more ultra visuals...</span>
             </div>
@@ -3240,15 +3951,35 @@
         </div>
 
         <!-- Sticky Spotify-Style Bottom Mini Player Bar -->
-        <div class="audio-mini-player" id="audioMiniPlayer" style="display:none;" onclick="toggleAudioPlayState()">
-            <img class="mini-player-artwork" id="miniPlayerArtwork" src="" alt="Album Art">
-            <div class="mini-player-meta">
-                <div class="mini-player-title" id="miniPlayerTitle">Track Title</div>
-                <div class="mini-player-artist" id="miniPlayerArtist">Artist Name</div>
+        <div class="audio-mini-player" id="audioMiniPlayer" style="display:none;">
+            <div class="audio-mini-progress-wrap">
+                <input type="range" class="audio-progress-slider" id="miniProgressSlider" min="0" max="100" value="0" step="0.1" oninput="seekAudioToPercent(this.value)" onclick="event.stopPropagation()">
             </div>
-            <button class="mini-player-play-btn" id="miniPlayerPlayBtn" onclick="toggleAudioPlayState(event)" aria-label="Play/Pause">
-                <svg id="miniPlayerPlayIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            </button>
+            <img class="mini-player-artwork" id="miniPlayerArtwork" src="" alt="Album Art">
+            <div class="mini-player-meta" onclick="toggleAudioPlayState(event)">
+                <div class="mini-player-title" id="miniPlayerTitle">Track Title</div>
+                <div class="mini-player-sub-row">
+                    <span class="mini-player-artist" id="miniPlayerArtist">Artist Name</span>
+                    <span class="audio-time-label" id="miniTimeLabel">00:00 / 00:00</span>
+                </div>
+            </div>
+            <div class="mini-player-controls">
+                <button class="mini-ctrl-btn" onclick="playPreviousTrack(event)" title="Previous Track">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                </button>
+                <button class="mini-ctrl-btn" onclick="seekAudioRelative(-10, event)" title="Rewind 10s">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><text x="12" y="15" font-size="8" font-family="sans-serif" font-weight="900" fill="currentColor" stroke="none" text-anchor="middle">10</text></svg>
+                </button>
+                <button class="mini-player-play-btn" id="miniPlayerPlayBtn" onclick="toggleAudioPlayState(event)" aria-label="Play/Pause">
+                    <svg id="miniPlayerPlayIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </button>
+                <button class="mini-ctrl-btn" onclick="seekAudioRelative(10, event)" title="Forward 10s">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.8 1.04 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><text x="12" y="15" font-size="8" font-family="sans-serif" font-weight="900" fill="currentColor" stroke="none" text-anchor="middle">10</text></svg>
+                </button>
+                <button class="mini-ctrl-btn" onclick="playNextTrack(event)" title="Next Track">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -3355,79 +4086,30 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 <span>Back</span>
             </button>
-            <span class="pulse-bar-title">Live Pulse Hub</span>
-            <button class="pulse-customize-btn" onclick="togglePulseCustomize()" title="Customize feed">Customize</button>
-            <select id="pulseCountrySelect" class="pulse-country-select" onchange="onCountryChanged(this.value)">
-                <option value="global">Global (US)</option>
-                <option value="us">United States</option>
-                <option value="uk">United Kingdom</option>
-                <option value="in">India</option>
-                <option value="ca">Canada</option>
-                <option value="de">Germany</option>
-                <option value="au">Australia</option>
-            </select>
+            <div class="pulse-context" aria-label="Live briefing status">Live briefing</div>
+            <div class="pulse-country-wrapper" onclick="document.getElementById('pulseCountrySelect').click()">
+                <select id="pulseCountrySelect" class="pulse-country-select" aria-label="Choose region" onchange="onCountryChanged(this.value)">
+                    <option value="global">Global (US)</option>
+                    <option value="us">United States</option>
+                    <option value="uk">United Kingdom</option>
+                    <option value="in">India</option>
+                    <option value="ca">Canada</option>
+                    <option value="de">Germany</option>
+                    <option value="au">Australia</option>
+                </select>
+                <svg class="pulse-country-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+            <button class="pulse-home-toggle-btn active" id="btnToggleHomeTrending" onclick="toggleHomeTrendingFeed(event)" title="Toggle trending articles on Home Screen">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <span id="labelToggleHomeTrending" style="display:none;">Home Feed: ON</span>
+            </button>
         </div>
 
         <div class="pulse-scroll-content">
-            <div class="pulse-custom-panel" id="pulseCustomPanel">
-                <label><input type="checkbox" data-pulse-section="weather" checked onchange="applyPulsePreferences()"> Weather</label>
-                <label><input type="checkbox" data-pulse-section="markets" checked onchange="applyPulsePreferences()"> Markets</label>
-                <label><input type="checkbox" data-pulse-section="news" checked onchange="applyPulsePreferences()"> Breaking news</label>
-            </div>
-            <!-- Weather Widget Card with Clean Non-Overlapping Layout -->
-            <div class="pulse-weather-card">
-                <div class="weather-meta-row">
-                    <div class="weather-city-badge">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
-                        <span id="weatherCityName">New York, US</span>
-                    </div>
-                    <button class="weather-edit-btn" onclick="openCityPickerModal()">Change City</button>
-                </div>
-                <div class="weather-main-row">
-                    <div>
-                        <div class="weather-temp" id="weatherTempVal">24°C</div>
-                        <div class="weather-cond" id="weatherCondText">Sunny &bull; Clear Skies</div>
-                    </div>
-                    <div class="weather-icon-disc">
-                        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="5"></circle>
-                            <line x1="12" y1="1" x2="12" y2="3"></line>
-                            <line x1="12" y1="21" x2="12" y2="23"></line>
-                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                            <line x1="1" y1="12" x2="3" y2="12"></line>
-                            <line x1="21" y1="12" x2="23" y2="12"></line>
-                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                        </svg>
-                    </div>
-                </div>
-                <div class="weather-divider"></div>
-                <div class="weather-sub" id="weatherSubDetails">Humidity 42% &bull; Wind 11 km/h &bull; Air Quality: Good (AQI 24)</div>
-            </div>
-
-            <!-- News & Content Category Selector (Sports removed completely) -->
-            <div class="pulse-segments">
-                <button class="pulse-seg-btn active" id="catAll" onclick="selectNewsCategory('all')">All News</button>
-                <button class="pulse-seg-btn" id="catTech" onclick="selectNewsCategory('tech')">Tech &amp; AI</button>
-                <button class="pulse-seg-btn" id="catBusiness" onclick="selectNewsCategory('business')">Markets &amp; Finance</button>
-                <button class="pulse-seg-btn" id="catWorld" onclick="selectNewsCategory('world')">World News</button>
-                <button class="pulse-seg-btn" id="catScience" onclick="selectNewsCategory('science')">Science &amp; Space</button>
-                <button class="pulse-seg-btn" id="catCulture" onclick="selectNewsCategory('culture')">Entertainment</button>
-            </div>
-
-            <!-- Markets & Currencies -->
-            <div class="pulse-section-header" data-seg="markets">
-                <span>Markets &amp; Currencies</span>
-                <span class="pulse-header-sub" id="marketRegionTag">Live Ticker</span>
-            </div>
-            <div class="pulse-ticker-scroll" id="pulseTickerStrip" data-seg="markets">
-                <!-- Dynamically populated per region -->
-            </div>
 
             <!-- Breaking News with Images -->
             <div class="pulse-section-header" data-seg="news">
-                <span>Top Stories</span>
+                <span>Top stories</span>
                 <span class="pulse-header-sub" id="newsRegionTag">Global Feed</span>
             </div>
             <div class="pulse-news-list" id="pulseNewsList" data-seg="news">
@@ -3496,6 +4178,15 @@
                 <div class="wallpaper-card" onclick="setWallpaper('pearl_light')" style="background: #F8FAFC; border: 1.5px solid #CBD5E1; color: #0F172A;">
                     <span class="wp-title" style="color: #0F172A;">Pearl Light</span>
                 </div>
+                <div class="wallpaper-card" onclick="setWallpaper('sail_azure')" style="background-image: url('https://images.unsplash.com/photo-1500930287596-c1ecaa373bb2?auto=format&fit=crop&w=400&q=80');">
+                    <span class="wp-title">Azure Sail</span>
+                </div>
+                <div class="wallpaper-card" onclick="setWallpaper('sail_coast')" style="background-image: url('https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=400&q=80');">
+                    <span class="wp-title">Pearl Yacht</span>
+                </div>
+                <div class="wallpaper-card" onclick="setWallpaper('sail_pearl')" style="background-image: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=400&q=80');">
+                    <span class="wp-title">Coastal Mist</span>
+                </div>
             </div>
             <input type="file" id="wallpaperFileInput" accept="image/*" style="display:none;" onchange="handleWallpaperFileSelected(event)">
             <button class="modal-btn" onclick="closeThemeModal()" style="margin-top: 10px;">Done</button>
@@ -3520,10 +4211,11 @@
 
         const isAppEnvironment = location.href.includes('android_asset') || location.protocol === 'file:';
 
-        if (!window.FokkShieldBridge) {
+        // Only install mock bridge in desktop preview browser, NEVER in Android App!
+        if (!window.FokkShieldBridge && !isAppEnvironment) {
             let ghostModeState = localStorage.getItem('fokk_ghost_mode') === 'true';
             window.FokkShieldBridge = {
-                isAndroidNative: function() { return isAppEnvironment; },
+                isAndroidNative: function() { return false; },
                 isGhostModeActive: function() { return ghostModeState; },
                 toggleGhostMode: function() {
                     ghostModeState = !ghostModeState;
@@ -3584,8 +4276,7 @@
             google: `<svg viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.15z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.94H1.24v3.15C3.26 21.36 7.33 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.26c-.25-.72-.38-1.49-.38-2.26s.13-1.54.38-2.26V6.59H1.24C.45 8.16 0 9.94 0 12s.45 3.84 1.24 5.41l4.04-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.24 6.59l4.04 3.15c.95-2.84 3.6-4.99 6.72-4.99z"/></svg>`,
             duckduckgo: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#DE5833"/><path fill="#FFFFFF" d="M12 4.8c-2.4 0-4.3 1.8-4.3 4.1 0 1.2.5 2.3 1.4 3-.2.4-.6.9-1.2 1.3-.3.2-.2.7.2.7.8 0 1.8-.2 2.6-.7.4.2.8.3 1.3.3 2.4 0 4.3-1.8 4.3-4.1 0-2.3-1.9-4.6-4.3-4.6z"/><circle cx="10.2" cy="8.2" r="1" fill="#2B2B2B"/><ellipse cx="10" cy="8" rx="0.3" ry="0.3" fill="#FFFFFF"/><path fill="#F9A01B" d="M14 8.5c.8-.1 2.8.5 2.8 1.5s-2 1.3-2.8 1.1z"/><circle cx="14" cy="9.8" r="0.4" fill="#C87508"/><path fill="#5B9E4D" d="M10.5 14.8l3 1.5-3 1.5z"/><path fill="#5B9E4D" d="M13.5 14.8l-3 1.5 3 1.5z"/><circle cx="12" cy="16.3" r="0.8" fill="#467B3B"/></svg>`,
             ecosia: `<svg viewBox="0 0 24 24"><path fill="#28C74D" d="M12 3.5c-2.5 0-4.6 1.7-5.1 4.1A4.8 4.8 0 0 0 2.5 12c0 2.6 2.1 4.8 4.7 4.8h9.6c2.6 0 4.7-2.2 4.7-4.8 0-2.4-1.8-4.4-4.2-4.7-.5-2.4-2.6-4.1-5.3-4.1z"/><path fill="#FFFFFF" d="M11 15.5v5.5h2v-5.5l2-3.7h-1.5L12 14l-1.5-2.2H9l2 3.7z"/></svg>`,
-            brave: `<svg viewBox="0 0 24 24"><path fill="#FB542B" d="M12 1.5l-7.5 4.3 1.2 8.6L12 22.5l6.3-8.1 1.2-8.6L12 1.5zm6.2 12.3L12 20.3l-6.2-6.5-1-7.2L12 3.2l7.2 3.4-1 7.2z"/><path fill="#FF7A00" d="M12 6.2l-4.5 2.2.7 4.8 3.8 4 3.8-4 .7-4.8L12 6.2z"/><circle cx="9.5" cy="10" r="1.1" fill="#FFFFFF"/><circle cx="14.5" cy="10" r="1.1" fill="#FFFFFF"/><path fill="#1A1A1A" d="M11 12.5h2l-1 1.5z"/></svg>`,
-            startpage: `<svg viewBox="0 0 24 24"><path fill="#FFFFFF" d="M12 3.5c-3.1 0-5.2 1.6-5.2 4.1 0 2.2 1.5 3.3 3.8 3.9l1.6.4c1.6.4 2.3 1 2.3 2 0 1.3-1.2 2.2-2.8 2.2-1.8 0-3.1-.9-3.4-2.3H5.8c.3 2.6 2.5 4.3 5.9 4.3 3.4 0 5.6-1.7 5.6-4.3 0-2.3-1.6-3.5-4-4.1l-1.5-.4c-1.5-.4-2.1-.9-2.1-1.8 0-1.2 1-2 2.5-2 1.5 0 2.6.8 2.8 2h2.5C17.2 5 15.1 3.5 12 3.5z"/><path fill="none" stroke="#7050FF" stroke-width="2.2" stroke-linecap="round" d="M6 21c3.5 1.2 8.5 1.2 12 0"/></svg>`,
+            yahoo: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#6001D2"/><path fill="#FFFFFF" d="M5.5 6.5h3.3l2.2 5 2.2-5h3.3l-4 8v4h-3v-4z"/><path fill="#FFFFFF" d="M17.5 6.5h1.7l-.4 7.7h-1z"/><circle cx="18.3" cy="17.3" r="1.1" fill="#FFFFFF"/></svg>`,
             instagram: `<svg viewBox="0 0 24 24"><defs><linearGradient id="ig-grad-real" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FFD600"/><stop offset="25%" stop-color="#FF0040"/><stop offset="60%" stop-color="#D800B9"/><stop offset="100%" stop-color="#7000FF"/></linearGradient></defs><rect width="24" height="24" rx="6" fill="url(#ig-grad-real)"/><rect x="3.5" y="3.5" width="17" height="17" rx="4.8" fill="none" stroke="#FFFFFF" stroke-width="1.8"/><circle cx="12" cy="12" r="4.2" fill="none" stroke="#FFFFFF" stroke-width="1.8"/><circle cx="16.5" cy="7.5" r="1.1" fill="#FFFFFF"/></svg>`,
             youtube: `<svg viewBox="0 0 24 24"><path fill="#FF0000" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path fill="#FFFFFF" d="m9.545 15.568 6.273-3.568-6.273-3.568z"/></svg>`,
             x: `<svg viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#000000"/><path fill="#FFFFFF" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`,
@@ -3621,21 +4312,16 @@
                 url: 'https://www.ecosia.org/search?q=',
                 icon: brandSvgs.ecosia
             },
-            brave: {
-                name: 'Brave',
-                url: 'https://search.brave.com/search?q=',
-                icon: brandSvgs.brave
-            },
-            startpage: {
-                name: 'Startpage',
-                url: 'https://www.startpage.com/sp/search?query=',
-                icon: brandSvgs.startpage
+            yahoo: {
+                name: 'Yahoo',
+                url: 'https://search.yahoo.com/search?p=',
+                icon: brandSvgs.yahoo
             }
         };
 
         let currentActiveEngine = localStorage.getItem('fokk_search_engine') || 'bing';
 
-        const quickEngines = ['bing', 'google', 'duckduckgo', 'ecosia'];
+        const quickEngines = ['bing', 'google', 'duckduckgo', 'yahoo', 'ecosia'];
 
         function renderEngineDropdown() {
             const popover = document.getElementById('engineDropdownPopover');
@@ -3748,19 +4434,35 @@
             if (popover) popover.classList.toggle('active');
         }
 
+        function openNativeMenuAction(e) {
+            if (e) {
+                if (typeof e.stopPropagation === 'function') e.stopPropagation();
+                if (typeof e.preventDefault === 'function') e.preventDefault();
+            }
+            if (navigator.vibrate) try { navigator.vibrate(15); } catch (err) {}
+            // Direct zero-delay opening of the native bottom sheet menu
+            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openMenu === 'function') {
+                window.FokkShieldBridge.openMenu();
+                return;
+            }
+            const popover = document.getElementById('commandMenuPopover');
+            const engPop = document.getElementById('engineDropdownPopover');
+            if (engPop) engPop.classList.remove('active');
+            if (popover) {
+                popover.classList.toggle('active');
+            }
+        }
+
         function toggleCommandMenu(e) {
             if (e) {
                 if (typeof e.stopPropagation === 'function') e.stopPropagation();
                 if (typeof e.preventDefault === 'function') e.preventDefault();
             }
             if (navigator.vibrate) try { navigator.vibrate(15); } catch (err) {}
-            try {
-                if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openMenu === 'function') {
-                    window.FokkShieldBridge.openMenu();
-                    return;
-                }
-            } catch (err) {
-                console.error("openMenu error", err);
+            // Direct zero-delay opening of the native bottom sheet menu
+            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openMenu === 'function') {
+                window.FokkShieldBridge.openMenu();
+                return;
             }
             const popover = document.getElementById('commandMenuPopover');
             const engPop = document.getElementById('engineDropdownPopover');
@@ -3788,20 +4490,137 @@
             showPreviewToast('Search Engine: ' + searchEngines[engKey].name);
         }
 
+        function onCommandInputFocus() {
+            const card = document.getElementById('startCommandCard');
+            if (card) card.classList.add('typing-active');
+            const input = document.getElementById('startCommandInput');
+            if (input && input.value.trim().length > 0) {
+                fetchSuggestions(input.value);
+            }
+        }
+
+        function onCommandInputBlur() {
+            setTimeout(() => {
+                const input = document.getElementById('startCommandInput');
+                const card = document.getElementById('startCommandCard');
+                if (input && card && input.value.trim().length === 0) {
+                    card.classList.remove('typing-active');
+                }
+                hideSuggestions();
+            }, 260);
+        }
+
+        let suggestionDebounceTimer = null;
+
         function onCommandInputChange(val) {
             const hasText = val.trim().length > 0;
             const clearBtn = document.getElementById('commandClearBtn');
             const voiceBtn = document.getElementById('commandVoiceBtn');
             const input = document.getElementById('startCommandInput');
+            const card = document.getElementById('startCommandCard');
+            if (card) {
+                if (hasText) card.classList.add('typing-active');
+            }
             if (clearBtn) clearBtn.style.display = hasText ? 'flex' : 'none';
             if (voiceBtn) voiceBtn.style.display = hasText ? 'none' : 'flex';
             if (input) {
                 if (val.length > 26) {
-                    input.style.fontSize = '13.5px';
+                    input.style.fontSize = '14px';
                 } else {
-                    input.style.fontSize = '15px';
+                    input.style.fontSize = '15.5px';
                 }
             }
+            if (hasText) {
+                fetchSuggestions(val);
+            } else {
+                hideSuggestions();
+            }
+        }
+
+        function fetchSuggestions(query) {
+            clearTimeout(suggestionDebounceTimer);
+            const trimmed = (query || '').trim();
+            if (!trimmed) {
+                hideSuggestions();
+                return;
+            }
+            suggestionDebounceTimer = setTimeout(() => {
+                // 1. Check Native Bridge first
+                try {
+                    if (window.FokkShieldBridge && typeof window.FokkShieldBridge.getSearchSuggestions === 'function') {
+                        const nativeJson = window.FokkShieldBridge.getSearchSuggestions(trimmed);
+                        if (nativeJson) {
+                            const parsed = JSON.parse(nativeJson);
+                            if (Array.isArray(parsed) && parsed.length > 0) {
+                                renderSuggestions(parsed, trimmed);
+                                return;
+                            }
+                        }
+                    }
+                } catch(e) {}
+
+                // 2. Query search suggestion API (DuckDuckGo instant list)
+                const url = 'https://duckduckgo.com/ac/?q=' + encodeURIComponent(trimmed) + '&type=list';
+                fetch(url)
+                    .then(res => res.json())
+                    .then(data => {
+                        const items = (data && data[1]) ? data[1] : [];
+                        renderSuggestions(items, trimmed);
+                    })
+                    .catch(() => {
+                        renderSuggestions([trimmed], trimmed);
+                    });
+            }, 120);
+        }
+
+        function renderSuggestions(items, query) {
+            const dropdown = document.getElementById('searchSuggestionsDropdown');
+            if (!dropdown) return;
+            if (!items || items.length === 0) {
+                hideSuggestions();
+                return;
+            }
+            dropdown.innerHTML = '';
+            const maxItems = items.slice(0, 6);
+            maxItems.forEach(item => {
+                const text = typeof item === 'string' ? item : (item.phrase || item.title || item.url || '');
+                if (!text) return;
+                const row = document.createElement('div');
+                row.className = 'suggestion-item';
+                row.onmousedown = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    selectSuggestion(text);
+                };
+                row.innerHTML = `
+                    <span class="suggestion-icon">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                    </span>
+                    <span class="suggestion-text">${escapeHtml(text)}</span>
+                    <span class="suggestion-arrow">↗</span>
+                `;
+                dropdown.appendChild(row);
+            });
+            dropdown.classList.add('active');
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function selectSuggestion(text) {
+            const input = document.getElementById('startCommandInput');
+            if (input) input.value = text;
+            hideSuggestions();
+            submitCommandSearch();
+        }
+
+        function hideSuggestions() {
+            const dropdown = document.getElementById('searchSuggestionsDropdown');
+            if (dropdown) dropdown.classList.remove('active');
         }
 
         function clearCommandInput(e) {
@@ -3921,18 +4740,6 @@
             } catch (err) {
                 console.error("openTabs error", err);
             }
-            openTabSwitcherModal();
-        }
-
-        function openTabSwitcherModal() {
-            const m = document.getElementById('tabSwitcherModal');
-            if (m) m.classList.add('active');
-        }
-
-        function closeTabSwitcherModal(e) {
-            if (e && e.target && !e.target.classList.contains('modal-overlay') && !e.target.classList.contains('modal-close')) return;
-            const m = document.getElementById('tabSwitcherModal');
-            if (m) m.classList.remove('active');
         }
 
         function triggerNewTabAction(e) {
@@ -3943,8 +4750,6 @@
             if (navigator.vibrate) try { navigator.vibrate(20); } catch (err) {}
             const popover = document.getElementById('commandMenuPopover');
             if (popover) popover.classList.remove('active');
-            const tabModal = document.getElementById('tabSwitcherModal');
-            if (tabModal) tabModal.classList.remove('active');
             if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openNewTab === 'function') {
                 window.FokkShieldBridge.openNewTab();
             } else {
@@ -4167,15 +4972,11 @@
             if (navigator.vibrate) try { navigator.vibrate(20); } catch (err) {}
             const popover = document.getElementById('commandMenuPopover');
             if (popover) popover.classList.remove('active');
-            try {
-                if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openBookmarks === 'function') {
-                    window.FokkShieldBridge.openBookmarks();
-                    return;
-                }
-            } catch (err) {
-                console.error("openBookmarks error", err);
+            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openBookmarks === 'function') {
+                window.FokkShieldBridge.openBookmarks();
+                return;
             }
-            showPreviewToast('Bookmarks & Saved Pages');
+            if (!isAppEnvironment) showPreviewToast('Bookmarks & Saved Pages');
         }
 
         function openHistoryAction(e) {
@@ -4186,15 +4987,11 @@
             if (navigator.vibrate) try { navigator.vibrate(20); } catch (err) {}
             const popover = document.getElementById('commandMenuPopover');
             if (popover) popover.classList.remove('active');
-            try {
-                if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openHistory === 'function') {
-                    window.FokkShieldBridge.openHistory();
-                    return;
-                }
-            } catch (err) {
-                console.error("openHistory error", err);
+            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openHistory === 'function') {
+                window.FokkShieldBridge.openHistory();
+                return;
             }
-            showPreviewToast('Browsing History');
+            if (!isAppEnvironment) showPreviewToast('Browsing History');
         }
 
         function openShieldAction(e) {
@@ -4205,15 +5002,26 @@
             if (navigator.vibrate) try { navigator.vibrate(20); } catch (err) {}
             const popover = document.getElementById('commandMenuPopover');
             if (popover) popover.classList.remove('active');
-            try {
-                if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openShieldDashboard === 'function') {
-                    window.FokkShieldBridge.openShieldDashboard();
-                    return;
-                }
-            } catch (err) {
-                console.error("openShieldDashboard error", err);
+            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openShieldDashboard === 'function') {
+                window.FokkShieldBridge.openShieldDashboard();
+                return;
             }
-            showPreviewToast('AdShield Defense');
+            if (!isAppEnvironment) showPreviewToast('AdShield Defense');
+        }
+
+        function openDualScreenAction(e) {
+            if (e) {
+                if (typeof e.stopPropagation === 'function') e.stopPropagation();
+                if (typeof e.preventDefault === 'function') e.preventDefault();
+            }
+            if (navigator.vibrate) try { navigator.vibrate(20); } catch (err) {}
+            const popover = document.getElementById('commandMenuPopover');
+            if (popover) popover.classList.remove('active');
+            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openDualScreen === 'function') {
+                window.FokkShieldBridge.openDualScreen();
+                return;
+            }
+            if (!isAppEnvironment) showPreviewToast('Dual Screen Multitasking');
         }
 
         function openSettingsAction(e) {
@@ -4224,16 +5032,13 @@
             if (navigator.vibrate) try { navigator.vibrate(20); } catch (err) {}
             const popover = document.getElementById('commandMenuPopover');
             if (popover) popover.classList.remove('active');
-            try {
-                if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openSettings === 'function') {
-                    window.FokkShieldBridge.openSettings();
-                    return;
-                }
-            } catch (err) {
-                console.error("openSettings error", err);
+            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openSettings === 'function') {
+                window.FokkShieldBridge.openSettings();
+                return;
             }
-            showPreviewToast('Browser Settings');
+            if (!isAppEnvironment) showPreviewToast('Settings');
         }
+
 
         function openWallpapersCustomizer(e) {
             if (e) {
@@ -4243,7 +5048,7 @@
             if (navigator.vibrate) try { navigator.vibrate(20); } catch (err) {}
             const popover = document.getElementById('commandMenuPopover');
             if (popover) popover.classList.remove('active');
-            openThemeModal();
+            openVisualHub(e);
         }
 
         function openShortcutsManager() {
@@ -4410,7 +5215,10 @@
                 window.FokkShieldBridge.triggerWallpaperPicker();
             } else {
                 const input = document.getElementById('wallpaperFileInput');
-                if (input) input.click();
+                if (input) {
+                    input.value = '';
+                    input.click();
+                }
             }
         }
 
@@ -4441,6 +5249,9 @@
                     if (window.FokkShieldBridge && typeof window.FokkShieldBridge.setGlobalTheme === 'function') {
                         window.FokkShieldBridge.setGlobalTheme('custom');
                     }
+                    if (typeof closeVisualHub === 'function') closeVisualHub();
+                    if (typeof closeThemeModal === 'function') closeThemeModal();
+                    if (typeof showPreviewToast === 'function') showPreviewToast('Custom device wallpaper applied!');
                 };
                 img.src = e.target.result;
             };
@@ -4476,7 +5287,25 @@
             } else if (themeType === 'pearl_light') {
                 body.classList.add('light-theme');
                 body.style.backgroundImage = 'none';
-                body.style.backgroundColor = '#F1F5F9';
+                body.style.backgroundColor = '#F8FAFC';
+            } else if (themeType === 'sail_azure') {
+                body.classList.add('light-theme');
+                body.classList.add('has-custom-wp');
+                body.style.backgroundImage = "url('https://images.unsplash.com/photo-1500930287596-c1ecaa373bb2?auto=format&fit=crop&w=1200&q=85')";
+                body.style.backgroundSize = 'cover';
+                body.style.backgroundPosition = 'center';
+            } else if (themeType === 'sail_coast') {
+                body.classList.add('light-theme');
+                body.classList.add('has-custom-wp');
+                body.style.backgroundImage = "url('https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=85')";
+                body.style.backgroundSize = 'cover';
+                body.style.backgroundPosition = 'center';
+            } else if (themeType === 'sail_pearl') {
+                body.classList.add('light-theme');
+                body.classList.add('has-custom-wp');
+                body.style.backgroundImage = "url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=85')";
+                body.style.backgroundSize = 'cover';
+                body.style.backgroundPosition = 'center';
             } else if (themeType === 'pure_obsidian') {
                 body.style.backgroundImage = 'none';
                 body.style.backgroundColor = '#11131C';
@@ -4603,12 +5432,14 @@
                 btn.style.transform = 'scale(0.92)';
                 setTimeout(() => { btn.style.transform = ''; }, 180);
             }
-            const isNative = window.FokkShieldBridge && typeof window.FokkShieldBridge.isAndroidNative === 'function' && window.FokkShieldBridge.isAndroidNative();
-            if (isNative && typeof window.FokkShieldBridge.toggleGhostMode === 'function') {
+            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.toggleGhostMode === 'function') {
                 window.FokkShieldBridge.toggleGhostMode();
-            } else if (isNative && typeof window.FokkShieldBridge.openPrivateTabs === 'function') {
+                return;
+            } else if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openPrivateTabs === 'function') {
                 window.FokkShieldBridge.openPrivateTabs();
-            } else {
+                return;
+            }
+            if (!isAppEnvironment) {
                 const current = localStorage.getItem('fokk_ghost_mode') === 'true';
                 const next = !current;
                 localStorage.setItem('fokk_ghost_mode', String(next));
@@ -4622,15 +5453,11 @@
             if (navigator.vibrate) {
                 try { navigator.vibrate(20); } catch (e) {}
             }
+            try { history.pushState({ modal: 'livePulse' }, ''); } catch (err) {}
             renderPulseData();
-            loadPulsePreferences();
-            applyPulsePreferences();
             const modal = document.getElementById('livePulseModal');
             if (modal) modal.classList.add('active');
 
-            // Trigger live background fetch for real weather, real stock/crypto prices, and live news
-            fetchLiveWeather(currentCity);
-            fetchLiveTickers();
             renderFilteredNews();
         }
 
@@ -4682,161 +5509,7 @@
         let currentCity = localStorage.getItem('fokk_pulse_city') || 'New York, US';
         let currentNewsCategory = 'all';
 
-        const richEditorialArticles = [
-            // TECH & AI
-            {
-                title: "Next-Gen Autonomous AI Agents Redefining Full-Stack Software Engineering",
-                category: "tech",
-                tag: "Tech & AI",
-                source: "Ars Technica",
-                time: "15m ago",
-                img: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=640&q=82",
-                query: "Next-gen AI autonomous coding agents software developments"
-            },
-            {
-                title: "Open-Weights Reasoning Models Challenge Proprietary Frontier AI Frontiers",
-                category: "tech",
-                tag: "AI Research",
-                source: "MIT Tech Review",
-                time: "42m ago",
-                img: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=640&q=82",
-                query: "Open weights reasoning models frontier artificial intelligence"
-            },
-            {
-                title: "Silicon Photonics Breakthrough Accelerates Ultra-Low Latency Data Centers",
-                category: "tech",
-                tag: "Hardware",
-                source: "TechCrunch",
-                time: "1h ago",
-                img: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=640&q=80",
-                query: "Silicon photonics breakthrough optical computing interconnects"
-            },
-            {
-                title: "End-to-End Encrypted Protocols Deployed Across 3 Billion Mobile Devices",
-                category: "tech",
-                tag: "Privacy",
-                source: "Wired",
-                time: "2h ago",
-                img: "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=640&q=80",
-                query: "Post quantum cryptography mobile end to end encryption"
-            },
-
-            // MARKETS & FINANCE
-            {
-                title: "Bitcoin Surges Past $68,000 as Institutional Spot ETF Inflows Reach All-Time High",
-                category: "business",
-                tag: "Crypto",
-                source: "Bloomberg",
-                time: "25m ago",
-                img: "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?auto=format&fit=crop&w=640&q=80",
-                query: "Bitcoin ETF inflows crypto market rally today"
-            },
-            {
-                title: "Global Central Banks Signal Coordinated Easing Cycle Amid Soft Landing Signals",
-                category: "business",
-                tag: "Economy",
-                source: "Financial Times",
-                time: "55m ago",
-                img: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=640&q=80",
-                query: "Federal Reserve interest rate cuts global markets economy"
-            },
-            {
-                title: "Semiconductor Fabrication Investments Expand with $120B in Next-Gen Foundries",
-                category: "business",
-                tag: "Industry",
-                source: "Wall Street Journal",
-                time: "2h ago",
-                img: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=640&q=80",
-                query: "Global semiconductor foundries investment expansion 2026"
-            },
-
-            // WORLD NEWS
-            {
-                title: "International Renewable Energy Accord Targets 11,000 GW Tripling Milestone",
-                category: "world",
-                tag: "Global Accord",
-                source: "Reuters",
-                time: "35m ago",
-                img: "https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=640&q=80",
-                query: "International renewable energy expansion summit accord"
-            },
-            {
-                title: "High-Speed Trans-Continental Rail Network Completes Phase 1 Tunnel Breakthrough",
-                category: "world",
-                tag: "Infrastructure",
-                source: "BBC News",
-                time: "1h ago",
-                img: "https://images.unsplash.com/photo-1474487548417-781cb71495f3?auto=format&fit=crop&w=640&q=80",
-                query: "High speed rail megaproject construction transit"
-            },
-            {
-                title: "Global Digital Sovereignty Framework Protects Consumer Data Mobility",
-                category: "world",
-                tag: "Policy",
-                source: "The Guardian",
-                time: "3h ago",
-                img: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=640&q=82",
-                query: "Digital sovereignty consumer data privacy regulations"
-            },
-
-            // SCIENCE & SPACE
-            {
-                title: "James Webb Telescope Discovers Atmospheres on Habitable-Zone Earth Cousins",
-                category: "science",
-                tag: "Deep Space",
-                source: "Nature",
-                time: "30m ago",
-                img: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=640&q=82",
-                query: "James Webb telescope exoplanet atmosphere biosignature discovery"
-            },
-            {
-                title: "Starship Flight 7 Achieves Full Reusability Milestone in Orbital Catch Test",
-                category: "science",
-                tag: "Aerospace",
-                source: "SpaceNews",
-                time: "1h ago",
-                img: "https://images.unsplash.com/photo-1517976487508-b80c32607f2a?auto=format&fit=crop&w=640&q=80",
-                query: "SpaceX Starship orbital catch booster flight test"
-            },
-            {
-                title: "Solid-State Battery Energy Density Doubled in Commercial Manufacturing Trials",
-                category: "science",
-                tag: "Clean Tech",
-                source: "Science Magazine",
-                time: "4h ago",
-                img: "https://images.unsplash.com/photo-1558441719-8d48980f89a6?auto=format&fit=crop&w=640&q=80",
-                query: "Solid state battery commercial manufacturing electric vehicles"
-            },
-
-            // ENTERTAINMENT
-            {
-                title: "Dune-Scale Sci-Fi Epic Shatters Global Box Office Records with $240M Debut",
-                category: "culture",
-                tag: "Cinema",
-                source: "Variety",
-                time: "50m ago",
-                img: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=640&q=80",
-                query: "Global box office new movie release premiere"
-            },
-            {
-                title: "Next-Gen Unreal Engine 6 Announced with Photorealistic Real-Time Neural Radiance",
-                category: "culture",
-                tag: "Gaming",
-                source: "IGN",
-                time: "1h ago",
-                img: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=640&q=80",
-                query: "Unreal Engine next gen gaming neural rendering graphics"
-            },
-            {
-                title: "Grammy Winners Announced Celebrating Global Indie & Spatial Audio Innovations",
-                category: "culture",
-                tag: "Music",
-                source: "Rolling Stone",
-                time: "3h ago",
-                img: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=640&q=80",
-                query: "Music industry awards spatial audio album releases"
-            }
-        ];
+        const richEditorialArticles = [];
 
         const regionalData = {
             global: {
@@ -5091,6 +5764,75 @@
             renderFilteredNews();
         }
 
+        function getNewsImageFallback() {
+            return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">' +
+                '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+                '<stop offset="0" stop-color="#172A3A"/><stop offset="1" stop-color="#0B1220"/></linearGradient></defs>' +
+                '<rect width="640" height="360" fill="url(#g)"/>' +
+                '<path d="M0 286h640" stroke="#38BDF8" stroke-opacity=".22" stroke-width="2"/>' +
+                '<rect x="46" y="72" width="548" height="150" rx="12" fill="#E0F2FE" fill-opacity=".08" stroke="#7DD3FC" stroke-opacity=".35"/>' +
+                '<path d="M78 112h220M78 140h390M78 168h310" stroke="#BAE6FD" stroke-opacity=".75" stroke-width="10" stroke-linecap="round"/>' +
+                '<circle cx="528" cy="146" r="32" fill="#38BDF8" fill-opacity=".18" stroke="#7DD3FC" stroke-opacity=".7" stroke-width="3"/>' +
+                '<path d="M512 146h32M528 130v32" stroke="#BAE6FD" stroke-width="5" stroke-linecap="round"/>' +
+                '</svg>'
+            );
+        }
+
+        function getSourceBrandBadge(sourceName) {
+            const src = (sourceName || 'News').trim();
+            const lower = src.toLowerCase();
+
+            if (lower.includes('bbc')) {
+                return `<span class="source-brand-badge"><span class="bbc-blocks"><span class="bbc-block">B</span><span class="bbc-block">B</span><span class="bbc-block">C</span></span><span class="brand-name">BBC News</span></span>`;
+            }
+            if (lower.includes('abc news') || lower === 'abc') {
+                return `<span class="source-brand-badge"><span class="abc-roundel">abc</span><span class="brand-name">ABC News</span></span>`;
+            }
+            if (lower.includes('cnn')) {
+                return `<span class="source-brand-badge"><span class="cnn-badge">CNN</span><span class="brand-name">CNN</span></span>`;
+            }
+            if (lower.includes('reuters')) {
+                return `<span class="source-brand-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="#FF8000" style="flex-shrink:0;"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="4" r="2"/><circle cx="12" cy="20" r="2"/><circle cx="4" cy="12" r="2"/><circle cx="20" cy="12" r="2"/><circle cx="6.3" cy="6.3" r="1.8"/><circle cx="17.7" cy="17.7" r="1.8"/><circle cx="6.3" cy="17.7" r="1.8"/><circle cx="17.7" cy="6.3" r="1.8"/></svg><span class="brand-name" style="color:#FFA500;">Reuters</span></span>`;
+            }
+            if (lower.includes('guardian')) {
+                return `<span class="source-brand-badge"><span class="guardian-roundel">G</span><span class="brand-name">The Guardian</span></span>`;
+            }
+            if (lower.includes('npr')) {
+                return `<span class="source-brand-badge"><span class="npr-badge"><span class="npr-n">n</span><span class="npr-p">p</span><span class="npr-r">r</span></span><span class="brand-name">NPR</span></span>`;
+            }
+            if (lower.includes('ndtv')) {
+                return `<span class="source-brand-badge"><span class="ndtv-badge">NDTV</span><span class="brand-name">${src}</span></span>`;
+            }
+            if (lower.includes('hindu')) {
+                return `<span class="source-brand-badge"><span class="hindu-badge">HINDU</span><span class="brand-name">The Hindu</span></span>`;
+            }
+            if (lower.includes('times of india') || lower === 'toi') {
+                return `<span class="source-brand-badge"><span class="toi-badge">TOI</span><span class="brand-name">Times of India</span></span>`;
+            }
+            if (lower.includes('cbc')) {
+                return `<span class="source-brand-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="#D32F2F" style="flex-shrink:0;"><circle cx="12" cy="12" r="3"/><path d="M12 2C9.5 2 7.3 3 5.6 4.7L8.5 7.6C9.5 6.6 10.7 6 12 6c2.8 0 5 2.2 5 5h4c0-5-4-9-9-9z"/><path d="M22 12c0 2.5-1 4.7-2.7 6.4l-2.9-2.9c1-.9 1.6-2.2 1.6-3.5h4z"/><path d="M12 22c2.5 0 4.7-1 6.4-2.7l-2.9-2.9c-.9 1-2.2 1.6-3.5 1.6-2.8 0-5-2.2-5-5H3c0 5 4 9 9 9z"/><path d="M2 12c0-2.5 1-4.7 2.7-6.4l2.9 2.9C6.6 9.5 6 10.7 6 12H2z"/></svg><span class="brand-name" style="color:#EF4444;">CBC News</span></span>`;
+            }
+            if (lower.includes('spiegel')) {
+                return `<span class="source-brand-badge"><span class="spiegel-badge">SPIEGEL</span><span class="brand-name">Der Spiegel</span></span>`;
+            }
+            if (lower.includes('deutsche welle') || lower.includes('dw news') || lower === 'dw') {
+                return `<span class="source-brand-badge"><span class="dw-badge">DW</span><span class="brand-name">DW News</span></span>`;
+            }
+            if (lower.includes('sydney morning herald') || lower === 'smh') {
+                return `<span class="source-brand-badge"><span class="smh-badge">SMH</span><span class="brand-name">Sydney Morning Herald</span></span>`;
+            }
+            if (lower.includes('verge')) {
+                return `<span class="source-brand-badge"><span class="verge-badge">VERGE</span><span class="brand-name">The Verge</span></span>`;
+            }
+            if (lower.includes('wired')) {
+                return `<span class="source-brand-badge"><span class="wired-badge">WIRED</span><span class="brand-name">Wired</span></span>`;
+            }
+
+            const shortInit = src.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase();
+            return `<span class="source-brand-badge"><span class="generic-brand-badge">${shortInit}</span><span class="brand-name">${src}</span></span>`;
+        }
+
         function renderNewsCards(items) {
             const newsList = document.getElementById('pulseNewsList');
             if (!newsList) return;
@@ -5106,87 +5848,63 @@
                     "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=640&q=80",
                     "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=640&q=80",
                     "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=640&q=80"
+                    "https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=640&q=80"
                 ],
                 business: [
                     "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?auto=format&fit=crop&w=640&q=80",
                     "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&w=640&q=80"
+                    "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=640&q=80"
                 ],
                 world: [
                     "https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=640&q=80",
                     "https://images.unsplash.com/photo-1474487548417-781cb71495f3?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?auto=format&fit=crop&w=640&q=80"
+                    "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=640&q=80"
                 ],
                 science: [
                     "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1517976487508-b80c32607f2a?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1558441719-8d48980f89a6?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1507668077129-56e32842fceb?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=640&q=80"
+                    "https://images.unsplash.com/photo-1517976487508-b80c32607f2a?auto=format&fit=crop&w=640&q=80"
                 ],
                 culture: [
                     "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=640&q=80"
+                    "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=640&q=80"
                 ],
                 all: [
                     "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=640&q=80",
                     "https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1476242906366-d8eb64c2f661?auto=format&fit=crop&w=640&q=80",
-                    "https://images.unsplash.com/photo-1526470608268-f674ce90ebd4?auto=format&fit=crop&w=640&q=80"
+                    "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=640&q=80"
                 ]
             };
 
-            const usedPhotoUrls = new Set();
             function getDynamicArticlePhoto(item, idx) {
-                if (item.img && typeof item.img === 'string' && item.img.startsWith('http') && !usedPhotoUrls.has(item.img)) {
-                    usedPhotoUrls.add(item.img);
+                if (item.img && typeof item.img === 'string' && item.img.startsWith('http')) {
                     return item.img;
                 }
                 const cat = (item.category || currentNewsCategory || 'all').toLowerCase();
                 const pool = editorialPhotoPool[cat] || editorialPhotoPool.all;
-                for (let i = 0; i < pool.length; i++) {
-                    const candidate = pool[(idx + i) % pool.length];
-                    if (!usedPhotoUrls.has(candidate)) {
-                        usedPhotoUrls.add(candidate);
-                        return candidate;
-                    }
-                }
-                const uniqueFallback = `https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=640&q=80&sig=${idx}`;
-                usedPhotoUrls.add(uniqueFallback);
-                return uniqueFallback;
+                return pool[idx % pool.length];
             }
 
             items.forEach((item, index) => {
                 const card = document.createElement('div');
                 card.className = 'pulse-news-card';
-                card.onclick = () => openPulseQuery(item.query || item.title);
+                card.onclick = () => {
+                    if (item.url && item.url.startsWith('http')) {
+                        if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openUrl === 'function') {
+                            window.FokkShieldBridge.openUrl(item.url);
+                        } else {
+                            window.location.href = item.url;
+                        }
+                    } else {
+                        openPulseQuery(item.query || item.title);
+                    }
+                };
                 const imgSrc = getDynamicArticlePhoto(item, index);
                 card.innerHTML = `
-                    <img src="${imgSrc}" alt="News" class="pulse-news-img" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=640&q=80'">
+                    <img src="${imgSrc}" alt="News image" class="pulse-news-img" onerror="this.onerror=null;this.src=getNewsImageFallback();">
                     <div class="pulse-news-body">
                         <div class="pulse-news-title">${item.title}</div>
                         <div class="pulse-news-footer">
-                            <span class="pulse-news-tag">${item.tag || item.category || 'Live'}</span>
-                            <span>&bull;</span>
-                            <span>${item.source || 'News'}</span>
+                            ${getSourceBrandBadge(item.source)}
                             <span>&bull;</span>
                             <span>${item.time || 'Live'}</span>
                         </div>
@@ -5196,27 +5914,259 @@
             });
         }
 
-        function renderFilteredNews(retryCount = 0) {
-            try {
-                if (window.FokkShieldBridge && typeof window.FokkShieldBridge.getLiveNews === 'function') {
-                    const raw = window.FokkShieldBridge.getLiveNews(currentNewsCategory);
-                    if (raw) {
-                        const parsed = JSON.parse(raw);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                            renderNewsCards(parsed);
-                            return;
+        function renderHomeTrendingArticles(items) {
+            const container = document.getElementById('homeTrendingSection');
+            const scrollTrack = document.getElementById('homeTrendingScroll');
+            if (!container || !scrollTrack) return;
+
+            const isEnabled = localStorage.getItem('fokk_show_home_trending') !== 'false';
+            if (!isEnabled) {
+                container.classList.add('hidden');
+                return;
+            }
+            container.classList.remove('hidden');
+
+            if (!items || items.length === 0) {
+                renderHomeTrendingFromCache();
+                return;
+            }
+
+            scrollTrack.innerHTML = '';
+            items.slice(0, 10).forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'home-trending-card';
+                card.onclick = (e) => {
+                    if (e) e.stopPropagation();
+                    if (item.url && item.url.startsWith('http')) {
+                        if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openUrl === 'function') {
+                            window.FokkShieldBridge.openUrl(item.url);
+                        } else {
+                            window.location.href = item.url;
                         }
-                    } else if (retryCount < 4) {
-                        setTimeout(() => renderFilteredNews(retryCount + 1), 800);
+                    } else {
+                        openPulseQuery(item.query || item.title);
+                    }
+                };
+                const imgSrc = (item.img && item.img.startsWith('http')) ? item.img : getNewsImageFallback();
+                card.innerHTML = `
+                    <img src="${imgSrc}" alt="Article thumbnail" class="home-trending-img" onerror="this.onerror=null;this.src=getNewsImageFallback();">
+                    <div class="home-trending-content">
+                        <div class="home-trending-meta">
+                            ${getSourceBrandBadge(item.source)}
+                            <span>&bull;</span>
+                            <span>${item.time || 'Live'}</span>
+                        </div>
+                        <div class="home-trending-title">${item.title}</div>
+                    </div>
+                `;
+                scrollTrack.appendChild(card);
+            });
+        }
+
+        function renderHomeTrendingFromCache() {
+            const container = document.getElementById('homeTrendingSection');
+            const scrollTrack = document.getElementById('homeTrendingScroll');
+            if (!container || !scrollTrack) return;
+
+            const isEnabled = localStorage.getItem('fokk_show_home_trending') !== 'false';
+            if (!isEnabled) {
+                container.classList.add('hidden');
+                return;
+            }
+            container.classList.remove('hidden');
+
+            const country = currentCountry || 'global';
+            const cached = localStorage.getItem('fokk_cached_pulse_' + country + '_all')
+                || localStorage.getItem('fokk_cached_pulse_all')
+                || localStorage.getItem('fokk_cached_pulse_' + country + '_tech');
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        renderHomeTrendingArticles(parsed);
+                        return;
+                    }
+                } catch (e) {}
+            }
+
+            scrollTrack.innerHTML = `
+                <div class="home-trending-card" style="opacity: 0.65;">
+                    <div style="width:78px; height:78px; border-radius:10px; background: rgba(255,255,255,0.06); flex-shrink:0;"></div>
+                    <div style="flex:1; display:flex; flex-direction:column; gap:8px; justify-content:center; min-height:78px;">
+                        <div style="width:45%; height:11px; background:rgba(255,255,255,0.08); border-radius:4px;"></div>
+                        <div style="width:95%; height:12px; background:rgba(255,255,255,0.08); border-radius:4px;"></div>
+                        <div style="width:80%; height:12px; background:rgba(255,255,255,0.08); border-radius:4px;"></div>
+                    </div>
+                </div>
+                <div class="home-trending-card" style="opacity: 0.65;">
+                    <div style="width:78px; height:78px; border-radius:10px; background: rgba(255,255,255,0.06); flex-shrink:0;"></div>
+                    <div style="flex:1; display:flex; flex-direction:column; gap:8px; justify-content:center; min-height:78px;">
+                        <div style="width:45%; height:11px; background:rgba(255,255,255,0.08); border-radius:4px;"></div>
+                        <div style="width:90%; height:12px; background:rgba(255,255,255,0.08); border-radius:4px;"></div>
+                        <div style="width:75%; height:12px; background:rgba(255,255,255,0.08); border-radius:4px;"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleHomeTrendingFeed(e) {
+            if (e) {
+                if (typeof e.stopPropagation === 'function') e.stopPropagation();
+                if (typeof e.preventDefault === 'function') e.preventDefault();
+            }
+            const currentlyOn = localStorage.getItem('fokk_show_home_trending') !== 'false';
+            const nextState = !currentlyOn;
+            try {
+                localStorage.setItem('fokk_show_home_trending', nextState ? 'true' : 'false');
+            } catch (err) {}
+
+            updateHomeTrendingToggleUi(nextState);
+
+            const homeContainer = document.getElementById('homeTrendingSection');
+            if (homeContainer) {
+                if (nextState) {
+                    homeContainer.classList.remove('hidden');
+                    renderHomeTrendingFromCache();
+                } else {
+                    homeContainer.classList.add('hidden');
+                }
+            }
+            if (navigator.vibrate) try { navigator.vibrate(12); } catch (err) {}
+            showPreviewToast(nextState ? 'Home trending feed enabled' : 'Home trending feed hidden');
+        }
+
+        function updateHomeTrendingToggleUi(isEnabled) {
+            const btn = document.getElementById('btnToggleHomeTrending');
+            const label = document.getElementById('labelToggleHomeTrending');
+            if (btn) {
+                if (isEnabled) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            }
+            if (label) {
+                label.textContent = isEnabled ? 'Home Feed: ON' : 'Home Feed: OFF';
+            }
+        }
+
+        window.onLiveNewsReceived = function(category, region, jsonStr) {
+            try {
+                let actualJson = jsonStr;
+                let actualRegion = region;
+                if (arguments.length === 2 && typeof region === 'string' && (region.startsWith('[') || region.startsWith('{'))) {
+                    actualJson = region;
+                    actualRegion = currentCountry;
+                }
+                if (!actualJson) return;
+                const parsed = typeof actualJson === 'string' ? JSON.parse(actualJson) : actualJson;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    const normCat = (category || 'all').toLowerCase();
+                    const normReg = (actualRegion || currentCountry || 'global').toLowerCase();
+                    try {
+                        localStorage.setItem('fokk_cached_pulse_' + normReg + '_' + normCat, JSON.stringify(parsed));
+                        localStorage.setItem('fokk_cached_pulse_' + normCat, JSON.stringify(parsed));
+                    } catch (e) {}
+
+                    if ((normCat === currentNewsCategory || currentNewsCategory === 'all') && normReg === currentCountry) {
+                        renderNewsCards(parsed);
+                    }
+                    if (normReg === currentCountry) {
+                        renderHomeTrendingArticles(parsed);
+                    }
+                }
+            } catch (e) {
+                console.error("onLiveNewsReceived error", e);
+            }
+        };
+
+        function renderFilteredNews(retryCount = 0) {
+            const cat = currentNewsCategory;
+            const country = currentCountry || 'global';
+            const cacheKey = country + '_' + cat;
+
+            // 1. Instant check from localStorage
+            try {
+                const local = localStorage.getItem('fokk_cached_pulse_' + cacheKey) || localStorage.getItem('fokk_cached_pulse_' + cat);
+                if (local) {
+                    const parsed = JSON.parse(local);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        renderNewsCards(parsed);
+                        renderHomeTrendingArticles(parsed);
                     }
                 }
             } catch (e) {}
 
-            const filtered = richEditorialArticles.filter(item => {
-                if (currentNewsCategory === 'all') return true;
-                return item.category === currentNewsCategory;
-            });
-            renderNewsCards(filtered);
+            // 2. Query bridge for cached/live multi-source news
+            try {
+                if (window.FokkShieldBridge) {
+                    let raw = "";
+                    if (typeof window.FokkShieldBridge.getLiveNewsForRegion === 'function') {
+                        raw = window.FokkShieldBridge.getLiveNewsForRegion(cat, country);
+                    } else if (typeof window.FokkShieldBridge.getLiveNews === 'function') {
+                        raw = window.FokkShieldBridge.getLiveNews(cat, country);
+                    }
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            try {
+                                localStorage.setItem('fokk_cached_pulse_' + cacheKey, raw);
+                                localStorage.setItem('fokk_cached_pulse_' + cat, raw);
+                            } catch(e){}
+                            renderNewsCards(parsed);
+                            renderHomeTrendingArticles(parsed);
+                            return;
+                        }
+                    } else if (retryCount < 5) {
+                        setTimeout(() => renderFilteredNews(retryCount + 1), 600);
+                        return;
+                    }
+                }
+            } catch (e) {}
+
+            // 3. Shimmer skeleton placeholder while loading first time
+            const newsList = document.getElementById('pulseNewsList');
+            if (newsList && newsList.children.length === 0) {
+                newsList.innerHTML = `
+                    <div class="pulse-news-skeleton">
+                        <div class="skeleton-img"></div>
+                        <div class="skeleton-lines">
+                            <div class="skeleton-line" style="width:92%"></div>
+                            <div class="skeleton-line" style="width:75%"></div>
+                            <div class="skeleton-line" style="width:40%"></div>
+                        </div>
+                    </div>
+                    <div class="pulse-news-skeleton">
+                        <div class="skeleton-img"></div>
+                        <div class="skeleton-lines">
+                            <div class="skeleton-line" style="width:85%"></div>
+                            <div class="skeleton-line" style="width:68%"></div>
+                            <div class="skeleton-line" style="width:35%"></div>
+                        </div>
+                    </div>
+                    <div class="pulse-news-skeleton">
+                        <div class="skeleton-img"></div>
+                        <div class="skeleton-lines">
+                            <div class="skeleton-line" style="width:90%"></div>
+                            <div class="skeleton-line" style="width:60%"></div>
+                            <div class="skeleton-line" style="width:45%"></div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function refreshCurrentNews() {
+            const country = currentCountry || 'global';
+            if (window.FokkShieldBridge) {
+                if (typeof window.FokkShieldBridge.refreshLiveNewsForRegion === 'function') {
+                    window.FokkShieldBridge.refreshLiveNewsForRegion(currentNewsCategory, country);
+                } else if (typeof window.FokkShieldBridge.refreshLiveNews === 'function') {
+                    window.FokkShieldBridge.refreshLiveNews(currentNewsCategory, country);
+                }
+            } else {
+                renderFilteredNews();
+            }
         }
 
         function onCountryChanged(country) {
@@ -5226,8 +6176,6 @@
             currentCity = data.city;
             localStorage.setItem('fokk_pulse_city', currentCity);
             renderPulseData();
-            fetchLiveWeather(currentCity);
-            fetchLiveTickers();
             renderFilteredNews();
         }
 
@@ -5414,7 +6362,7 @@
                 card.className = 'pulse-news-card';
                 card.onclick = () => openPulseQuery(item.query);
                 card.innerHTML = `
-                    <img src="${item.img}" alt="News" class="pulse-news-img" onerror="this.style.display='none'">
+                    <img src="${item.img}" alt="News image unavailable" class="pulse-news-img" onerror="this.onerror=null;this.src=getNewsImageFallback();">
                     <div class="pulse-news-body">
                         <div class="pulse-news-title">${item.title}</div>
                         <div class="pulse-news-footer">
@@ -5485,6 +6433,21 @@
         // UNLIMITED VISUALS & 4K WALLPAPERS STUDIO (PINTEREST MASONRY + INFINITE)
         // =========================================================================
         const visualSeedLibrary = {
+            sailboats: [
+                { id: "sb1", title: "Sapphire Ocean Solitude", sub: "Sunlight Reflections • 4K", ratio: "1.4", img: "wallpapers/fokk_sailboat_1.jpg" },
+                { id: "sb2", title: "Turquoise Horizon Sail", sub: "Minimalist Teal Calm • 4K", ratio: "1.4", img: "wallpapers/fokk_sailboat_2.jpg" },
+                { id: "sb3", title: "Glistening Sunlight Yacht", sub: "Pure Oceanic Freedom • 4K", ratio: "1.4", img: "wallpapers/fokk_sailboat_3.jpg" },
+                { id: "sb4", title: "White Sail in Azure Waters", sub: "Mediterranean Breeze • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb5", title: "Sunset Horizon Golden Voyage", sub: "Golden Hour Calm • UHD", ratio: "1.4", img: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb6", title: "Classic Wooden Hull Sloop", sub: "Pacific Blue Waters • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb7", title: "Emerald Bay Tropical Anchor", sub: "Crystal Lagoon Reef • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1516815231560-8f41ec531527?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb8", title: "Open Atlantic Windward Run", sub: "Deep Indigo Waves • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1506929562872-bb421503ef21?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb9", title: "Virgin Islands Secluded Moor", sub: "Caribbean Turquoise • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb10", title: "High-Performance Ocean Regatta", sub: "Windward Spinnaker • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1517411032315-54ef2cb783bb?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb11", title: "Twilight Golden Sails", sub: "Horizon Sunbeam • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1494791368093-85217fbbf8de?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb12", title: "Aegean Coastal Explorer", sub: "Cyclades Turquoise • UHD", ratio: "1.4", img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=800&q=82" },
+                { id: "sb13", title: "Catamaran Island Anchorage", sub: "Crystal Clear Atoll • 4K", ratio: "1.4", img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=82" }
+            ],
             wallpapers: [
                 { id: "w1", title: "Cyberpunk Tokyo Rain", sub: "4K OLED • Ultra Neon", ratio: "1.4", img: "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&w=800&q=82" },
                 { id: "w2", title: "Alpine Emerald Mirror Lake", sub: "8K UHD • Dolomites", ratio: "0.8", img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=82" },
@@ -5580,6 +6543,8 @@
             }
             if (navigator.vibrate) try { navigator.vibrate(20); } catch (err) {}
             visualPage = 1;
+            visualHasMore = true;
+            try { history.pushState({ modal: 'visualHub' }, ''); } catch (err) {}
             renderVisualCuratedShelf();
             renderVisualGrid(currentVisualCategory, '', true);
             const m = document.getElementById('visualHubModal');
@@ -5654,7 +6619,8 @@
                     title: p.title,
                     category: p.cat,
                     sub: p.sub,
-                    img: `https://picsum.photos/id/${p.id}/1080/1920`,
+                    img: `https://picsum.photos/id/${p.id}/540/810`,
+                    fullImg: `https://picsum.photos/id/${p.id}/1080/1920`,
                     ratio: "1.3"
                 });
             });
@@ -5677,58 +6643,8 @@
             return results;
         }
 
-        async function renderVisualGrid(cat, query = '', reset = false) {
-            const grid = document.getElementById('visualGridContainer');
-            if (!grid) return;
-            if (reset) {
-                grid.innerHTML = '';
-                visualPage = 1;
-                seenVisualUrls.clear();
-            }
-
-            let items = [];
-            // 1. Fetch live unlimited 4K wallpapers via Native Bridge or direct fetch
-            try {
-                const searchQuery = query || (cat === 'all' ? 'wallpapers' : cat);
-                let raw = '';
-                if (window.FokkShieldBridge && typeof window.FokkShieldBridge.fetchOnlineWallpapers === 'function') {
-                    raw = window.FokkShieldBridge.fetchOnlineWallpapers(searchQuery, visualPage);
-                }
-                if (!raw) {
-                    const res = await fetch(`https://wallhaven.cc/api/v1/search?q=${encodeURIComponent(searchQuery)}&page=${visualPage}&purity=100&sorting=toplist`);
-                    if (res.ok) raw = await res.text();
-                }
-                if (raw) {
-                    const json = JSON.parse(raw);
-                    if (json && json.data && json.data.length > 0) {
-                        items = json.data.map(item => ({
-                            title: `${(item.category || cat).toUpperCase()} • ${item.resolution || '4K UHD'}`,
-                            category: item.category || cat,
-                            sub: `Wallhaven • ${item.resolution || 'Ultra 4K'}`,
-                            img: (item.thumbs && item.thumbs.large) ? item.thumbs.large : item.path,
-                            fullImg: item.path,
-                            ratio: item.ratio || "1.3"
-                        }));
-                    }
-                }
-            } catch (err) {
-                console.log("[VisualHub] Network fetch notice:", err);
-            }
-
-            // Filter out any already seen URLs to eliminate duplicates completely
-            items = items.filter(it => !seenVisualUrls.has(it.fullImg || it.img));
-
-            // 2. Fallback or augment with procedural batch if needed
-            if (items.length < 6) {
-                const fallbackItems = getUnlimitedVisualBatch(cat, visualPage, query);
-                items.push(...fallbackItems);
-            }
-
-            if (items.length === 0 && reset) {
-                grid.innerHTML = '<div style="column-span: all; text-align: center; color: var(--text-secondary); padding: 30px 0; font-size: 13px;">No visuals found. Try another search term.</div>';
-                return;
-            }
-
+        function appendVisualCards(items, grid) {
+            if (!items || !grid) return;
             items.forEach(item => {
                 const dlUrl = item.fullImg || item.img;
                 if (seenVisualUrls.has(dlUrl)) return;
@@ -5741,7 +6657,7 @@
                 const safeCat = (item.category || 'wallpapers').replace(/'/g, "\\'");
                 const safeSub = (item.sub || 'Ultra 4K').replace(/'/g, "\\'");
                 card.innerHTML = `
-                    <img src="${item.img}" alt="${item.title}" loading="lazy" onclick="openVisualLightbox('${safeTitle}', '${safeUrl}', '${safeCat}', '${safeSub}')">
+                    <img src="${item.img}" alt="${item.title}" loading="lazy" onerror="this.onerror=null;this.src='wallpapers/fokk_sailboat_1.jpg';" onclick="openVisualLightbox('${safeTitle}', '${safeUrl}', '${safeCat}', '${safeSub}')">
                     <div class="visual-card-footer">
                         <div class="visual-card-text" onclick="openVisualLightbox('${safeTitle}', '${safeUrl}', '${safeCat}', '${safeSub}')">
                             <span class="visual-card-title">${item.title}</span>
@@ -5754,6 +6670,55 @@
                 `;
                 grid.appendChild(card);
             });
+        }
+
+        async function renderVisualGrid(cat, query = '', reset = false) {
+            const grid = document.getElementById('visualGridContainer');
+            if (!grid) return;
+            if (reset) {
+                grid.innerHTML = '';
+                visualPage = 1;
+                seenVisualUrls.clear();
+                // Render initial batch instantly for smooth 0ms instant display
+                const instantBatch = getUnlimitedVisualBatch(cat, visualPage, query);
+                appendVisualCards(instantBatch, grid);
+            }
+
+            // Asynchronously fetch online wallpapers in background without UI thread freeze
+            setTimeout(async () => {
+                try {
+                    if (cat === 'sailboats' && !query) {
+                        return; // Keep curated sailboat collection pristine without random network reordering
+                    }
+                    const searchQuery = query || (cat === 'all' ? 'wallpapers' : cat);
+                    let raw = '';
+                    if (window.FokkShieldBridge && typeof window.FokkShieldBridge.fetchOnlineWallpapers === 'function') {
+                        raw = window.FokkShieldBridge.fetchOnlineWallpapers(searchQuery, visualPage);
+                    }
+                    if (!raw) {
+                        const res = await fetch(`https://wallhaven.cc/api/v1/search?q=${encodeURIComponent(searchQuery)}&page=${visualPage}&purity=100&sorting=toplist`);
+                        if (res.ok) raw = await res.text();
+                    }
+                    if (raw) {
+                        const json = JSON.parse(raw);
+                        if (json && json.data && json.data.length > 0) {
+                            const onlineItems = json.data.map(item => ({
+                                title: `${(item.category || cat).toUpperCase()} • ${item.resolution || '4K UHD'}`,
+                                category: item.category || cat,
+                                sub: `Wallhaven • ${item.resolution || 'Ultra 4K'}`,
+                                img: (item.thumbs && item.thumbs.large) ? item.thumbs.large : item.path,
+                                fullImg: item.path,
+                                ratio: item.ratio || "1.3"
+                            })).filter(it => !seenVisualUrls.has(it.fullImg || it.img));
+                            if (onlineItems.length > 0) {
+                                appendVisualCards(onlineItems, grid);
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.log("[VisualHub] Network fetch notice:", err);
+                }
+            }, 60);
         }
 
         // FULLSCREEN PINTEREST LIGHTBOX CONTROLLER
@@ -5895,24 +6860,66 @@
             if (!scrollContainer || scrollContainer.__fokk_infinite_bound) return;
             scrollContainer.__fokk_infinite_bound = true;
 
+            let scrollTicking = false;
             scrollContainer.addEventListener('scroll', function() {
-                if (isVisualLoading) return;
-                const distToBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight;
-                if (distToBottom < 300) {
-                    isVisualLoading = true;
-                    const loader = document.getElementById('visualInfiniteLoader');
-                    if (loader) loader.style.display = 'flex';
-                    setTimeout(() => {
-                        visualPage++;
-                        const input = document.getElementById('visualSearchInput');
-                        const q = input ? input.value.trim() : '';
-                        renderVisualGrid(currentVisualCategory, q, false);
-                        if (loader) loader.style.display = 'none';
-                        isVisualLoading = false;
-                    }, 400);
-                }
-            });
+                if (scrollTicking) return;
+                scrollTicking = true;
+                requestAnimationFrame(() => {
+                    scrollTicking = false;
+                    if (isVisualLoading || !visualHasMore) return;
+                    const distToBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight;
+                    if (distToBottom < 380) {
+                        isVisualLoading = true;
+                        const loader = document.getElementById('visualInfiniteLoader');
+                        if (loader) loader.style.opacity = '1';
+                        setTimeout(() => {
+                            visualPage++;
+                            const input = document.getElementById('visualSearchInput');
+                            const q = input ? input.value.trim() : '';
+                            const grid = document.getElementById('visualGridContainer');
+                            const nextBatch = getUnlimitedVisualBatch(currentVisualCategory, visualPage, q);
+                            if (nextBatch.length > 0 && grid) {
+                                appendVisualCards(nextBatch, grid);
+                            } else if (nextBatch.length === 0) {
+                                visualHasMore = false;
+                            }
+                            renderVisualGrid(currentVisualCategory, q, false);
+                            if (loader) loader.style.opacity = '0';
+                            isVisualLoading = false;
+                        }, 250);
+                    }
+                });
+            }, { passive: true });
         }
+
+        window.addEventListener('popstate', function(event) {
+            const v = document.getElementById('visualHubModal');
+            if (v && v.classList.contains('active')) {
+                v.classList.remove('active');
+                v.style.display = 'none';
+                return;
+            }
+            const l = document.getElementById('livePulseModal');
+            if (l && l.classList.contains('active')) {
+                l.classList.remove('active');
+                return;
+            }
+            const light = document.getElementById('visualLightboxModal');
+            if (light && light.style.display === 'flex') {
+                light.style.display = 'none';
+                return;
+            }
+            const popover = document.getElementById('commandMenuPopover');
+            if (popover && popover.classList.contains('active')) {
+                popover.classList.remove('active');
+                return;
+            }
+            const engPop = document.getElementById('engineDropdownPopover');
+            if (engPop && engPop.classList.contains('active')) {
+                engPop.classList.remove('active');
+                return;
+            }
+        });
 
         function searchVisuals() {
             const input = document.getElementById('visualSearchInput');
@@ -6904,11 +7911,71 @@
             if (card) card.style.display = 'none';
         }
 
-        function playNextTrack() {
+        function playPreviousTrack(e) {
+            if (e) e.stopPropagation();
+            if (!currentPlaylist || currentPlaylist.length === 0) return;
+            const currentIndex = currentPlaylist.findIndex(t => t.id === (currentPlayingTrack ? currentPlayingTrack.id : null));
+            const prevIndex = (currentIndex - 1 + currentPlaylist.length) % currentPlaylist.length;
+            playAudioTrack(currentPlaylist[prevIndex]);
+        }
+
+        function playNextTrack(e) {
+            if (e) e.stopPropagation();
             if (!currentPlaylist || currentPlaylist.length === 0) return;
             const currentIndex = currentPlaylist.findIndex(t => t.id === (currentPlayingTrack ? currentPlayingTrack.id : null));
             const nextIndex = (currentIndex + 1) % currentPlaylist.length;
             playAudioTrack(currentPlaylist[nextIndex]);
+        }
+
+        function seekAudioRelative(seconds, e) {
+            if (e) e.stopPropagation();
+            const player = document.getElementById('fokkGlobalAudioPlayer');
+            if (!player) return;
+            const dur = player.duration || (currentPlayingTrack ? currentPlayingTrack.duration : 0) || 0;
+            const cur = player.currentTime || 0;
+            const target = Math.max(0, Math.min(dur || 99999, cur + seconds));
+            player.currentTime = target;
+            updateAudioProgressUI();
+        }
+
+        function seekAudioToPercent(percent) {
+            const player = document.getElementById('fokkGlobalAudioPlayer');
+            if (!player) return;
+            const dur = player.duration || (currentPlayingTrack ? currentPlayingTrack.duration : 0) || 0;
+            if (dur > 0) {
+                player.currentTime = (percent / 100) * dur;
+                updateAudioProgressUI();
+            }
+        }
+
+        function formatAudioTime(seconds) {
+            if (isNaN(seconds) || seconds < 0) return "00:00";
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function updateAudioProgressUI() {
+            const player = document.getElementById('fokkGlobalAudioPlayer');
+            if (!player) return;
+            const cur = player.currentTime || 0;
+            const dur = player.duration || (currentPlayingTrack ? currentPlayingTrack.duration : 0) || 0;
+            const pct = dur > 0 ? (cur / dur) * 100 : 0;
+
+            const miniSlider = document.getElementById('miniProgressSlider');
+            if (miniSlider && !miniSlider.__is_dragging) {
+                miniSlider.value = pct;
+            }
+            const homeSlider = document.getElementById('homeProgressSlider');
+            if (homeSlider && !homeSlider.__is_dragging) {
+                homeSlider.value = pct;
+            }
+
+            const timeStr = `${formatAudioTime(cur)} / ${formatAudioTime(dur)}`;
+            const miniTime = document.getElementById('miniTimeLabel');
+            if (miniTime) miniTime.textContent = timeStr;
+            const homeTime = document.getElementById('homeTimeLabel');
+            if (homeTime) homeTime.textContent = timeStr;
         }
 
         function initAudioPlayerListeners() {
@@ -6919,6 +7986,7 @@
             player.addEventListener('play', () => {
                 updatePlayIcons(true);
                 updateHomeLiveMusicCard(currentPlayingTrack, true);
+                updateAudioProgressUI();
             });
             player.addEventListener('pause', () => {
                 if (!isUserExplicitPaused && currentPlayingTrack) {
@@ -6932,7 +8000,10 @@
                 }
                 updatePlayIcons(false);
                 updateHomeLiveMusicCard(currentPlayingTrack, false);
+                updateAudioProgressUI();
             });
+            player.addEventListener('timeupdate', updateAudioProgressUI);
+            player.addEventListener('loadedmetadata', updateAudioProgressUI);
             player.addEventListener('ended', () => {
                 updatePlayIcons(false);
                 playNextTrack();
@@ -6967,6 +8038,23 @@
         loadSpeedDials();
         loadTrendingTopics();
         updateGhostModeStatus();
+
+        // Initialize Home Trending Articles & Toggle UI
+        try {
+            const isHomeTrendingEnabled = localStorage.getItem('fokk_show_home_trending') !== 'false';
+            updateHomeTrendingToggleUi(isHomeTrendingEnabled);
+            const homeTrendingContainer = document.getElementById('homeTrendingSection');
+            if (homeTrendingContainer) {
+                if (isHomeTrendingEnabled) {
+                    homeTrendingContainer.classList.remove('hidden');
+                    renderHomeTrendingFromCache();
+                } else {
+                    homeTrendingContainer.classList.add('hidden');
+                }
+            }
+            renderFilteredNews();
+        } catch (e) {}
+
         try {
             const savedTheme = localStorage.getItem('fokk_global_theme') || 'default';
             if (savedTheme && window.applyThemeFromNative) {
@@ -6976,13 +8064,14 @@
         setTimeout(initCommandCard, 80);
         setTimeout(initCommandCard, 350);
 
-        // Sync Live Stats from Android Bridge
+        // Auto-open Visual Hub if requested by native menu or intent
         try {
-            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.getStats === 'function') {
-                const stats = JSON.parse(window.FokkShieldBridge.getStats());
-                if (stats.blocked) {
-                    document.getElementById('statBlockedBadge').innerText = Number(stats.blocked).toLocaleString() + " Requests Filtered";
-                }
+            const urlParams = new URLSearchParams(window.location.search);
+            const act = urlParams.get('action');
+            if (act === 'visuals' || act === 'wallpapers') {
+                setTimeout(() => {
+                    if (typeof openVisualHub === 'function') openVisualHub();
+                }, 120);
             }
         } catch (e) {}
     </script>

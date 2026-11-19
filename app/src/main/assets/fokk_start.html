@@ -34,21 +34,21 @@
         }
 
         body.light-theme {
-            --bg-color: #F1F5F9;
+            --bg-color: #F8FAFC;
             --surface-card: #FFFFFF;
-            --card-border: rgba(0, 0, 0, 0.08);
+            --card-border: rgba(226, 232, 240, 0.9);
             --text-primary: #0F172A;
             --text-secondary: #475569;
             --text-muted: #64748B;
-            --tile-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+            --tile-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
             color: #0F172A;
-            background: #F1F5F9 !important;
+            background: #F8FAFC !important;
         }
 
         body.light-theme .start-command-card {
             background: #FFFFFF !important;
-            border-color: rgba(0, 0, 0, 0.12) !important;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+            border: 1px solid #E2E8F0 !important;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08) !important;
         }
 
         body.light-theme .start-command-input {
@@ -80,14 +80,19 @@
 
         body.light-theme .home-essential {
             background: rgba(255, 255, 255, 0.96) !important;
-            border-color: rgba(0, 0, 0, 0.08) !important;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06) !important;
+            border-color: rgba(226, 232, 240, 0.9) !important;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
+            color: #0F172A !important;
+        }
+
+        body.light-theme .home-essential span {
+            color: #0F172A !important;
         }
 
         body.light-theme .speed-dial-card {
             background: #FFFFFF !important;
-            border-color: rgba(0, 0, 0, 0.06) !important;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
+            border-color: rgba(226, 232, 240, 0.9) !important;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05) !important;
         }
 
         body.light-theme .speed-dial-title {
@@ -96,6 +101,62 @@
 
         body.light-theme .speed-dial-url {
             color: #64748B !important;
+        }
+
+        body.light-theme .pulse-card,
+        body.light-theme .news-card,
+        body.light-theme .feed-card {
+            background: #FFFFFF !important;
+            border-color: #E2E8F0 !important;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
+            color: #0F172A !important;
+        }
+
+        body.light-theme .pulse-card-title,
+        body.light-theme .news-card-title,
+        body.light-theme .feed-title {
+            color: #0F172A !important;
+        }
+
+        body.light-theme .pulse-card-desc,
+        body.light-theme .news-card-snippet,
+        body.light-theme .feed-snippet {
+            color: #475569 !important;
+        }
+
+        body.light-theme .pulse-source,
+        body.light-theme .news-source,
+        body.light-theme .feed-meta {
+            color: #64748B !important;
+        }
+
+        body.light-theme .modal-content,
+        body.light-theme .sheet-container {
+            background: #FFFFFF !important;
+            border-color: #E2E8F0 !important;
+            color: #0F172A !important;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12) !important;
+        }
+
+        body.light-theme .modal-header,
+        body.light-theme .modal-title {
+            color: #0F172A !important;
+        }
+
+        body.light-theme .modal-close {
+            color: #64748B !important;
+        }
+
+        body.light-theme .quick-engine-pill {
+            background: #F1F5F9 !important;
+            border-color: #E2E8F0 !important;
+            color: #334155 !important;
+        }
+
+        body.light-theme .quick-engine-pill.active {
+            background: #00E5FF22 !important;
+            border-color: #00E5FF !important;
+            color: #0284C7 !important;
         }
 
         * {
@@ -4117,6 +4178,15 @@
                 <div class="wallpaper-card" onclick="setWallpaper('pearl_light')" style="background: #F8FAFC; border: 1.5px solid #CBD5E1; color: #0F172A;">
                     <span class="wp-title" style="color: #0F172A;">Pearl Light</span>
                 </div>
+                <div class="wallpaper-card" onclick="setWallpaper('sail_azure')" style="background-image: url('https://images.unsplash.com/photo-1500930287596-c1ecaa373bb2?auto=format&fit=crop&w=400&q=80');">
+                    <span class="wp-title">Azure Sail</span>
+                </div>
+                <div class="wallpaper-card" onclick="setWallpaper('sail_coast')" style="background-image: url('https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=400&q=80');">
+                    <span class="wp-title">Pearl Yacht</span>
+                </div>
+                <div class="wallpaper-card" onclick="setWallpaper('sail_pearl')" style="background-image: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=400&q=80');">
+                    <span class="wp-title">Coastal Mist</span>
+                </div>
             </div>
             <input type="file" id="wallpaperFileInput" accept="image/*" style="display:none;" onchange="handleWallpaperFileSelected(event)">
             <button class="modal-btn" onclick="closeThemeModal()" style="margin-top: 10px;">Done</button>
@@ -4206,8 +4276,7 @@
             google: `<svg viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.15z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.94H1.24v3.15C3.26 21.36 7.33 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.26c-.25-.72-.38-1.49-.38-2.26s.13-1.54.38-2.26V6.59H1.24C.45 8.16 0 9.94 0 12s.45 3.84 1.24 5.41l4.04-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.24 6.59l4.04 3.15c.95-2.84 3.6-4.99 6.72-4.99z"/></svg>`,
             duckduckgo: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#DE5833"/><path fill="#FFFFFF" d="M12 4.8c-2.4 0-4.3 1.8-4.3 4.1 0 1.2.5 2.3 1.4 3-.2.4-.6.9-1.2 1.3-.3.2-.2.7.2.7.8 0 1.8-.2 2.6-.7.4.2.8.3 1.3.3 2.4 0 4.3-1.8 4.3-4.1 0-2.3-1.9-4.6-4.3-4.6z"/><circle cx="10.2" cy="8.2" r="1" fill="#2B2B2B"/><ellipse cx="10" cy="8" rx="0.3" ry="0.3" fill="#FFFFFF"/><path fill="#F9A01B" d="M14 8.5c.8-.1 2.8.5 2.8 1.5s-2 1.3-2.8 1.1z"/><circle cx="14" cy="9.8" r="0.4" fill="#C87508"/><path fill="#5B9E4D" d="M10.5 14.8l3 1.5-3 1.5z"/><path fill="#5B9E4D" d="M13.5 14.8l-3 1.5 3 1.5z"/><circle cx="12" cy="16.3" r="0.8" fill="#467B3B"/></svg>`,
             ecosia: `<svg viewBox="0 0 24 24"><path fill="#28C74D" d="M12 3.5c-2.5 0-4.6 1.7-5.1 4.1A4.8 4.8 0 0 0 2.5 12c0 2.6 2.1 4.8 4.7 4.8h9.6c2.6 0 4.7-2.2 4.7-4.8 0-2.4-1.8-4.4-4.2-4.7-.5-2.4-2.6-4.1-5.3-4.1z"/><path fill="#FFFFFF" d="M11 15.5v5.5h2v-5.5l2-3.7h-1.5L12 14l-1.5-2.2H9l2 3.7z"/></svg>`,
-            brave: `<svg viewBox="0 0 24 24"><path fill="#FB542B" d="M12 1.5l-7.5 4.3 1.2 8.6L12 22.5l6.3-8.1 1.2-8.6L12 1.5zm6.2 12.3L12 20.3l-6.2-6.5-1-7.2L12 3.2l7.2 3.4-1 7.2z"/><path fill="#FF7A00" d="M12 6.2l-4.5 2.2.7 4.8 3.8 4 3.8-4 .7-4.8L12 6.2z"/><circle cx="9.5" cy="10" r="1.1" fill="#FFFFFF"/><circle cx="14.5" cy="10" r="1.1" fill="#FFFFFF"/><path fill="#1A1A1A" d="M11 12.5h2l-1 1.5z"/></svg>`,
-            startpage: `<svg viewBox="0 0 24 24"><path fill="#FFFFFF" d="M12 3.5c-3.1 0-5.2 1.6-5.2 4.1 0 2.2 1.5 3.3 3.8 3.9l1.6.4c1.6.4 2.3 1 2.3 2 0 1.3-1.2 2.2-2.8 2.2-1.8 0-3.1-.9-3.4-2.3H5.8c.3 2.6 2.5 4.3 5.9 4.3 3.4 0 5.6-1.7 5.6-4.3 0-2.3-1.6-3.5-4-4.1l-1.5-.4c-1.5-.4-2.1-.9-2.1-1.8 0-1.2 1-2 2.5-2 1.5 0 2.6.8 2.8 2h2.5C17.2 5 15.1 3.5 12 3.5z"/><path fill="none" stroke="#7050FF" stroke-width="2.2" stroke-linecap="round" d="M6 21c3.5 1.2 8.5 1.2 12 0"/></svg>`,
+            yahoo: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#6001D2"/><path fill="#FFFFFF" d="M5.5 6.5h3.3l2.2 5 2.2-5h3.3l-4 8v4h-3v-4z"/><path fill="#FFFFFF" d="M17.5 6.5h1.7l-.4 7.7h-1z"/><circle cx="18.3" cy="17.3" r="1.1" fill="#FFFFFF"/></svg>`,
             instagram: `<svg viewBox="0 0 24 24"><defs><linearGradient id="ig-grad-real" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FFD600"/><stop offset="25%" stop-color="#FF0040"/><stop offset="60%" stop-color="#D800B9"/><stop offset="100%" stop-color="#7000FF"/></linearGradient></defs><rect width="24" height="24" rx="6" fill="url(#ig-grad-real)"/><rect x="3.5" y="3.5" width="17" height="17" rx="4.8" fill="none" stroke="#FFFFFF" stroke-width="1.8"/><circle cx="12" cy="12" r="4.2" fill="none" stroke="#FFFFFF" stroke-width="1.8"/><circle cx="16.5" cy="7.5" r="1.1" fill="#FFFFFF"/></svg>`,
             youtube: `<svg viewBox="0 0 24 24"><path fill="#FF0000" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path fill="#FFFFFF" d="m9.545 15.568 6.273-3.568-6.273-3.568z"/></svg>`,
             x: `<svg viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#000000"/><path fill="#FFFFFF" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`,
@@ -4243,21 +4312,16 @@
                 url: 'https://www.ecosia.org/search?q=',
                 icon: brandSvgs.ecosia
             },
-            brave: {
-                name: 'Brave',
-                url: 'https://search.brave.com/search?q=',
-                icon: brandSvgs.brave
-            },
-            startpage: {
-                name: 'Startpage',
-                url: 'https://www.startpage.com/sp/search?query=',
-                icon: brandSvgs.startpage
+            yahoo: {
+                name: 'Yahoo',
+                url: 'https://search.yahoo.com/search?p=',
+                icon: brandSvgs.yahoo
             }
         };
 
         let currentActiveEngine = localStorage.getItem('fokk_search_engine') || 'bing';
 
-        const quickEngines = ['bing', 'google', 'duckduckgo', 'ecosia'];
+        const quickEngines = ['bing', 'google', 'duckduckgo', 'yahoo', 'ecosia'];
 
         function renderEngineDropdown() {
             const popover = document.getElementById('engineDropdownPopover');
@@ -5223,7 +5287,25 @@
             } else if (themeType === 'pearl_light') {
                 body.classList.add('light-theme');
                 body.style.backgroundImage = 'none';
-                body.style.backgroundColor = '#F1F5F9';
+                body.style.backgroundColor = '#F8FAFC';
+            } else if (themeType === 'sail_azure') {
+                body.classList.add('light-theme');
+                body.classList.add('has-custom-wp');
+                body.style.backgroundImage = "url('https://images.unsplash.com/photo-1500930287596-c1ecaa373bb2?auto=format&fit=crop&w=1200&q=85')";
+                body.style.backgroundSize = 'cover';
+                body.style.backgroundPosition = 'center';
+            } else if (themeType === 'sail_coast') {
+                body.classList.add('light-theme');
+                body.classList.add('has-custom-wp');
+                body.style.backgroundImage = "url('https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=85')";
+                body.style.backgroundSize = 'cover';
+                body.style.backgroundPosition = 'center';
+            } else if (themeType === 'sail_pearl') {
+                body.classList.add('light-theme');
+                body.classList.add('has-custom-wp');
+                body.style.backgroundImage = "url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=85')";
+                body.style.backgroundSize = 'cover';
+                body.style.backgroundPosition = 'center';
             } else if (themeType === 'pure_obsidian') {
                 body.style.backgroundImage = 'none';
                 body.style.backgroundColor = '#11131C';

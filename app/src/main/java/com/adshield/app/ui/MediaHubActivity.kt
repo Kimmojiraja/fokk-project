@@ -192,10 +192,9 @@ open class MediaHubActivity : AppCompatActivity() {
 
     enum class SearchEngine(val displayName: String, val searchUrl: String, val iconRes: Int) {
         GOOGLE("Google", "https://www.google.com/search?q=", R.drawable.ic_engine_google),
-        BRAVE("Brave Search", "https://search.brave.com/search?q=", R.drawable.ic_engine_brave),
         DUCKDUCKGO("DuckDuckGo", "https://duckduckgo.com/?q=", R.drawable.ic_engine_duckduckgo),
+        YAHOO("Yahoo", "https://search.yahoo.com/search?p=", R.drawable.ic_engine_yahoo),
         ECOSIA("Ecosia", "https://www.ecosia.org/search?q=", R.drawable.ic_engine_ecosia),
-        STARTPAGE("Startpage", "https://www.startpage.com/sp/search?query=", R.drawable.ic_engine_startpage),
         BING("Bing", "https://www.bing.com/search?q=", R.drawable.ic_engine_bing)
     }
 
@@ -1351,7 +1350,8 @@ open class MediaHubActivity : AppCompatActivity() {
 
         val savedEngineName = prefs.getString(PREF_SEARCH_ENGINE, SearchEngine.BING.name)
         currentSearchEngine = try {
-            SearchEngine.valueOf(savedEngineName ?: SearchEngine.BING.name)
+            val name = savedEngineName ?: SearchEngine.BING.name
+            if (name == "BRAVE" || name == "STARTPAGE") SearchEngine.YAHOO else SearchEngine.valueOf(name)
         } catch (e: Exception) {
             SearchEngine.BING
         }
@@ -1359,6 +1359,7 @@ open class MediaHubActivity : AppCompatActivity() {
         val toolbarPos = prefs.getString(PREF_TOOLBAR_POSITION, "bottom") ?: "bottom"
         val isHomeInitial = activeWebView?.url?.contains("fokk_start.html") == true || activeWebView?.url.isNullOrBlank()
         applyToolbarPosition(toolbarPos, isHomePage = isHomeInitial, animated = false)
+        applyAppTheme(isAppInLightMode(), animated = false)
 
         loadInjectionScript()
         setupControls()
@@ -1482,22 +1483,88 @@ open class MediaHubActivity : AppCompatActivity() {
         }
     }
 
+    fun isAppInLightMode(): Boolean {
+        val systemSync = prefs.getBoolean(PREF_THEME_SYSTEM_SYNC, true)
+        if (systemSync) {
+            val nightModeFlags = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+            return nightModeFlags != Configuration.UI_MODE_NIGHT_YES
+        }
+        return prefs.getBoolean(PREF_LIGHT_THEME, false)
+    }
+
+    fun applyAppTheme(isLight: Boolean, animated: Boolean = false) {
+        val decor = window.decorView
+        val insetsController = WindowCompat.getInsetsController(window, decor)
+        insetsController.isAppearanceLightStatusBars = isLight
+        insetsController.isAppearanceLightNavigationBars = isLight
+
+        val toolbarPos = prefs.getString(PREF_TOOLBAR_POSITION, "bottom") ?: "bottom"
+        val isTop = toolbarPos.equals("top", ignoreCase = true)
+        if (isLight) {
+            binding.topBar.setBackgroundResource(if (isTop) R.drawable.bg_docked_command_bar_top_light else R.drawable.bg_docked_command_bar_bottom_light)
+            binding.bottomNav.setBackgroundColor(Color.parseColor("#FFFFFF"))
+            binding.urlInput.setTextColor(Color.parseColor("#0F172A"))
+            binding.urlInput.setHintTextColor(Color.parseColor("#64748B"))
+        } else {
+            binding.topBar.setBackgroundResource(if (isTop) R.drawable.bg_docked_command_bar_top else R.drawable.bg_docked_command_bar_bottom)
+            binding.bottomNav.setBackgroundColor(Color.parseColor("#0C101A"))
+            binding.urlInput.setTextColor(Color.parseColor("#FFFFFF"))
+            binding.urlInput.setHintTextColor(Color.parseColor("#94A3B8"))
+        }
+
+        val themeKey = if (isLight) "pearl_light" else "default"
+        tabs.forEach { tab ->
+            tab.webView?.evaluateJavascript("if (typeof applyThemeFromNative === 'function') applyThemeFromNative('$themeKey', '');", null)
+        }
+    }
+
+    private fun isVerticalVideoFeedUrl(url: String?): Boolean {
+        if (url.isNullOrBlank()) return false
+        val lower = url.lowercase(Locale.ROOT)
+        return lower.contains("/shorts") ||
+               lower.contains("/reel") ||
+               lower.contains("/reels") ||
+               lower.contains("tiktok.com") ||
+               lower.contains("/stories") ||
+               lower.contains("/story") ||
+               lower.contains("instagram.com/reel/") ||
+               lower.contains("instagram.com/reels/") ||
+               lower.contains("youtube.com/shorts/") ||
+               lower.contains("facebook.com/reel/") ||
+               lower.contains("facebook.com/watch/")
+    }
+
+    private fun syncRefreshLayoutWithActiveScroll() {
+        val wv = activeWebView
+        val currentUrl = wv?.url.orEmpty()
+        val isGesturesEnabled = prefs.getBoolean(PREF_PULL_TO_REFRESH, true)
+        val isFeed = isVerticalVideoFeedUrl(currentUrl) || customView != null
+        val atTop = !isFeed && isGesturesEnabled && (wv?.scrollY ?: 0) <= 0 && (wv?.canScrollVertically(-1) != true)
+        if (binding.swipeRefreshLayout.isEnabled != atTop) {
+            binding.swipeRefreshLayout.isEnabled = atTop
+        }
+    }
+
     private fun setupRefreshControl() {
         binding.swipeRefreshLayout.setColorSchemeColors(Color.parseColor("#00E5FF"))
         binding.swipeRefreshLayout.setOnRefreshListener {
             val wv = activeWebView
             val currentUrl = wv?.url.orEmpty()
-            if (wv != null && currentUrl.isNotBlank() && !currentUrl.contains("fokk_start.html")) {
+            if (wv != null && currentUrl.isNotBlank() && !currentUrl.contains("fokk_start.html") && !isVerticalVideoFeedUrl(currentUrl)) {
                 wv.reload()
             } else {
                 binding.swipeRefreshLayout.isRefreshing = false
             }
         }
         binding.swipeRefreshLayout.setOnChildScrollUpCallback { _, _ ->
-            val wv = activeWebView
-            wv != null && (wv.scrollY > 0 || wv.canScrollVertically(-1))
+            val wv = activeWebView ?: return@setOnChildScrollUpCallback false
+            val currentUrl = wv.url.orEmpty()
+            if (!prefs.getBoolean(PREF_PULL_TO_REFRESH, true) || isVerticalVideoFeedUrl(currentUrl) || customView != null) {
+                return@setOnChildScrollUpCallback true
+            }
+            wv.scrollY > 0 || wv.canScrollVertically(-1)
         }
-        binding.swipeRefreshLayout.isEnabled = true
+        syncRefreshLayoutWithActiveScroll()
     }
 
     private fun setupFindInPage() {
@@ -3274,9 +3341,8 @@ open class MediaHubActivity : AppCompatActivity() {
             }
             if (event.action == MotionEvent.ACTION_DOWN) {
                 activateBrowsingPane(webView)
-                val atTop = webView.scrollY <= 0 && !webView.canScrollVertically(-1)
-                if (webView === activeWebView && binding.swipeRefreshLayout.isEnabled != atTop) {
-                    binding.swipeRefreshLayout.isEnabled = atTop
+                if (webView === activeWebView) {
+                    syncRefreshLayoutWithActiveScroll()
                 }
             }
             if (binding.urlInput.hasFocus()) {
@@ -3288,10 +3354,9 @@ open class MediaHubActivity : AppCompatActivity() {
             false
         }
 
-        webView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
-            val atTop = scrollY <= 0 && !webView.canScrollVertically(-1)
-            if (webView === activeWebView && binding.swipeRefreshLayout.isEnabled != atTop) {
-                binding.swipeRefreshLayout.isEnabled = atTop
+        webView.setOnScrollChangeListener { _, _, _, _, _ ->
+            if (webView === activeWebView) {
+                syncRefreshLayoutWithActiveScroll()
             }
         }
 
@@ -3526,6 +3591,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 if (view == activeWebView) {
                     binding.progressBar.visibility = View.GONE
                     binding.swipeRefreshLayout.isRefreshing = false
+                    syncRefreshLayoutWithActiveScroll()
                 }
                 val loadedTab = tabs.firstOrNull { it.webView == view }
                 if (loadedTab?.isOfflineReader != true) {
@@ -4214,8 +4280,7 @@ open class MediaHubActivity : AppCompatActivity() {
         }
         applyWebViewVisibility()
         hideFindInPage()
-        val currentWv = current.webView
-        binding.swipeRefreshLayout.isEnabled = (currentWv?.scrollY ?: 0) <= 0 && (currentWv?.canScrollVertically(-1) != true)
+        syncRefreshLayoutWithActiveScroll()
         com.adshield.app.engine.VpnEngine.syncProxyForTabPrivacy(this, current.isPrivate)
         checkAndHibernateBackgroundTabs()
         if (current.shouldLoadOnSelect) {
@@ -4225,17 +4290,25 @@ open class MediaHubActivity : AppCompatActivity() {
         updateUrlBar(current.url, current.title)
         updateToolbarLayoutForUrl(current.url, animated = false)
 
-        // Apply Private Tab styling if active
+        // Apply Tab Theme / Private styling
         binding.imgEngineIcon.imageTintList = null
         binding.imgEngineIcon.setImageResource(currentSearchEngine.iconRes)
         val toolbarPos = prefs.getString(PREF_TOOLBAR_POSITION, "bottom") ?: "bottom"
         val isTop = toolbarPos.equals("top", ignoreCase = true)
+        val isLight = isAppInLightMode()
         if (current.isPrivate) {
             binding.topBar.setBackgroundResource(if (isTop) R.drawable.bg_docked_command_bar_top_private else R.drawable.bg_docked_command_bar_bottom_private)
             binding.bottomNav.setBackgroundColor(android.graphics.Color.parseColor("#120A1C"))
+        } else if (isLight) {
+            binding.topBar.setBackgroundResource(if (isTop) R.drawable.bg_docked_command_bar_top_light else R.drawable.bg_docked_command_bar_bottom_light)
+            binding.bottomNav.setBackgroundColor(Color.parseColor("#FFFFFF"))
+            binding.urlInput.setTextColor(Color.parseColor("#0F172A"))
+            binding.urlInput.setHintTextColor(Color.parseColor("#64748B"))
         } else {
             binding.topBar.setBackgroundResource(if (isTop) R.drawable.bg_docked_command_bar_top else R.drawable.bg_docked_command_bar_bottom)
             binding.bottomNav.setBackgroundColor(android.graphics.Color.parseColor("#0C101A"))
+            binding.urlInput.setTextColor(Color.parseColor("#FFFFFF"))
+            binding.urlInput.setHintTextColor(Color.parseColor("#94A3B8"))
         }
 
         updateTabCounter()
@@ -4747,8 +4820,7 @@ open class MediaHubActivity : AppCompatActivity() {
             binding.btnQuickEngineEcosia to SearchEngine.ECOSIA,
             binding.btnQuickEngineGoogle to SearchEngine.GOOGLE,
             binding.btnQuickEngineDuckDuckGo to SearchEngine.DUCKDUCKGO,
-            binding.btnQuickEngineBrave to SearchEngine.BRAVE,
-            binding.btnQuickEngineStartpage to SearchEngine.STARTPAGE
+            binding.btnQuickEngineYahoo to SearchEngine.YAHOO
         )
 
         for ((btn, engine) in pairs) {
@@ -4776,8 +4848,7 @@ open class MediaHubActivity : AppCompatActivity() {
             binding.btnQuickEngineEcosia to SearchEngine.ECOSIA,
             binding.btnQuickEngineGoogle to SearchEngine.GOOGLE,
             binding.btnQuickEngineDuckDuckGo to SearchEngine.DUCKDUCKGO,
-            binding.btnQuickEngineBrave to SearchEngine.BRAVE,
-            binding.btnQuickEngineStartpage to SearchEngine.STARTPAGE
+            binding.btnQuickEngineYahoo to SearchEngine.YAHOO
         )
         for ((btn, engine) in mapping) {
             if (currentSearchEngine == engine) {
@@ -5373,11 +5444,10 @@ open class MediaHubActivity : AppCompatActivity() {
                 imgLogo.setImageResource(engine.iconRes)
                 textName.text = engine.displayName
                 textDesc.text = when (engine) {
-                    SearchEngine.ECOSIA -> "Trees & Climate Action • 100% Green (Default)"
+                    SearchEngine.ECOSIA -> "Trees & Climate Action • 100% Green"
                     SearchEngine.DUCKDUCKGO -> "Private Search • Zero Tracker Profiling"
-                    SearchEngine.BRAVE -> "Independent Web Index • Ad-Free"
+                    SearchEngine.YAHOO -> "Yahoo Search • News, Finance & Web Results"
                     SearchEngine.GOOGLE -> "Comprehensive Global Index"
-                    SearchEngine.STARTPAGE -> "Google Results with Absolute Privacy"
                     SearchEngine.BING -> "Microsoft Bing • Global Web & AI Copilot"
                 }
                 radioBtn.isChecked = (engine == currentSearchEngine)
@@ -6513,17 +6583,19 @@ open class MediaHubActivity : AppCompatActivity() {
                 .show()
         }
 
-        sheetBinding.textMenuQuickNightStatus.text = if (isDarkMode) "On" else "Off"
-        sheetBinding.textMenuQuickNightStatus.setTextColor(android.graphics.Color.parseColor(if (isDarkMode) "#FBBF24" else "#8E8E93"))
+        val isCurrentLight = isAppInLightMode()
+        sheetBinding.imgMenuNightIcon.setImageResource(if (isCurrentLight) R.drawable.ic_light_mode else R.drawable.ic_dark_mode)
+        sheetBinding.imgMenuNightIcon.imageTintList = ColorStateList.valueOf(Color.parseColor(if (isCurrentLight) "#F59E0B" else "#818CF8"))
+        sheetBinding.textMenuQuickNightTitle.text = if (isCurrentLight) "Light mode" else "Night mode"
+        sheetBinding.textMenuQuickNightStatus.text = if (isCurrentLight) "Day" else "Night"
+        sheetBinding.textMenuQuickNightStatus.setTextColor(Color.parseColor(if (isCurrentLight) "#F59E0B" else "#818CF8"))
         sheetBinding.btnMenuQuickNight.setOnClickListener {
-            isDarkMode = !isDarkMode
-            sheetBinding.textMenuQuickNightStatus.text = if (isDarkMode) "On" else "Off"
-            sheetBinding.textMenuQuickNightStatus.setTextColor(android.graphics.Color.parseColor(if (isDarkMode) "#FBBF24" else "#8E8E93"))
-            sheetBinding.switchDarkMode.isChecked = isDarkMode
-            if (!isThirdPartyMediaService(activeWebView?.url)) {
-                injectDarkModeScript(activeWebView, isDarkMode)
-            }
+            val nextLight = !isAppInLightMode()
+            prefs.edit().putBoolean(PREF_THEME_SYSTEM_SYNC, false).apply()
+            prefs.edit().putBoolean(PREF_LIGHT_THEME, nextLight).apply()
+            applyAppTheme(nextLight, animated = true)
             dialog.dismiss()
+            Toast.makeText(this, if (nextLight) "Daylight Mode Activated" else "Dark Theme Activated", Toast.LENGTH_SHORT).show()
         }
         sheetBinding.btnMenuNightInfo.setOnClickListener {
             AlertDialog.Builder(this)
@@ -6951,9 +7023,8 @@ open class MediaHubActivity : AppCompatActivity() {
             b.radioEngineBing.isChecked = selected == SearchEngine.BING
             b.radioEngineEcosia.isChecked = selected == SearchEngine.ECOSIA
             b.radioEngineDdg.isChecked = selected == SearchEngine.DUCKDUCKGO
-            b.radioEngineBrave.isChecked = selected == SearchEngine.BRAVE
+            b.radioEngineYahoo.isChecked = selected == SearchEngine.YAHOO
             b.radioEngineGoogle.isChecked = selected == SearchEngine.GOOGLE
-            b.radioEngineStartpage.isChecked = selected == SearchEngine.STARTPAGE
         }
         updateEngineRadios(currentSearchEngine)
 
@@ -6968,9 +7039,8 @@ open class MediaHubActivity : AppCompatActivity() {
         b.rowEngineBing.setOnClickListener { selectEngine(SearchEngine.BING) }
         b.rowEngineEcosia.setOnClickListener { selectEngine(SearchEngine.ECOSIA) }
         b.rowEngineDdg.setOnClickListener { selectEngine(SearchEngine.DUCKDUCKGO) }
-        b.rowEngineBrave.setOnClickListener { selectEngine(SearchEngine.BRAVE) }
+        b.rowEngineYahoo.setOnClickListener { selectEngine(SearchEngine.YAHOO) }
         b.rowEngineGoogle.setOnClickListener { selectEngine(SearchEngine.GOOGLE) }
-        b.rowEngineStartpage.setOnClickListener { selectEngine(SearchEngine.STARTPAGE) }
 
         val currentToolbarPos = prefs.getString(PREF_TOOLBAR_POSITION, "bottom") ?: "bottom"
         val isTop = currentToolbarPos.equals("top", ignoreCase = true)
@@ -6992,15 +7062,39 @@ open class MediaHubActivity : AppCompatActivity() {
             Toast.makeText(this, if (checked) "HTTPS-Only Mode Enabled" else "HTTPS-Only Mode Disabled", Toast.LENGTH_SHORT).show()
         }
 
-        val isLightMode = prefs.getBoolean(PREF_LIGHT_THEME, false)
-        b.switchLightMode.isChecked = isLightMode
-        b.textLightModeDesc.text = if (isLightMode) "Light theme active" else "Dark Cyberpunk active (Default)"
+        val isSystemSync = prefs.getBoolean(PREF_THEME_SYSTEM_SYNC, true)
+        b.switchSystemThemeSync.isChecked = isSystemSync
+        b.switchLightMode.isEnabled = !isSystemSync
+        b.switchLightMode.alpha = if (isSystemSync) 0.45f else 1.0f
+
+        val isLight = isAppInLightMode()
+        b.switchLightMode.isChecked = isLight
+        b.textLightModeDesc.text = if (isLight) "Light pearl appearance active" else "Dark Cyberpunk active"
+
+        b.switchSystemThemeSync.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean(PREF_THEME_SYSTEM_SYNC, checked).apply()
+            b.switchLightMode.isEnabled = !checked
+            b.switchLightMode.alpha = if (checked) 0.45f else 1.0f
+            applyAppTheme(isAppInLightMode(), animated = true)
+            b.switchLightMode.isChecked = isAppInLightMode()
+            b.textLightModeDesc.text = if (isAppInLightMode()) "Light pearl appearance active" else "Dark Cyberpunk active"
+            Toast.makeText(this, if (checked) "System Theme Sync Enabled (Auto Light/Dark)" else "System Theme Sync Disabled", Toast.LENGTH_SHORT).show()
+        }
+
         b.switchLightMode.setOnCheckedChangeListener { _, checked ->
+            if (b.switchSystemThemeSync.isChecked) return@setOnCheckedChangeListener
             prefs.edit().putBoolean(PREF_LIGHT_THEME, checked).apply()
-            b.textLightModeDesc.text = if (checked) "Light theme active" else "Dark Cyberpunk active (Default)"
-            val themeKey = if (checked) "pearl_light" else "default"
-            activeWebView?.evaluateJavascript("if (typeof setWallpaper === 'function') setWallpaper('$themeKey');", null)
+            b.textLightModeDesc.text = if (checked) "Light pearl appearance active" else "Dark Cyberpunk active"
+            applyAppTheme(checked, animated = true)
             Toast.makeText(this, if (checked) "Daylight Mode Enabled" else "Dark Mode Enabled", Toast.LENGTH_SHORT).show()
+        }
+
+        val pullEnabled = prefs.getBoolean(PREF_PULL_TO_REFRESH, true)
+        b.switchPullToRefresh.isChecked = pullEnabled
+        b.switchPullToRefresh.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean(PREF_PULL_TO_REFRESH, checked).apply()
+            syncRefreshLayoutWithActiveScroll()
+            Toast.makeText(this, if (checked) "Pull-to-Refresh Gestures Enabled" else "Pull-to-Refresh Gestures Disabled", Toast.LENGTH_SHORT).show()
         }
 
         dialog.show()
@@ -11000,6 +11094,9 @@ open class MediaHubActivity : AppCompatActivity() {
         if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE && !(isMediaPlaying && hasActiveVideo)) {
             collapseCommandBar(animated = true)
         }
+        if (prefs.getBoolean(PREF_THEME_SYSTEM_SYNC, true)) {
+            applyAppTheme(isAppInLightMode(), animated = true)
+        }
     }
 
     override fun onUserLeaveHint() {
@@ -11881,6 +11978,8 @@ open class MediaHubActivity : AppCompatActivity() {
         private const val PREF_AI_FILTER = "fokk_ai_filter_enabled"
         private const val PREF_HTTPS_ONLY = "fokk_https_only_enabled"
         private const val PREF_FOKKO_AI = "fokk_fokko_ai_enabled"
+        private const val PREF_THEME_SYSTEM_SYNC = "fokk_theme_system_sync"
+        private const val PREF_PULL_TO_REFRESH = "fokk_pull_to_refresh"
         private const val PREF_ACTIVE_THEME = "fokk_active_theme"
         private const val PREF_USER_AVATAR = "fokk_user_avatar"
         private const val PREF_USER_ALIAS = "fokk_user_alias"

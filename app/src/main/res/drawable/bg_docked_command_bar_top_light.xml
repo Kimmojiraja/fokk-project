@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Pristine pearl white body with bottom divider line -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#E2E8F0" />
+        </shape>
+    </item>
+    <item android:bottom="1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#FAFFFFFF" />
+        </shape>
+    </item>
+</layer-list>
