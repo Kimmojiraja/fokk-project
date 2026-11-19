@@ -788,13 +788,30 @@
         // Realtime theme synchronization
         (function() {
             function syncTheme() {
-                const saved = localStorage.getItem('fokk_theme');
-                if (saved === 'light' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)) {
-                    document.body.classList.add('theme-light');
+                var isLight = false;
+                if (window.FokkShieldBridge && typeof window.FokkShieldBridge.isLightMode === 'function') {
+                    isLight = window.FokkShieldBridge.isLightMode();
                 } else {
-                    document.body.classList.remove('theme-light');
+                    const saved = localStorage.getItem('fokk_theme');
+                    isLight = saved === 'light' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+                }
+                if (isLight) {
+                    document.body.classList.add('theme-light', 'light-theme');
+                } else {
+                    document.body.classList.remove('theme-light', 'light-theme');
                 }
             }
+            window.applyThemeFromNative = function(themeType, customData, isLightExplicit) {
+                if (typeof isLightExplicit === 'boolean') {
+                    if (isLightExplicit) {
+                        document.body.classList.add('theme-light', 'light-theme');
+                    } else {
+                        document.body.classList.remove('theme-light', 'light-theme');
+                    }
+                } else {
+                    syncTheme();
+                }
+            };
             syncTheme();
             window.addEventListener('storage', syncTheme);
             if (window.matchMedia) {
