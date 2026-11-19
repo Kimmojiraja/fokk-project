@@ -707,7 +707,7 @@ object FokkSearchAggregator {
                 val cleaned = fallbackTitle
                     .replace(Regex("""[^a-zA-Z0-9\s\-']"""), " ")
                     .split(Regex("\\s+"))
-                    .filter { it.length >= 4 && !QUERY_STOP_WORDS.contains(it.lowercase(Locale.ROOT)) }
+                    .filter { it.length >= 4 && !isFunctionalStopWord(it) }
                     .take(4)
                     .joinToString(" ")
                 if (cleaned.isNotBlank()) listOf(cleaned) else emptyList()
