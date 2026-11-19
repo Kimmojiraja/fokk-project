@@ -262,15 +262,24 @@ object FokkAiEngine {
                 append("CONTEXT: The user is asking a general web or knowledge question.\n\n")
             }
             if (externalSources.isNotEmpty()) {
-                append("\nLIVE WEB SOURCES:\n")
+                append("\nLIVE WEB SOURCES (News, Journalism & Social Media):\n")
                 externalSources.forEachIndexed { i, s ->
-                    append("[${i + 1}] ${s.title} (${s.domain})")
+                    val typeTag = when (s.sourceType) {
+                        "NEWS" -> "[News]"
+                        "SOCIAL" -> "[Social Media]"
+                        "WIKI" -> "[Reference]"
+                        else -> "[Web]"
+                    }
+                    append("[${i + 1}] $typeTag ${s.title} (${s.domain})")
                     if (s.snippet.isNotBlank()) append(" — ${s.snippet}")
                     append("\n")
                 }
             }
             append("\nSTYLE & QUALITY RULES:\n")
             append("- Directly answer what the user asked in the very first sentence. Never open with boilerplate like 'Credibly documented across newsrooms'.\n")
+            append("- Always check the LIVE WEB SOURCES carefully for recent breaking news, bilateral summits, press conferences, photo ops, viral moments, or quotes (for example, PM Modi attempting to wrap up a photo op with Donald Trump at the Quad summit in Manila, saying 'shall we move?'). If the user's question relates to an incident reported in the live sources, accurately and directly explain what occurred, where, who was involved, and what took place.\n")
+            append("- Prioritize verified journalism (Bloomberg, Reuters, AP, BBC, etc.) for core factual grounding, and use social media posts (Reddit, X, Bluesky, YouTube, etc.) to capture viral quotes, public sentiment, trending discussions, and eyewitness clips without mistaking social chatter for confirmed official policy.\n")
+            append("- Never dismiss a real-world query with 'there is no recorded incident' if live web sources describe the event or interaction.\n")
             append("- If the user asks 'what is this' or 'summarize', give a crisp, clear synthesis in your own words (never copy-paste raw article paragraphs).\n")
             append("- If the user asks 'who posted it' or 'who wrote this', clearly state the publisher/site, author/byline (if known), and who/what the piece is about.\n")
             append("- If the user asks a general knowledge question unrelated to the page, answer it helpfully using your knowledge and the web sources.\n")

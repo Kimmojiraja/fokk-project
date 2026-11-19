@@ -2378,38 +2378,22 @@ open class MediaHubActivity : AppCompatActivity() {
             }
             activity.runOnUiThread {
                 activity.currentDetectedVideoStream = DetectedVideoStream(url, title)
-                activity.binding.btnMediaDetectedAction.visibility = View.VISIBLE
             }
         }
 
         @JavascriptInterface
         fun adjustBrightness(deltaPercent: Float) {
-            activity.runOnUiThread {
-                val lp = activity.window.attributes
-                var current = lp.screenBrightness
-                if (current < 0f) current = 0.5f
-                lp.screenBrightness = (current + (deltaPercent / 100f)).coerceIn(0.05f, 1.0f)
-                activity.window.attributes = lp
-            }
+            // Video gestures disabled per user requirement
         }
 
         @JavascriptInterface
         fun adjustVolume(deltaPercent: Float) {
-            activity.runOnUiThread {
-                val audioManager = activity.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return@runOnUiThread
-                val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                val currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                val step = if (deltaPercent > 0) 1 else -1
-                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (currentVol + step).coerceIn(0, maxVol), 0)
-            }
+            // Video gestures disabled per user requirement
         }
 
         @JavascriptInterface
         fun onSeekFeedback(seekSeconds: Int) {
-            activity.runOnUiThread {
-                val label = if (seekSeconds > 0) "+${seekSeconds}s" else "${seekSeconds}s"
-                Toast.makeText(activity, label, Toast.LENGTH_SHORT).show()
-            }
+            // Video gestures disabled per user requirement
         }
 
     }
@@ -4185,6 +4169,8 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     private fun isShieldEnabledFor(url: String?): Boolean {
+        val isGlobalEnabled = prefs.getBoolean(PREF_GLOBAL_SHIELD_ENABLED, true)
+        if (!isGlobalEnabled) return false
         val host = try { Uri.parse(url).host?.lowercase() } catch (_: Exception) { null } ?: return true
         val disabledSites = localPrefs.getStringSet(PREF_SHIELD_DISABLED_SITES, emptySet()).orEmpty()
         return host !in disabledSites && registrableDomain(host) !in disabledSites
@@ -4834,28 +4820,11 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         binding.btnMediaDetectedAction.setOnClickListener {
-            val stream = currentDetectedVideoStream
-            if (stream != null) {
-                val tabIsPrivate = activeTab?.isPrivate == true
-                showDownloadOptions(
-                    downloadUrl = stream.url,
-                    userAgent = cleanMobileUa,
-                    contentDisposition = null,
-                    mimeType = "video/*",
-                    isPrivate = tabIsPrivate,
-                    sourceUrl = activeWebView?.url.orEmpty(),
-                    allowThirdPartyCookies = true
-                )
-            }
+            // Video stream sniffer button disabled and removed per user requirement
         }
 
         binding.btnPictureInPicture.setOnClickListener {
-            // Never turn an audio page or a normal browser page into a tiny window.
-            if (isMediaPlaying && hasActiveVideo) {
-                enterPipMode()
-            } else {
-                Toast.makeText(this, "Play a video before minimizing it", Toast.LENGTH_SHORT).show()
-            }
+            // Picture-in-Picture disabled and removed per user requirement
         }
 
         binding.chipMediaDetected.setOnClickListener {
@@ -6392,19 +6361,23 @@ open class MediaHubActivity : AppCompatActivity() {
                 .show()
         }
 
-        sheetBinding.textMenuQuickShieldStatus.text = if (isShieldEnabled) "On" else "Off"
-        sheetBinding.textMenuQuickShieldStatus.setTextColor(android.graphics.Color.parseColor(if (isShieldEnabled) "#34D399" else "#8E8E93"))
+        val isGlobalShieldActive = prefs.getBoolean(PREF_GLOBAL_SHIELD_ENABLED, true) && isShieldEnabledFor(activeWebView?.url)
+        sheetBinding.textMenuQuickShieldStatus.text = if (isGlobalShieldActive) "On" else "Off"
+        sheetBinding.textMenuQuickShieldStatus.setTextColor(android.graphics.Color.parseColor(if (isGlobalShieldActive) "#34D399" else "#8E8E93"))
         sheetBinding.btnMenuQuickShield.setOnClickListener {
-            if (isThirdPartyMediaService(activeWebView?.url)) {
-                Toast.makeText(this, "Filtering is disabled for this service", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            val newState = !isShieldEnabled
-            setShieldEnabledForCurrentSite(newState)
-            sheetBinding.textMenuQuickShieldStatus.text = if (newState) "On" else "Off"
-            sheetBinding.textMenuQuickShieldStatus.setTextColor(android.graphics.Color.parseColor(if (newState) "#34D399" else "#8E8E93"))
-            sheetBinding.switchMenuShield.isChecked = newState
-            val msg = if (newState) "Fokk Shield Protection Enabled" else "Fokk Shield Paused"
+            val currentlyGlobalOn = prefs.getBoolean(PREF_GLOBAL_SHIELD_ENABLED, true)
+            val newGlobalState = !currentlyGlobalOn
+            prefs.edit().putBoolean(PREF_GLOBAL_SHIELD_ENABLED, newGlobalState).apply()
+            isShieldEnabled = newGlobalState
+            setShieldEnabledForCurrentSite(newGlobalState)
+
+            sheetBinding.textMenuQuickShieldStatus.text = if (newGlobalState) "On" else "Off"
+            sheetBinding.textMenuQuickShieldStatus.setTextColor(android.graphics.Color.parseColor(if (newGlobalState) "#34D399" else "#8E8E93"))
+            sheetBinding.switchMenuShield.isChecked = newGlobalState
+            sheetBinding.badgeSocialShield.alpha = if (newGlobalState) 1.0f else 0.4f
+            sheetBinding.badgeAiFilter.alpha = if (newGlobalState) 1.0f else 0.4f
+
+            val msg = if (newGlobalState) "Ad Blocker Enabled (Brave Shield Active)" else "Ad Blocker Paused (All sites allowed)"
             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
             activeWebView?.reload()
         }
@@ -6809,10 +6782,6 @@ open class MediaHubActivity : AppCompatActivity() {
             showShieldSettingsDialog()
         }
 
-        sheetBinding.rowNavMedia.setOnClickListener {
-            dialog.dismiss()
-            showMediaSettingsDialog()
-        }
 
         sheetBinding.rowNavVault.setOnClickListener {
             dialog.dismiss()
@@ -10907,41 +10876,11 @@ open class MediaHubActivity : AppCompatActivity() {
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         armWebMediaForBackground()
-        val currentUrl = activeTab?.url.orEmpty()
-        val isStartPage = currentUrl.contains("fokk_start.html")
-        val autoPipEnabled = prefs.getBoolean("fokk_auto_pip", true)
-        // PiP strictly triggers ONLY when an active video is actively playing!
-        if (!isStartPage && autoPipEnabled && isMediaPlaying && (hasActiveVideo || customView != null)) {
-            enterPipMode(showFailureToast = false)
-        }
+        // Picture-in-Picture disabled per user requirement
     }
 
     private fun enterPipMode(showFailureToast: Boolean = true) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isMediaPlaying && (hasActiveVideo || customView != null)) {
-            // Fullscreen WebChromeClient video already has a dedicated native
-            // view. Let Android PiP capture that surface directly.
-            if (customView != null) {
-                enterNativePipMode()
-                return
-            }
-            val webView = activeWebView
-            if (webView == null) {
-                if (showFailureToast) Toast.makeText(this, "The active video is not ready for picture-in-picture", Toast.LENGTH_SHORT).show()
-                return
-            }
-            // Only minimize after the page confirms it has a currently playing
-            // video element. This avoids opening PiP around the browser chrome
-            // when a site's media surface is inaccessible to the DOM.
-            webView.evaluateJavascript(
-                "typeof window.__fokk_enter_pip_view === 'function' ? window.__fokk_enter_pip_view() : false;"
-            ) { result ->
-                if (result == "true") {
-                    enterNativePipMode()
-                } else if (showFailureToast) {
-                    Toast.makeText(this, "This site's video surface cannot be minimized by the browser", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
+        // Picture-in-Picture disabled per user requirement
     }
 
     private fun enterNativePipMode() {
@@ -11800,6 +11739,7 @@ open class MediaHubActivity : AppCompatActivity() {
         private const val MAX_REPORTED_HOSTS = 12
         private const val MAX_DOWNLOAD_FILENAME_LENGTH = 180
         private const val MEDIA_RECENT_ACTIVITY_WINDOW_MS = 5_000L
+        private const val PREF_GLOBAL_SHIELD_ENABLED = "pref_global_shield_enabled"
         private const val PREF_SHIELD_DISABLED_SITES = "key_shield_disabled_sites"
         private const val PREF_SHOW_HOMEPAGE_SHORTCUTS = "fokk_show_shortcuts"
         private const val PREF_BIOMETRIC_PRIVATE_TABS = "fokk_biometric_private_tabs"

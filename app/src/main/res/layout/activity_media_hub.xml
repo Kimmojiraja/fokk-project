@@ -250,37 +250,21 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <!-- Video Stream Sniffer Action Button -->
+            <!-- Video Stream Sniffer Action Button (Permanently hidden per user requirement) -->
             <FrameLayout
                 android:id="@+id/btnMediaDetectedAction"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:layout_marginEnd="4dp"
-                android:background="@drawable/bg_command_search_go"
-                android:clickable="true"
-                android:focusable="true"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
                 android:visibility="gone"
-                android:contentDescription="Detected Video Stream">
+                android:contentDescription="Detected Video Stream" />
 
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_video"
-                    app:tint="#34D399" />
-            </FrameLayout>
-
-            <!-- This is deliberately video-only. Audio stays in the notification/player controls. -->
+            <!-- PiP action button (Permanently hidden per user requirement) -->
             <ImageButton
                 android:id="@+id/btnPictureInPicture"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:layout_marginEnd="2dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Minimize active video"
-                android:src="@drawable/ic_pip"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
                 android:visibility="gone"
-                app:tint="#00E5FF" />
+                android:contentDescription="Minimize active video" />
 
             <View
                 android:id="@+id/commandBarDivider"

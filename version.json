@@ -1,6 +1,6 @@
 {
-  "versionCode": 294,
-  "versionName": "2.9.4",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.4/app-debug.apk",
-  "changelog": "- AI Experience Overhaul: Unboxed magazine-quality editorial layout for Explore Further questions (clean typography, hairline separators, responsive touch ripple).\n- AI Navigation Back-Stack: Clicking any source chip, image, or web search from Fokk AI (Summary, Ask AI, Truth & Bias) preserves AI state so pressing Back seamlessly returns to the exact AI tab where you left off.\n- Truth & Bias Executive View: Removed bulky horizontal meter bars and replaced with sleek editorial leaning badges, verified fact-density pills, and sensationalism ratings.\n- Dynamic Real-Time Web Intelligence: Ask AI queries from the homepage or general topics dynamically fetch and synthesize live Google News, Wikipedia, and web sources with modern temporal grounding, citing actual web sources instead of internal screens.\n- Curated Bottom Menu Quality Tools: Added Translate Page and Save as PDF to Daily Essentials, plus Media Grabber and Read Aloud (TTS) to Advanced Tools."
+  "versionCode": 295,
+  "versionName": "2.9.5",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v2.9.5/app-debug.apk",
+  "changelog": "- Advanced Real-Time Intelligence & Social Media Aggregation: Ask AI queries now capture and prioritize both verified journalism and breaking social media posts (Reddit, X, Bluesky, Threads, Instagram, YouTube clips) with intelligent query distillation and entity typo correction.\n- Master Ad Blocker Toggle on Bottom Menu: The Ad Blocker button beside Fokk Mesh now acts as an instant master switch controlling the whole ad blocker. Easily toggle off when encountering anti-adblock warnings or site breakage, and re-enable with full Brave Rust shield power.\n- Streamlined UI: Completely removed Media, Gestures & PiP hub from menu and eliminated the video logo and PiP icon from the command card bar for a cleaner, clutter-free browsing experience."
 }
