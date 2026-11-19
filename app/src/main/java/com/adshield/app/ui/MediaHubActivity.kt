@@ -3081,7 +3081,6 @@ open class MediaHubActivity : AppCompatActivity() {
         if (targetUrl.contains("google.") && targetUrl.contains("/search") && !targetUrl.contains("pws=0")) {
             targetUrl = if (targetUrl.contains("?")) "$targetUrl&pws=0" else "$targetUrl?pws=0"
         }
-        val tabIsPrivate = tab?.isPrivate == true
         CookieManager.getInstance().setAcceptThirdPartyCookies(
             webView,
             true
