@@ -1363,6 +1363,7 @@ open class MediaHubActivity : AppCompatActivity() {
         loadInjectionScript()
         setupControls()
         setupRefreshControl()
+        setupFindInPage()
         initMediaSession()
         fetchLiveTrendingTopics()
         preloadPulseNews()
@@ -1482,12 +1483,102 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     private fun setupRefreshControl() {
-        binding.swipeRefreshLayout.setColorSchemeResources(R.color.fokk_cyan)
-        binding.swipeRefreshLayout.isEnabled = false
-        binding.swipeRefreshLayout.isNestedScrollingEnabled = false
+        binding.swipeRefreshLayout.setColorSchemeColors(Color.parseColor("#00E5FF"))
         binding.swipeRefreshLayout.setOnRefreshListener {
-            binding.swipeRefreshLayout.isRefreshing = false
+            val wv = activeWebView
+            val currentUrl = wv?.url.orEmpty()
+            if (wv != null && currentUrl.isNotBlank() && !currentUrl.contains("fokk_start.html")) {
+                wv.reload()
+            } else {
+                binding.swipeRefreshLayout.isRefreshing = false
+            }
         }
+        binding.swipeRefreshLayout.setOnChildScrollUpCallback { _, _ ->
+            val wv = activeWebView
+            wv != null && (wv.scrollY > 0 || wv.canScrollVertically(-1))
+        }
+        binding.swipeRefreshLayout.isEnabled = true
+    }
+
+    private fun setupFindInPage() {
+        binding.inputFindQuery.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val query = s?.toString().orEmpty()
+                if (query.isNotBlank()) {
+                    activeWebView?.findAllAsync(query)
+                } else {
+                    activeWebView?.clearMatches()
+                    binding.textFindMatches.text = ""
+                }
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        binding.inputFindQuery.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH || actionId == EditorInfo.IME_ACTION_DONE) {
+                activeWebView?.findNext(true)
+                true
+            } else {
+                false
+            }
+        }
+
+        binding.btnFindNext.setOnClickListener {
+            activeWebView?.findNext(true)
+        }
+
+        binding.btnFindPrev.setOnClickListener {
+            activeWebView?.findNext(false)
+        }
+
+        binding.btnFindClose.setOnClickListener {
+            hideFindInPage()
+        }
+    }
+
+    private fun showFindInPage() {
+        val wv = activeWebView
+        val currentUrl = wv?.url.orEmpty()
+        if (currentUrl.contains("fokk_start.html") || currentUrl.isBlank()) {
+            Toast.makeText(this, "Open a webpage to search within the page", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        wv?.setFindListener { activeMatchOrdinal, numberOfMatches, _ ->
+            if (numberOfMatches > 0) {
+                val current = activeMatchOrdinal + 1
+                binding.textFindMatches.text = "$current/$numberOfMatches"
+                binding.textFindMatches.setTextColor(Color.parseColor("#38BDF8"))
+            } else {
+                val query = binding.inputFindQuery.text?.toString().orEmpty()
+                if (query.isNotBlank()) {
+                    binding.textFindMatches.text = "0/0"
+                    binding.textFindMatches.setTextColor(Color.parseColor("#EF4444"))
+                } else {
+                    binding.textFindMatches.text = ""
+                }
+            }
+        }
+
+        binding.layoutFindInPage.visibility = View.VISIBLE
+        binding.inputFindQuery.requestFocus()
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.showSoftInput(binding.inputFindQuery, InputMethodManager.SHOW_IMPLICIT)
+
+        val query = binding.inputFindQuery.text?.toString().orEmpty()
+        if (query.isNotBlank()) {
+            wv?.findAllAsync(query)
+        }
+    }
+
+    private fun hideFindInPage() {
+        binding.layoutFindInPage.visibility = View.GONE
+        activeWebView?.clearMatches()
+        binding.textFindMatches.text = ""
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(binding.inputFindQuery.windowToken, 0)
+        binding.inputFindQuery.clearFocus()
     }
 
     private fun loadInjectionScript() {
@@ -2900,7 +2991,7 @@ open class MediaHubActivity : AppCompatActivity() {
         val tabIsPrivate = tab?.isPrivate == true
         CookieManager.getInstance().setAcceptThirdPartyCookies(
             webView,
-            !tabIsPrivate && isThirdPartyMediaService(targetUrl)
+            true
         )
         // Automatically apply desktop mode for Spotify so it loads the real Web Player
         // rather than the restricted 30-second mobile teaser
@@ -3178,14 +3269,15 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         webView.setOnTouchListener { _, event ->
-            if (event.actionMasked == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_MOVE) {
-                webView.parent?.requestDisallowInterceptTouchEvent(true)
-            }
             if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_UP) {
                 lastUserInteractionTime = System.currentTimeMillis()
             }
             if (event.action == MotionEvent.ACTION_DOWN) {
                 activateBrowsingPane(webView)
+                val atTop = webView.scrollY <= 0 && !webView.canScrollVertically(-1)
+                if (webView === activeWebView && binding.swipeRefreshLayout.isEnabled != atTop) {
+                    binding.swipeRefreshLayout.isEnabled = atTop
+                }
             }
             if (binding.urlInput.hasFocus()) {
                 binding.urlInput.clearFocus()
@@ -3196,9 +3288,16 @@ open class MediaHubActivity : AppCompatActivity() {
             false
         }
 
+        webView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
+            val atTop = scrollY <= 0 && !webView.canScrollVertically(-1)
+            if (webView === activeWebView && binding.swipeRefreshLayout.isEnabled != atTop) {
+                binding.swipeRefreshLayout.isEnabled = atTop
+            }
+        }
+
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
-        cookieManager.setAcceptThirdPartyCookies(webView, false)
+        cookieManager.setAcceptThirdPartyCookies(webView, true)
 
         webView.settings.apply {
             javaScriptEnabled = true
@@ -3211,7 +3310,7 @@ open class MediaHubActivity : AppCompatActivity() {
             useWideViewPort = true
             loadWithOverviewMode = true
             cacheMode = if (isPrivate) WebSettings.LOAD_NO_CACHE else WebSettings.LOAD_DEFAULT
-            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             allowFileAccess = true
             allowContentAccess = true
             allowFileAccessFromFileURLs = true
@@ -3609,6 +3708,11 @@ open class MediaHubActivity : AppCompatActivity() {
                     return super.shouldInterceptRequest(view, request)
                 }
 
+                // Streaming media infrastructure & manifests bypass: never block streaming CDN or video players
+                if (isStreamingHost(host) || isMediaRequest) {
+                    return super.shouldInterceptRequest(view, request)
+                }
+
                 // 1. Check native Brave adblock-rust Engine for all non-YouTube websites
                 if (!isMediaRequest) {
                     val braveDecision = AdShieldApp.instance.braveEngine.checkNetworkRequest(
@@ -3683,11 +3787,15 @@ open class MediaHubActivity : AppCompatActivity() {
             override fun onPermissionRequest(request: PermissionRequest?) {
                 if (request == null) return
                 val requested = request.resources ?: emptyArray()
-                if (requested.isNotEmpty() && requested.all { it == PermissionRequest.RESOURCE_PROTECTED_MEDIA_ID }) {
-                    request.grant(requested)
+                if (requested.contains(PermissionRequest.RESOURCE_PROTECTED_MEDIA_ID)) {
+                    request.grant(arrayOf(PermissionRequest.RESOURCE_PROTECTED_MEDIA_ID))
                     return
                 }
                 runOnUiThread { handleWebPermissionRequest(webView, request) }
+            }
+
+            override fun getDefaultVideoPoster(): Bitmap? {
+                return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
             }
 
             override fun onPermissionRequestCanceled(request: PermissionRequest?) {
@@ -4105,6 +4213,9 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
         applyWebViewVisibility()
+        hideFindInPage()
+        val currentWv = current.webView
+        binding.swipeRefreshLayout.isEnabled = (currentWv?.scrollY ?: 0) <= 0 && (currentWv?.canScrollVertically(-1) != true)
         com.adshield.app.engine.VpnEngine.syncProxyForTabPrivacy(this, current.isPrivate)
         checkAndHibernateBackgroundTabs()
         if (current.shouldLoadOnSelect) {
@@ -6615,6 +6726,24 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
             } else {
                 Toast.makeText(this, "Open a website to export as PDF", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        sheetBinding.rowFindInPage.setOnClickListener {
+            dialog.dismiss()
+            showFindInPage()
+        }
+
+        sheetBinding.rowCopyLink.setOnClickListener {
+            dialog.dismiss()
+            val currentUrl = activeTab?.url ?: activeWebView?.url
+            if (!currentUrl.isNullOrBlank() && !currentUrl.contains("fokk_start.html")) {
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                val clip = ClipData.newPlainText("URL", currentUrl)
+                clipboard?.setPrimaryClip(clip)
+                Toast.makeText(this, "Link copied to clipboard", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "No active webpage to copy", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -11055,6 +11184,10 @@ open class MediaHubActivity : AppCompatActivity() {
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
+        if (binding.layoutFindInPage.visibility == View.VISIBLE) {
+            hideFindInPage()
+            return
+        }
         if (binding.urlInput.hasFocus()) {
             binding.urlInput.clearFocus()
             val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
@@ -11673,6 +11806,8 @@ open class MediaHubActivity : AppCompatActivity() {
             "yahoo.com", "yimg.com", "s.yimg.com", "v.yimg.com", "media.zenfs.com",
             "video.media.yql.yahoo.com", "yvp.yahoo.com", "sports.yahoo.com",
             "vidgyor.com", "playstream.media", "htmedia.in",
+            "turner.com", "turner.io", "warnermediacdn.com", "warnermedia.com", "cdn.turner.com",
+            "fwmrm.net", "freewheel.tv", "cnn.com", "cnn.io", "bleacherreport.net",
             "connatix.com", "cnevids.com", "anvato.net", "kaltura.com",
             "sendtonews.com", "ex.co", "playwire.com", "brid.tv", "videoelephant.com"
         )
