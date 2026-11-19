@@ -6315,7 +6315,7 @@ open class MediaHubActivity : AppCompatActivity() {
                     mimeType = "video/*",
                     isPrivate = tabIsPrivate,
                     sourceUrl = activeWebView?.url.orEmpty(),
-                    title = stream.title
+                    allowThirdPartyCookies = true
                 )
             } else {
                 activeWebView?.evaluateJavascript("""
