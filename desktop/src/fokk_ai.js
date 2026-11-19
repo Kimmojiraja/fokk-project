@@ -463,12 +463,14 @@ async function aggregateSources(query, pageTitle = '', pageHost = '', maxResults
         if (isReputableDomain(normDomain)) score += 35;
         if (src.sourceType === 'NEWS') score += 25;
 
-        // Recency bonus for modern facts
+        // Dynamic recency bonus for live/current facts (adapts dynamically to any future year)
         const tsLower = (src.timestamp || '').toLowerCase();
         const snipLower = (src.snippet || '').toLowerCase();
-        if (tsLower.includes('2026') || snipLower.includes('2026') || tsLower.includes('ago') || tsLower.includes('hour') || tsLower.includes('minute')) {
+        const currentYear = new Date().getFullYear();
+        const prevYear = currentYear - 1;
+        if (tsLower.includes(String(currentYear)) || snipLower.includes(String(currentYear)) || tsLower.includes('ago') || tsLower.includes('hour') || tsLower.includes('minute')) {
             score += 25;
-        } else if (tsLower.includes('2025') || snipLower.includes('2025')) {
+        } else if (tsLower.includes(String(prevYear)) || snipLower.includes(String(prevYear))) {
             score += 10;
         }
 
@@ -959,18 +961,26 @@ class FokkAiService {
             : [];
 
         const now = new Date();
-        const currentYear = now.getFullYear();
-        const currentDateStr = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        const fullDateTimeStr = now.toLocaleString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZoneName: 'short'
+        });
 
         const systemPrompt = [
             'You are Fokk AI, an advanced real-time AI research assistant built into Fokk Browser.',
-            `TEMPORAL BASELINE: Today is ${currentDateStr} (Year ${currentYear}).`,
+            `LIVE TEMPORAL BASELINE (EXACT CURRENT TIME): ${fullDateTimeStr}.`,
             '',
             'CORE COGNITIVE ARCHITECTURE & GROUNDING RULES:',
-            '1. REAL-TIME WORLD EVOLUTION:',
-            '   - The real world changes dynamically: government leadership, heads of state, election results, corporate executives, sports champions, geopolitical developments, scientific findings, and cultural events evolve continuously.',
-            '   - Whenever addressing real-world factual inquiries, ALWAYS prioritize the LIVE WEB SOURCES provided below over your static pretraining weights.',
-            '   - If live web sources report a recent transition, appointment, election victory, or ongoing event, faithfully report the up-to-date reality from the sources. Never revert to outdated pretraining memory.',
+            '1. REAL-TIME WORLD EVOLUTION (UP-TO-THE-MINUTE):',
+            '   - Real-world events, government leadership, heads of state, election results, corporate leadership, sports scores, market shifts, viral moments, and social media discussions evolve by the minute.',
+            `   - All facts, relative times ('5 mins ago', '1 hour ago', 'today', 'yesterday'), and entity statuses must be anchored against the live timestamp above (${fullDateTimeStr}).`,
+            '   - Whenever addressing real-world factual inquiries, ALWAYS prioritize the LIVE WEB SOURCES provided below over static pretraining weights.',
+            '   - If live web sources report a recent transition, appointment, election victory, viral quote, or breaking development, faithfully report the up-to-the-minute reality from the sources. Never revert to outdated pretraining memory.',
             '',
             '2. DYNAMIC INTENT & CONTEXT DISCRIMINATION:',
             '   - [OPEN-DOMAIN / OUT-OF-BOX INQUIRIES]: If the user asks an open-domain or general knowledge question (asking who an official is, asking about an external event, scientific or factual question while browsing an unrelated webpage), synthesize your answer directly and exclusively from the LIVE WEB SOURCES and modern knowledge. NEVER contaminate or hallucinate facts from the ACTIVE WEBPAGE CONTEXT into an unrelated open-domain question.',
