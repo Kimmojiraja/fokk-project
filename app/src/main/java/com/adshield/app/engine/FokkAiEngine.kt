@@ -233,17 +233,33 @@ object FokkAiEngine {
         val apiKey = resolveApiKey(context)
         val cleanContext = cleanDropCaps(pageContext)
 
+        val isInternalPage = pageTitle.equals("Fokk", ignoreCase = true) ||
+                pageTitle.equals("Fokk AI", ignoreCase = true) ||
+                pageHost.contains("localhost") ||
+                pageHost.contains("fokk") ||
+                pageUrl.contains("fokk_start.html") ||
+                pageUrl.contains("fokk_about.html") ||
+                pageUrl.startsWith("file://")
+
+        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        val currentDateStr = java.text.SimpleDateFormat("MMMM yyyy", Locale.US).format(java.util.Date())
+
         val systemPrompt = buildString {
             append("You are Fokk AI, a sharp, helpful, premium AI assistant built into Fokk Browser.\n")
+            append("TEMPORAL GROUNDING: The current date is $currentDateStr (Year $currentYear). Always synthesize your answer using modern, up-to-date facts grounded in the live web sources provided below. Never claim your knowledge is cutoff at mid-2024 or earlier when addressing real-world queries.\n\n")
             append("Answer the user's EXACT question directly, naturally, and concisely — like Perplexity or Claude.\n\n")
-            append("ACTIVE WEBPAGE CONTEXT:\n")
-            if (pageTitle.isNotBlank()) append("Title: $pageTitle\n")
-            if (pageHost.isNotBlank()) append("Publisher / Site: ${FokkSearchAggregator.cleanPublisherName(pageHost)} ($pageHost)\n")
-            if (pageAuthor.isNotBlank()) append("Author / Byline: $pageAuthor\n")
-            if (pagePublished.isNotBlank()) append("Published Date: $pagePublished\n")
-            if (pageUrl.isNotBlank()) append("URL: $pageUrl\n")
-            if (cleanContext.isNotBlank()) {
-                append("\nPage Content:\n${cleanContext.take(7500)}\n")
+            if (!isInternalPage) {
+                append("ACTIVE WEBPAGE CONTEXT:\n")
+                if (pageTitle.isNotBlank()) append("Title: $pageTitle\n")
+                if (pageHost.isNotBlank()) append("Publisher / Site: ${FokkSearchAggregator.cleanPublisherName(pageHost)} ($pageHost)\n")
+                if (pageAuthor.isNotBlank()) append("Author / Byline: $pageAuthor\n")
+                if (pagePublished.isNotBlank()) append("Published Date: $pagePublished\n")
+                if (pageUrl.isNotBlank()) append("URL: $pageUrl\n")
+                if (cleanContext.isNotBlank()) {
+                    append("\nPage Content:\n${cleanContext.take(7500)}\n")
+                }
+            } else {
+                append("CONTEXT: The user is asking a general web or knowledge question.\n\n")
             }
             if (externalSources.isNotEmpty()) {
                 append("\nLIVE WEB SOURCES:\n")
@@ -258,6 +274,7 @@ object FokkAiEngine {
             append("- If the user asks 'what is this' or 'summarize', give a crisp, clear synthesis in your own words (never copy-paste raw article paragraphs).\n")
             append("- If the user asks 'who posted it' or 'who wrote this', clearly state the publisher/site, author/byline (if known), and who/what the piece is about.\n")
             append("- If the user asks a general knowledge question unrelated to the page, answer it helpfully using your knowledge and the web sources.\n")
+            append("- Never cite 'Fokk' or internal browser pages as an external source for real-world topics.\n")
             append("- Use clean, readable markdown: short paragraphs, **bold key phrases**, and concise bullet points only when helpful.\n")
             append("- Cite external web sources naturally with [1], [2] only when actually drawing from them.\n")
             append("- Keep the tone calm, intelligent, and concise. Avoid robotic jargon or repeating previous answers.\n")
