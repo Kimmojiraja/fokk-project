@@ -51,9 +51,13 @@ object FokkSearchAggregator {
         "pressreader.com", "pinterest.com", "quora.com", "brainly.com",
         "brainly.in", "chegg.com", "scribd.com", "slideshare.net",
         "ebay.com", "amazon.com", "aliexpress.com", "walmart.com",
-        "etsy.com", "tiktok.com", "facebook.com", "instagram.com",
-        "linkedin.com", "youtube.com", "youtu.be", "fixthecourt.com",
+        "etsy.com", "fixthecourt.com",
         "duckduckgo.com", "bing.com", "google.com", "msn.com"
+    )
+
+    private val SOCIAL_DOMAINS = setOf(
+        "reddit.com", "x.com", "twitter.com", "bsky.app", "threads.net",
+        "instagram.com", "facebook.com", "youtube.com", "youtu.be", "tiktok.com"
     )
 
     private val REPUTABLE_DOMAINS = setOf(
@@ -85,6 +89,11 @@ object FokkSearchAggregator {
         return BLOCKED_DOMAINS.any { blocked -> d == blocked || d.endsWith(".$blocked") }
     }
 
+    fun isSocialDomain(domain: String): Boolean {
+        val d = domain.lowercase(Locale.ROOT).removePrefix("www.")
+        return SOCIAL_DOMAINS.any { s -> d == s || d.endsWith(".$s") }
+    }
+
     fun isReputableDomain(domain: String): Boolean {
         val d = domain.lowercase(Locale.ROOT).removePrefix("www.")
         if (d.endsWith(".gov") || d.endsWith(".gov.uk") || d.endsWith(".edu") || d.endsWith(".ac.uk")) return true
@@ -94,6 +103,14 @@ object FokkSearchAggregator {
     fun cleanPublisherName(domain: String): String {
         val d = domain.lowercase(Locale.ROOT).removePrefix("www.")
         return when {
+            d.contains("reddit.com") -> "Reddit"
+            d.contains("x.com") || d.contains("twitter.com") -> "X"
+            d.contains("bsky.app") -> "Bluesky"
+            d.contains("threads.net") -> "Threads"
+            d.contains("instagram.com") -> "Instagram"
+            d.contains("facebook.com") -> "Facebook"
+            d.contains("youtube.com") || d.contains("youtu.be") -> "YouTube"
+            d.contains("tiktok.com") -> "TikTok"
             d.contains("independent.co.uk") -> "The Independent"
             d.contains("thetimes.com") || d.contains("thetimes.co.uk") -> "The Times"
             d.contains("thestandard.co.uk") -> "The Standard"
@@ -137,6 +154,66 @@ object FokkSearchAggregator {
     }
 
     /**
+     * Intelligently strips conversational filler ("no something i have seen that", "i saw that", etc.),
+     * corrects common entity transliterations/typos (e.g. "mode" -> "modi"), and generates targeted
+     * search queries (distilled query, entity focus query, raw query) for multi-faceted news fetching.
+     */
+    fun extractSearchQueries(rawQuery: String): List<String> {
+        val q = rawQuery.trim()
+        if (q.isBlank()) return emptyList()
+
+        // 1. Strip conversational preamble/fillers
+        var cleaned = q
+        val conversationalPatterns = listOf(
+            Regex("""^(?:no\s+|yes\s+)?(?:something\s+)?(?:i\s+have\s+seen|i\s+saw|i\s+heard|i\s+think|i\s+read)\s+(?:that\s+)?""", RegexOption.IGNORE_CASE),
+            Regex("""^(?:can\s+you\s+tell\s+me|tell\s+me|do\s+you\s+know|what\s+about|what\s+is|what\s+happened\s+with)\s+""", RegexOption.IGNORE_CASE),
+            Regex("""^(?:is\s+it\s+true\s+that|there\s+was\s+(?:an?\s+)?incident\s+where)\s+""", RegexOption.IGNORE_CASE)
+        )
+        for (pattern in conversationalPatterns) {
+            cleaned = cleaned.replace(pattern, "")
+        }
+
+        // 2. Normalize geopolitical/news entities and common typos
+        cleaned = cleaned.replace(Regex("""\bmode\b""", RegexOption.IGNORE_CASE), "modi")
+        cleaned = cleaned.replace(Regex("""\bgta6\b""", RegexOption.IGNORE_CASE), "gta 6")
+        cleaned = cleaned.replace(Regex("""\bgta v\b""", RegexOption.IGNORE_CASE), "gta 5")
+
+        // 3. Extract key topical terms
+        val conversationalStopWords = setOf(
+            "don't", "dont", "want", "while", "is", "are", "the", "a", "an",
+            "and", "in", "on", "at", "for", "with", "that", "this",
+            "just", "something", "have", "seen", "like", "from"
+        )
+        val meaningfulTokens = cleaned.lowercase(Locale.ROOT)
+            .split(Regex("[^a-z0-9]+"))
+            .filter { it.length >= 3 && !conversationalStopWords.contains(it) }
+
+        val variants = mutableListOf<String>()
+
+        // Variant 1: Distilled topical terms (e.g. "modi stand trump answering journalist")
+        if (meaningfulTokens.size >= 2) {
+            variants.add(meaningfulTokens.take(6).joinToString(" "))
+        }
+
+        // Variant 2: Specific high-signal entity pairs (e.g. if modi and trump both present)
+        val tokenSet = meaningfulTokens.toSet()
+        if (tokenSet.contains("modi") && tokenSet.contains("trump")) {
+            variants.add("modi trump photo op")
+            variants.add("modi trump")
+        } else if (meaningfulTokens.size >= 2) {
+            variants.add(meaningfulTokens.take(2).joinToString(" "))
+        }
+
+        // Variant 3: Cleaned query (without conversational opening)
+        val cleanedOneLine = cleaned.replace(Regex("""\s+"""), " ").trim()
+        if (cleanedOneLine.isNotBlank() && !variants.contains(cleanedOneLine)) {
+            variants.add(cleanedOneLine.take(90))
+        }
+
+        return variants.distinct().filter { it.isNotBlank() }
+    }
+
+    /**
      * Aggregates intelligence across all sources in parallel, filtering out spam
      * and irrelevant hits while ranking reputable sources first.
      */
@@ -155,8 +232,11 @@ object FokkSearchAggregator {
                 pageHost.contains("fokk") ||
                 pageTitle.startsWith("New Tab", ignoreCase = true)
 
+        val searchVariants = extractSearchQueries(cleanQuery)
+        val primaryQuery = searchVariants.firstOrNull() ?: cleanQuery
+
         // Extract meaningful topic keywords for relevance filtering (allow 3+ letter terms like gta, ai, war)
-        val anchorText = if (pageTitle.isNotBlank() && !isInternalPage) "$pageTitle $cleanQuery" else cleanQuery
+        val anchorText = if (pageTitle.isNotBlank() && !isInternalPage) "$pageTitle $primaryQuery" else "$primaryQuery $cleanQuery"
         val topicKeywords = anchorText.lowercase(Locale.ROOT)
             .split(Regex("[^a-z0-9]+"))
             .filter { it.length >= 3 && !QUERY_STOP_WORDS.contains(it) }
@@ -164,13 +244,19 @@ object FokkSearchAggregator {
             .take(12)
 
         coroutineScope {
-            val newsDeferred = async { fetchGoogleNews(cleanQuery, max = 5) }
-            val ddgDeferred = async { fetchDuckDuckGoHtml(cleanQuery, max = 6) }
-            val wikiDeferred = async { fetchWikipedia(cleanQuery, max = 3) }
-            val wikidataDeferred = async { fetchWikidata(cleanQuery, max = 1) }
+            val newsDeferreds = searchVariants.take(3).map { q ->
+                async { fetchGoogleNews(q, max = 5) }
+            }
+            val ddgDeferred = async { fetchDuckDuckGoHtml(primaryQuery, max = 6) }
+            val socialDeferred = async {
+                fetchDuckDuckGoHtml("$primaryQuery (site:reddit.com OR site:x.com OR site:bsky.app OR site:youtube.com)", max = 4)
+            }
+            val wikiDeferred = async { fetchWikipedia(searchVariants.getOrNull(1) ?: primaryQuery, max = 3) }
+            val wikidataDeferred = async { fetchWikidata(searchVariants.getOrNull(1) ?: primaryQuery, max = 1) }
 
-            val newsResults = runCatching { newsDeferred.await() }.getOrDefault(emptyList())
+            val newsResults = newsDeferreds.flatMap { runCatching { it.await() }.getOrDefault(emptyList()) }
             val ddgResults = runCatching { ddgDeferred.await() }.getOrDefault(emptyList())
+            val socialResults = runCatching { socialDeferred.await() }.getOrDefault(emptyList())
             val wikiResults = runCatching { wikiDeferred.await() }.getOrDefault(emptyList())
             val wikidataResults = runCatching { wikidataDeferred.await() }.getOrDefault(emptyList())
 
@@ -199,6 +285,10 @@ object FokkSearchAggregator {
                 var score = baseScore + (keywordHits * 10)
                 if (isReputableDomain(normDomain)) score += 35
                 if (src.sourceType == "NEWS") score += 20
+                if (src.sourceType == "SOCIAL") {
+                    // Social posts provide viral/community context; score reasonably with keyword relevance
+                    score = baseScore + (keywordHits * 8)
+                }
 
                 seenUrls.add(normUrl)
                 seenDomains.add(normDomain)
@@ -207,6 +297,7 @@ object FokkSearchAggregator {
 
             newsResults.forEach { evaluateAndAdd(it, baseScore = 40, strictRelevance = true) }
             ddgResults.forEach { evaluateAndAdd(it, baseScore = 20, strictRelevance = true) }
+            socialResults.forEach { evaluateAndAdd(it, baseScore = 15, strictRelevance = true) }
 
             // Include Wikipedia/Wikidata when query matches topic
             wikiResults.forEach { w ->
@@ -345,7 +436,11 @@ object FokkSearchAggregator {
                     val domain = runCatching { Uri.parse(targetUrl).host }.getOrNull().orEmpty().removePrefix("www.")
 
                     if (cleanTitle.isNotBlank() && targetUrl.startsWith("http") && domain.isNotBlank() && !isBlockedDomain(domain)) {
-                        val sourceType = if (isReputableDomain(domain) && !domain.contains("wikipedia")) "NEWS" else "WEB"
+                        val sourceType = when {
+                            isSocialDomain(domain) -> "SOCIAL"
+                            isReputableDomain(domain) && !domain.contains("wikipedia") -> "NEWS"
+                            else -> "WEB"
+                        }
                         results.add(
                             CorroboratedSource(
                                 title = cleanTitle,
