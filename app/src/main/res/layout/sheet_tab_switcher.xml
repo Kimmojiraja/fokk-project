@@ -1,178 +1,171 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootTabSwitcher"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:background="#0A0A0A"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:layout_height="match_parent"
+    android:background="#0B0F17">
 
-    <!-- Modern obsidian drag handle indicator -->
-    <View
-        android:layout_width="36dp"
-        android:layout_height="4dp"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="12dp"
-        android:background="#27272A" />
-
-    <!-- PINNED TOP ACTION HEADER (Always visible even with 7+, 12+, 50+ tabs) -->
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="42dp"
-        android:layout_marginBottom="12dp"
-        android:gravity="center_vertical">
-
-        <!-- Left: Close All Tabs Button -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnCloseAllTabs"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="38dp"
-            android:layout_alignParentStart="true"
-            android:layout_centerVertical="true"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:paddingHorizontal="10dp"
-            android:text="Close All"
-            android:textColor="#EF4444"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            app:icon="@drawable/ic_close"
-            app:iconSize="14dp"
-            app:iconTint="#EF4444"
-            app:rippleColor="#33EF4444" />
-
-        <!-- Right actions: + Ghost Tab & [+] New Tab -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnNewPrivateTab"
-                style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="wrap_content"
-                android:layout_height="38dp"
-                android:layout_marginEnd="8dp"
-                android:backgroundTint="#1F1329"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:paddingHorizontal="12dp"
-                android:text="+ Ghost"
-                android:textColor="#D8B4FE"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                app:cornerRadius="12dp"
-                app:rippleColor="#40C084FC" />
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/btnNewTabSheet"
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="#FFFFFF"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:rippleColor="#33000000"
-                app:strokeWidth="0dp">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_add"
-                    app:tint="#000000" />
-            </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
-    </RelativeLayout>
-
-    <!-- Tab Search Bar to quickly find and filter open tabs -->
+    <!-- Top Opera-Style Navigation Header -->
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="42dp"
-        android:layout_marginBottom="10dp"
-        android:background="@drawable/bg_search_pill"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingHorizontal="12dp">
-
-        <ImageView
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:src="@drawable/ic_search"
-            app:tint="#71717A" />
-
-        <EditText
-            android:id="@+id/editSearchTabs"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:layout_marginStart="10dp"
-            android:layout_marginEnd="6dp"
-            android:background="@null"
-            android:hint="Search tabs by title or URL..."
-            android:imeOptions="actionDone"
-            android:inputType="text"
-            android:maxLines="1"
-            android:textColor="#FFFFFF"
-            android:textColorHint="#71717A"
-            android:textSize="13sp" />
-
-        <ImageButton
-            android:id="@+id/btnClearTabSearch"
-            android:layout_width="26dp"
-            android:layout_height="26dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_close"
-            android:visibility="gone"
-            app:tint="#A1A1AA" />
-    </LinearLayout>
-
-    <!-- AMOLED Obsidian Category Switcher (Tabs vs Ghost Mode) -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:layout_marginBottom="12dp"
-        android:background="#141416"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="3dp">
-
-        <TextView
-            android:id="@+id/btnFilterNormal"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="@drawable/bg_stat_chip"
-            android:gravity="center"
-            android:text="Tabs (1)"
-            android:textColor="#FFFFFF"
-            android:textSize="12.5sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/btnFilterPrivate"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="Ghost Mode (0)"
-            android:textColor="#71717A"
-            android:textSize="12.5sp"
-            android:textStyle="bold" />
-    </LinearLayout>
-
-    <!-- Scrollable 2-column Tab Cards Grid -->
-    <androidx.core.widget.NestedScrollView
+        android:id="@+id/layoutTabsTopBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="6dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="44dp">
+
+            <!-- Tabs / Private Categories with underline -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_alignParentStart="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <!-- Normal Tabs Option -->
+                <LinearLayout
+                    android:id="@+id/btnFilterNormal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="4dp">
+
+                    <TextView
+                        android:id="@+id/textNormalTabsTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Tabs"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <View
+                        android:id="@+id/indicatorNormalUnderline"
+                        android:layout_width="32dp"
+                        android:layout_height="3dp"
+                        android:layout_marginTop="3dp"
+                        android:background="#FFFFFF" />
+                </LinearLayout>
+
+                <!-- Private / Ghost Mode Option -->
+                <LinearLayout
+                    android:id="@+id/btnFilterPrivate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="24dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="4dp">
+
+                    <TextView
+                        android:id="@+id/textPrivateTabsTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Private"
+                        android:textColor="#71717A"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <View
+                        android:id="@+id/indicatorPrivateUnderline"
+                        android:layout_width="32dp"
+                        android:layout_height="3dp"
+                        android:layout_marginTop="3dp"
+                        android:background="@android:color/transparent" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Search Action Button on Header Right -->
+            <FrameLayout
+                android:id="@+id/btnToggleTabSearch"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="Search open tabs">
+
+                <ImageView
+                    android:id="@+id/imgSearchHeaderIcon"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_search"
+                    app:tint="#FFFFFF" />
+            </FrameLayout>
+        </RelativeLayout>
+
+        <!-- Expandable Search Input Row -->
+        <LinearLayout
+            android:id="@+id/layoutTabSearchBar"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_search_pill"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_search"
+                app:tint="#71717A" />
+
+            <EditText
+                android:id="@+id/editSearchTabs"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="6dp"
+                android:background="@null"
+                android:hint="Search tabs by title or URL..."
+                android:imeOptions="actionDone"
+                android:inputType="text"
+                android:maxLines="1"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#71717A"
+                android:textSize="13sp" />
+
+            <ImageButton
+                android:id="@+id/btnClearTabSearch"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_close"
+                android:visibility="gone"
+                app:tint="#A1A1AA"
+                android:contentDescription="Clear tab search" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Scrollable 2-Column Tab Grid -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scrollTabsGrid"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/layoutTabsTopBar"
+        android:layout_above="@id/cardBottomPill"
         android:clipToPadding="false"
-        android:paddingBottom="24dp"
-        android:maxHeight="480dp">
+        android:paddingHorizontal="10dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="12dp">
 
         <LinearLayout
             android:id="@+id/layoutTabsGrid"
@@ -181,4 +174,152 @@
             android:orientation="vertical" />
     </androidx.core.widget.NestedScrollView>
 
-</LinearLayout>
+    <!-- Opera-Style Floating Bottom Navigation Pill Bar -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardBottomPill"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="16dp"
+        app:cardBackgroundColor="#18181B"
+        app:cardCornerRadius="32dp"
+        app:cardElevation="12dp"
+        app:strokeColor="#27272A"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- 1. Tab Switcher Icon (Far Left) -->
+            <FrameLayout
+                android:id="@+id/btnBottomTabs"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="Tabs list">
+
+                <ImageView
+                    android:id="@+id/imgBottomTabs"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_tab_windows"
+                    app:tint="#FFFFFF" />
+            </FrameLayout>
+
+            <!-- 2. History Clock Icon -->
+            <FrameLayout
+                android:id="@+id/btnBottomHistory"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="Browsing History">
+
+                <ImageView
+                    android:id="@+id/imgBottomHistory"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_history"
+                    app:tint="#A1A1AA" />
+            </FrameLayout>
+
+            <!-- 3. Prominent Circular Central New Tab Button -->
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_marginHorizontal="6dp"
+                android:gravity="center">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/btnNewTabSheet"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:layout_gravity="center"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="#FFFFFF"
+                    app:cardCornerRadius="25dp"
+                    app:cardElevation="4dp"
+                    app:strokeWidth="0dp">
+
+                    <ImageView
+                        android:id="@+id/imgCentralPlusIcon"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_add"
+                        app:tint="#0B0F17" />
+                </com.google.android.material.card.MaterialCardView>
+            </FrameLayout>
+
+            <!-- 4. Tab Counter Box -->
+            <FrameLayout
+                android:id="@+id/btnBottomTabCount"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="Active tab count">
+
+                <TextView
+                    android:id="@+id/textTabCountBadge"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_tab_counter_box"
+                    android:gravity="center"
+                    android:text="1"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11.5sp"
+                    android:textStyle="bold" />
+            </FrameLayout>
+
+            <!-- 5. Three Dots Menu Icon (Far Right) -->
+            <FrameLayout
+                android:id="@+id/btnBottomMenu"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="Tab options menu">
+
+                <ImageView
+                    android:id="@+id/imgBottomMenu"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_more_vert"
+                    app:tint="#A1A1AA" />
+            </FrameLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Compatibility Invisible Views for Seamless Build & API Compatibility -->
+    <View
+        android:id="@+id/btnCloseAllTabs"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
+
+    <View
+        android:id="@+id/btnNewPrivateTab"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
+
+</RelativeLayout>

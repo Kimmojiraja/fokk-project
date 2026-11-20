@@ -495,172 +495,35 @@
         android:visibility="gone" />
 
     <!-- Top 10 Recent Browsing History Dropdown Overlay -->
+    <!-- Modern Premium Suggestions & History Card Overlay -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardSuggestions"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="8dp"
+        android:layout_marginHorizontal="12dp"
         android:layout_alignParentBottom="true"
         android:layout_marginBottom="76dp"
         android:visibility="gone"
-        app:cardBackgroundColor="#111624"
-        app:cardCornerRadius="14dp"
-        app:cardElevation="16dp"
-        app:strokeColor="#2A3A54"
-        app:strokeWidth="1.2dp">
+        app:cardBackgroundColor="#131B2E"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="14dp"
+        app:strokeColor="#24344D"
+        app:strokeWidth="1dp">
 
-        <LinearLayout
+        <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <!-- Firefox-Style Search Engine Quick Switcher Strip -->
-            <LinearLayout
-                android:id="@+id/layoutEngineQuickSwitch"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingHorizontal="14dp"
-                android:paddingTop="10dp"
-                android:paddingBottom="8dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="SEARCH WITH"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.08" />
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:layout_weight="1" />
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <!-- Bing -->
-                    <FrameLayout
-                        android:id="@+id/btnQuickEngineBing"
-                        android:layout_width="34dp"
-                        android:layout_height="34dp"
-                        android:layout_marginStart="4dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:contentDescription="Search with Bing">
-
-                        <ImageView
-                            android:id="@+id/imgQuickEngineBing"
-                            android:layout_width="22dp"
-                            android:layout_height="22dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_engine_bing" />
-                    </FrameLayout>
-
-                    <!-- Ecosia -->
-                    <FrameLayout
-                        android:id="@+id/btnQuickEngineEcosia"
-                        android:layout_width="34dp"
-                        android:layout_height="34dp"
-                        android:layout_marginStart="4dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:contentDescription="Search with Ecosia">
-
-                        <ImageView
-                            android:id="@+id/imgQuickEngineEcosia"
-                            android:layout_width="22dp"
-                            android:layout_height="22dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_engine_ecosia" />
-                    </FrameLayout>
-
-                    <!-- Google -->
-                    <FrameLayout
-                        android:id="@+id/btnQuickEngineGoogle"
-                        android:layout_width="34dp"
-                        android:layout_height="34dp"
-                        android:layout_marginStart="4dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:contentDescription="Search with Google">
-
-                        <ImageView
-                            android:id="@+id/imgQuickEngineGoogle"
-                            android:layout_width="22dp"
-                            android:layout_height="22dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_engine_google" />
-                    </FrameLayout>
-
-                    <!-- DuckDuckGo -->
-                    <FrameLayout
-                        android:id="@+id/btnQuickEngineDuckDuckGo"
-                        android:layout_width="34dp"
-                        android:layout_height="34dp"
-                        android:layout_marginStart="4dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:contentDescription="Search with DuckDuckGo">
-
-                        <ImageView
-                            android:id="@+id/imgQuickEngineDuckDuckGo"
-                            android:layout_width="22dp"
-                            android:layout_height="22dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_engine_duckduckgo" />
-                    </FrameLayout>
-
-                    <!-- Yahoo -->
-                    <FrameLayout
-                        android:id="@+id/btnQuickEngineYahoo"
-                        android:layout_width="34dp"
-                        android:layout_height="34dp"
-                        android:layout_marginStart="4dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:contentDescription="Search with Yahoo">
-
-                        <ImageView
-                            android:id="@+id/imgQuickEngineYahoo"
-                            android:layout_width="22dp"
-                            android:layout_height="22dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_engine_yahoo" />
-                    </FrameLayout>
-                </LinearLayout>
-            </LinearLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="#24344D" />
-
-            <androidx.core.widget.NestedScrollView
-                android:layout_width="match_parent"
-                android:layout_height="240dp"
-                android:fillViewport="true"
-                android:overScrollMode="ifContentScrolls">
+            android:layout_height="250dp"
+            android:fillViewport="true"
+            android:overScrollMode="ifContentScrolls">
 
             <LinearLayout
                 android:id="@+id/layoutSuggestionsList"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="8dp" />
-            </androidx.core.widget.NestedScrollView>
-        </LinearLayout>
+                android:paddingVertical="6dp"
+                android:paddingHorizontal="4dp" />
+        </androidx.core.widget.NestedScrollView>
     </com.google.android.material.card.MaterialCardView>
 
     <!-- Fullscreen Video Container -->

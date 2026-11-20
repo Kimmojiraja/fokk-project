@@ -235,13 +235,68 @@ object VpnEngine {
         "IN" -> com.adshield.app.R.drawable.ic_flag_in
         "FR" -> com.adshield.app.R.drawable.ic_flag_fr
         "SE" -> com.adshield.app.R.drawable.ic_flag_se
+        "FI" -> com.adshield.app.R.drawable.ic_flag_fi
         "BR" -> com.adshield.app.R.drawable.ic_flag_br
         "CH" -> com.adshield.app.R.drawable.ic_flag_ch
         "IT" -> com.adshield.app.R.drawable.ic_flag_it
+        "ES" -> com.adshield.app.R.drawable.ic_flag_es
+        "NO" -> com.adshield.app.R.drawable.ic_flag_no
+        "AU" -> com.adshield.app.R.drawable.ic_flag_au
+        "PL" -> com.adshield.app.R.drawable.ic_flag_pl
+        "MX" -> com.adshield.app.R.drawable.ic_flag_mx
+        "DK" -> com.adshield.app.R.drawable.ic_flag_dk
+        "IE" -> com.adshield.app.R.drawable.ic_flag_ie
+        "BE" -> com.adshield.app.R.drawable.ic_flag_be
+        "AT" -> com.adshield.app.R.drawable.ic_flag_at
+        "PT" -> com.adshield.app.R.drawable.ic_flag_pt
+        "UA" -> com.adshield.app.R.drawable.ic_flag_ua
+        "NZ" -> com.adshield.app.R.drawable.ic_flag_gb
+        "TW" -> com.adshield.app.R.drawable.ic_flag_hk
         "AM" -> com.adshield.app.R.drawable.ic_flag_us
         "EU" -> com.adshield.app.R.drawable.ic_flag_gb
         "AS" -> com.adshield.app.R.drawable.ic_flag_jp
         else -> com.adshield.app.R.drawable.ic_flag_optimal
+    }
+
+    fun getCountryFlagDrawable(context: Context, code: String): android.graphics.drawable.Drawable {
+        val upper = code.uppercase(java.util.Locale.ROOT).trim()
+        val res = getRegionFlagRes(upper)
+        if (res != com.adshield.app.R.drawable.ic_flag_optimal) {
+            val d = androidx.core.content.ContextCompat.getDrawable(context, res)
+            if (d != null) return d
+        }
+        if (upper == "SMART_CLOAK" || upper == "AUTO" || upper == "OPTIMAL" || upper == "EDGE" || upper == "HOME_BASE") {
+            return androidx.core.content.ContextCompat.getDrawable(context, com.adshield.app.R.drawable.ic_flag_optimal)
+                ?: android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+        }
+        // Dynamically synthesize a crisp circular 2-letter ISO country badge
+        val sizePx = (36 * context.resources.displayMetrics.density).toInt().coerceAtLeast(36)
+        val bitmap = android.graphics.Bitmap.createBitmap(sizePx, sizePx, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+
+        // Slate circular background
+        paint.color = android.graphics.Color.parseColor("#1E293B")
+        paint.style = android.graphics.Paint.Style.FILL
+        canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f, paint)
+
+        // Cyan outer border ring
+        paint.color = android.graphics.Color.parseColor("#38BDF8")
+        paint.style = android.graphics.Paint.Style.STROKE
+        paint.strokeWidth = 1.5f * context.resources.displayMetrics.density
+        canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f - paint.strokeWidth / 2f, paint)
+
+        // 2-letter ISO country code label
+        paint.style = android.graphics.Paint.Style.FILL
+        paint.color = android.graphics.Color.WHITE
+        paint.textSize = sizePx * 0.42f
+        paint.typeface = android.graphics.Typeface.DEFAULT_BOLD
+        paint.textAlign = android.graphics.Paint.Align.CENTER
+        val yPos = (sizePx / 2f - (paint.descent() + paint.ascent()) / 2f)
+        val label = if (upper.length <= 3) upper else upper.take(2)
+        canvas.drawText(label, sizePx / 2f, yPos, paint)
+
+        return android.graphics.drawable.BitmapDrawable(context.resources, bitmap)
     }
 
     enum class VpnMode(val id: String, val title: String, val defaultProxy: String) {
