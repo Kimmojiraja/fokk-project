@@ -17,7 +17,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
           fetch-depth: 0
 
       - name: Set up Python 3.11
@@ -53,18 +52,17 @@ jobs:
 
           cp /tmp/nodes_manifest.json nodes_manifest.json
           cp /tmp/nodes.json nodes.json
-          git add nodes_manifest.json nodes.json
+          git add -f nodes_manifest.json nodes.json
 
           if ! git diff --staged --quiet; then
             git commit -m "chore(sentinel): publish verified Fokk Mesh manifest [skip ci]"
-            git push origin mesh-manifest
+            git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:mesh-manifest
             echo "Published live manifest to mesh-manifest branch."
           else
             echo "mesh-manifest branch already up to date."
           fi
 
-          # Return to triggering branch
-          git checkout -f ${{ github.ref_name }}
+          # Ensure manifest files remain available in working directory for subsequent steps
           cp /tmp/nodes_manifest.json nodes_manifest.json
           cp /tmp/nodes.json nodes.json
 

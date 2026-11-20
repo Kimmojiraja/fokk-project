@@ -3445,63 +3445,38 @@ open class MediaHubActivity : AppCompatActivity() {
         val slideDistance = barHeight + (8 * density)
 
         binding.layoutCollapsedBar.visibility = View.GONE
-        val containerLp = binding.mainContentLayout.layoutParams as? RelativeLayout.LayoutParams
 
         val isHome = isHomePageUrl(activeWebView?.url)
         if (isHome) {
             binding.topBar.visibility = View.GONE
             browserChromeHidden = false
-            containerLp?.let {
-                it.topMargin = 0
-                it.bottomMargin = 0
-                binding.mainContentLayout.layoutParams = it
-            }
-            binding.mainContentLayout.translationY = 0f
             return
         }
-
-        binding.mainContentLayout.translationY = 0f
 
         if (visible) {
             if (!browserChromeHidden) return
             browserChromeHidden = false
-            ignoreScrollUntilMs = System.currentTimeMillis() + 350L
-
-            // Restore margin so the bar docks cleanly without covering page content
-            containerLp?.let {
-                val targetTop = if (isTop) (56 * density).toInt() else 0
-                val targetBottom = if (isTop) 0 else (56 * density).toInt()
-                if (it.topMargin != targetTop || it.bottomMargin != targetBottom) {
-                    it.topMargin = targetTop
-                    it.bottomMargin = targetBottom
-                    binding.mainContentLayout.layoutParams = it
-                }
-            }
+            ignoreScrollUntilMs = System.currentTimeMillis() + 250L
 
             binding.topBar.animate().cancel()
-            binding.topBar.translationY = 0f
-            binding.topBar.alpha = 1f
             binding.topBar.visibility = View.VISIBLE
+            binding.topBar.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(180)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .start()
         } else {
             if (browserChromeHidden || binding.urlInput.hasFocus()) return
             browserChromeHidden = true
-            ignoreScrollUntilMs = System.currentTimeMillis() + 350L
-
-            // Expand webpage to fill 100% full screen when bar collapses (zero empty space)
-            containerLp?.let {
-                if (it.topMargin != 0 || it.bottomMargin != 0) {
-                    it.topMargin = 0
-                    it.bottomMargin = 0
-                    binding.mainContentLayout.layoutParams = it
-                }
-            }
+            ignoreScrollUntilMs = System.currentTimeMillis() + 250L
 
             val targetY = if (isTop) -slideDistance else slideDistance
             binding.topBar.animate().cancel()
             binding.topBar.animate()
                 .alpha(0f)
                 .translationY(targetY)
-                .setDuration(160)
+                .setDuration(180)
                 .setInterpolator(android.view.animation.AccelerateInterpolator())
                 .withEndAction {
                     if (browserChromeHidden) binding.topBar.visibility = View.GONE
@@ -3703,6 +3678,8 @@ open class MediaHubActivity : AppCompatActivity() {
                 loadingTab?.thirdPartyRequests = 0
                 loadingTab?.thirdPartyRequestHosts?.clear()
                 if (view == activeWebView) {
+                    cachedAiSummaryUrl = null
+                    cachedAiSummaryJson = null
                     val isStartPage = isHomePageUrl(pageUrl)
                     if (isStartPage) {
                         binding.topBar.visibility = View.GONE
@@ -4257,6 +4234,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 if (System.currentTimeMillis() < ignoreScrollUntilMs) return@setOnScrollChangeListener
                 val currentUrl = activeWebView?.url.orEmpty()
                 val isShorts = currentUrl.contains("/shorts/") || currentUrl.contains("tiktok.com") || currentUrl.contains("instagram.com/reels")
+                val isGoogleImageSearch = currentUrl.contains("google.") && (currentUrl.contains("tbm=isch") || currentUrl.contains("udm=2") || currentUrl.contains("/imgres"))
                 val dy = scrollY - oldScrollY
                 binding.topBar.removeCallbacks(showChromeOnIdleRunnable)
 
@@ -4266,10 +4244,22 @@ open class MediaHubActivity : AppCompatActivity() {
                     return@setOnScrollChangeListener
                 }
 
-                if (dy > 18 && scrollY > 100) {
+                val density = resources.displayMetrics.density
+                val scrollThreshold = (32 * density).toInt().coerceAtLeast(70)
+                val minScrollToHide = (140 * density).toInt()
+
+                // On Google Images, keep the bottom bar docked to avoid flickering while tapping or inspecting thumbnails
+                if (isGoogleImageSearch) {
+                    if (browserChromeHidden && scrollY < (40 * density).toInt()) {
+                        setBrowserChromeVisible(true)
+                    }
+                    return@setOnScrollChangeListener
+                }
+
+                if (dy > scrollThreshold && scrollY > minScrollToHide) {
                     setBrowserChromeVisible(false)
                     binding.cardSuggestions.visibility = View.GONE
-                } else if (!isShorts && (dy < -18 || scrollY < 25)) {
+                } else if (!isShorts && (dy < -scrollThreshold || scrollY < (25 * density).toInt())) {
                     setBrowserChromeVisible(true)
                 }
             }
@@ -9004,6 +8994,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 sheetBinding.editAiUserQuestion.setHintTextColor(Color.parseColor("#64748B"))
                 sheetBinding.btnAiVoiceInput.imageTintList = ColorStateList.valueOf(Color.parseColor("#0F172A"))
                 sheetBinding.btnSendAiQuestion.imageTintList = ColorStateList.valueOf(Color.parseColor("#0F172A"))
+                sheetBinding.btnRefreshAiSummary.imageTintList = ColorStateList.valueOf(Color.parseColor("#475569"))
             }
 
             val density = resources.displayMetrics.density
@@ -9682,6 +9673,17 @@ open class MediaHubActivity : AppCompatActivity() {
             // Button Listeners
             sheetBinding.btnCloseSummary.setOnClickListener { sheetDialog.dismiss() }
             sheetBinding.btnAiHistory.setOnClickListener { showAiHistorySheet() }
+            sheetBinding.btnRefreshAiSummary.setOnClickListener {
+                sheetDialog.dismiss()
+                cachedAiSummaryUrl = null
+                cachedAiSummaryJson = null
+                sessionKey.let { aiChatSessions.remove(it) }
+                lastAiPageContext = ""
+                Toast.makeText(this@MediaHubActivity, "AI cache cleared. Fetching fresh analysis...", Toast.LENGTH_SHORT).show()
+                mainHandler.postDelayed({
+                    showSmartPageSummaryDialog(0)
+                }, 200L)
+            }
             sheetBinding.btnSummaryTrustPill.setOnClickListener { switchAiMode(2) }
 
             sheetBinding.btnCopySummary.setOnClickListener {
