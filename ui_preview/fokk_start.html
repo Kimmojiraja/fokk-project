@@ -674,9 +674,20 @@
         }
 
         /* INCOGNITO STEALTH FULL SCREEN MODE */
-        body.incognito-stealth-mode {
+        body.incognito-stealth-mode,
+        body.incognito-stealth-mode#pageBody,
+        body.light-theme.incognito-stealth-mode,
+        body.light-theme.incognito-stealth-mode#pageBody {
             background: #000000 !important;
             background-image: none !important;
+            --bg-color: #000000;
+            --surface-card: #121824;
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+            --tile-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+            color: #F8FAFC !important;
         }
         body.incognito-stealth-mode .home-essentials-strip,
         body.incognito-stealth-mode .features-strip,
@@ -688,11 +699,79 @@
         body.incognito-stealth-mode .home-trending-scroll,
         body.incognito-stealth-mode #homeTrendingSection,
         body.incognito-stealth-mode .trending-pulse-section,
-        body.incognito-stealth-mode .pulse-news-list {
+        body.incognito-stealth-mode .pulse-news-list,
+        body.light-theme.incognito-stealth-mode .home-essentials-strip,
+        body.light-theme.incognito-stealth-mode .features-strip,
+        body.light-theme.incognito-stealth-mode .home-live-music-card,
+        body.light-theme.incognito-stealth-mode .hero-spacer,
+        body.light-theme.incognito-stealth-mode .shortcuts-bottom-section,
+        body.light-theme.incognito-stealth-mode .live-pulse-section,
+        body.light-theme.incognito-stealth-mode .home-trending-section,
+        body.light-theme.incognito-stealth-mode .home-trending-scroll,
+        body.light-theme.incognito-stealth-mode #homeTrendingSection,
+        body.light-theme.incognito-stealth-mode .trending-pulse-section,
+        body.light-theme.incognito-stealth-mode .pulse-news-list {
             display: none !important;
         }
-        body.incognito-stealth-mode .incognito-stealth-hero {
+        body.incognito-stealth-mode .incognito-stealth-hero,
+        body.light-theme.incognito-stealth-mode .incognito-stealth-hero {
             display: flex !important;
+        }
+        body.incognito-stealth-mode .hero-wordmark,
+        body.incognito-stealth-mode .brand-title-hero,
+        body.incognito-stealth-mode .stealth-hero-title,
+        body.light-theme.incognito-stealth-mode .hero-wordmark,
+        body.light-theme.incognito-stealth-mode .brand-title-hero,
+        body.light-theme.incognito-stealth-mode .stealth-hero-title {
+            color: #F8FAFC !important;
+        }
+        body.incognito-stealth-mode .start-command-card,
+        body.light-theme.incognito-stealth-mode .start-command-card {
+            background: #0B0F19 !important;
+            border-color: rgba(255, 255, 255, 0.16) !important;
+            box-shadow: 0 10px 32px rgba(0, 0, 0, 0.8) !important;
+        }
+        body.incognito-stealth-mode .start-command-input,
+        body.incognito-stealth-mode .engine-selector-capsule,
+        body.light-theme.incognito-stealth-mode .start-command-input,
+        body.light-theme.incognito-stealth-mode .engine-selector-capsule {
+            color: #F8FAFC !important;
+        }
+        body.incognito-stealth-mode .start-command-input::placeholder,
+        body.light-theme.incognito-stealth-mode .start-command-input::placeholder {
+            color: #94A3B8 !important;
+        }
+        body.incognito-stealth-mode .hero-privacy-btn,
+        body.light-theme.incognito-stealth-mode .hero-privacy-btn {
+            background: #A855F7 !important;
+            box-shadow: 0 0 16px rgba(168, 85, 247, 0.4) !important;
+            border: none !important;
+            color: #FFFFFF !important;
+        }
+        body.incognito-stealth-mode .hero-privacy-btn svg path,
+        body.light-theme.incognito-stealth-mode .hero-privacy-btn svg path {
+            fill: #FFFFFF !important;
+        }
+        body.incognito-stealth-mode .hero-privacy-btn svg circle,
+        body.light-theme.incognito-stealth-mode .hero-privacy-btn svg circle {
+            stroke: #FFFFFF !important;
+        }
+        body.incognito-stealth-mode .command-icon-btn,
+        body.light-theme.incognito-stealth-mode .command-icon-btn {
+            color: #94A3B8 !important;
+        }
+        body.incognito-stealth-mode .command-action-divider,
+        body.light-theme.incognito-stealth-mode .command-action-divider {
+            background: rgba(255, 255, 255, 0.12) !important;
+        }
+        body.incognito-stealth-mode .tab-badge-num,
+        body.light-theme.incognito-stealth-mode .tab-badge-num {
+            color: #FFFFFF !important;
+            border-color: rgba(255, 255, 255, 0.5) !important;
+        }
+        body.incognito-stealth-mode .engine-caret,
+        body.light-theme.incognito-stealth-mode .engine-caret {
+            stroke: #94A3B8 !important;
         }
 
         body.has-custom-wp::before {
@@ -5775,8 +5854,15 @@
             const body = document.getElementById('pageBody');
             if (!body) return;
 
+            const urlParams = new URLSearchParams(window.location.search);
+            const isGhost = urlParams.get('incognito') === 'true' || urlParams.get('incognito') === '1' || window.location.hash.includes('incognito') ||
+                (window.FokkShieldBridge && typeof window.FokkShieldBridge.isGhostModeActive === 'function' && window.FokkShieldBridge.isGhostModeActive());
+
             let isLight = false;
-            if (typeof isLightExplicit === 'boolean') {
+            if (isGhost) {
+                isLight = false;
+                themeType = 'default';
+            } else if (typeof isLightExplicit === 'boolean') {
                 isLight = isLightExplicit;
             } else if (themeType === 'pearl_light' || (typeof themeType === 'string' && themeType.startsWith('sail_'))) {
                 isLight = true;
@@ -5792,12 +5878,19 @@
                 }
             }
 
-            try { localStorage.setItem('fokk_is_light_mode', isLight ? 'true' : 'false'); } catch (e) {}
+            if (!isGhost) {
+                try { localStorage.setItem('fokk_is_light_mode', isLight ? 'true' : 'false'); } catch (e) {}
+            }
 
-            if (isLight) {
+            if (isGhost) {
+                body.classList.remove('light-theme');
+                body.classList.add('incognito-stealth-mode');
+            } else if (isLight) {
                 body.classList.add('light-theme');
+                body.classList.remove('incognito-stealth-mode');
             } else {
                 body.classList.remove('light-theme');
+                body.classList.remove('incognito-stealth-mode');
             }
 
             body.classList.remove('has-custom-wp');
@@ -5944,7 +6037,10 @@
         function updateGhostModeStatus() {
             try {
                 let isGhost = false;
-                if (window.FokkShieldBridge && typeof window.FokkShieldBridge.isGhostModeActive === 'function') {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('incognito') === 'true' || urlParams.get('incognito') === '1' || window.location.hash.includes('incognito')) {
+                    isGhost = true;
+                } else if (window.FokkShieldBridge && typeof window.FokkShieldBridge.isGhostModeActive === 'function') {
                     isGhost = window.FokkShieldBridge.isGhostModeActive();
                 } else {
                     isGhost = localStorage.getItem('fokk_ghost_mode') === 'true';
@@ -5955,7 +6051,10 @@
                 const stealthHero = document.getElementById('incognitoStealthHero');
 
                 if (isGhost) {
-                    if (body) body.classList.add('incognito-stealth-mode');
+                    if (body) {
+                        body.classList.add('incognito-stealth-mode');
+                        body.classList.remove('light-theme');
+                    }
                     if (btn) {
                         btn.classList.add('ghost-mode-active');
                         btn.setAttribute('title', 'Ghost Mode: ON');
@@ -8609,10 +8708,15 @@
         } catch (e) {}
 
         try {
-            const isBridgeLight = (window.FokkShieldBridge && typeof window.FokkShieldBridge.isLightMode === 'function')
+            const urlParams = new URLSearchParams(window.location.search);
+            const isIncognitoUrl = urlParams.get('incognito') === 'true' || urlParams.get('incognito') === '1' || window.location.hash.includes('incognito');
+            const isGhost = isIncognitoUrl || (window.FokkShieldBridge && typeof window.FokkShieldBridge.isGhostModeActive === 'function' && window.FokkShieldBridge.isGhostModeActive());
+            const isBridgeLight = !isGhost && (
+                (window.FokkShieldBridge && typeof window.FokkShieldBridge.isLightMode === 'function')
                 ? window.FokkShieldBridge.isLightMode()
-                : (localStorage.getItem('fokk_is_light_mode') === 'true');
-            const savedTheme = localStorage.getItem('fokk_global_theme') || (isBridgeLight ? 'sail_azure' : 'default');
+                : (localStorage.getItem('fokk_is_light_mode') === 'true')
+            );
+            const savedTheme = isGhost ? 'default' : (localStorage.getItem('fokk_global_theme') || (isBridgeLight ? 'sail_azure' : 'default'));
             if (window.applyThemeFromNative) {
                 window.applyThemeFromNative(savedTheme, '', isBridgeLight);
             }

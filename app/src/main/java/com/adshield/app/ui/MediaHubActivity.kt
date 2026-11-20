@@ -42,6 +42,9 @@ import android.graphics.Typeface
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.animation.ValueAnimator
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.view.animation.AccelerateInterpolator
 import android.view.GestureDetector
 import android.view.ScaleGestureDetector
 import android.view.animation.DecelerateInterpolator
@@ -1522,17 +1525,24 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     fun applyAppTheme(isLight: Boolean, animated: Boolean = false) {
+        val isPrivateActive = activeTab?.isPrivate == true
         val decor = window.decorView
         val insetsController = WindowCompat.getInsetsController(window, decor)
-        insetsController.isAppearanceLightStatusBars = isLight
-        insetsController.isAppearanceLightNavigationBars = isLight
+        val lightBars = isLight && !isPrivateActive
+        insetsController.isAppearanceLightStatusBars = lightBars
+        insetsController.isAppearanceLightNavigationBars = lightBars
 
         // Set system navigation bar color so the device bottom bar matches the theme
-        window.navigationBarColor = Color.parseColor(if (isLight) "#FFFFFF" else "#090D14")
+        window.navigationBarColor = Color.parseColor(if (lightBars) "#FFFFFF" else "#090D14")
 
         val toolbarPos = prefs.getString(PREF_TOOLBAR_POSITION, "bottom") ?: "bottom"
         val isTop = toolbarPos.equals("top", ignoreCase = true)
-        if (isLight) {
+        if (isPrivateActive) {
+            binding.topBar.setBackgroundResource(if (isTop) R.drawable.bg_docked_command_bar_top_private else R.drawable.bg_docked_command_bar_bottom_private)
+            binding.bottomNav.setBackgroundColor(Color.parseColor("#120A1C"))
+            binding.urlInput.setTextColor(Color.parseColor("#FFFFFF"))
+            binding.urlInput.setHintTextColor(Color.parseColor("#94A3B8"))
+        } else if (isLight) {
             binding.topBar.setBackgroundResource(if (isTop) R.drawable.bg_docked_command_bar_top_light else R.drawable.bg_docked_command_bar_bottom_light)
             binding.bottomNav.setBackgroundColor(Color.parseColor("#FFFFFF"))
             binding.urlInput.setTextColor(Color.parseColor("#0F172A"))
@@ -1543,13 +1553,16 @@ open class MediaHubActivity : AppCompatActivity() {
             binding.urlInput.setTextColor(Color.parseColor("#FFFFFF"))
             binding.urlInput.setHintTextColor(Color.parseColor("#94A3B8"))
         }
-        applyCommandBarControlTheme(isLight && activeTab?.isPrivate != true)
+        applyCommandBarControlTheme(isLight && !isPrivateActive)
 
         val savedTheme = prefs.getString(PREF_ACTIVE_THEME, "default") ?: "default"
         val customData = if (savedTheme == "custom") getCustomWallpaperDataUri() else ""
         tabs.forEach { tab ->
+            val tabLight = if (tab.isPrivate) false else isLight
+            val tabTheme = if (tab.isPrivate) "default" else savedTheme
+            val tabData = if (tab.isPrivate) "" else customData
             tab.webView?.evaluateJavascript(
-                "if (typeof applyThemeFromNative === 'function') applyThemeFromNative('$savedTheme', '$customData', $isLight);",
+                "if (typeof applyThemeFromNative === 'function') applyThemeFromNative('$tabTheme', '$tabData', $tabLight);",
                 null
             )
         }
@@ -1961,8 +1974,11 @@ open class MediaHubActivity : AppCompatActivity() {
                 val customData = if (theme == "custom") activity.getCustomWallpaperDataUri() else ""
                 val isLight = activity.isAppInLightMode()
                 activity.tabs.forEach { tab ->
+                    val tabLight = if (tab.isPrivate) false else isLight
+                    val tabTheme = if (tab.isPrivate) "default" else theme
+                    val tabData = if (tab.isPrivate) "" else customData
                     tab.webView?.evaluateJavascript(
-                        "if (typeof applyThemeFromNative === 'function') applyThemeFromNative('$theme', '$customData', $isLight);",
+                        "if (typeof applyThemeFromNative === 'function') applyThemeFromNative('$tabTheme', '$tabData', $tabLight);",
                         null
                     )
                 }
@@ -1971,6 +1987,10 @@ open class MediaHubActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun isLightMode(): Boolean {
+            val tab = activity.tabs.firstOrNull { it.webView === sourceWebView }
+            if (tab?.isPrivate == true || activity.isIsolatedPrivateProfile) {
+                return false
+            }
             return activity.isAppInLightMode()
         }
 
@@ -2141,7 +2161,8 @@ open class MediaHubActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun isGhostModeActive(): Boolean {
-            return activity.isIsolatedPrivateProfile || (activity.activeTab?.isPrivate == true)
+            val tab = activity.tabs.firstOrNull { it.webView === sourceWebView }
+            return activity.isIsolatedPrivateProfile || tab?.isPrivate == true || (activity.activeTab?.isPrivate == true)
         }
 
         @JavascriptInterface
@@ -3452,6 +3473,60 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     private var commandBarCollapsed = false
+    private var contentMarginAnimator: ValueAnimator? = null
+
+    private fun updateContentMargins(targetTop: Int, targetBottom: Int, animated: Boolean = true) {
+        if (isFinishing || isDestroyed) return
+        val lp = binding.mainContentLayout.layoutParams as? RelativeLayout.LayoutParams ?: return
+        val currentTop = lp.topMargin
+        val currentBottom = lp.bottomMargin
+
+        if (currentTop == targetTop && currentBottom == targetBottom) return
+
+        contentMarginAnimator?.cancel()
+
+        if (!animated) {
+            lp.topMargin = targetTop
+            lp.bottomMargin = targetBottom
+            binding.mainContentLayout.layoutParams = lp
+            return
+        }
+
+        val startTop = currentTop
+        val startBottom = currentBottom
+        val interpolator = if (targetTop == 0 && targetBottom == 0) {
+            AccelerateInterpolator()
+        } else {
+            DecelerateInterpolator()
+        }
+
+        contentMarginAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 180
+            this.interpolator = interpolator
+            addUpdateListener { va ->
+                val fraction = va.animatedFraction
+                val newTop = (startTop + (targetTop - startTop) * fraction).toInt()
+                val newBottom = (startBottom + (targetBottom - startBottom) * fraction).toInt()
+                val curLp = binding.mainContentLayout.layoutParams as? RelativeLayout.LayoutParams
+                if (curLp != null && (curLp.topMargin != newTop || curLp.bottomMargin != newBottom)) {
+                    curLp.topMargin = newTop
+                    curLp.bottomMargin = newBottom
+                    binding.mainContentLayout.layoutParams = curLp
+                }
+            }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    val curLp = binding.mainContentLayout.layoutParams as? RelativeLayout.LayoutParams
+                    if (curLp != null) {
+                        curLp.topMargin = targetTop
+                        curLp.bottomMargin = targetBottom
+                        binding.mainContentLayout.layoutParams = curLp
+                    }
+                }
+            })
+            start()
+        }
+    }
 
     private fun collapseCommandBar(animated: Boolean = true) {
         setBrowserChromeVisible(false)
@@ -3463,6 +3538,7 @@ open class MediaHubActivity : AppCompatActivity() {
             binding.topBar.visibility = View.GONE
             binding.layoutCollapsedBar.visibility = View.GONE
             commandBarCollapsed = false
+            updateContentMargins(0, 0, animated = false)
             return
         }
         binding.layoutCollapsedBar.visibility = View.GONE
@@ -3481,6 +3557,7 @@ open class MediaHubActivity : AppCompatActivity() {
         val isTop = prefs.getString(PREF_TOOLBAR_POSITION, "bottom") == "top"
         val density = resources.displayMetrics.density
         val barHeight = if (binding.topBar.height > 0) binding.topBar.height.toFloat() else 56 * density
+        val barHeightInt = barHeight.toInt()
         val slideDistance = barHeight + (8 * density)
 
         binding.layoutCollapsedBar.visibility = View.GONE
@@ -3489,6 +3566,7 @@ open class MediaHubActivity : AppCompatActivity() {
         if (isHome) {
             binding.topBar.visibility = View.GONE
             browserChromeHidden = false
+            updateContentMargins(0, 0, animated = false)
             return
         }
 
@@ -3505,6 +3583,10 @@ open class MediaHubActivity : AppCompatActivity() {
                 .setDuration(180)
                 .setInterpolator(android.view.animation.DecelerateInterpolator())
                 .start()
+
+            val targetTop = if (isTop) barHeightInt else 0
+            val targetBottom = if (isTop) 0 else barHeightInt
+            updateContentMargins(targetTop, targetBottom, animated = true)
         } else {
             if (browserChromeHidden || binding.urlInput.hasFocus()) return
             browserChromeHidden = true
@@ -3521,6 +3603,9 @@ open class MediaHubActivity : AppCompatActivity() {
                     if (browserChromeHidden) binding.topBar.visibility = View.GONE
                 }
                 .start()
+
+            // Smoothly expand webpage to fill full space vacated by command card
+            updateContentMargins(0, 0, animated = true)
         }
     }
 
@@ -3857,9 +3942,10 @@ open class MediaHubActivity : AppCompatActivity() {
                         loadedTab?.url = loadedUrl
                         if (loadedUrl.contains("fokk_start.html")) {
                             loadedTab?.title = "New Tab"
-                            val isLight = isAppInLightMode()
-                            val theme = prefs.getString(PREF_ACTIVE_THEME, "default") ?: "default"
-                            val customData = if (theme == "custom") getCustomWallpaperDataUri() else ""
+                            val isPrivateTab = loadedTab?.isPrivate == true
+                            val isLight = if (isPrivateTab) false else isAppInLightMode()
+                            val theme = if (isPrivateTab) "default" else (prefs.getString(PREF_ACTIVE_THEME, "default") ?: "default")
+                            val customData = if (!isPrivateTab && theme == "custom") getCustomWallpaperDataUri() else ""
                             view?.evaluateJavascript(
                                 "if (typeof applyThemeFromNative === 'function') applyThemeFromNative('$theme', '$customData', $isLight);",
                                 null
@@ -4576,17 +4662,30 @@ open class MediaHubActivity : AppCompatActivity() {
         val toolbarPos = prefs.getString(PREF_TOOLBAR_POSITION, "bottom") ?: "bottom"
         val isTop = toolbarPos.equals("top", ignoreCase = true)
         val isLight = isAppInLightMode()
+        val decor = window.decorView
+        val insetsController = WindowCompat.getInsetsController(window, decor)
         if (current.isPrivate) {
+            insetsController.isAppearanceLightStatusBars = false
+            insetsController.isAppearanceLightNavigationBars = false
+            window.navigationBarColor = Color.parseColor("#090D14")
             binding.topBar.setBackgroundResource(if (isTop) R.drawable.bg_docked_command_bar_top_private else R.drawable.bg_docked_command_bar_bottom_private)
-            binding.bottomNav.setBackgroundColor(android.graphics.Color.parseColor("#120A1C"))
+            binding.bottomNav.setBackgroundColor(Color.parseColor("#120A1C"))
+            binding.urlInput.setTextColor(Color.parseColor("#FFFFFF"))
+            binding.urlInput.setHintTextColor(Color.parseColor("#94A3B8"))
         } else if (isLight) {
+            insetsController.isAppearanceLightStatusBars = true
+            insetsController.isAppearanceLightNavigationBars = true
+            window.navigationBarColor = Color.parseColor("#FFFFFF")
             binding.topBar.setBackgroundResource(if (isTop) R.drawable.bg_docked_command_bar_top_light else R.drawable.bg_docked_command_bar_bottom_light)
             binding.bottomNav.setBackgroundColor(Color.parseColor("#FFFFFF"))
             binding.urlInput.setTextColor(Color.parseColor("#0F172A"))
             binding.urlInput.setHintTextColor(Color.parseColor("#64748B"))
         } else {
+            insetsController.isAppearanceLightStatusBars = false
+            insetsController.isAppearanceLightNavigationBars = false
+            window.navigationBarColor = Color.parseColor("#090D14")
             binding.topBar.setBackgroundResource(if (isTop) R.drawable.bg_docked_command_bar_top else R.drawable.bg_docked_command_bar_bottom)
-            binding.bottomNav.setBackgroundColor(android.graphics.Color.parseColor("#0C101A"))
+            binding.bottomNav.setBackgroundColor(Color.parseColor("#0C101A"))
             binding.urlInput.setTextColor(Color.parseColor("#FFFFFF"))
             binding.urlInput.setHintTextColor(Color.parseColor("#94A3B8"))
         }
@@ -5535,23 +5634,37 @@ open class MediaHubActivity : AppCompatActivity() {
     fun updateToolbarLayoutForUrl(url: String?, animated: Boolean = true) {
         val isHome = isHomePageUrl(url)
         val prefPos = prefs.getString(PREF_TOOLBAR_POSITION, "bottom") ?: "bottom"
+        if (!isHome && browserChromeHidden) {
+            browserChromeHidden = false
+            binding.topBar.animate().cancel()
+            binding.topBar.visibility = View.VISIBLE
+            binding.topBar.alpha = 1f
+            binding.topBar.translationY = 0f
+        }
         applyToolbarPosition(prefPos, isHomePage = isHome, animated = animated)
     }
 
     private fun applyToolbarPosition(position: String, isHomePage: Boolean = false, animated: Boolean = false) {
         val targetVisibility = if (isHomePage) View.GONE else View.VISIBLE
-        if (isToolbarInHomeMode == isHomePage && lastAppliedToolbarPos == position && binding.topBar.visibility == targetVisibility) {
+        val isTop = position.equals("top", ignoreCase = true)
+        val density = resources.displayMetrics.density
+        val barHeight = if (binding.topBar.height > 0) binding.topBar.height else (56 * density).toInt()
+        val targetTop = if (isHomePage) 0 else (if (isTop) barHeight else 0)
+        val targetBottom = if (isHomePage) 0 else (if (isTop) 0 else barHeight)
+
+        val containerLp = binding.mainContentLayout.layoutParams as? RelativeLayout.LayoutParams
+        val curTop = containerLp?.topMargin ?: 0
+        val curBottom = containerLp?.bottomMargin ?: 0
+
+        if (isToolbarInHomeMode == isHomePage && lastAppliedToolbarPos == position && binding.topBar.visibility == targetVisibility && curTop == targetTop && curBottom == targetBottom) {
             return
         }
         isToolbarInHomeMode = isHomePage
         lastAppliedToolbarPos = position
 
-        val isTop = position.equals("top", ignoreCase = true)
         val lp = binding.topBar.layoutParams as? RelativeLayout.LayoutParams ?: return
         val collapsedLp = binding.layoutCollapsedBar.layoutParams as? RelativeLayout.LayoutParams
-        val containerLp = binding.mainContentLayout.layoutParams as? RelativeLayout.LayoutParams
         val cardLp = binding.cardSuggestions.layoutParams as? RelativeLayout.LayoutParams
-        val density = resources.displayMetrics.density
 
         binding.layoutCollapsedBar.visibility = View.GONE
         commandBarCollapsed = false
@@ -5560,6 +5673,7 @@ open class MediaHubActivity : AppCompatActivity() {
             binding.topBar.visibility = View.GONE
             binding.layoutCollapsedBar.visibility = View.GONE
             binding.cardSuggestions.visibility = View.GONE
+            contentMarginAnimator?.cancel()
             containerLp?.let {
                 it.topMargin = 0
                 it.bottomMargin = 0
@@ -5589,6 +5703,7 @@ open class MediaHubActivity : AppCompatActivity() {
         binding.topBar.setBackgroundResource(bgRes)
         applyCommandBarControlTheme(isLight && activeTab?.isPrivate != true)
 
+        contentMarginAnimator?.cancel()
         if (isTop) {
             binding.topBar.visibility = View.VISIBLE
             lp.removeRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
@@ -5605,7 +5720,7 @@ open class MediaHubActivity : AppCompatActivity() {
             }
 
             containerLp?.let {
-                it.topMargin = 0
+                it.topMargin = barHeight
                 it.bottomMargin = 0
                 binding.mainContentLayout.layoutParams = it
             }
@@ -5614,14 +5729,13 @@ open class MediaHubActivity : AppCompatActivity() {
             if (cardLp != null) {
                 cardLp.removeRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
                 cardLp.addRule(RelativeLayout.ALIGN_PARENT_TOP)
-                cardLp.topMargin = (56 * density).toInt()
+                cardLp.topMargin = barHeight
                 cardLp.bottomMargin = 0
                 binding.cardSuggestions.layoutParams = cardLp
             }
-            val barPadding = (56 * density).toInt()
             tabs.forEach {
                 it.webView?.clipToPadding = false
-                it.webView?.setPadding(0, barPadding, 0, 0)
+                it.webView?.setPadding(0, 0, 0, 0)
             }
         } else {
             binding.topBar.visibility = View.VISIBLE
@@ -5640,7 +5754,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
             containerLp?.let {
                 it.topMargin = 0
-                it.bottomMargin = 0
+                it.bottomMargin = barHeight
                 binding.mainContentLayout.layoutParams = it
             }
             binding.mainContentLayout.translationY = 0f
@@ -5649,13 +5763,12 @@ open class MediaHubActivity : AppCompatActivity() {
                 cardLp.removeRule(RelativeLayout.ALIGN_PARENT_TOP)
                 cardLp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
                 cardLp.topMargin = 0
-                cardLp.bottomMargin = (56 * density).toInt()
+                cardLp.bottomMargin = barHeight
                 binding.cardSuggestions.layoutParams = cardLp
             }
-            val barPadding = (56 * density).toInt()
             tabs.forEach {
                 it.webView?.clipToPadding = false
-                it.webView?.setPadding(0, 0, 0, barPadding)
+                it.webView?.setPadding(0, 0, 0, 0)
             }
         }
         binding.topBar.layoutParams = lp
@@ -12226,6 +12339,8 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        contentMarginAnimator?.cancel()
+        contentMarginAnimator = null
         runCatching { unregisterReceiver(meshStateReceiver) }
         backgroundMediaKeepAlive?.let(mainHandler::removeCallbacks)
         backgroundMediaKeepAlive = null

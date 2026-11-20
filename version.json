@@ -1,6 +1,6 @@
 {
-  "versionCode": 301,
-  "versionName": "3.0.1",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v3.0.1/app-debug.apk",
-  "changelog": "- Advanced Real-Time AI Grounding: Overhauled Ask AI with dynamic multi-source intelligence (Google News, Bing News, DuckDuckGo Instant Fact API, and Wikipedia) and Year 2026 temporal grounding to eliminate hallucinations for current political leaders, elections, officeholders, and real-world queries.\n- Dynamic Semantic Intent & Decoupling: General knowledge and out-of-the-box inquiries are automatically distinguished and decoupled from active webpage context with zero hardcoded constraints.\n- Incognito Navigation Fix: Resolved private browsing session back-button bug to ensure previous pages and ad visits navigate back cleanly to prior session pages rather than abruptly jumping to the public start page.\n- Performance & Stability: Enhanced local multi-source relevance scoring and offline forensic synthesis."
+  "versionCode": 307,
+  "versionName": "3.0.7",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v3.0.7/app-debug.apk",
+  "changelog": "- Viewport Insets & Webpage View: Fixed layout logic so the docked command card never hides webpage headers or bottom navigation, ensuring full viewport visibility whether positioned top or bottom.\n- Smooth Webpage Expansion on Collapse: Added smooth synchronized margin animations so webpages expand smoothly to fill full screen when the command card collapses on scroll, and contract cleanly when it expands.\n- Incognito / Private Home Page Dark Alignment: Fixed incognito home page styling to remain in pure stealth dark theme even when light theme is active across the browser."
 }
