@@ -41,6 +41,10 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
+import android.animation.ValueAnimator
+import android.view.GestureDetector
+import android.view.ScaleGestureDetector
+import android.view.animation.DecelerateInterpolator
 import java.io.FileOutputStream
 import android.speech.tts.TextToSpeech
 import java.net.Socket
@@ -322,6 +326,17 @@ open class MediaHubActivity : AppCompatActivity() {
 
     private var lastMediaPlayingTime = 0L
     private var isFullscreenCustomView = false
+    private var currentVideoScale = 1.0f
+    private var isVideoZoomedToFill = false
+    private var videoScaleGestureDetector: ScaleGestureDetector? = null
+    private var videoGestureDetector: GestureDetector? = null
+    private var videoControlsOverlay: View? = null
+    private var videoZoomButton: View? = null
+    private var videoZoomText: TextView? = null
+    private var videoZoomIcon: ImageView? = null
+    private var videoHudText: TextView? = null
+    private var videoZoomAnimator: ValueAnimator? = null
+    private val videoControlsHandler = Handler(Looper.getMainLooper())
     private var stopPlaybackRunnable: Runnable? = null
     private var backgroundMediaKeepAlive: Runnable? = null
     private var backgroundPlaybackArmed = false
@@ -3177,7 +3192,194 @@ open class MediaHubActivity : AppCompatActivity() {
             .show()
     }
 
+    // Fullscreen Video Zoom & Aspect Ratio Fill Engine
+    private val hideVideoControlsRunnable = Runnable {
+        videoZoomButton?.animate()?.alpha(0f)?.setDuration(280)?.withEndAction {
+            videoZoomButton?.visibility = View.GONE
+        }?.start()
+    }
+
+    private val hideVideoHudRunnable = Runnable {
+        videoHudText?.animate()?.alpha(0f)?.setDuration(240)?.withEndAction {
+            videoHudText?.visibility = View.GONE
+        }?.start()
+    }
+
+    private fun scheduleHideVideoControls() {
+        videoControlsHandler.removeCallbacks(hideVideoControlsRunnable)
+        videoControlsHandler.postDelayed(hideVideoControlsRunnable, 3500)
+    }
+
+    private fun revealVideoControls() {
+        videoControlsHandler.removeCallbacks(hideVideoControlsRunnable)
+        videoZoomButton?.let { btn ->
+            if (btn.visibility != View.VISIBLE || btn.alpha < 0.95f) {
+                btn.visibility = View.VISIBLE
+                btn.animate().alpha(1f).setDuration(200).start()
+            }
+        }
+        scheduleHideVideoControls()
+    }
+
+    private fun showVideoZoomHud(message: String) {
+        val hud = videoHudText ?: return
+        videoControlsHandler.removeCallbacks(hideVideoHudRunnable)
+        hud.text = message
+        hud.visibility = View.VISIBLE
+        hud.animate().alpha(1f).setDuration(160).start()
+        videoControlsHandler.postDelayed(hideVideoHudRunnable, 1400)
+    }
+
+    private fun getFillScaleFactor(): Float {
+        val dm = resources.displayMetrics
+        val screenW = maxOf(dm.widthPixels, dm.heightPixels).toFloat()
+        val screenH = minOf(dm.widthPixels, dm.heightPixels).toFloat()
+        if (screenH <= 0f) return 1.28f
+        val screenRatio = screenW / screenH
+        val video169Ratio = 16f / 9f
+        return (screenRatio / video169Ratio).coerceIn(1.15f, 1.45f)
+    }
+
+    private fun applyVideoScale(view: View, scale: Float) {
+        view.pivotX = view.width / 2f
+        view.pivotY = view.height / 2f
+        view.scaleX = scale
+        view.scaleY = scale
+    }
+
+    private fun updateZoomButtonUi() {
+        if (isVideoZoomedToFill) {
+            videoZoomText?.text = "Fit to screen"
+            videoZoomIcon?.setImageResource(R.drawable.ic_zoom_fit)
+        } else {
+            videoZoomText?.text = "Zoom to fill"
+            videoZoomIcon?.setImageResource(R.drawable.ic_zoom_fill)
+        }
+    }
+
+    private fun toggleFullscreenVideoZoom() {
+        val targetScale = if (isVideoZoomedToFill) 1.0f else getFillScaleFactor()
+        val startScale = currentVideoScale
+        val isZooming = targetScale > 1.05f
+        isVideoZoomedToFill = isZooming
+
+        videoZoomAnimator?.cancel()
+        val animator = ValueAnimator.ofFloat(startScale, targetScale).apply {
+            duration = 240
+            interpolator = DecelerateInterpolator()
+            addUpdateListener { va ->
+                val scale = va.animatedValue as Float
+                currentVideoScale = scale
+                customView?.let { applyVideoScale(it, scale) }
+            }
+        }
+        videoZoomAnimator = animator
+        animator.start()
+
+        updateZoomButtonUi()
+        showVideoZoomHud(if (isZooming) "Zoomed to fill" else "Fit to screen")
+        revealVideoControls()
+
+        activeWebView?.evaluateJavascript(
+            "if (typeof window.__fokkToggleVideoZoom === 'function') window.__fokkToggleVideoZoom($isZooming);",
+            null
+        )
+    }
+
+    private fun setupFullscreenVideoControls(view: View) {
+        currentVideoScale = 1.0f
+        isVideoZoomedToFill = false
+
+        val overlay = layoutInflater.inflate(R.layout.view_fullscreen_video_controls, binding.fullscreenContainer, false)
+        videoControlsOverlay = overlay
+        videoZoomButton = overlay.findViewById(R.id.btnVideoZoomToggle)
+        videoZoomText = overlay.findViewById(R.id.tvVideoZoomLabel)
+        videoZoomIcon = overlay.findViewById(R.id.ivVideoZoomIcon)
+        videoHudText = overlay.findViewById(R.id.tvVideoZoomHud)
+
+        updateZoomButtonUi()
+
+        videoZoomButton?.setOnClickListener {
+            toggleFullscreenVideoZoom()
+        }
+
+        videoScaleGestureDetector = ScaleGestureDetector(this, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                val factor = detector.scaleFactor
+                val newScale = (currentVideoScale * factor).coerceIn(1.0f, 2.5f)
+                currentVideoScale = newScale
+                applyVideoScale(view, newScale)
+                isVideoZoomedToFill = newScale >= 1.15f
+                updateZoomButtonUi()
+                showVideoZoomHud("Zoom: ${(newScale * 100).toInt()}%")
+                return true
+            }
+        })
+
+        videoGestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDoubleTap(e: MotionEvent): Boolean {
+                toggleFullscreenVideoZoom()
+                return true
+            }
+        })
+
+        binding.fullscreenContainer.addView(
+            overlay,
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        )
+
+        revealVideoControls()
+    }
+
+    private fun teardownFullscreenVideoControls() {
+        videoZoomAnimator?.cancel()
+        videoZoomAnimator = null
+        videoControlsHandler.removeCallbacks(hideVideoControlsRunnable)
+        videoControlsHandler.removeCallbacks(hideVideoHudRunnable)
+
+        videoControlsOverlay?.let { binding.fullscreenContainer.removeView(it) }
+        videoControlsOverlay = null
+        videoZoomButton = null
+        videoZoomText = null
+        videoZoomIcon = null
+        videoHudText = null
+        videoScaleGestureDetector = null
+        videoGestureDetector = null
+
+        customView?.let {
+            it.scaleX = 1.0f
+            it.scaleY = 1.0f
+        }
+        currentVideoScale = 1.0f
+        isVideoZoomedToFill = false
+
+        activeWebView?.evaluateJavascript(
+            "if (typeof window.__fokkResetVideoZoom === 'function') window.__fokkResetVideoZoom();",
+            null
+        )
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        if (isFullscreenCustomView && ev != null) {
+            val scaleHandled = videoScaleGestureDetector?.onTouchEvent(ev) == true
+            if (scaleHandled && videoScaleGestureDetector?.isInProgress == true) {
+                scheduleHideVideoControls()
+                return true
+            }
+            val doubleTapHandled = videoGestureDetector?.onTouchEvent(ev) == true
+            if (doubleTapHandled) {
+                scheduleHideVideoControls()
+                return true
+            }
+            if (ev.action == MotionEvent.ACTION_DOWN || ev.action == MotionEvent.ACTION_UP) {
+                revealVideoControls()
+            }
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
     private fun hideCustomView() {
+        teardownFullscreenVideoControls()
         val activeCustomView = customView ?: return
         isFullscreenCustomView = false
         binding.fullscreenContainer.removeView(activeCustomView)
@@ -4027,6 +4229,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 binding.mainContentLayout.visibility = View.GONE
                 binding.topBar.visibility = View.GONE
                 binding.layoutCollapsedBar.visibility = View.GONE
+                setupFullscreenVideoControls(view)
             }
 
             override fun onHideCustomView() {

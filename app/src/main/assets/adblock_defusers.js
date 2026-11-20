@@ -580,6 +580,14 @@
 
     // 9. Intelligent Anti-Adblock Defuser & Auto-Dismissal (Generic across Fox News, The Sun, Yahoo, Forbes, etc.)
     var scrubNagElements = function() {
+        var host = (window.location.hostname || '').toLowerCase();
+        if (host.indexOf('google.') !== -1 || host.indexOf('bing.com') !== -1 ||
+            host.indexOf('duckduckgo.com') !== -1 || host.indexOf('yahoo.com') !== -1 ||
+            host.indexOf('ecosia.org') !== -1 || host.indexOf('pinterest.com') !== -1 ||
+            host.indexOf('wikipedia.org') !== -1 || host.indexOf('wikimedia.org') !== -1 ||
+            host.indexOf('youtube.com') !== -1 || host.indexOf('instagram.com') !== -1) {
+            return;
+        }
         try {
             var nagPhrases = [
                 'ad or script blocking',
@@ -684,10 +692,10 @@
                 topModal.style.setProperty('visibility', 'hidden', 'important');
 
                 // Clean backdrop overlays
-                var backdrops = document.querySelectorAll('.modal-backdrop, .overlay-backdrop, [class*="backdrop"], .sp_veil, div[style*="position: fixed"][style*="z-index"]');
+                var backdrops = document.querySelectorAll('.modal-backdrop, .overlay-backdrop, [class*="backdrop"], .sp_veil');
                 for (var b = 0; b < backdrops.length; b++) {
                     var bd = backdrops[b];
-                    if (bd && bd !== topModal && !bd.querySelector('video, audio, iframe, main, article, [class*="player"]')) {
+                    if (bd && bd !== topModal && !bd.querySelector('video, audio, iframe, main, article, img, picture, svg, canvas, figure, [role="img"], [class*="player"]')) {
                         var bds = bd.style;
                         if (bds.position === 'fixed' || (window.getComputedStyle(bd).position === 'fixed')) {
                             bd.style.setProperty('display', 'none', 'important');
