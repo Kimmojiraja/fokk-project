@@ -1157,7 +1157,7 @@
         div:has(> [aria-label*="Sponsored"]),
         article:has([aria-label*="Sponsored"]),
         div[role="article"]:has([aria-label*="Sponsored"]),
-        div[role="dialog"]:has(a[href*="play.google.com"]),
+        div[data-testid="banner-mobile-app"]:has(a[href*="play.google.com"]),
         div[data-testid="banner-mobile-app"],
 
         /* YouTube Mobile Ad Overlays & Feed Inline Preview Defuser */
@@ -2386,8 +2386,16 @@
 
     function defuseClickjackingOverlays() {
         if (!isAiFilterEnabled) return;
-        const host = window.location.hostname;
-        if (host.includes('youtube.com') || host.includes('instagram.com')) return;
+        const host = (window.location.hostname || '').toLowerCase();
+        if (host.includes('youtube.com') || host.includes('instagram.com') ||
+            host.includes('google.') || host.includes('bing.com') ||
+            host.includes('duckduckgo.com') || host.includes('yahoo.com') ||
+            host.includes('ecosia.org') || host.includes('pinterest.com') ||
+            host.includes('wikipedia.org') || host.includes('wikimedia.org') ||
+            host.includes('flickr.com') || host.includes('unsplash.com') ||
+            host.includes('reddit.com') || host.includes('x.com') || host.includes('twitter.com')) {
+            return;
+        }
         try {
             unlockPageScrolling();
             const vw = window.innerWidth || document.documentElement.clientWidth;
@@ -2400,7 +2408,7 @@
             for (let i = 0; i < limit; i++) {
                 const el = suspects[i];
                 if (!el || el.tagName === 'MAIN' || el.tagName === 'ARTICLE' || el.tagName === 'NAV' || el.tagName === 'VIDEO' || el.tagName === 'IFRAME' || el.id === 'main' || el.id === 'app' || el.id === 'player') continue;
-                if (el.querySelector && el.querySelector('video, iframe, [class*="player"], [id*="player"], twitter-tweet, .twitter-tweet, [data-testid="tweet"]')) continue;
+                if (el.querySelector && el.querySelector('video, iframe, img, picture, svg, canvas, figure, [role="img"], [class*="player"], [id*="player"], twitter-tweet, .twitter-tweet, [data-testid="tweet"]')) continue;
                 if (el.closest && el.closest('video, .video-player, [class*="player"], [id*="player"], .twitter-tweet, [data-testid="tweet"]')) continue;
 
                 const style = window.getComputedStyle(el);
@@ -2426,6 +2434,14 @@
     }
 
     function defuseAntiAdblockModals() {
+        const host = (window.location.hostname || '').toLowerCase();
+        if (host.includes('google.') || host.includes('bing.com') ||
+            host.includes('duckduckgo.com') || host.includes('yahoo.com') ||
+            host.includes('ecosia.org') || host.includes('pinterest.com') ||
+            host.includes('wikipedia.org') || host.includes('wikimedia.org') ||
+            host.includes('youtube.com') || host.includes('instagram.com')) {
+            return;
+        }
         try {
             const adblockKeywords = [
                 'ad blocker', 'adblock', 'disable your ad', 'turn off your ad',
@@ -2433,31 +2449,35 @@
                 'welcome to fox news', 'consider disabling your ad blocker',
                 'journalism is supported through advertising', 'error: make sure filterlist is'
             ];
+            let adblockModalFound = false;
             const modals = document.querySelectorAll(
                 'div[role="dialog"], div[class*="modal"], div[class*="dialog"], div[class*="popup"], ' +
                 'div[class*="overlay"], div[id*="modal"], div[id*="popup"], div[class*="adblock"], ' +
                 'div[id*="adblock"], .fnc-alert-overlay, [class*="fnc-modal"]'
             );
             modals.forEach(function(modal) {
-                // Safeguard against hiding main content or media
-                if (modal.querySelector && modal.querySelector('video, audio, [class*="player"]')) return;
+                // Safeguard against hiding main content, media, or image lightboxes
+                if (modal.querySelector && modal.querySelector('video, audio, img, picture, svg, canvas, figure, [role="img"], [class*="player"]')) return;
                 const text = (modal.innerText || modal.textContent || '').toLowerCase();
                 if (adblockKeywords.some(function(k) { return text.includes(k); })) {
+                    adblockModalFound = true;
                     modal.style.setProperty('display', 'none', 'important');
                     modal.remove();
                     unlockPageScrolling();
                 }
             });
-            // Clean modal backdrops that freeze the screen
-            document.querySelectorAll('.modal-backdrop, .overlay-backdrop, [class*="backdrop"], div[style*="position: fixed"][style*="z-index"]').forEach(function(b) {
-                if (!b.querySelector('video, audio, iframe, main, article, [class*="player"]')) {
-                    const st = window.getComputedStyle(b);
-                    if (st.position === 'fixed' && (parseInt(st.zIndex, 10) > 100 || b.className.includes('backdrop'))) {
-                        b.style.setProperty('display', 'none', 'important');
-                        try { b.remove(); } catch(e) {}
+            // Clean modal backdrops ONLY if an ad blocker modal was confirmed present
+            if (adblockModalFound) {
+                document.querySelectorAll('.modal-backdrop, .overlay-backdrop, [class*="backdrop"], .sp_veil').forEach(function(b) {
+                    if (!b.querySelector('video, audio, iframe, main, article, img, picture, svg, canvas, figure, [role="img"], [class*="player"]')) {
+                        const st = window.getComputedStyle(b);
+                        if (st.position === 'fixed' && (parseInt(st.zIndex, 10) > 100 || b.className.includes('backdrop') || b.className.includes('veil'))) {
+                            b.style.setProperty('display', 'none', 'important');
+                            try { b.remove(); } catch(e) {}
+                        }
                     }
-                }
-            });
+                });
+            }
         } catch(e) {}
     }
 
@@ -2840,6 +2860,10 @@
                         if (window.FokkVideoBridge && typeof window.FokkVideoBridge.onSeekFeedback === 'function') {
                             window.FokkVideoBridge.onSeekFeedback(10);
                         }
+                    } else {
+                        if (typeof window.__fokkToggleVideoZoom === 'function') {
+                            window.__fokkToggleVideoZoom();
+                        }
                     }
                 }
                 lastTapTime = now;
@@ -2869,6 +2893,68 @@
                 }
             }
         }, { passive: true });
+    })();
+
+    // =========================================================================
+    // HTML5 & YouTube Video Zoom to Fill Engine
+    // =========================================================================
+    (function installVideoZoomEngine() {
+        let isVideoFillActive = false;
+
+        function showInPageZoomBadge(text) {
+            try {
+                let badge = document.getElementById('__fokk_video_zoom_hud');
+                if (!badge) {
+                    badge = document.createElement('div');
+                    badge.id = '__fokk_video_zoom_hud';
+                    badge.style.cssText = 'position:fixed;top:36px;left:50%;transform:translateX(-50%);z-index:2147483647;background:rgba(18,20,24,0.88);color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;font-family:system-ui,-apple-system,sans-serif;pointer-events:none;transition:opacity 0.25s ease, transform 0.25s ease;box-shadow:0 4px 16px rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.15);';
+                    (document.body || document.documentElement).appendChild(badge);
+                }
+                badge.textContent = text;
+                badge.style.opacity = '1';
+                badge.style.transform = 'translateX(-50%) translateY(0)';
+                if (badge.__timer) clearTimeout(badge.__timer);
+                badge.__timer = setTimeout(function() {
+                    badge.style.opacity = '0';
+                    badge.style.transform = 'translateX(-50%) translateY(-6px)';
+                }, 1300);
+            } catch (_) {}
+        }
+
+        window.__fokkToggleVideoZoom = function(forceFill) {
+            try {
+                if (typeof forceFill === 'boolean') {
+                    isVideoFillActive = forceFill;
+                } else {
+                    isVideoFillActive = !isVideoFillActive;
+                }
+                const videos = document.querySelectorAll('video');
+                videos.forEach(function(vid) {
+                    if (isVideoFillActive) {
+                        vid.style.setProperty('object-fit', 'cover', 'important');
+                        vid.setAttribute('data-fokk-zoomed', 'true');
+                    } else {
+                        vid.style.setProperty('object-fit', 'contain', 'important');
+                        vid.removeAttribute('data-fokk-zoomed');
+                    }
+                });
+                showInPageZoomBadge(isVideoFillActive ? 'Zoomed to fill' : 'Fit to screen');
+                return isVideoFillActive;
+            } catch (e) {
+                return false;
+            }
+        };
+
+        window.__fokkResetVideoZoom = function() {
+            try {
+                isVideoFillActive = false;
+                const videos = document.querySelectorAll('video[data-fokk-zoomed]');
+                videos.forEach(function(vid) {
+                    vid.style.setProperty('object-fit', 'contain', 'important');
+                    vid.removeAttribute('data-fokk-zoomed');
+                });
+            } catch (e) {}
+        };
     })();
 
 })();
