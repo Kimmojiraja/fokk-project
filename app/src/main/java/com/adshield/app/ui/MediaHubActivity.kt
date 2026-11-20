@@ -1232,9 +1232,16 @@ open class MediaHubActivity : AppCompatActivity() {
         val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return null
         val host = uri.host?.lowercase(Locale.ROOT) ?: return null
         val isSearchHost = host.contains("google.") || host.contains("duckduckgo.com") ||
-            host.contains("brave.com") || host.contains("startpage.com") || host.contains("bing.com") || host.contains("ecosia.org")
+            host.contains("yahoo.") || host.contains("bing.com") || host.contains("ecosia.org") ||
+            host.contains("brave.com") || host.contains("startpage.com") || host.contains("yandex.") ||
+            host.contains("baidu.com")
         if (!isSearchHost) return null
-        return uri.getQueryParameter("q") ?: uri.getQueryParameter("query")
+        return uri.getQueryParameter("q")
+            ?: uri.getQueryParameter("p")
+            ?: uri.getQueryParameter("query")
+            ?: uri.getQueryParameter("text")
+            ?: uri.getQueryParameter("wd")
+            ?: uri.getQueryParameter("search")
     }
 
     private fun applySearchEngine(engine: SearchEngine) {
@@ -1887,9 +1894,7 @@ open class MediaHubActivity : AppCompatActivity() {
                     it.name.equals(engineName, ignoreCase = true) || it.displayName.equals(engineName, ignoreCase = true)
                 }
                 if (found != null) {
-                    activity.currentSearchEngine = found
-                    activity.prefs.edit().putString(PREF_SEARCH_ENGINE, found.name).apply()
-                    activity.binding.urlInput.hint = "Search with ${found.displayName} or enter URL..."
+                    activity.applySearchEngine(found)
                 }
             }
         }
@@ -5054,54 +5059,7 @@ open class MediaHubActivity : AppCompatActivity() {
         return STREAMING_MEDIA_DOMAINS.any { lower == it || lower.endsWith(".$it") }
     }
 
-    private fun setupQuickEngineSwitcher() {
-        val pairs = listOf(
-            binding.btnQuickEngineBing to SearchEngine.BING,
-            binding.btnQuickEngineEcosia to SearchEngine.ECOSIA,
-            binding.btnQuickEngineGoogle to SearchEngine.GOOGLE,
-            binding.btnQuickEngineDuckDuckGo to SearchEngine.DUCKDUCKGO,
-            binding.btnQuickEngineYahoo to SearchEngine.YAHOO
-        )
-
-        for ((btn, engine) in pairs) {
-            btn.setOnClickListener {
-                it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                applySearchEngine(engine)
-                updateQuickEngineSwitcherUI()
-
-                val query = binding.urlInput.text.toString().trim()
-                if (query.isNotEmpty() && !query.startsWith("http://") && !query.startsWith("https://") && !query.startsWith("file://") && (!query.contains(".") || query.contains(" "))) {
-                    binding.cardSuggestions.visibility = View.GONE
-                    binding.urlInput.clearFocus()
-                    val target = engine.searchUrl + Uri.encode(query)
-                    loadUrlInActiveWebView(target)
-                    recordHistory(query, target)
-                }
-            }
-        }
-        updateQuickEngineSwitcherUI()
-    }
-
-    private fun updateQuickEngineSwitcherUI() {
-        val mapping = listOf(
-            binding.btnQuickEngineBing to SearchEngine.BING,
-            binding.btnQuickEngineEcosia to SearchEngine.ECOSIA,
-            binding.btnQuickEngineGoogle to SearchEngine.GOOGLE,
-            binding.btnQuickEngineDuckDuckGo to SearchEngine.DUCKDUCKGO,
-            binding.btnQuickEngineYahoo to SearchEngine.YAHOO
-        )
-        for ((btn, engine) in mapping) {
-            if (currentSearchEngine == engine) {
-                btn.setBackgroundResource(R.drawable.bg_quick_engine_active)
-            } else {
-                btn.setBackgroundResource(android.R.drawable.list_selector_background)
-            }
-        }
-    }
-
     private fun setupControls() {
-        setupQuickEngineSwitcher()
-
         binding.btnReaderMode.setOnClickListener {
             openReaderView()
         }
@@ -5373,48 +5331,61 @@ open class MediaHubActivity : AppCompatActivity() {
             return
         }
 
-        updateQuickEngineSwitcherUI()
         binding.layoutSuggestionsList.removeAllViews()
         val density = resources.displayMetrics.density
+        val isLight = isAppInLightMode()
+
+        if (isLight) {
+            binding.cardSuggestions.setCardBackgroundColor(Color.parseColor("#FFFFFF"))
+            binding.cardSuggestions.strokeColor = Color.parseColor("#E2E8F0")
+            binding.cardSuggestions.cardElevation = 12 * density
+        } else {
+            binding.cardSuggestions.setCardBackgroundColor(Color.parseColor("#131B2E"))
+            binding.cardSuggestions.strokeColor = Color.parseColor("#23324B")
+            binding.cardSuggestions.cardElevation = 14 * density
+        }
+
+        val primaryTextColor = if (isLight) Color.parseColor("#0F172A") else Color.parseColor("#F8FAFC")
+        val secondaryTextColor = if (isLight) Color.parseColor("#64748B") else Color.parseColor("#94A3B8")
+        val searchIconTint = if (isLight) Color.parseColor("#0284C7") else Color.parseColor("#38BDF8")
+        val historyIconTint = if (isLight) Color.parseColor("#64748B") else Color.parseColor("#94A3B8")
 
         for (item in list) {
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding((12 * density).toInt(), (9 * density).toInt(), (12 * density).toInt(), (9 * density).toInt())
+                setPadding((14 * density).toInt(), (10 * density).toInt(), (14 * density).toInt(), (10 * density).toInt())
                 setBackgroundResource(android.R.drawable.list_selector_background)
                 isClickable = true
                 isFocusable = true
             }
 
             val icon = ImageView(this).apply {
-                layoutParams = LinearLayout.LayoutParams((16 * density).toInt(), (16 * density).toInt())
+                layoutParams = LinearLayout.LayoutParams((18 * density).toInt(), (18 * density).toInt())
                 val iconRes = if (item.isHistory) R.drawable.ic_history else R.drawable.ic_search
                 setImageResource(iconRes)
-                imageTintList = ColorStateList.valueOf(
-                    if (item.isHistory) getColor(R.color.secondary) else getColor(R.color.fokk_cyan)
-                )
+                imageTintList = ColorStateList.valueOf(if (item.isHistory) historyIconTint else searchIconTint)
             }
 
             val textLayout = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginStart = (10 * density).toInt()
+                    marginStart = (12 * density).toInt()
                 }
             }
 
             val titleTv = TextView(this).apply {
                 text = item.title
-                setTextColor(getColor(R.color.text_primary))
-                textSize = 13f
+                setTextColor(primaryTextColor)
+                textSize = 13.5f
                 maxLines = 1
                 ellipsize = TextUtils.TruncateAt.END
             }
 
             val urlTv = TextView(this).apply {
                 text = item.url
-                setTextColor(getColor(R.color.text_secondary))
-                textSize = 10.5f
+                setTextColor(secondaryTextColor)
+                textSize = 11f
                 maxLines = 1
                 ellipsize = TextUtils.TruncateAt.END
             }
@@ -6122,12 +6093,13 @@ open class MediaHubActivity : AppCompatActivity() {
         val isLight = isAppInLightMode()
         if (isLight) {
             cardBinding.cardTab.setCardBackgroundColor(Color.parseColor("#FFFFFF"))
-            cardBinding.layoutCardHeader.setBackgroundColor(if (tab.isPrivate) Color.parseColor("#F5F3FF") else Color.parseColor("#F1F5F9"))
+            cardBinding.layoutCardHeader.setBackgroundColor(Color.parseColor("#FFFFFF"))
             cardBinding.textTabTitle.setTextColor(Color.parseColor("#0F172A"))
             cardBinding.textTabUrl.setTextColor(Color.parseColor("#64748B"))
-            cardBinding.btnCloseTab.imageTintList = ColorStateList.valueOf(Color.parseColor("#0F172A"))
+            cardBinding.btnCloseTab.imageTintList = ColorStateList.valueOf(Color.parseColor("#475569"))
+            cardBinding.imgTabIcon.imageTintList = ColorStateList.valueOf(Color.parseColor("#0F172A"))
             if (globalIndex == activeTabIndex) {
-                cardBinding.cardTab.strokeColor = Color.parseColor("#0284C7")
+                cardBinding.cardTab.strokeColor = Color.parseColor("#0F172A")
                 cardBinding.cardTab.strokeWidth = (2f * resources.displayMetrics.density).toInt()
             } else {
                 cardBinding.cardTab.strokeColor = Color.parseColor("#E2E8F0")
@@ -6154,11 +6126,39 @@ open class MediaHubActivity : AppCompatActivity() {
         val sheetBinding = SheetTabSwitcherBinding.inflate(layoutInflater)
         dialog.setContentView(sheetBinding.root)
         val isLight = isAppInLightMode()
-        dialog.window?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.setBackgroundColor(
-            if (isLight) Color.parseColor("#FAF9F6") else Color.parseColor("#0A0A0A")
-        )
+
+        dialog.setOnShowListener { dialogInterface ->
+            val bottomSheetDialog = dialogInterface as? BottomSheetDialog ?: return@setOnShowListener
+            val bottomSheet = bottomSheetDialog.findViewById<FrameLayout>(
+                com.google.android.material.R.id.design_bottom_sheet
+            ) ?: return@setOnShowListener
+            val behavior = BottomSheetBehavior.from(bottomSheet)
+            behavior.state = BottomSheetBehavior.STATE_EXPANDED
+            behavior.skipCollapsed = true
+            behavior.isDraggable = true
+            val layoutParams = bottomSheet.layoutParams
+            layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+            bottomSheet.layoutParams = layoutParams
+            bottomSheet.setBackgroundColor(
+                if (isLight) Color.parseColor("#FAF9F5") else Color.parseColor("#0B0F17")
+            )
+        }
+
+        val themeBgColor = if (isLight) Color.parseColor("#FAF9F5") else Color.parseColor("#0B0F17")
+        sheetBinding.rootTabSwitcher.setBackgroundColor(themeBgColor)
+
         if (isLight) {
-            applyLightThemeToSheet(sheetBinding.root, dialog)
+            sheetBinding.cardBottomPill.setCardBackgroundColor(Color.parseColor("#FFFFFF"))
+            sheetBinding.cardBottomPill.strokeColor = Color.parseColor("#E2E8F0")
+            sheetBinding.imgBottomTabs.imageTintList = ColorStateList.valueOf(Color.parseColor("#0F172A"))
+            sheetBinding.imgBottomHistory.imageTintList = ColorStateList.valueOf(Color.parseColor("#64748B"))
+            sheetBinding.btnNewTabSheet.setCardBackgroundColor(Color.parseColor("#18181B"))
+            sheetBinding.imgCentralPlusIcon.imageTintList = ColorStateList.valueOf(Color.parseColor("#FFFFFF"))
+            sheetBinding.textTabCountBadge.setTextColor(Color.parseColor("#0F172A"))
+            sheetBinding.imgBottomMenu.imageTintList = ColorStateList.valueOf(Color.parseColor("#64748B"))
+            sheetBinding.imgSearchHeaderIcon.imageTintList = ColorStateList.valueOf(Color.parseColor("#0F172A"))
+            sheetBinding.editSearchTabs.setTextColor(Color.parseColor("#0F172A"))
+            sheetBinding.editSearchTabs.setHintTextColor(Color.parseColor("#94A3B8"))
         }
 
         var tabSearchQuery = ""
@@ -6167,19 +6167,20 @@ open class MediaHubActivity : AppCompatActivity() {
             val normalTabs = tabs.filter { !it.isPrivate }
             val privateTabs = tabs.filter { it.isPrivate }
 
-            sheetBinding.btnFilterNormal.text = "Tabs (${normalTabs.size})"
-            sheetBinding.btnFilterPrivate.text = "Ghost Mode (${privateTabs.size})"
+            val primaryTextColor = if (isLight) Color.parseColor("#0F172A") else Color.WHITE
+            val inactiveTextColor = Color.parseColor("#71717A")
+            val underlineActiveColor = if (isLight) Color.parseColor("#0F172A") else Color.WHITE
 
             if (showingPrivateTabs) {
-                sheetBinding.btnFilterPrivate.setBackgroundResource(R.drawable.bg_stat_chip)
-                sheetBinding.btnFilterPrivate.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
-                sheetBinding.btnFilterNormal.background = null
-                sheetBinding.btnFilterNormal.setTextColor(android.graphics.Color.parseColor("#71717A"))
+                sheetBinding.textPrivateTabsTitle.setTextColor(primaryTextColor)
+                sheetBinding.indicatorPrivateUnderline.setBackgroundColor(underlineActiveColor)
+                sheetBinding.textNormalTabsTitle.setTextColor(inactiveTextColor)
+                sheetBinding.indicatorNormalUnderline.setBackgroundColor(Color.TRANSPARENT)
             } else {
-                sheetBinding.btnFilterNormal.setBackgroundResource(R.drawable.bg_stat_chip)
-                sheetBinding.btnFilterNormal.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
-                sheetBinding.btnFilterPrivate.background = null
-                sheetBinding.btnFilterPrivate.setTextColor(android.graphics.Color.parseColor("#71717A"))
+                sheetBinding.textNormalTabsTitle.setTextColor(primaryTextColor)
+                sheetBinding.indicatorNormalUnderline.setBackgroundColor(underlineActiveColor)
+                sheetBinding.textPrivateTabsTitle.setTextColor(inactiveTextColor)
+                sheetBinding.indicatorPrivateUnderline.setBackgroundColor(Color.TRANSPARENT)
             }
 
             val currentTabsList = tabs.filter {
@@ -6188,6 +6189,8 @@ open class MediaHubActivity : AppCompatActivity() {
                  it.title.contains(tabSearchQuery, ignoreCase = true) ||
                  it.url.contains(tabSearchQuery, ignoreCase = true))
             }
+
+            sheetBinding.textTabCountBadge.text = "${tabs.count { it.isPrivate == showingPrivateTabs }.coerceAtLeast(1)}"
             sheetBinding.layoutTabsGrid.removeAllViews()
 
             val density = resources.displayMetrics.density
@@ -6195,52 +6198,71 @@ open class MediaHubActivity : AppCompatActivity() {
             if (currentTabsList.isEmpty()) {
                 val emptyNotice = TextView(this).apply {
                     text = if (tabSearchQuery.isNotEmpty()) "No tabs found matching \"$tabSearchQuery\"" else "No open tabs"
-                    setTextColor(getColor(R.color.text_secondary))
+                    setTextColor(if (isLight) Color.parseColor("#64748B") else getColor(R.color.text_secondary))
                     textSize = 13f
                     gravity = Gravity.CENTER
-                    setPadding(0, (32 * density).toInt(), 0, (32 * density).toInt())
+                    setPadding(0, (48 * density).toInt(), 0, (48 * density).toInt())
                 }
                 sheetBinding.layoutTabsGrid.addView(emptyNotice)
             } else {
                 for (i in currentTabsList.indices step 2) {
-                val row = LinearLayout(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        bottomMargin = (6 * density).toInt()
+                    val row = LinearLayout(this).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                        ).apply {
+                            bottomMargin = (8 * density).toInt()
+                        }
+                        orientation = LinearLayout.HORIZONTAL
+                        weightSum = 2f
                     }
-                    orientation = LinearLayout.HORIZONTAL
-                    weightSum = 2f
-                }
 
-                val tab1 = currentTabsList[i]
-                val globalIdx1 = tabs.indexOf(tab1)
-                val cardBinding1 = ItemTabCardBinding.inflate(layoutInflater, row, false)
-                bindTabCard(cardBinding1, tab1, globalIdx1, dialog) {
-                    updateTabsView()
-                }
-                cardBinding1.root.layoutParams = LinearLayout.LayoutParams(0, (170 * density).toInt(), 1f)
-                row.addView(cardBinding1.root)
-
-                if (i + 1 < currentTabsList.size) {
-                    val tab2 = currentTabsList[i + 1]
-                    val globalIdx2 = tabs.indexOf(tab2)
-                    val cardBinding2 = ItemTabCardBinding.inflate(layoutInflater, row, false)
-                    bindTabCard(cardBinding2, tab2, globalIdx2, dialog) {
+                    val tab1 = currentTabsList[i]
+                    val globalIdx1 = tabs.indexOf(tab1)
+                    val cardBinding1 = ItemTabCardBinding.inflate(layoutInflater, row, false)
+                    bindTabCard(cardBinding1, tab1, globalIdx1, dialog) {
                         updateTabsView()
                     }
-                    cardBinding2.root.layoutParams = LinearLayout.LayoutParams(0, (170 * density).toInt(), 1f)
-                    row.addView(cardBinding2.root)
-                } else {
-                    val spacer = View(this).apply {
-                        layoutParams = LinearLayout.LayoutParams(0, (170 * density).toInt(), 1f)
+                    cardBinding1.root.layoutParams = LinearLayout.LayoutParams(0, (175 * density).toInt(), 1f).apply {
+                        marginEnd = (4 * density).toInt()
                     }
-                    row.addView(spacer)
-                }
+                    row.addView(cardBinding1.root)
 
-                sheetBinding.layoutTabsGrid.addView(row)
+                    if (i + 1 < currentTabsList.size) {
+                        val tab2 = currentTabsList[i + 1]
+                        val globalIdx2 = tabs.indexOf(tab2)
+                        val cardBinding2 = ItemTabCardBinding.inflate(layoutInflater, row, false)
+                        bindTabCard(cardBinding2, tab2, globalIdx2, dialog) {
+                            updateTabsView()
+                        }
+                        cardBinding2.root.layoutParams = LinearLayout.LayoutParams(0, (175 * density).toInt(), 1f).apply {
+                            marginStart = (4 * density).toInt()
+                        }
+                        row.addView(cardBinding2.root)
+                    } else {
+                        val spacer = View(this).apply {
+                            layoutParams = LinearLayout.LayoutParams(0, (175 * density).toInt(), 1f).apply {
+                                marginStart = (4 * density).toInt()
+                            }
+                        }
+                        row.addView(spacer)
+                    }
+
+                    sheetBinding.layoutTabsGrid.addView(row)
                 }
+            }
+        }
+
+        sheetBinding.btnToggleTabSearch.setOnClickListener {
+            val isSearchVisible = sheetBinding.layoutTabSearchBar.visibility == View.VISIBLE
+            if (isSearchVisible) {
+                sheetBinding.layoutTabSearchBar.visibility = View.GONE
+                sheetBinding.editSearchTabs.setText("")
+            } else {
+                sheetBinding.layoutTabSearchBar.visibility = View.VISIBLE
+                sheetBinding.editSearchTabs.requestFocus()
+                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+                imm?.showSoftInput(sheetBinding.editSearchTabs, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
             }
         }
 
@@ -6276,40 +6298,69 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         sheetBinding.btnNewTabSheet.setOnClickListener {
-            addNewTab("file:///android_asset/fokk_start.html", isPrivate = false)
-            showingPrivateTabs = isIsolatedPrivateProfile
+            addNewTab("file:///android_asset/fokk_start.html", isPrivate = showingPrivateTabs)
             dialog.dismiss()
         }
 
-        sheetBinding.btnNewPrivateTab.setOnClickListener {
-            authenticateForPrivateTabs {
-                addNewTab("file:///android_asset/fokk_start.html", isPrivate = true)
-                showingPrivateTabs = true
-                dialog.dismiss()
-            }
+        sheetBinding.btnBottomTabs.setOnClickListener {
+            dialog.dismiss()
         }
 
-        sheetBinding.btnCloseAllTabs.setOnClickListener {
-            val toRemove = tabs.filter { it.isPrivate == showingPrivateTabs }
-            for (tab in toRemove) {
-                tab.webView?.let { webView ->
-                    binding.tabContainer.removeView(webView)
-                    webView.destroy()
+        sheetBinding.btnBottomHistory.setOnClickListener {
+            dialog.dismiss()
+            showHistoryDialog()
+        }
+
+        sheetBinding.btnBottomTabCount.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        sheetBinding.btnBottomMenu.setOnClickListener { anchorView ->
+            val popup = androidx.appcompat.widget.PopupMenu(this, anchorView)
+            popup.menu.add(0, 1, 0, "Close All Tabs")
+            popup.menu.add(0, 2, 1, "New Ghost Tab")
+            popup.menu.add(0, 3, 2, "Start Page")
+            popup.setOnMenuItemClickListener { menuItem ->
+                when (menuItem.itemId) {
+                    1 -> {
+                        val toRemove = tabs.filter { it.isPrivate == showingPrivateTabs }
+                        for (tab in toRemove) {
+                            tab.webView?.let { webView ->
+                                binding.tabContainer.removeView(webView)
+                                webView.destroy()
+                            }
+                            tabs.remove(tab)
+                        }
+                        if (tabs.isEmpty()) {
+                            addNewTab("file:///android_asset/fokk_start.html", isPrivate = false)
+                        } else {
+                            switchToTab(0)
+                        }
+                        dialog.dismiss()
+                        true
+                    }
+                    2 -> {
+                        authenticateForPrivateTabs {
+                            addNewTab("file:///android_asset/fokk_start.html", isPrivate = true)
+                            showingPrivateTabs = true
+                            dialog.dismiss()
+                        }
+                        true
+                    }
+                    3 -> {
+                        addNewTab("file:///android_asset/fokk_start.html", isPrivate = showingPrivateTabs)
+                        dialog.dismiss()
+                        true
+                    }
+                    else -> false
                 }
-                tabs.remove(tab)
             }
-            if (tabs.isEmpty()) {
-                addNewTab("file:///android_asset/fokk_start.html", isPrivate = false)
-            } else {
-                switchToTab(0)
-            }
-            dialog.dismiss()
+            popup.show()
         }
 
         if (isIsolatedPrivateProfile) {
             sheetBinding.btnFilterNormal.visibility = View.GONE
-            sheetBinding.btnFilterPrivate.text = "Private tabs (${tabs.size})"
-            sheetBinding.btnNewTabSheet.contentDescription = "New private tab"
+            sheetBinding.textPrivateTabsTitle.text = "Private"
         }
 
         updateTabsView()
@@ -8385,9 +8436,16 @@ open class MediaHubActivity : AppCompatActivity() {
 
         for (country in countries) {
             val itemBinding = com.adshield.app.databinding.ItemVpnLocationBinding.inflate(inflater, b.countryLocationsContainer, false)
-            itemBinding.imgFlag.setImageResource(country.flagRes)
+            itemBinding.imgFlag.setImageDrawable(com.adshield.app.engine.VpnEngine.getCountryFlagDrawable(this, country.code))
             itemBinding.textTitle.text = country.name
             itemBinding.textSubtitle.text = country.subtitle
+            // These rows are created after the sheet-wide light-theme pass. Give
+            // their dynamically created labels the same accessible light palette.
+            if (isAppInLightMode()) {
+                itemBinding.textTitle.setTextColor(Color.parseColor("#0F172A"))
+                itemBinding.textSubtitle.setTextColor(Color.parseColor("#475569"))
+                itemBinding.dividerLocation.setBackgroundColor(Color.parseColor("#E2E8F0"))
+            }
             itemBinding.badgePro.visibility = View.VISIBLE
             itemBinding.rowLocation.setOnClickListener { select(country.code) }
             countryCheckViews[country.code] = itemBinding.imgCheck
