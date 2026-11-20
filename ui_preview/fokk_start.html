@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fokk Browser</title>
+    <title>Fokk Nox</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -834,6 +834,12 @@
             font-display: swap;
         }
 
+        .brand-title-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+        }
+
         .brand-title-hero {
             font-family: 'Sora', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             font-size: 28px;
@@ -842,6 +848,39 @@
             color: var(--text-primary);
             line-height: 1;
             text-transform: uppercase;
+        }
+
+        .brand-nox-pill {
+            font-family: 'Sora', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: 2.2px;
+            color: #F8FAFC;
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.28) 0%, rgba(59, 130, 246, 0.16) 100%);
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            padding: 3px 8px 3px 9px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            box-shadow: 0 0 14px rgba(168, 85, 247, 0.25);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        body.light-theme .brand-nox-pill {
+            color: #0F172A;
+            background: #EDE9FE;
+            border: 1px solid #C4B5FD;
+            box-shadow: 0 2px 8px rgba(168, 85, 247, 0.15);
+        }
+
+        body.incognito-stealth-mode .brand-nox-pill,
+        body.light-theme.incognito-stealth-mode .brand-nox-pill {
+            color: #F8FAFC !important;
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.35) 0%, rgba(59, 130, 246, 0.2) 100%) !important;
+            border: 1px solid rgba(168, 85, 247, 0.45) !important;
+            box-shadow: 0 0 16px rgba(168, 85, 247, 0.3) !important;
         }
 
         /* 2. ULTRA-MODERN SQUIRCLE COMMAND INPUT CARD */
@@ -4105,9 +4144,12 @@
         <!-- 1. CENTERED HERO BRANDING -->
         <div class="brand-hero-center">
             <div class="brand-logo-disc">
-                <img src="fokk_logo.png" alt="Fokk Logo" class="brand-logo-img" onerror="this.src='ic_fokk_logo.png'">
+                <img src="fokk_logo.png" alt="Fokk Nox Logo" class="brand-logo-img" onerror="this.src='ic_fokk_logo.png'">
             </div>
-            <span class="brand-title-hero">Fokk</span>
+            <div class="brand-title-group">
+                <span class="brand-title-hero">FOKK</span>
+                <span class="brand-nox-pill">NOX</span>
+            </div>
         </div>
 
         <!-- 2. ULTRA-MODERN SQUIRCLE COMMAND INPUT CARD -->
@@ -4222,8 +4264,8 @@
                     <path d="M10.8 16.5 Q12 15.2 13.2 16.5" stroke="#A855F7" stroke-width="2" fill="none"/>
                 </svg>
             </div>
-            <h2 class="stealth-hero-title">Incognito Mode Active</h2>
-            <p class="stealth-hero-subtitle">You are browsing in private stealth mode. Your browsing history, search records, and cookies are never saved.</p>
+            <h2 class="stealth-hero-title">Nox Stealth Active</h2>
+            <p class="stealth-hero-subtitle">You are browsing in private Nox stealth mode. Your browsing history, search records, and cookies are never saved.</p>
             <div class="stealth-features-badges">
                 <div class="stealth-chip">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>

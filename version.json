@@ -1,6 +1,6 @@
 {
-  "versionCode": 307,
-  "versionName": "3.0.7",
-  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v3.0.7/app-debug.apk",
-  "changelog": "- Viewport Insets & Webpage View: Fixed layout logic so the docked command card never hides webpage headers or bottom navigation, ensuring full viewport visibility whether positioned top or bottom.\n- Smooth Webpage Expansion on Collapse: Added smooth synchronized margin animations so webpages expand smoothly to fill full screen when the command card collapses on scroll, and contract cleanly when it expands.\n- Incognito / Private Home Page Dark Alignment: Fixed incognito home page styling to remain in pure stealth dark theme even when light theme is active across the browser."
+  "versionCode": 308,
+  "versionName": "3.0.8",
+  "downloadUrl": "https://github.com/Kimmojiraja/fokk-project/releases/download/v3.0.8/app-debug.apk",
+  "changelog": "- Brand Identity: Rebranded to Fokk Nox — an ultra-sleek, luxury midnight edition built for stealth, speed, and focus.\n- Nox Midnight UI: Refined dark theme palette to deep obsidian (#07080C), starlight white typography, and subtle nebula violet glass pill accents.\n- Viewport Insets & Webpage View: Fixed layout logic so the docked command bar never obscures webpage headers or navigation bar whether docked top or bottom.\n- Smooth Webpage Expansion: Added smooth animated viewport transitions when the command bar collapses and expands on scroll.\n- Stealth Incognito Mode: Guaranteed strict dark stealth theme for private tabs even when daylight mode is selected."
 }
