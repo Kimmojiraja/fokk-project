@@ -99,6 +99,17 @@
                 app:tint="#94A3B8"
                 android:contentDescription="Save Summary" />
 
+            <!-- Refresh / Clear AI Cache Button -->
+            <ImageButton
+                android:id="@+id/btnRefreshAiSummary"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:layout_marginEnd="2dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_refresh"
+                app:tint="#94A3B8"
+                android:contentDescription="Refresh Analysis and Clear Cache" />
+
             <!-- History Button -->
             <ImageButton
                 android:id="@+id/btnAiHistory"

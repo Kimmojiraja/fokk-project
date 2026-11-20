@@ -2388,6 +2388,39 @@
         const host = (window.location.hostname || '').toLowerCase();
         if (!host.includes('google.')) return;
         try {
+            // Early CSS suppression of Google One Tap / credential prompt & app promo overlays
+            if (!document.getElementById('__fokk_google_style')) {
+                const style = document.createElement('style');
+                style.id = '__fokk_google_style';
+                style.textContent = `
+                    #credential_picker_container, #credential_picker_iframe, iframe[src*="smartlock.google.com"],
+                    iframe[src*="accounts.google.com/gsi/"], div[id*="g_id_onload"],
+                    div[data-component="bottom-sheet"]:not(:has(#islsp)):not(:has([data-ved])),
+                    div[class*="app-upsell"], div[class*="promos-container"], div[id*="app-promo"] {
+                        display: none !important;
+                        visibility: hidden !important;
+                        pointer-events: none !important;
+                    }
+                `;
+                (document.head || document.documentElement).appendChild(style);
+            }
+
+            // Defuse Google One Tap JS API prompt before it displays or stalls
+            if (window.google) {
+                window.google.accounts = window.google.accounts || {};
+                if (!window.google.accounts.id || !window.google.accounts.id.__fokkDefused) {
+                    window.google.accounts.id = {
+                        __fokkDefused: true,
+                        initialize: function() {},
+                        prompt: function() {},
+                        renderButton: function() {},
+                        disableAutoSelect: function() {},
+                        storeCredential: function() {},
+                        cancel: function() {}
+                    };
+                }
+            }
+
             // 1. Google One Tap / credential picker iframes
             const oneTap = document.querySelectorAll('#credential_picker_container, #credential_picker_iframe, iframe[src*="smartlock.google.com"], iframe[src*="accounts.google.com/gsi/"], div[id*="g_id_onload"]');
             oneTap.forEach(function(el) {
@@ -2427,14 +2460,25 @@
                 const hasNoText = (sheet.innerText || '').trim().length === 0;
                 const rect = sheet.getBoundingClientRect();
                 const isBottomHalf = rect.top > window.innerHeight * 0.3 && rect.height > window.innerHeight * 0.25;
-                if (hasSpinner && hasNoText && isBottomHalf) {
+                if (hasSpinner && (hasNoText || sheet.querySelectorAll('button, a').length <= 1) && isBottomHalf) {
                     sheet.style.setProperty('display', 'none', 'important');
                     try { sheet.remove(); } catch(e) {}
                     unlockPageScrolling();
                 }
             });
 
-            // 5. Always ensure page is unlocked and scrollable on Google
+            // 5. Dismiss empty backdrop overlays that lock screen on Google
+            document.querySelectorAll('div[class*="backdrop"], div[class*="overlay"], div[jsname="b-d"], div.b-d').forEach(function(bd) {
+                if (bd.querySelector('#islsp, [data-ved], img[src*="http"]')) return;
+                const rect = bd.getBoundingClientRect();
+                if (rect.width > window.innerWidth * 0.8 && rect.height > window.innerHeight * 0.8) {
+                    bd.style.setProperty('display', 'none', 'important');
+                    try { bd.remove(); } catch(e) {}
+                    unlockPageScrolling();
+                }
+            });
+
+            // 6. Always ensure page is unlocked and scrollable on Google
             unlockPageScrolling();
         } catch(e) {}
     }
