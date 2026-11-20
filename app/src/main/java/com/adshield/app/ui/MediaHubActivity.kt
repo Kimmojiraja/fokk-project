@@ -1575,7 +1575,6 @@ open class MediaHubActivity : AppCompatActivity() {
         binding.imgNavAiIcon.imageTintList = null
         binding.btnAiSummary.setImageResource(aiLogoRes)
         binding.btnAiSummary.imageTintList = null
-        binding.btnMediaDetectedAction.imageTintList = ColorStateList.valueOf(foreground)
         binding.btnPictureInPicture.imageTintList = ColorStateList.valueOf(foreground)
         binding.commandBarDivider.setBackgroundColor(if (isLight) Color.parseColor("#CBD5E1") else Color.parseColor("#2E3C52"))
         binding.textTabCount.setTextColor(foreground)
@@ -6279,6 +6278,9 @@ open class MediaHubActivity : AppCompatActivity() {
             sheetBinding.layoutTabsGrid.removeAllViews()
 
             val density = resources.displayMetrics.density
+            val currentTabsList = (if (showingPrivateTabs) privateTabs else normalTabs).filter {
+                if (tabSearchQuery.isEmpty()) true else it.title.contains(tabSearchQuery, ignoreCase = true) || it.url.contains(tabSearchQuery, ignoreCase = true)
+            }
 
             if (currentTabsList.isEmpty()) {
                 val emptyNotice = TextView(this).apply {
