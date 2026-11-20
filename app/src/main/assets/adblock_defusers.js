@@ -581,15 +581,14 @@
     // 9. Intelligent Anti-Adblock Defuser & Auto-Dismissal (Generic across Fox News, The Sun, Yahoo, Forbes, etc.)
     var scrubNagElements = function() {
         var host = (window.location.hostname || '').toLowerCase();
-        if (host.indexOf('google.') !== -1 || host.indexOf('bing.com') !== -1 ||
+        var isSearchOrPlatform = host.indexOf('google.') !== -1 || host.indexOf('bing.com') !== -1 ||
             host.indexOf('duckduckgo.com') !== -1 || host.indexOf('yahoo.com') !== -1 ||
             host.indexOf('ecosia.org') !== -1 || host.indexOf('pinterest.com') !== -1 ||
             host.indexOf('wikipedia.org') !== -1 || host.indexOf('wikimedia.org') !== -1 ||
-            host.indexOf('youtube.com') !== -1 || host.indexOf('instagram.com') !== -1) {
-            return;
-        }
+            host.indexOf('youtube.com') !== -1 || host.indexOf('instagram.com') !== -1;
         try {
-            var nagPhrases = [
+            if (!isSearchOrPlatform) {
+                var nagPhrases = [
                 'ad or script blocking',
                 'interfering with this page',
                 'disable any ad or script',
@@ -705,6 +704,7 @@
                 }
 
                 restoreScroll();
+            }
             }
 
             // Remove mobile app prompt nags

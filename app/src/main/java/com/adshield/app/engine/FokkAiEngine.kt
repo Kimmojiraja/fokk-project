@@ -133,6 +133,7 @@ object FokkAiEngine {
         s = s.replace(Regex("(?is)^we need (to )?answer as fokk ai.*?(\n\n|$)"), "")
         s = s.replace(Regex("(?is)^okay, let('s| us) analyze.*?(\n\n|$)"), "")
         s = s.replace(Regex("(?is)^let's think step by step.*?(\n\n|$)"), "")
+        s = s.replace(Regex("""\[(?:name|number|figure|insert[^\]]*|placeholder|details|short bold topic)\]""", RegexOption.IGNORE_CASE), "")
         return stripEmojis(cleanDropCaps(s)).trim()
     }
 
@@ -176,10 +177,10 @@ object FokkAiEngine {
             append("EXECUTIVE_BRIEF:\n")
             append("[2-3 crisp, synthesized sentences explaining the core story, why it matters, and the main conclusion in fresh, plain English.]\n\n")
             append("KEY_EVIDENCE:\n")
-            append("- **[Short bold topic]:** [1 concise, rewritten takeaway sentence with specific facts/names/figures.]\n")
-            append("- **[Short bold topic]:** [1 concise, rewritten takeaway sentence.]\n")
-            append("- **[Short bold topic]:** [1 concise, rewritten takeaway sentence.]\n")
-            append("- **[Short bold topic]:** [1 concise, rewritten takeaway sentence.]\n\n")
+            append("- **Core Finding:** Concise, rewritten takeaway sentence with specific facts, names, and figures.\n")
+            append("- **Context & Details:** Concise, rewritten takeaway sentence.\n")
+            append("- **Key Developments:** Concise, rewritten takeaway sentence.\n")
+            append("- **Implications:** Concise, rewritten takeaway sentence.\n\n")
             append("KEY_METRICS:\n")
             append("[Up to 4 concrete numbers/stats from the article, each on its own line as: VALUE :: 2-5 word label. Example: £254m :: Claimed budget savings. NEVER output standalone years like 2025 or 2026 without context. Write NONE if the page has no meaningful figures.]\n\n")
             append("TRUTH_AUDIT:\n")
@@ -285,6 +286,7 @@ object FokkAiEngine {
             }
             append("\nSTYLE & SYNTHESIS STANDARDS:\n")
             append("- Directly answer what the user asked in the very first sentence. Be direct, authoritative, and concise.\n")
+            append("- NEVER output placeholder tokens like '[name]', '[number]', '[insert name]', or bracketed placeholders. If a specific figure or entity is not mentioned, describe the role or event naturally in plain English without placeholders.\n")
             append("- Prioritize verified journalism and primary reporting for core factual grounding, capturing eyewitness details and public discourse without mistaking social speculation for confirmed official policy.\n")
             append("- Never dismiss a real-world query with 'there is no record' if live web sources describe the event or entity.\n")
             append("- If the user asks 'what is this' or 'summarize', give a crisp, clear synthesis in your own words.\n")

@@ -3917,6 +3917,15 @@ open class MediaHubActivity : AppCompatActivity() {
                     return super.shouldInterceptRequest(view, request)
                 }
 
+                // Google Search & Image Infrastructure: unconditionally allow search assets, gstatic,
+                // and googleusercontent image thumbnails so mobile image previews never stall on spinners
+                val isGoogleSearchPage = pageHostLower?.contains("google.") == true
+                val isGoogleAsset = hostLower.contains("google.") || hostLower.contains("gstatic.com") || hostLower.contains("googleusercontent.com")
+                val isGoogleAdEndpoint = urlStr.contains("/pagead/") || urlStr.contains("adservice.google.") || urlStr.contains("doubleclick.net")
+                if (isGoogleSearchPage && isGoogleAsset && !isGoogleAdEndpoint) {
+                    return super.shouldInterceptRequest(view, request)
+                }
+
                 val isCrossSiteRequest = pageHost != null && !isSameSite(pageHost, host)
                 if (isCrossSiteRequest) recordThirdPartyRequest(view, host)
 
@@ -8920,8 +8929,10 @@ open class MediaHubActivity : AppCompatActivity() {
             val activeUrl = json.optString("url", activeWebView?.url.orEmpty())
             val postUrl = json.optString("postUrl", "").trim()
             val extractedContext = json.optString("extractedContext", "").trim()
-            if (extractedContext.isNotBlank()) {
+            if (extractedContext.isNotBlank() && !isHomePageUrl(activeUrl)) {
                 lastAiPageContext = FokkAiEngine.cleanDropCaps(extractedContext).take(10000)
+            } else if (isHomePageUrl(activeUrl)) {
+                lastAiPageContext = ""
             }
             val topEntitiesFromJs = mutableListOf<String>().apply {
                 val arr = json.optJSONArray("topEntities")
@@ -10392,15 +10403,20 @@ open class MediaHubActivity : AppCompatActivity() {
                     if (child != null) sheetBinding.scrollAiChatResponses.smoothScrollTo(0, child.bottom)
                 }
 
-                val pageCtx = lastAiPageContext.take(8000)
-                val historySnapshot = chatHistory.toList()
-
                 // Advanced Semantic Intent Analysis: Disentangle substantive factual queries from referential page requests
                 val substantiveKeywords = cleanQuery.lowercase(Locale.ROOT)
                     .split(Regex("[^a-z0-9]+"))
                     .filter { it.isNotBlank() && !FokkSearchAggregator.isFunctionalStopWord(it) }
 
                 val isSubstantiveQuery = substantiveKeywords.size >= 2 || (substantiveKeywords.size == 1 && cleanQuery.length > 5)
+                val isInternalOrHomePage = isHomePageUrl(activeUrl) || title.startsWith("New Tab", ignoreCase = true) || title.equals("Fokk", ignoreCase = true) || title.equals("Fokk AI", ignoreCase = true)
+
+                val pageCtx = if (isSubstantiveQuery || isInternalOrHomePage) {
+                    ""
+                } else {
+                    lastAiPageContext.take(8000)
+                }
+                val historySnapshot = chatHistory.toList()
 
                 val (searchQuery, anchorTitle, anchorHost) = if (isSubstantiveQuery) {
                     Triple(cleanQuery.take(120), "", "")
@@ -10429,13 +10445,13 @@ open class MediaHubActivity : AppCompatActivity() {
                     val (answer, followUps) = FokkAiEngine.queryInteractiveResearch(
                         context = this@MediaHubActivity,
                         userQuery = cleanQuery,
-                        pageTitle = title,
-                        pageHost = sourceHost,
+                        pageTitle = if (isSubstantiveQuery || isInternalOrHomePage) "" else title,
+                        pageHost = if (isSubstantiveQuery || isInternalOrHomePage) "" else sourceHost,
                         pageContext = pageCtx,
                         externalSources = sources,
-                        pageAuthor = pageAuthor,
-                        pagePublished = pagePublished,
-                        pageUrl = activeUrl,
+                        pageAuthor = if (isSubstantiveQuery || isInternalOrHomePage) "" else pageAuthor,
+                        pagePublished = if (isSubstantiveQuery || isInternalOrHomePage) "" else pagePublished,
+                        pageUrl = if (isSubstantiveQuery || isInternalOrHomePage) "" else activeUrl,
                         conversationHistory = historySnapshot
                     )
 
@@ -10857,16 +10873,18 @@ open class MediaHubActivity : AppCompatActivity() {
         }
         val (answer, followUps) = runCatching {
             kotlinx.coroutines.runBlocking(Dispatchers.IO) {
+                val isHome = isHomePageUrl(activeWebView?.url)
+                val effectiveContext = if (isHome) "" else lastAiPageContext
                 FokkAiEngine.queryInteractiveResearch(
                     context = this@MediaHubActivity,
                     userQuery = userQuery,
                     pageTitle = "",
                     pageHost = "",
-                    pageContext = lastAiPageContext,
+                    pageContext = effectiveContext,
                     externalSources = sources
                 )
             }
-        }.getOrDefault(Pair(FokkAiEngine.buildOfflineForensicSynthesis(userQuery, lastAiPageContext, sources), emptyList()))
+        }.getOrDefault(Pair(FokkAiEngine.buildOfflineForensicSynthesis(userQuery, if (isHomePageUrl(activeWebView?.url)) "" else lastAiPageContext, sources), emptyList()))
 
         return if (followUps.isNotEmpty()) {
             answer + "\n\nSUGGESTED_FOLLOWUPS: " + followUps.joinToString(" | ")

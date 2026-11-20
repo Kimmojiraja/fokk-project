@@ -265,12 +265,14 @@ object FokkSearchAggregator {
                 async { fetchBingNews(q, max = 5) }
             }
             val ddgInstantDeferred = async { fetchDuckDuckGoInstant(primaryQuery) }
+            val ddgHtmlDeferred = async { fetchDuckDuckGoHtml(primaryQuery, max = 5) }
             val wikiDeferred = async { fetchWikipedia(searchVariants.getOrNull(1) ?: primaryQuery, max = 3) }
             val wikidataDeferred = async { fetchWikidata(searchVariants.getOrNull(1) ?: primaryQuery, max = 1) }
 
             val googleNewsResults = googleNewsDeferreds.flatMap { runCatching { it.await() }.getOrDefault(emptyList()) }
             val bingNewsResults = bingNewsDeferreds.flatMap { runCatching { it.await() }.getOrDefault(emptyList()) }
             val ddgInstantResults = runCatching { ddgInstantDeferred.await() }.getOrDefault(emptyList())
+            val ddgHtmlResults = runCatching { ddgHtmlDeferred.await() }.getOrDefault(emptyList())
             val wikiResults = runCatching { wikiDeferred.await() }.getOrDefault(emptyList())
             val wikidataResults = runCatching { wikidataDeferred.await() }.getOrDefault(emptyList())
 
@@ -319,6 +321,7 @@ object FokkSearchAggregator {
             googleNewsResults.forEach { evaluateAndAdd(it, baseScore = 45, strictRelevance = true) }
             bingNewsResults.forEach { evaluateAndAdd(it, baseScore = 45, strictRelevance = true) }
             ddgInstantResults.forEach { evaluateAndAdd(it, baseScore = 30, strictRelevance = false) }
+            ddgHtmlResults.forEach { evaluateAndAdd(it, baseScore = 40, strictRelevance = false) }
 
             wikiResults.forEach { w ->
                 val haystack = "${w.title} ${w.snippet}".lowercase(Locale.ROOT)
@@ -473,6 +476,25 @@ object FokkSearchAggregator {
     }
 
     /**
+     * Extracts multi-perspective headlines or summary text from Google News RSS description HTML.
+     */
+    fun cleanGoogleNewsDescription(rawDesc: String): String {
+        if (rawDesc.isBlank()) return ""
+        val liMatches = Regex("<li[^>]*>(.*?)</li>", RegexOption.DOT_MATCHES_ALL).findAll(rawDesc)
+        val headlines = mutableListOf<String>()
+        for (m in liMatches) {
+            val cleaned = cleanHtmlText(m.groupValues[1])
+            if (cleaned.isNotBlank()) {
+                headlines.add(cleaned)
+            }
+        }
+        if (headlines.isNotEmpty()) {
+            return headlines.take(3).joinToString(" | ")
+        }
+        return cleanHtmlText(rawDesc)
+    }
+
+    /**
      * Fetches real-time headlines from Google News RSS feed.
      */
     fun fetchGoogleNews(query: String, max: Int = 4): List<CorroboratedSource> {
@@ -491,6 +513,7 @@ object FokkSearchAggregator {
                 val itemRegex = Regex("<item>(.*?)</item>", RegexOption.DOT_MATCHES_ALL)
                 val titleRegex = Regex("<title>(.*?)</title>", RegexOption.DOT_MATCHES_ALL)
                 val linkRegex = Regex("<link>(.*?)</link>", RegexOption.DOT_MATCHES_ALL)
+                val descRegex = Regex("<description>(.*?)</description>", RegexOption.DOT_MATCHES_ALL)
                 val pubDateRegex = Regex("<pubDate>(.*?)</pubDate>", RegexOption.DOT_MATCHES_ALL)
                 val sourceRegex = Regex("<source[^>]*url=\"([^\"]*)\"[^>]*>(.*?)</source>", RegexOption.DOT_MATCHES_ALL)
 
@@ -498,6 +521,7 @@ object FokkSearchAggregator {
                     val itemContent = match.groupValues[1]
                     val rawTitle = titleRegex.find(itemContent)?.groupValues?.get(1).orEmpty()
                     val rawLink = linkRegex.find(itemContent)?.groupValues?.get(1).orEmpty()
+                    val rawDesc = descRegex.find(itemContent)?.groupValues?.get(1).orEmpty()
                     val pubDate = pubDateRegex.find(itemContent)?.groupValues?.get(1).orEmpty()
                     val sourceMatch = sourceRegex.find(itemContent)
 
@@ -517,10 +541,13 @@ object FokkSearchAggregator {
                     val cleanTitle = cleanHtmlText(rawTitle)
                     if (cleanTitle.isNotBlank() && rawLink.isNotBlank()) {
                         val formattedDate = pubDate.take(16).trim()
-                        val snippet = if (formattedDate.isNotBlank()) {
-                            "$sourceName ($formattedDate)"
-                        } else {
-                            sourceName
+                        val richSnippet = cleanGoogleNewsDescription(rawDesc)
+                        val snippet = when {
+                            richSnippet.isNotBlank() && richSnippet != cleanTitle -> {
+                                if (formattedDate.isNotBlank()) "$richSnippet ($formattedDate)" else richSnippet
+                            }
+                            formattedDate.isNotBlank() -> "$sourceName ($formattedDate)"
+                            else -> sourceName
                         }
 
                         results.add(
