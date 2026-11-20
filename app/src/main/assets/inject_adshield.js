@@ -2346,15 +2346,15 @@
             // 3. Computed style scroll & fixed-position check & unlock on body
             if (body) {
                 const bodyStyle = window.getComputedStyle(body);
-                if (bodyStyle.overflowY === 'hidden' || bodyStyle.overflowY === 'clip' || bodyStyle.overflow === 'hidden') {
+                if (bodyStyle.overflowY === 'hidden' || bodyStyle.overflowY === 'clip' || bodyStyle.overflow === 'hidden' || body.style.overflow === 'hidden' || body.style.overflowY === 'hidden') {
                     body.style.setProperty('overflow', 'auto', 'important');
                     body.style.setProperty('overflow-y', 'auto', 'important');
                 }
-                if (bodyStyle.position === 'fixed') {
+                if (bodyStyle.position === 'fixed' || body.style.position === 'fixed') {
                     body.style.setProperty('position', 'static', 'important');
                 }
-                if (body.style.position === 'fixed') {
-                    body.style.setProperty('position', 'static', 'important');
+                if (bodyStyle.touchAction === 'none' || body.style.touchAction === 'none') {
+                    body.style.setProperty('touch-action', 'auto', 'important');
                 }
                 if (bodyStyle.filter && bodyStyle.filter.includes('blur')) {
                     body.style.setProperty('filter', 'none', 'important');
@@ -2384,8 +2384,64 @@
         } catch(e) {}
     }
 
+    function defuseGoogleAppPromosAndSpinners() {
+        const host = (window.location.hostname || '').toLowerCase();
+        if (!host.includes('google.')) return;
+        try {
+            // 1. Google One Tap / credential picker iframes
+            const oneTap = document.querySelectorAll('#credential_picker_container, #credential_picker_iframe, iframe[src*="smartlock.google.com"], iframe[src*="accounts.google.com/gsi/"], div[id*="g_id_onload"]');
+            oneTap.forEach(function(el) {
+                try { el.remove(); } catch(e) {}
+            });
+
+            // 2. Google "Get the app" / "Search in the app" / "Stay in browser" bottom sheets
+            const appNags = document.querySelectorAll(
+                'div[data-component="bottom-sheet"], div[class*="bottom-sheet"], div[class*="app-upsell"], ' +
+                'div[id*="app-promo"], div[class*="app-promo"], div[class*="promos-container"], ' +
+                'div:has(> a[href*="play.google.com"]), div:has(> div > a[href*="play.google.com"])'
+            );
+            appNags.forEach(function(el) {
+                // NEVER touch search results or image viewer
+                if (el.querySelector('img[src*="http"], img[data-src], #islsp, [data-ved]')) return;
+                const txt = (el.innerText || el.textContent || '').toLowerCase();
+                if (txt.includes('app') || txt.includes('sign in') || txt.includes('stay in browser') || txt.includes('faster') || txt.includes('experience')) {
+                    el.style.setProperty('display', 'none', 'important');
+                    try { el.remove(); } catch(e) {}
+                    unlockPageScrolling();
+                }
+            });
+
+            // 3. Auto-dismiss / click "Stay in browser" or "No thanks" or "Dismiss" if present
+            document.querySelectorAll('button, a, div[role="button"]').forEach(function(btn) {
+                const bTxt = (btn.innerText || btn.textContent || '').trim().toLowerCase();
+                if (bTxt === 'stay in browser' || bTxt === 'no thanks' || bTxt === 'not now' || bTxt === 'dismiss') {
+                    try { btn.click(); } catch(e) {}
+                }
+            });
+
+            // 4. Stalled empty bottom sheets stuck on a spinner with no image / no results
+            document.querySelectorAll('div[role="dialog"], div[class*="bottom-sheet"], div[class*="dialog"], div[class*="drawer"]').forEach(function(sheet) {
+                // Strictly protect legitimate image viewer and results
+                if (sheet.querySelector('img[src*="http"], img[data-src], #islsp, [data-ved], article, main')) return;
+                const hasSpinner = sheet.querySelector('[role="progressbar"], .g-loading-icon, svg circle, [aria-busy="true"]');
+                const hasNoText = (sheet.innerText || '').trim().length === 0;
+                const rect = sheet.getBoundingClientRect();
+                const isBottomHalf = rect.top > window.innerHeight * 0.3 && rect.height > window.innerHeight * 0.25;
+                if (hasSpinner && hasNoText && isBottomHalf) {
+                    sheet.style.setProperty('display', 'none', 'important');
+                    try { sheet.remove(); } catch(e) {}
+                    unlockPageScrolling();
+                }
+            });
+
+            // 5. Always ensure page is unlocked and scrollable on Google
+            unlockPageScrolling();
+        } catch(e) {}
+    }
+
     function defuseClickjackingOverlays() {
         if (!isAiFilterEnabled) return;
+        unlockPageScrolling();
         const host = (window.location.hostname || '').toLowerCase();
         if (host.includes('youtube.com') || host.includes('instagram.com') ||
             host.includes('google.') || host.includes('bing.com') ||
@@ -2397,7 +2453,6 @@
             return;
         }
         try {
-            unlockPageScrolling();
             const vw = window.innerWidth || document.documentElement.clientWidth;
             const vh = window.innerHeight || document.documentElement.clientHeight;
             if (!vw || !vh || !document.body) return;
@@ -2496,6 +2551,8 @@
 
     function scrubAdultAndStreamingAds() {
         try {
+            unlockPageScrolling();
+            defuseGoogleAppPromosAndSpinners();
             defuseClickjackingOverlays();
             defuseAntiAdblockModals();
             defuseDeceptiveButtons();
@@ -2517,7 +2574,11 @@
             pendingSweep = true;
             setTimeout(function() {
                 pendingSweep = false;
-                if (host.includes('google.') || host.includes('bing.com')) scrubAiContent();
+                if (host.includes('google.') || host.includes('bing.com')) {
+                    scrubAiContent();
+                    if (host.includes('google.')) defuseGoogleAppPromosAndSpinners();
+                    unlockPageScrolling();
+                }
                 if (host.includes('youtube.com')) {
                     runUniversalVideoAdSkipper();
                     scrubYouTubeSponsored();
