@@ -721,6 +721,36 @@
             display: flex !important;
         }
 
+        /* Private home remains neutral in either system theme; daylight variables
+           must not leak into this dark no-history surface. */
+        body.light-theme.incognito-stealth-mode {
+            --bg-color: #000000;
+            --surface-card: #121824;
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+            --tile-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+            color: #F8FAFC;
+        }
+        body.light-theme.incognito-stealth-mode .hero-wordmark,
+        body.light-theme.incognito-stealth-mode .brand-title-hero,
+        body.light-theme.incognito-stealth-mode .stealth-hero-title {
+            color: #F8FAFC !important;
+        }
+        body.light-theme.incognito-stealth-mode .start-command-card {
+            background: #0B0F19 !important;
+            border-color: rgba(255, 255, 255, 0.16) !important;
+            box-shadow: 0 10px 32px rgba(0, 0, 0, 0.8) !important;
+        }
+        body.light-theme.incognito-stealth-mode .start-command-input,
+        body.light-theme.incognito-stealth-mode .engine-selector-capsule {
+            color: #F8FAFC !important;
+        }
+        body.light-theme.incognito-stealth-mode .start-command-input::placeholder {
+            color: #94A3B8 !important;
+        }
+
         body.has-custom-wp::before {
             content: '';
             position: fixed;
@@ -2912,9 +2942,24 @@
         }
         /* Publisher names set their own foreground color, so the footer rule alone
            cannot make them readable against a light news card. */
+        body.light-theme .pulse-news-footer,
+        body.light-theme .pulse-news-footer span,
         body.light-theme .pulse-news-footer .source-brand-badge,
-        body.light-theme .pulse-news-footer .brand-name {
-            color: #475569 !important;
+        body.light-theme .pulse-news-footer .brand-name,
+        body.light-theme .home-trending-meta,
+        body.light-theme .home-trending-meta span,
+        body.light-theme .home-trending-meta .source-brand-badge,
+        body.light-theme .home-trending-meta .brand-name {
+            color: #334155 !important;
+        }
+        body.light-theme:not(.incognito-stealth-mode) .brand-logo-disc {
+            background: #FFFFFF !important;
+            border: 1px solid #E2E8F0 !important;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
+        }
+        body.light-theme:not(.incognito-stealth-mode) .brand-logo-img {
+            filter: invert(1);
+            mix-blend-mode: multiply;
         }
         body.light-theme .pulse-news-footer .generic-brand-badge {
             background: #E2E8F0;
@@ -4107,12 +4152,12 @@
                 <div class="command-action-divider"></div>
 
                 <!-- Tabs Badge -->
-                <button class="command-icon-btn tabs-badge-btn" id="commandTabsBtn" ontouchstart="triggerTabsAction(event)" onclick="triggerTabsAction(event)" title="Open Tabs">
+                <button class="command-icon-btn tabs-badge-btn" id="commandTabsBtn" onclick="triggerTabsAction(event)" title="Open Tabs">
                     <span class="tab-badge-num" id="tabBadgeNumber">1</span>
                 </button>
 
                 <!-- Three-Dots Menu (Triangular 3-dots matching reference image) -->
-                <button class="command-icon-btn menu-dots-btn" id="commandMenuBtn" ontouchstart="toggleCommandMenu(event)" onclick="toggleCommandMenu(event)" title="Options Menu">
+                <button class="command-icon-btn menu-dots-btn" id="commandMenuBtn" onclick="toggleCommandMenu(event)" title="Options Menu">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFFFFF">
                         <circle cx="12" cy="6.5" r="2.8" fill="#FFFFFF"/>
                         <circle cx="6.5" cy="16.5" r="2.8" fill="#FFFFFF"/>
@@ -4351,7 +4396,7 @@
         <div class="modal-card" style="max-height: 85vh; overflow-y: auto;">
             <div class="modal-title">
                 <span>Manage Shortcuts</span>
-                <button class="modal-close" onclick="closeShortcutsManager()">✕</button>
+                <button class="modal-close" onclick="closeShortcutsManager()">&times;</button>
             </div>
 
             <!-- Existing Shortcuts List -->
@@ -4395,7 +4440,7 @@
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload from Device
                 </button>
                 <button class="visual-tag-btn active" onclick="filterVisuals('all', this)">All Feeds</button>
-                <button class="visual-tag-btn" onclick="filterVisuals('sailboats', this)">⛵ Sail &amp; Horizon</button>
+                <button class="visual-tag-btn" onclick="filterVisuals('sailboats', this)">Sail &amp; Horizon</button>
                 <button class="visual-tag-btn" onclick="filterVisuals('wallpapers', this)">4K Wallpapers</button>
                 <button class="visual-tag-btn" onclick="filterVisuals('cyberpunk', this)">Cyberpunk &amp; Neon</button>
                 <button class="visual-tag-btn" onclick="filterVisuals('nature', this)">Ethereal Nature</button>
@@ -4672,7 +4717,7 @@
         <div class="modal-card">
             <div class="modal-title">
                 <span>Select Weather City</span>
-                <button class="modal-close" onclick="closeCityPickerModal()">✕</button>
+                <button class="modal-close" onclick="closeCityPickerModal()">&times;</button>
             </div>
             <div style="display:flex; flex-direction:column; gap:10px;">
                 <input type="text" id="inputCustomCity" class="modal-input" placeholder="Type city (e.g. London, Tokyo, Mumbai)">
@@ -4695,7 +4740,7 @@
         <div class="modal-card">
             <div class="modal-title">
                 <span>Wallpapers &amp; Themes</span>
-                <button class="modal-close" onclick="closeThemeModal()">✕</button>
+                <button class="modal-close" onclick="closeThemeModal()">&times;</button>
             </div>
             <div class="wallpaper-grid">
                 <div class="wallpaper-card upload-card" onclick="triggerCustomWallpaperUpload()" style="background: rgba(255, 255, 255, 0.04); border: 2px dashed rgba(255, 255, 255, 0.22); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
@@ -4770,12 +4815,12 @@
                     ghostModeState = !ghostModeState;
                     localStorage.setItem('fokk_ghost_mode', String(ghostModeState));
                     updateGhostModeStatus();
-                    showPreviewToast(ghostModeState ? '👻 Ghost Mode: ON (Private Browsing)' : '🛡️ Ghost Mode: OFF');
+                    showPreviewToast(ghostModeState ? 'Ghost Mode: ON (Private Browsing)' : 'Ghost Mode: OFF');
                 },
-                openBookmarks: function() { showPreviewToast('⭐ Bookmarks & Saved Pages'); },
-                openHistory: function() { showPreviewToast('🕒 Browsing History'); },
-                openShieldDashboard: function() { showPreviewToast('🛡️ AdShield Defense Matrix'); },
-                openSettings: function() { showPreviewToast('⚙️ Browser Settings'); },
+                openBookmarks: function() { showPreviewToast('Bookmarks & Saved Pages'); },
+                openHistory: function() { showPreviewToast('Browsing History'); },
+                openShieldDashboard: function() { showPreviewToast('AdShield Defense Matrix'); },
+                openSettings: function() { showPreviewToast('Browser Settings'); },
                 openTabs: function() { openTabSwitcherModal(); },
                 openMenu: function() {
                     const pop = document.getElementById('commandMenuPopover');
@@ -4787,20 +4832,20 @@
                     ghostModeState = true;
                     localStorage.setItem('fokk_ghost_mode', 'true');
                     updateGhostModeStatus();
-                    showPreviewToast('🕵️ Opened Private Tab');
+                    showPreviewToast('Opened Private Tab');
                 },
                 openPrivateTabs: function() {
                     ghostModeState = true;
                     localStorage.setItem('fokk_ghost_mode', 'true');
                     updateGhostModeStatus();
-                    showPreviewToast('🕵️ Private Tabs Active');
+                    showPreviewToast('Private Tabs Active');
                 },
-                openReaderMode: function() { showPreviewToast('📖 Open an article to use Reader Mode'); },
-                saveCurrentPage: function() { showPreviewToast('💾 Tap Save on any web page to store it offline'); },
-                openDownloads: function() { showPreviewToast('📥 Downloads'); },
+                openReaderMode: function() { showPreviewToast('Open an article to use Reader Mode'); },
+                saveCurrentPage: function() { showPreviewToast('Tap Save on any web page to store it offline'); },
+                openDownloads: function() { showPreviewToast('Downloads'); },
                 burnSession: function() {
                     clearCommandInput();
-                    showPreviewToast('🔥 Session Burned: Cache, tabs & private cookies purged');
+                    showPreviewToast('Session Burned: Cache, tabs & private cookies purged');
                 },
                 triggerWallpaperPicker: function() {
                     const input = document.getElementById('wallpaperFileInput');
@@ -5001,11 +5046,12 @@
             }
         }
 
+        let lastCommandMenuTap = 0;
         function toggleCommandMenu(e) {
-            if (e) {
-                if (typeof e.stopPropagation === 'function') e.stopPropagation();
-                if (typeof e.preventDefault === 'function') e.preventDefault();
-            }
+            if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+            const now = Date.now();
+            if (now - lastCommandMenuTap < 350) return;
+            lastCommandMenuTap = now;
             if (navigator.vibrate) try { navigator.vibrate(15); } catch (err) {}
             // Direct zero-delay opening of the native bottom sheet menu
             if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openMenu === 'function') {
@@ -5270,15 +5316,16 @@
             if (window.FokkShieldBridge && typeof window.FokkShieldBridge.saveCurrentPage === 'function') {
                 window.FokkShieldBridge.saveCurrentPage();
             } else {
-                showPreviewToast('💾 Tap Save on any web page to store it offline');
+                showPreviewToast('Tap Save on any web page to store it offline');
             }
         }
 
+        let lastTabsTap = 0;
         function triggerTabsAction(e) {
-            if (e) {
-                e.stopPropagation();
-                if (typeof e.preventDefault === 'function') e.preventDefault();
-            }
+            if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+            const now = Date.now();
+            if (now - lastTabsTap < 350) return;
+            lastTabsTap = now;
             if (navigator.vibrate) try { navigator.vibrate(20); } catch (err) {}
             try {
                 if (window.FokkShieldBridge && typeof window.FokkShieldBridge.openTabs === 'function') {
@@ -5316,7 +5363,7 @@
             if (window.FokkShieldBridge && typeof window.FokkShieldBridge.burnSession === 'function') {
                 window.FokkShieldBridge.burnSession();
             } else {
-                showPreviewToast('🔥 Session Burned: Cache, tabs & private cookies purged');
+                showPreviewToast('Session Burned: Cache, tabs & private cookies purged');
             }
         }
 
@@ -6014,9 +6061,14 @@
             } catch (e) {}
         }
 
-        function toggleGhostMode() {
+        let lastGhostTap = 0;
+        function toggleGhostMode(e) {
+            if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+            const now = Date.now();
+            if (now - lastGhostTap < 350) return;
+            lastGhostTap = now;
             if (navigator.vibrate) {
-                try { navigator.vibrate(25); } catch (e) {}
+                try { navigator.vibrate(25); } catch (err) {}
             }
             const btn = document.getElementById('heroGhostBtn');
             if (btn) {
@@ -6035,7 +6087,7 @@
                 const next = !current;
                 localStorage.setItem('fokk_ghost_mode', String(next));
                 updateGhostModeStatus();
-                showPreviewToast(next ? '👻 Ghost Mode: ON (Private Browsing)' : '🛡️ Ghost Mode: OFF');
+                showPreviewToast(next ? 'Ghost Mode: ON (Private Browsing)' : 'Ghost Mode: OFF');
             }
         }
 

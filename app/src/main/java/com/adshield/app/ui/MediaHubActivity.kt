@@ -1266,7 +1266,13 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
         val currentUrl = activeWebView?.url.orEmpty()
-        val query = extractSearchQuery(currentUrl)
+        var query = extractSearchQuery(currentUrl)
+        if (query.isNullOrBlank()) {
+            val inputCandidate = binding.urlInput.text?.toString()?.trim().orEmpty()
+            if (inputCandidate.isNotBlank() && !inputCandidate.startsWith("http://") && !inputCandidate.startsWith("https://") && !inputCandidate.contains("fokk://")) {
+                query = inputCandidate
+            }
+        }
         if (!query.isNullOrBlank() && activeWebView != null) {
             val newSearchUrl = engine.searchUrl + Uri.encode(query)
             loadUrlInWebView(activeWebView, newSearchUrl)
@@ -1537,6 +1543,7 @@ open class MediaHubActivity : AppCompatActivity() {
             binding.urlInput.setTextColor(Color.parseColor("#FFFFFF"))
             binding.urlInput.setHintTextColor(Color.parseColor("#94A3B8"))
         }
+        applyCommandBarControlTheme(isLight && activeTab?.isPrivate != true)
 
         val savedTheme = prefs.getString(PREF_ACTIVE_THEME, "default") ?: "default"
         val customData = if (savedTheme == "custom") getCustomWallpaperDataUri() else ""
@@ -1546,6 +1553,32 @@ open class MediaHubActivity : AppCompatActivity() {
                 null
             )
         }
+    }
+
+    /** Keeps every command-bar affordance legible when a normal webpage uses daylight mode. */
+    private fun applyCommandBarControlTheme(isLight: Boolean) {
+        val foreground = Color.parseColor(if (isLight) "#0F172A" else "#FFFFFF")
+        val secondary = Color.parseColor(if (isLight) "#475569" else "#94A3B8")
+        val accentBlue = Color.parseColor(if (isLight) "#0284C7" else "#38BDF8")
+
+        binding.urlInput.setTextColor(foreground)
+        binding.urlInput.setHintTextColor(secondary)
+        binding.btnEngineSelector.setBackgroundResource(if (isLight) R.drawable.bg_engine_capsule_light else R.drawable.bg_engine_capsule)
+        binding.imgEngineDropdown.imageTintList = ColorStateList.valueOf(secondary)
+        binding.btnVoiceSearch.imageTintList = ColorStateList.valueOf(accentBlue)
+        binding.btnClearUrl.imageTintList = ColorStateList.valueOf(secondary)
+        binding.btnSearchGo.imageTintList = ColorStateList.valueOf(foreground)
+        binding.btnNavMenu.imageTintList = ColorStateList.valueOf(foreground)
+        binding.btnNavFavorite.imageTintList = ColorStateList.valueOf(secondary)
+        val aiLogoRes = if (isLight) R.drawable.ic_fokk_ai_logo_light else R.drawable.ic_fokk_ai_logo
+        binding.imgNavAiIcon.setImageResource(aiLogoRes)
+        binding.imgNavAiIcon.imageTintList = null
+        binding.btnAiSummary.setImageResource(aiLogoRes)
+        binding.btnAiSummary.imageTintList = null
+        binding.btnPictureInPicture.imageTintList = ColorStateList.valueOf(foreground)
+        binding.commandBarDivider.setBackgroundColor(if (isLight) Color.parseColor("#CBD5E1") else Color.parseColor("#2E3C52"))
+        binding.textTabCount.setTextColor(foreground)
+        binding.textTabCount.setBackgroundResource(if (isLight) R.drawable.bg_tab_counter_box_light else R.drawable.bg_tab_counter_box)
     }
 
     private fun isVerticalVideoFeedUrl(url: String?): Boolean {
@@ -3491,6 +3524,8 @@ open class MediaHubActivity : AppCompatActivity() {
         }
     }
 
+
+
     @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
     private fun createTab(url: String, isPrivate: Boolean = false): BrowserTab {
         val webView = FocusedPaneWebView(this)
@@ -4454,18 +4489,17 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     private fun openIsolatedPrivateBrowser(url: String) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-            Toast.makeText(this, "Private tabs with isolated site data require Android 9 or newer", Toast.LENGTH_LONG).show()
-            return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val launched = runCatching {
+                startActivity(Intent(this, PrivateBrowserActivity::class.java).apply {
+                    putExtra(EXTRA_URL, url)
+                    addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                })
+                true
+            }.getOrDefault(false)
+            if (launched) return
         }
-        runCatching {
-            startActivity(Intent(this, PrivateBrowserActivity::class.java).apply {
-                putExtra(EXTRA_URL, url)
-                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            })
-        }.onFailure {
-            Toast.makeText(this, "Could not open the isolated private browser", Toast.LENGTH_LONG).show()
-        }
+        addNewTab(url, isPrivate = true)
     }
 
     private fun addNewTab(
@@ -4556,6 +4590,7 @@ open class MediaHubActivity : AppCompatActivity() {
             binding.urlInput.setTextColor(Color.parseColor("#FFFFFF"))
             binding.urlInput.setHintTextColor(Color.parseColor("#94A3B8"))
         }
+        applyCommandBarControlTheme(isLight && !current.isPrivate)
 
         updateTabCounter()
         persistSession()
@@ -5327,7 +5362,7 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     private fun displaySuggestions(list: List<HistorySuggestion>) {
-        if (!binding.urlInput.hasFocus()) {
+        if (!binding.urlInput.hasFocus() || list.isEmpty()) {
             binding.cardSuggestions.visibility = View.GONE
             return
         }
@@ -5339,11 +5374,13 @@ open class MediaHubActivity : AppCompatActivity() {
         if (isLight) {
             binding.cardSuggestions.setCardBackgroundColor(Color.parseColor("#FFFFFF"))
             binding.cardSuggestions.strokeColor = Color.parseColor("#E2E8F0")
-            binding.cardSuggestions.cardElevation = 12 * density
-        } else {
-            binding.cardSuggestions.setCardBackgroundColor(Color.parseColor("#131B2E"))
-            binding.cardSuggestions.strokeColor = Color.parseColor("#23324B")
             binding.cardSuggestions.cardElevation = 14 * density
+            binding.cardSuggestions.radius = 18 * density
+        } else {
+            binding.cardSuggestions.setCardBackgroundColor(Color.parseColor("#0E1424"))
+            binding.cardSuggestions.strokeColor = Color.parseColor("#1E293B")
+            binding.cardSuggestions.cardElevation = 16 * density
+            binding.cardSuggestions.radius = 18 * density
         }
 
         val primaryTextColor = if (isLight) Color.parseColor("#0F172A") else Color.parseColor("#F8FAFC")
@@ -5543,9 +5580,17 @@ open class MediaHubActivity : AppCompatActivity() {
             TransitionManager.beginDelayedTransition(binding.root as ViewGroup, transition)
         }
 
+        val isLight = isAppInLightMode()
+        val bgRes = when {
+            activeTab?.isPrivate == true -> if (isTop) R.drawable.bg_docked_command_bar_top_private else R.drawable.bg_docked_command_bar_bottom_private
+            isLight -> if (isTop) R.drawable.bg_docked_command_bar_top_light else R.drawable.bg_docked_command_bar_bottom_light
+            else -> if (isTop) R.drawable.bg_docked_command_bar_top else R.drawable.bg_docked_command_bar_bottom
+        }
+        binding.topBar.setBackgroundResource(bgRes)
+        applyCommandBarControlTheme(isLight && activeTab?.isPrivate != true)
+
         if (isTop) {
             binding.topBar.visibility = View.VISIBLE
-            binding.topBar.setBackgroundResource(R.drawable.bg_docked_command_bar_top)
             lp.removeRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
             lp.addRule(RelativeLayout.ALIGN_PARENT_TOP)
             lp.topMargin = 0
@@ -5560,7 +5605,7 @@ open class MediaHubActivity : AppCompatActivity() {
             }
 
             containerLp?.let {
-                it.topMargin = if (browserChromeHidden) 0 else (56 * density).toInt()
+                it.topMargin = 0
                 it.bottomMargin = 0
                 binding.mainContentLayout.layoutParams = it
             }
@@ -5573,10 +5618,13 @@ open class MediaHubActivity : AppCompatActivity() {
                 cardLp.bottomMargin = 0
                 binding.cardSuggestions.layoutParams = cardLp
             }
-            tabs.forEach { it.webView?.setPadding(0, 0, 0, 0) }
+            val barPadding = (56 * density).toInt()
+            tabs.forEach {
+                it.webView?.clipToPadding = false
+                it.webView?.setPadding(0, barPadding, 0, 0)
+            }
         } else {
             binding.topBar.visibility = View.VISIBLE
-            binding.topBar.setBackgroundResource(R.drawable.bg_docked_command_bar_bottom)
             lp.removeRule(RelativeLayout.ALIGN_PARENT_TOP)
             lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
             lp.topMargin = 0
@@ -5592,7 +5640,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
             containerLp?.let {
                 it.topMargin = 0
-                it.bottomMargin = if (browserChromeHidden) 0 else (56 * density).toInt()
+                it.bottomMargin = 0
                 binding.mainContentLayout.layoutParams = it
             }
             binding.mainContentLayout.translationY = 0f
@@ -5604,7 +5652,11 @@ open class MediaHubActivity : AppCompatActivity() {
                 cardLp.bottomMargin = (56 * density).toInt()
                 binding.cardSuggestions.layoutParams = cardLp
             }
-            tabs.forEach { it.webView?.setPadding(0, 0, 0, 0) }
+            val barPadding = (56 * density).toInt()
+            tabs.forEach {
+                it.webView?.clipToPadding = false
+                it.webView?.setPadding(0, 0, 0, barPadding)
+            }
         }
         binding.topBar.layoutParams = lp
     }
@@ -5773,6 +5825,12 @@ open class MediaHubActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this)
         val sheetBinding = SheetHistoryBinding.inflate(layoutInflater)
         dialog.setContentView(sheetBinding.root)
+        dialog.setOnShowListener {
+            dialog.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)?.let { sheet ->
+                sheet.layoutParams = sheet.layoutParams.apply { height = ViewGroup.LayoutParams.MATCH_PARENT }
+                BottomSheetBehavior.from(sheet).state = BottomSheetBehavior.STATE_EXPANDED
+            }
+        }
         val isLight = isAppInLightMode()
         if (isLight) {
             applyLightThemeToSheet(sheetBinding.root, dialog)
@@ -5900,7 +5958,9 @@ open class MediaHubActivity : AppCompatActivity() {
 
                         val logoIv = ImageView(this).apply {
                             layoutParams = LinearLayout.LayoutParams((22 * density).toInt(), (22 * density).toInt())
-                            setImageResource(R.drawable.ic_fokk_ai_logo)
+                            val isLight = isAppInLightMode()
+                            setImageResource(if (isLight) R.drawable.ic_fokk_ai_logo_light else R.drawable.ic_fokk_ai_logo)
+                            imageTintList = null
                             scaleType = ImageView.ScaleType.FIT_CENTER
                         }
 
@@ -6095,6 +6155,9 @@ open class MediaHubActivity : AppCompatActivity() {
         if (isLight) {
             cardBinding.cardTab.setCardBackgroundColor(Color.parseColor("#FFFFFF"))
             cardBinding.layoutCardHeader.setBackgroundColor(Color.parseColor("#FFFFFF"))
+            cardBinding.layoutTabPreview.setBackgroundColor(Color.parseColor("#F8FAFC"))
+            cardBinding.imgPreviewLogo.imageTintList = ColorStateList.valueOf(Color.parseColor("#64748B"))
+            cardBinding.imgPreviewLogo.alpha = 0.5f
             cardBinding.textTabTitle.setTextColor(Color.parseColor("#0F172A"))
             cardBinding.textTabUrl.setTextColor(Color.parseColor("#64748B"))
             cardBinding.btnCloseTab.imageTintList = ColorStateList.valueOf(Color.parseColor("#475569"))
@@ -6106,6 +6169,11 @@ open class MediaHubActivity : AppCompatActivity() {
                 cardBinding.cardTab.strokeColor = Color.parseColor("#E2E8F0")
                 cardBinding.cardTab.strokeWidth = (1 * resources.displayMetrics.density).toInt()
             }
+        } else {
+            cardBinding.cardTab.setCardBackgroundColor(Color.parseColor("#121212"))
+            cardBinding.layoutTabPreview.setBackgroundColor(Color.parseColor("#0A0A0A"))
+            cardBinding.imgPreviewLogo.imageTintList = ColorStateList.valueOf(Color.parseColor("#FFFFFF"))
+            cardBinding.imgPreviewLogo.alpha = 0.4f
         }
 
         cardBinding.cardTab.setOnClickListener {
@@ -6149,17 +6217,31 @@ open class MediaHubActivity : AppCompatActivity() {
         sheetBinding.rootTabSwitcher.setBackgroundColor(themeBgColor)
 
         if (isLight) {
+            sheetBinding.layoutSegmentedTabsTrack.setBackgroundResource(R.drawable.bg_segmented_capsule_track_light)
+            sheetBinding.textDoneAction.setTextColor(Color.parseColor("#0284C7"))
             sheetBinding.cardBottomPill.setCardBackgroundColor(Color.parseColor("#FFFFFF"))
             sheetBinding.cardBottomPill.strokeColor = Color.parseColor("#E2E8F0")
             sheetBinding.imgBottomTabs.imageTintList = ColorStateList.valueOf(Color.parseColor("#0F172A"))
             sheetBinding.imgBottomHistory.imageTintList = ColorStateList.valueOf(Color.parseColor("#64748B"))
-            sheetBinding.btnNewTabSheet.setCardBackgroundColor(Color.parseColor("#18181B"))
-            sheetBinding.imgCentralPlusIcon.imageTintList = ColorStateList.valueOf(Color.parseColor("#FFFFFF"))
-            sheetBinding.textTabCountBadge.setTextColor(Color.parseColor("#0F172A"))
             sheetBinding.imgBottomMenu.imageTintList = ColorStateList.valueOf(Color.parseColor("#64748B"))
-            sheetBinding.imgSearchHeaderIcon.imageTintList = ColorStateList.valueOf(Color.parseColor("#0F172A"))
+            sheetBinding.btnNewTabSheet.setBackgroundResource(R.drawable.bg_pill_new_tab_light)
+            sheetBinding.imgCentralPlusIcon.imageTintList = ColorStateList.valueOf(Color.WHITE)
+            sheetBinding.textNewTab.setTextColor(Color.WHITE)
             sheetBinding.editSearchTabs.setTextColor(Color.parseColor("#0F172A"))
             sheetBinding.editSearchTabs.setHintTextColor(Color.parseColor("#94A3B8"))
+        } else {
+            sheetBinding.layoutSegmentedTabsTrack.setBackgroundResource(R.drawable.bg_segmented_capsule_track)
+            sheetBinding.textDoneAction.setTextColor(Color.parseColor("#38BDF8"))
+            sheetBinding.cardBottomPill.setCardBackgroundColor(Color.parseColor("#121826"))
+            sheetBinding.cardBottomPill.strokeColor = Color.parseColor("#1F293D")
+            sheetBinding.imgBottomTabs.imageTintList = ColorStateList.valueOf(Color.WHITE)
+            sheetBinding.imgBottomHistory.imageTintList = ColorStateList.valueOf(Color.parseColor("#94A3B8"))
+            sheetBinding.imgBottomMenu.imageTintList = ColorStateList.valueOf(Color.parseColor("#94A3B8"))
+            sheetBinding.btnNewTabSheet.setBackgroundResource(R.drawable.bg_pill_new_tab)
+            sheetBinding.imgCentralPlusIcon.imageTintList = ColorStateList.valueOf(Color.parseColor("#0B0F17"))
+            sheetBinding.textNewTab.setTextColor(Color.parseColor("#0B0F17"))
+            sheetBinding.editSearchTabs.setTextColor(Color.WHITE)
+            sheetBinding.editSearchTabs.setHintTextColor(Color.parseColor("#71717A"))
         }
 
         var tabSearchQuery = ""
@@ -6168,33 +6250,37 @@ open class MediaHubActivity : AppCompatActivity() {
             val normalTabs = tabs.filter { !it.isPrivate }
             val privateTabs = tabs.filter { it.isPrivate }
 
-            val primaryTextColor = if (isLight) Color.parseColor("#0F172A") else Color.WHITE
-            val inactiveTextColor = Color.parseColor("#71717A")
-            val underlineActiveColor = if (isLight) Color.parseColor("#0F172A") else Color.WHITE
-
             if (showingPrivateTabs) {
-                sheetBinding.textPrivateTabsTitle.setTextColor(primaryTextColor)
-                sheetBinding.indicatorPrivateUnderline.setBackgroundColor(underlineActiveColor)
-                sheetBinding.textNormalTabsTitle.setTextColor(inactiveTextColor)
-                sheetBinding.indicatorNormalUnderline.setBackgroundColor(Color.TRANSPARENT)
+                sheetBinding.btnFilterPrivate.setBackgroundResource(R.drawable.bg_segmented_capsule_ghost)
+                sheetBinding.textPrivateTabsTitle.setTextColor(Color.WHITE)
+                sheetBinding.imgPrivateTabsIcon.imageTintList = ColorStateList.valueOf(Color.WHITE)
+
+                sheetBinding.btnFilterNormal.background = null
+                val inactiveColor = if (isLight) Color.parseColor("#64748B") else Color.parseColor("#94A3B8")
+                sheetBinding.textNormalTabsTitle.setTextColor(inactiveColor)
+                sheetBinding.textTabCountBadge.setTextColor(inactiveColor)
+                sheetBinding.imgNormalTabsIcon.imageTintList = ColorStateList.valueOf(inactiveColor)
             } else {
-                sheetBinding.textNormalTabsTitle.setTextColor(primaryTextColor)
-                sheetBinding.indicatorNormalUnderline.setBackgroundColor(underlineActiveColor)
-                sheetBinding.textPrivateTabsTitle.setTextColor(inactiveTextColor)
-                sheetBinding.indicatorPrivateUnderline.setBackgroundColor(Color.TRANSPARENT)
+                val activeBg = if (isLight) R.drawable.bg_segmented_capsule_active_light else R.drawable.bg_segmented_capsule_active
+                val activeFg = if (isLight) Color.WHITE else Color.parseColor("#0B0F17")
+                sheetBinding.btnFilterNormal.setBackgroundResource(activeBg)
+                sheetBinding.textNormalTabsTitle.setTextColor(activeFg)
+                sheetBinding.textTabCountBadge.setTextColor(activeFg)
+                sheetBinding.imgNormalTabsIcon.imageTintList = ColorStateList.valueOf(activeFg)
+
+                sheetBinding.btnFilterPrivate.background = null
+                val inactiveColor = if (isLight) Color.parseColor("#64748B") else Color.parseColor("#94A3B8")
+                sheetBinding.textPrivateTabsTitle.setTextColor(inactiveColor)
+                sheetBinding.imgPrivateTabsIcon.imageTintList = ColorStateList.valueOf(inactiveColor)
             }
 
-            val currentTabsList = tabs.filter {
-                it.isPrivate == showingPrivateTabs &&
-                (tabSearchQuery.isBlank() ||
-                 it.title.contains(tabSearchQuery, ignoreCase = true) ||
-                 it.url.contains(tabSearchQuery, ignoreCase = true))
-            }
-
-            sheetBinding.textTabCountBadge.text = "${tabs.count { it.isPrivate == showingPrivateTabs }.coerceAtLeast(1)}"
+            sheetBinding.textTabCountBadge.text = "${normalTabs.size}"
             sheetBinding.layoutTabsGrid.removeAllViews()
 
             val density = resources.displayMetrics.density
+            val currentTabsList = (if (showingPrivateTabs) privateTabs else normalTabs).filter {
+                if (tabSearchQuery.isEmpty()) true else it.title.contains(tabSearchQuery, ignoreCase = true) || it.url.contains(tabSearchQuery, ignoreCase = true)
+            }
 
             if (currentTabsList.isEmpty()) {
                 val emptyNotice = TextView(this).apply {
@@ -6304,7 +6390,16 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         sheetBinding.btnBottomTabs.setOnClickListener {
-            dialog.dismiss()
+            val isSearchVisible = sheetBinding.layoutTabSearchBar.visibility == View.VISIBLE
+            if (isSearchVisible) {
+                sheetBinding.layoutTabSearchBar.visibility = View.GONE
+                sheetBinding.editSearchTabs.setText("")
+            } else {
+                sheetBinding.layoutTabSearchBar.visibility = View.VISIBLE
+                sheetBinding.editSearchTabs.requestFocus()
+                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+                imm?.showSoftInput(sheetBinding.editSearchTabs, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+            }
         }
 
         sheetBinding.btnBottomHistory.setOnClickListener {
@@ -6620,6 +6715,9 @@ open class MediaHubActivity : AppCompatActivity() {
     }
 
     private fun applyThemeToBrowserMenu(b: SheetBrowserMenuBinding, isLight: Boolean) {
+        val aiLogoRes = if (isLight) R.drawable.ic_fokk_ai_logo_light else R.drawable.ic_fokk_ai_logo
+        b.imgMenuAskAi.setImageResource(aiLogoRes)
+        b.imgMenuAskAi.imageTintList = null
         if (!isLight) return
         val bgSheet = Color.parseColor("#FAF9F6")
         val textPrimary = Color.parseColor("#0F172A")
@@ -8027,10 +8125,8 @@ open class MediaHubActivity : AppCompatActivity() {
                 else -> "AUTO"
             }
             val locationLabel = com.adshield.app.engine.VpnEngine.getRegionDisplayName(activeRegionCode)
-            val flagRes = com.adshield.app.engine.VpnEngine.getRegionFlagRes(activeRegionCode)
-
             b.textSelectedLocation.text = locationLabel
-            b.imgSelectedLocationFlag.setImageResource(flagRes)
+            b.imgSelectedLocationFlag.setImageDrawable(com.adshield.app.engine.VpnEngine.getCountryFlagDrawable(this, activeRegionCode))
             b.textLocationSub.text = when {
                 !isConnected -> "Tap to switch Smart-Cloak / Mesh Pro"
                 activeMode == com.adshield.app.engine.VpnEngine.VpnMode.SMART_CLOAK -> "Encrypted DoH + TLS SNI Shield · Full Speed"
@@ -9040,6 +9136,11 @@ open class MediaHubActivity : AppCompatActivity() {
             sheetDialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
             val isLight = isAppInLightMode()
+            val aiLogoRes = if (isLight) R.drawable.ic_fokk_ai_logo_light else R.drawable.ic_fokk_ai_logo
+            sheetBinding.imgAiHeaderLogo.setImageResource(aiLogoRes)
+            sheetBinding.imgAiHeaderLogo.imageTintList = null
+            sheetBinding.imgWelcomeAiLogo.setImageResource(aiLogoRes)
+            sheetBinding.imgWelcomeAiLogo.imageTintList = null
             if (isLight) {
                 applyLightThemeToSheet(sheetBinding.root, sheetDialog)
                 sheetBinding.layoutAiComposerDock.setBackgroundColor(Color.parseColor("#FAF9F6"))
@@ -9370,9 +9471,22 @@ open class MediaHubActivity : AppCompatActivity() {
             // Clean 3-tab switching (Summary / Ask AI / Truth & Bias)
             fun switchAiMode(mode: Int) {
                 currentAiMode = mode
-                sheetBinding.layoutAiSummarySection.visibility = if (mode == 0) View.VISIBLE else View.GONE
-                sheetBinding.layoutAiChatSection.visibility = if (mode == 1) View.VISIBLE else View.GONE
-                sheetBinding.layoutAiRealityAuditSection.visibility = if (mode == 2) View.VISIBLE else View.GONE
+                val panels = listOf(
+                    sheetBinding.layoutAiSummarySection,
+                    sheetBinding.layoutAiChatSection,
+                    sheetBinding.layoutAiRealityAuditSection
+                )
+                panels.forEachIndexed { index, panel ->
+                    if (index == mode) {
+                        panel.animate().cancel()
+                        panel.alpha = 0f
+                        panel.visibility = View.VISIBLE
+                        panel.animate().alpha(1f).setDuration(160L).setInterpolator(DecelerateInterpolator()).start()
+                    } else {
+                        panel.animate().cancel()
+                        panel.visibility = View.GONE
+                    }
+                }
 
                 val selBg = if (isLight) R.drawable.bg_ai_tab_selected_light else R.drawable.bg_ai_tab_selected
                 val selTxt = if (isLight) "#0F172A" else "#FFFFFF"
@@ -9386,6 +9500,35 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 sheetBinding.btnTabAiAudit.setBackgroundResource(if (mode == 2) selBg else 0)
                 sheetBinding.btnTabAiAudit.setTextColor(Color.parseColor(if (mode == 2) selTxt else unselTxt))
+            }
+
+            // Editorial sections stay compact until wanted; this keeps longer AI
+            // analyses easy to scan without hiding any result or action.
+            fun makeSectionCollapsible(header: View, content: View) {
+                val headerText = header as? TextView
+                val baseLabel = headerText?.text?.toString()
+                var expanded = true
+                fun updateLabel() {
+                    headerText?.text = if (expanded) "$baseLabel  ⌃" else "$baseLabel  ⌄"
+                    header.contentDescription = if (expanded) "Collapse $baseLabel" else "Expand $baseLabel"
+                }
+                header.isClickable = true
+                header.isFocusable = true
+                header.setOnClickListener {
+                    expanded = !expanded
+                    content.animate().cancel()
+                    if (expanded) {
+                        content.alpha = 0f
+                        content.visibility = View.VISIBLE
+                        content.animate().alpha(1f).setDuration(140L).start()
+                    } else {
+                        content.animate().alpha(0f).setDuration(110L).withEndAction {
+                            if (!expanded) content.visibility = View.GONE
+                        }.start()
+                    }
+                    updateLabel()
+                }
+                updateLabel()
             }
 
             // Render clean takeaway / claim row with subtle micro-tag and markdown bold support
@@ -9440,7 +9583,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 val textTv = TextView(this@MediaHubActivity).apply {
                     text = formatMarkdownToSpanned(bullet)
-                    setTextColor(Color.parseColor("#E2E8F0"))
+                    setTextColor(Color.parseColor(if (isLight) "#334155" else "#E2E8F0"))
                     textSize = 14f
                     setLineSpacing(4 * density, 1f)
                     layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
@@ -9456,7 +9599,7 @@ open class MediaHubActivity : AppCompatActivity() {
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             (1 * density).toInt().coerceAtLeast(1)
                         )
-                        setBackgroundColor(Color.parseColor("#111827"))
+                        setBackgroundColor(Color.parseColor(if (isLight) "#E2E8F0" else "#111827"))
                     }
                     container.addView(divider)
                 }
@@ -9490,7 +9633,10 @@ open class MediaHubActivity : AppCompatActivity() {
                     pair.forEachIndexed { colIdx, metric ->
                         val card = LinearLayout(this@MediaHubActivity).apply {
                             orientation = LinearLayout.VERTICAL
-                            background = ContextCompat.getDrawable(this@MediaHubActivity, R.drawable.bg_ai_card)
+                            background = ContextCompat.getDrawable(
+                                this@MediaHubActivity,
+                                if (isLight) R.drawable.bg_ai_card_light else R.drawable.bg_ai_card
+                            )
                             setPadding((14 * density).toInt(), (12 * density).toInt(), (14 * density).toInt(), (12 * density).toInt())
                             layoutParams = LinearLayout.LayoutParams(
                                 0,
@@ -9504,7 +9650,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
                         val valueTv = TextView(this@MediaHubActivity).apply {
                             text = metric.value
-                            setTextColor(Color.parseColor("#F8FAFC"))
+                            setTextColor(Color.parseColor(if (isLight) "#0F172A" else "#F8FAFC"))
                             textSize = 17.5f
                             setTypeface(null, Typeface.BOLD)
                             maxLines = 1
@@ -9513,7 +9659,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
                         val labelTv = TextView(this@MediaHubActivity).apply {
                             text = metric.label
-                            setTextColor(Color.parseColor("#94A3B8"))
+                            setTextColor(Color.parseColor(if (isLight) "#64748B" else "#94A3B8"))
                             textSize = 12f
                             maxLines = 2
                             ellipsize = TextUtils.TruncateAt.END
@@ -9582,7 +9728,7 @@ open class MediaHubActivity : AppCompatActivity() {
 
                 val qTv = TextView(this@MediaHubActivity).apply {
                     text = question
-                    setTextColor(Color.parseColor("#F1F5F9"))
+                    setTextColor(Color.parseColor(if (isLight) "#334155" else "#F1F5F9"))
                     textSize = 13.5f
                     setLineSpacing(2.5f * density, 1f)
                     layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
@@ -9605,7 +9751,7 @@ open class MediaHubActivity : AppCompatActivity() {
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         (0.75f * density).toInt().coerceAtLeast(1)
                     )
-                    setBackgroundColor(Color.parseColor("#172033"))
+                    setBackgroundColor(Color.parseColor(if (isLight) "#E2E8F0" else "#172033"))
                 }
                 itemWrapper.addView(divider)
 
@@ -9717,6 +9863,11 @@ open class MediaHubActivity : AppCompatActivity() {
 
             renderKeyMetrics(currentMetrics)
             renderFollowUpSection(currentQuestions)
+
+            makeSectionCollapsible(sheetBinding.textAiKeyInsightsHeader, sheetBinding.layoutSummaryBullets)
+            makeSectionCollapsible(sheetBinding.textMetricsLabel, sheetBinding.layoutKeyMetricsGrid)
+            makeSectionCollapsible(sheetBinding.textQuestionsLabel, sheetBinding.layoutFollowUpQuestions)
+            makeSectionCollapsible(sheetBinding.textAiCorroborationStatus, sheetBinding.scrollAiSources)
 
             // Populate Ask AI Welcome Quick Prompts
             sheetBinding.layoutChatQuickPrompts.removeAllViews()
@@ -10088,7 +10239,9 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
 
                 val aiLogo = ImageView(this@MediaHubActivity).apply {
-                    setImageResource(R.drawable.ic_fokk_ai_logo)
+                    val currentAiLogo = if (isLight) R.drawable.ic_fokk_ai_logo_light else R.drawable.ic_fokk_ai_logo
+                    setImageResource(currentAiLogo)
+                    imageTintList = null
                     layoutParams = LinearLayout.LayoutParams((18 * density).toInt(), (18 * density).toInt()).apply {
                         marginEnd = (8 * density).toInt()
                     }
@@ -10442,7 +10595,9 @@ open class MediaHubActivity : AppCompatActivity() {
                 }
 
                 val thinkingLogo = ImageView(this@MediaHubActivity).apply {
-                    setImageResource(R.drawable.ic_fokk_ai_logo)
+                    val currentAiLogo = if (isLight) R.drawable.ic_fokk_ai_logo_light else R.drawable.ic_fokk_ai_logo
+                    setImageResource(currentAiLogo)
+                    imageTintList = null
                     layoutParams = LinearLayout.LayoutParams((18 * density).toInt(), (18 * density).toInt()).apply {
                         marginEnd = (8 * density).toInt()
                     }
@@ -11487,6 +11642,50 @@ open class MediaHubActivity : AppCompatActivity() {
             return
         }
 
+        if (initialTab == 1) {
+            val pageTitle = webView.title?.trim()?.ifBlank { null } ?: (Uri.parse(url).host?.removePrefix("www.") ?: "Webpage")
+            val pageHost = Uri.parse(url).host?.removePrefix("www.") ?: "web"
+            val instantJson = org.json.JSONObject().apply {
+                put("title", pageTitle)
+                put("source", pageHost)
+                put("sourceHost", pageHost)
+                put("url", url)
+                put("readingTime", "1 min read")
+                put("wordCount", 100)
+                put("executiveSummary", "Ask AI is ready. Inquire about $pageTitle or ask any question.")
+                put("bullets", org.json.JSONArray().apply {
+                    put("Ask any question about $pageTitle.")
+                    put("Context is extracted securely on your device.")
+                })
+                put("metrics", org.json.JSONArray())
+                put("followUpQuestions", org.json.JSONArray().apply {
+                    put("What is this page about?")
+                    put("Summarize the key points.")
+                })
+            }
+            webView.evaluateJavascript(
+                """(function() {
+                    try {
+                        var bodyText = (document.body ? document.body.innerText || '' : '').replace(/\s+/g, ' ').trim();
+                        return bodyText.substring(0, 8000);
+                    } catch(e) { return ''; }
+                })();""".trimIndent()
+            ) { rawContext ->
+                if (!rawContext.isNullOrBlank() && rawContext != "null") {
+                    val clean = rawContext.removePrefix("\"").removeSuffix("\"")
+                        .replace("\\n", "\n").replace("\\t", " ").replace("\\\"", "\"")
+                        .take(10000)
+                    lastAiPageContext = clean
+                    val activeSession = aiChatSessions[url] ?: aiChatSessions[pageTitle]
+                    if (activeSession != null) {
+                        activeSession.pageContext = clean
+                    }
+                }
+            }
+            showAiSummarySheet(instantJson.toString(), initialTab = 1)
+            return
+        }
+
         // Dynamic social feeds (Instagram home, X home/profile, Reddit, Threads) change focal post while scrolling
         // WITHOUT changing window.location.href — never return a stale URL-only cached summary on those pages!
         val lowerUrl = url.lowercase(Locale.ROOT)
@@ -11594,41 +11793,43 @@ open class MediaHubActivity : AppCompatActivity() {
         val watchdog = Runnable {
             if (!handled && !isFinishing && !isDestroyed && activeAiSummarySheetDialog?.isShowing != true) {
                 handled = true
-                val fallbackJs = """
-                    (function() {
-                        try {
-                            var t = document.title || 'Page Summary';
-                            var desc = document.querySelector('meta[name="description"]')?.content || '';
-                            var paras = Array.from(document.querySelectorAll('[data-testid="tweetText"], p, blockquote, article'))
-                                .map(function(el) { return (el.innerText || '').trim(); })
-                                .filter(function(txt) { return txt.length > 20 && !txt.includes('{') && !/\b\d+K?\s+Views\b/i.test(txt); });
-                            var topP = paras.slice(0, 4);
-                            if (topP.length === 0) topP = ['Content extracted directly from webpage.'];
-                            var exec = desc || topP[0];
-                            var obj = {
-                                title: t,
-                                source: window.location.hostname.replace(/^www\./i, '') || 'Web',
-                                sourceHost: window.location.hostname || '',
-                                favicon: 'https://www.google.com/s2/favicons?domain=' + window.location.hostname + '&sz=128',
-                                executiveSummary: exec,
-                                summary: exec,
-                                bullets: topP,
-                                metrics: [],
-                                followUpQuestions: ['Has an official statement or announcement been confirmed?'],
-                                readingTime: Math.max(1, Math.round(paras.join(' ').split(/\s+/).length / 200)) + ' min read',
-                                wordCount: paras.join(' ').split(/\s+/).length
-                            };
-                            if (window.FokkShieldBridge && typeof window.FokkShieldBridge.showAiSummaryData === 'function') {
-                                window.FokkShieldBridge.showAiSummaryData(JSON.stringify(obj));
-                            }
-                        } catch(e) {}
-                    })();
-                """.trimIndent()
-                webView.evaluateJavascript(fallbackJs, null)
+                val pageTitle = webView.title?.trim()?.ifBlank { null } ?: (Uri.parse(url).host?.removePrefix("www.") ?: "Page Summary")
+                val pageHost = Uri.parse(url).host?.removePrefix("www.") ?: "Web"
+                val fallbackSummary = if (lastAiPageContext.isNotBlank()) {
+                    lastAiPageContext.lines().filter { it.isNotBlank() }.take(2).joinToString(" ").take(300)
+                } else {
+                    "Content extracted directly from $pageTitle."
+                }
+                val bulletsList = org.json.JSONArray().apply {
+                    if (lastAiPageContext.isNotBlank()) {
+                        lastAiPageContext.lines().filter { it.length > 25 }.take(3).forEach { put(it.take(150)) }
+                    }
+                    if (length() == 0) {
+                        put("Loaded directly from $pageHost.")
+                        put("Tap 'Ask AI' to query or analyze this article.")
+                    }
+                }
+                val fallbackObj = org.json.JSONObject().apply {
+                    put("title", pageTitle)
+                    put("source", pageHost)
+                    put("sourceHost", pageHost)
+                    put("url", url)
+                    put("favicon", "https://www.google.com/s2/favicons?domain=$pageHost&sz=128")
+                    put("executiveSummary", fallbackSummary)
+                    put("summary", fallbackSummary)
+                    put("bullets", bulletsList)
+                    put("metrics", org.json.JSONArray())
+                    put("followUpQuestions", org.json.JSONArray().apply {
+                        put("What are the key takeaways from this article?")
+                    })
+                    put("readingTime", "1 min read")
+                    put("wordCount", fallbackSummary.split("\\s+".toRegex()).size)
+                }
+                showAiSummarySheet(fallbackObj.toString(), initialTab)
             }
         }
         aiSummaryWatchdog = watchdog
-        mainHandler.postDelayed(watchdog, 4000L)
+        mainHandler.postDelayed(watchdog, 1200L)
 
         val js = "$summarizerScript; if (typeof triggerFokkSummarizer === 'function') { triggerFokkSummarizer(); }"
         webView.evaluateJavascript(js, null)

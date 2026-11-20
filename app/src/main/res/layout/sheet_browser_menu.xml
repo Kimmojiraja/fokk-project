@@ -320,6 +320,7 @@
             android:paddingHorizontal="14dp">
 
             <ImageView
+                android:id="@+id/imgMenuAskAi"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_fokk_ai_logo"
