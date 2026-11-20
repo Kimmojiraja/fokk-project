@@ -3921,7 +3921,8 @@ open class MediaHubActivity : AppCompatActivity() {
                 // and googleusercontent image thumbnails so mobile image previews never stall on spinners
                 val isGoogleSearchPage = pageHostLower?.contains("google.") == true
                 val isGoogleAsset = hostLower.contains("google.") || hostLower.contains("gstatic.com") || hostLower.contains("googleusercontent.com")
-                val isGoogleAdEndpoint = urlStr.contains("/pagead/") || urlStr.contains("adservice.google.") || urlStr.contains("doubleclick.net")
+                val reqUrlLower = requestUrl.orEmpty().lowercase(Locale.ROOT)
+                val isGoogleAdEndpoint = reqUrlLower.contains("/pagead/") || reqUrlLower.contains("adservice.google.") || reqUrlLower.contains("doubleclick.net")
                 if (isGoogleSearchPage && isGoogleAsset && !isGoogleAdEndpoint) {
                     return super.shouldInterceptRequest(view, request)
                 }
