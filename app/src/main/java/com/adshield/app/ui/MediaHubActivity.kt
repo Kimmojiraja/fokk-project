@@ -123,6 +123,7 @@ import com.adshield.app.databinding.SheetAboutCommunityBinding
 import com.adshield.app.databinding.SheetFundraisingContributeBinding
 import com.adshield.app.model.DnsOverHttpsEngine
 import android.media.AudioManager
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
@@ -6127,15 +6128,15 @@ open class MediaHubActivity : AppCompatActivity() {
         dialog.setContentView(sheetBinding.root)
         val isLight = isAppInLightMode()
 
+        dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
+        dialog.behavior.skipCollapsed = true
+        dialog.behavior.isDraggable = true
+
         dialog.setOnShowListener { dialogInterface ->
             val bottomSheetDialog = dialogInterface as? BottomSheetDialog ?: return@setOnShowListener
             val bottomSheet = bottomSheetDialog.findViewById<FrameLayout>(
                 com.google.android.material.R.id.design_bottom_sheet
             ) ?: return@setOnShowListener
-            val behavior = BottomSheetBehavior.from(bottomSheet)
-            behavior.state = BottomSheetBehavior.STATE_EXPANDED
-            behavior.skipCollapsed = true
-            behavior.isDraggable = true
             val layoutParams = bottomSheet.layoutParams
             layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
             bottomSheet.layoutParams = layoutParams
