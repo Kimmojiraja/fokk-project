@@ -1549,7 +1549,7 @@ open class MediaHubActivity : AppCompatActivity() {
             binding.urlInput.setHintTextColor(Color.parseColor("#64748B"))
         } else {
             binding.topBar.setBackgroundResource(if (isTop) R.drawable.bg_docked_command_bar_top else R.drawable.bg_docked_command_bar_bottom)
-            binding.bottomNav.setBackgroundColor(Color.parseColor("#0C101A"))
+            binding.bottomNav.setBackgroundColor(Color.parseColor("#07080D"))
             binding.urlInput.setTextColor(Color.parseColor("#FFFFFF"))
             binding.urlInput.setHintTextColor(Color.parseColor("#94A3B8"))
         }
@@ -1589,7 +1589,7 @@ open class MediaHubActivity : AppCompatActivity() {
         binding.btnAiSummary.setImageResource(aiLogoRes)
         binding.btnAiSummary.imageTintList = null
         binding.btnPictureInPicture.imageTintList = ColorStateList.valueOf(foreground)
-        binding.commandBarDivider.setBackgroundColor(if (isLight) Color.parseColor("#CBD5E1") else Color.parseColor("#2E3C52"))
+        binding.commandBarDivider.setBackgroundColor(if (isLight) Color.parseColor("#CBD5E1") else Color.parseColor("#1A1C26"))
         binding.textTabCount.setTextColor(foreground)
         binding.textTabCount.setBackgroundResource(if (isLight) R.drawable.bg_tab_counter_box_light else R.drawable.bg_tab_counter_box)
     }
@@ -4392,7 +4392,7 @@ open class MediaHubActivity : AppCompatActivity() {
             }
         }
 
-        val initialTitle = if (url.contains("fokk_start.html")) "New Tab" else "Fokk Browser"
+        val initialTitle = if (url.contains("fokk_start.html")) "New Tab" else "Fokk Nox"
         val tab = BrowserTab(title = initialTitle, url = url, isPrivate = isPrivate, webView = webView)
         binding.tabContainer.addView(webView)
         return tab
@@ -4685,7 +4685,7 @@ open class MediaHubActivity : AppCompatActivity() {
             insetsController.isAppearanceLightNavigationBars = false
             window.navigationBarColor = Color.parseColor("#090D14")
             binding.topBar.setBackgroundResource(if (isTop) R.drawable.bg_docked_command_bar_top else R.drawable.bg_docked_command_bar_bottom)
-            binding.bottomNav.setBackgroundColor(Color.parseColor("#0C101A"))
+            binding.bottomNav.setBackgroundColor(Color.parseColor("#07080D"))
             binding.urlInput.setTextColor(Color.parseColor("#FFFFFF"))
             binding.urlInput.setHintTextColor(Color.parseColor("#94A3B8"))
         }
@@ -5783,7 +5783,7 @@ open class MediaHubActivity : AppCompatActivity() {
                     defaultBrowserLauncher.launch(roleIntent)
                     return
                 } else {
-                    Toast.makeText(this, "Fokk Browser is already your default browser", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Fokk Nox is already your default browser", Toast.LENGTH_SHORT).show()
                     return
                 }
             }

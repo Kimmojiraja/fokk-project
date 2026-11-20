@@ -37,7 +37,7 @@
                     android:id="@+id/splitDivider"
                     android:layout_width="match_parent"
                     android:layout_height="34dp"
-                    android:background="#0F172A"
+                    android:background="#07080C"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:paddingHorizontal="12dp"
@@ -348,7 +348,7 @@
                 android:layout_height="20dp"
                 android:layout_marginStart="2dp"
                 android:layout_marginEnd="4dp"
-                android:background="#2E3C52" />
+                android:background="#1A1C26" />
 
             <FrameLayout
                 android:id="@+id/btnNavTabs"
@@ -473,7 +473,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="6dp"
-            android:text="Fokk"
+            android:text="Fokk Nox"
             android:textColor="@color/text_primary"
             android:textSize="12sp"
             android:textStyle="bold"
@@ -504,10 +504,10 @@
         android:layout_alignParentBottom="true"
         android:layout_marginBottom="76dp"
         android:visibility="gone"
-        app:cardBackgroundColor="#131B2E"
+        app:cardBackgroundColor="#0A0B10"
         app:cardCornerRadius="16dp"
         app:cardElevation="14dp"
-        app:strokeColor="#24344D"
+        app:strokeColor="#181A24"
         app:strokeWidth="1dp">
 
         <androidx.core.widget.NestedScrollView
