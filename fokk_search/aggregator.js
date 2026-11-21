@@ -223,6 +223,7 @@ function formatTimeAgo(dateInput) {
         return 'Recent';
     }
 }
+const formatTimerAgo = formatTimeAgo;
 
 function httpsRequest(urlStr, options = {}, timeoutMs = 6500) {
     return new Promise((resolve) => {

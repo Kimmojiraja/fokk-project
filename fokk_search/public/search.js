@@ -247,6 +247,22 @@ function isBlocked(domain) {
     return false;
 }
 
+function formatTimeAgo(dateInput) {
+    if (!dateInput) return 'Recent';
+    try {
+        const d = new Date(dateInput);
+        if (isNaN(d.getTime())) return 'Recent';
+        const diffMin = Math.round((Date.now() - d.getTime()) / 60000);
+        if (diffMin < 60) return `${Math.max(1, diffMin)}m ago`;
+        if (diffMin < 1440) return `${Math.floor(diffMin / 60)}h ago`;
+        if (diffMin < 10080) return `${Math.floor(diffMin / 1440)}d ago`;
+        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (_) {
+        return 'Recent';
+    }
+}
+const formatTimerAgo = formatTimeAgo;
+
 // 1. Multi-Engine Web Results (Bing Web + DuckDuckGo Parallel Meta Aggregator)
 async function fetchBingWeb(query) {
     const results = [];
