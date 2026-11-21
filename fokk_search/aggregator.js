@@ -1185,94 +1185,100 @@ function extractYoutubeId(url) {
 
 async function fetchVideos(query) {
     const results = [];
+    const seenIds = new Set();
     const cleanQ = encodeURIComponent(query);
 
-    // 1. Direct YouTube Results via ytInitialData
-    try {
-        const ytRes = await httpsRequest(`https://www.youtube.com/results?search_query=${cleanQ}`, {
-            headers: { 'Accept': 'text/html' }
-        }, 5000);
+    // 1. Direct YouTube Results via ytInitialData (Fast 2500ms timeout)
+    const fetchDirectYT = async () => {
+        try {
+            const ytRes = await httpsRequest(`https://www.youtube.com/results?search_query=${cleanQ}`, {
+                headers: { 'Accept': 'text/html', 'User-Agent': USER_AGENT }
+            }, 2500);
 
-        if (ytRes.status === 200 && ytRes.body) {
-            const m = ytRes.body.match(/var ytInitialData = ({[\s\S]*?});<\/script>/);
-            if (m) {
-                const j = JSON.parse(m[1]);
-                const contents = j?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
-                const items = contents?.[0]?.itemSectionRenderer?.contents || [];
-                for (const it of items) {
-                    if (it.videoRenderer) {
-                        const vr = it.videoRenderer;
-                        const vId = vr.videoId;
-                        if (!vId) continue;
-                        results.push({
-                            title: cleanHtmlText(vr.title?.runs?.[0]?.text || query),
-                            videoId: vId,
-                            url: `https://www.youtube.com/watch?v=${vId}`,
-                            thumbnail: `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`,
-                            duration: vr.lengthText ? vr.lengthText.simpleText : '',
-                            channel: vr.ownerText ? vr.ownerText.runs?.[0]?.text : 'YouTube',
-                            views: vr.viewCountText ? (vr.viewCountText.simpleText || '') : '',
-                            snippet: vr.detailedMetadataSnippets?.[0]?.snippetText?.runs?.[0]?.text || '',
-                            platform: 'YouTube',
-                            domain: 'youtube.com',
-                            source: 'Videos'
-                        });
-                        if (results.length >= 24) break;
+            if (ytRes.status === 200 && ytRes.body) {
+                const m = ytRes.body.match(/var ytInitialData = ({[\s\S]*?});<\/script>/);
+                if (m) {
+                    const j = JSON.parse(m[1]);
+                    const contents = j?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
+                    const items = contents?.[0]?.itemSectionRenderer?.contents || [];
+                    for (const it of items) {
+                        if (it.videoRenderer) {
+                            const vr = it.videoRenderer;
+                            const vId = vr.videoId;
+                            if (!vId || seenIds.has(vId)) continue;
+                            seenIds.add(vId);
+                            results.push({
+                                title: cleanHtmlText(vr.title?.runs?.[0]?.text || query),
+                                videoId: vId,
+                                url: `https://www.youtube.com/watch?v=${vId}`,
+                                thumbnail: `https://i.ytimg.com/vi/${vId}/mqdefault.jpg`,
+                                duration: vr.lengthText ? vr.lengthText.simpleText : '',
+                                channel: vr.ownerText ? vr.ownerText.runs?.[0]?.text : 'YouTube',
+                                views: vr.viewCountText ? (vr.viewCountText.simpleText || '') : '',
+                                snippet: vr.detailedMetadataSnippets?.[0]?.snippetText?.runs?.[0]?.text || '',
+                                platform: 'YouTube',
+                                domain: 'youtube.com',
+                                source: 'Videos'
+                            });
+                            if (results.length >= 24) break;
+                        }
                     }
                 }
             }
-        }
-    } catch (_) {}
+        } catch (_) {}
+    };
 
-    // 2. Fallback to DDG if YouTube directly returned zero
-    if (results.length === 0) {
-        const postBody = `q=site:youtube.com+${cleanQ}`;
-        const res = await httpsRequest('https://html.duckduckgo.com/html/', {
-            method: 'POST',
-            body: postBody,
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Content-Length': Buffer.byteLength(postBody),
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Origin': 'https://html.duckduckgo.com',
-                'Referer': 'https://html.duckduckgo.com/'
+    // 2. Parallel DuckDuckGo Video Search Fallback (Fast 2500ms timeout)
+    const fetchDDGYT = async () => {
+        try {
+            const postBody = `q=site:youtube.com+${cleanQ}`;
+            const res = await httpsRequest('https://html.duckduckgo.com/html/', {
+                method: 'POST',
+                body: postBody,
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Origin': 'https://html.duckduckgo.com',
+                    'Referer': 'https://html.duckduckgo.com/'
+                }
+            }, 2500);
+
+            if (res.status === 200 && res.body) {
+                const blocks = res.body.split(/<div class="result results_links results_links_deep web-result/i);
+                for (let i = 1; i < blocks.length; i++) {
+                    const block = blocks[i];
+                    const titleMatch = block.match(/<h2 class="result__title">[\s\S]*?<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i);
+                    if (!titleMatch) continue;
+
+                    const targetUrl = cleanUrl(titleMatch[1]);
+                    const ytId = extractYoutubeId(targetUrl);
+                    if (!ytId || seenIds.has(ytId)) continue;
+                    seenIds.add(ytId);
+
+                    const title = cleanHtmlText(titleMatch[2]).replace(/\s*-\s*YouTube$/i, '');
+                    const snipMatch = block.match(/<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i);
+                    const snippet = cleanHtmlText(snipMatch ? snipMatch[1] : '');
+
+                    results.push({
+                        title,
+                        url: targetUrl,
+                        videoId: ytId,
+                        thumbnail: `https://i.ytimg.com/vi/${ytId}/mqdefault.jpg`,
+                        duration: '',
+                        channel: 'YouTube',
+                        views: '',
+                        snippet,
+                        platform: 'YouTube',
+                        domain: 'youtube.com',
+                        source: 'Videos'
+                    });
+                    if (results.length >= 24) break;
+                }
             }
-        }, 5000);
+        } catch (_) {}
+    };
 
-        if (res.status === 200 && res.body) {
-            const blocks = res.body.split(/<div class="result results_links results_links_deep web-result/i);
-            for (let i = 1; i < blocks.length; i++) {
-                const block = blocks[i];
-                const titleMatch = block.match(/<h2 class="result__title">[\s\S]*?<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i);
-                if (!titleMatch) continue;
-
-                const targetUrl = cleanUrl(titleMatch[1]);
-                const ytId = extractYoutubeId(targetUrl);
-                if (!ytId) continue;
-
-                const title = cleanHtmlText(titleMatch[2]).replace(/\s*-\s*YouTube$/i, '');
-                const snipMatch = block.match(/<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i);
-                const snippet = cleanHtmlText(snipMatch ? snipMatch[1] : '');
-
-                results.push({
-                    title,
-                    url: targetUrl,
-                    videoId: ytId,
-                    thumbnail: `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`,
-                    duration: '',
-                    channel: 'YouTube',
-                    views: '',
-                    snippet,
-                    platform: 'YouTube',
-                    domain: 'youtube.com',
-                    source: 'Videos'
-                });
-                if (results.length >= 15) break;
-            }
-        }
-    }
-
+    await Promise.all([fetchDirectYT(), fetchDDGYT()]);
     return results;
 }
 
@@ -1456,19 +1462,22 @@ async function aggregateSearch(query, category = 'all') {
         };
     }
 
-    // Default Universal 'All' View
-    const sportsPromise = fetchSportsData(cleanQ);
-    const sports = await sportsPromise;
-
-    const [webResults, knowledge, topNews, topDiscussions, topVideos, suggestions, topImages] = await Promise.all([
+    // Default Universal 'All' View (Fully Parallelized Pipeline)
+    const [sports, webResults, knowledge, topNews, topDiscussions, topVideos, suggestions, topImages] = await Promise.all([
+        fetchSportsData(cleanQ),
         fetchWebResults(cleanQ),
-        fetchKnowledge(cleanQ, sports),
+        fetchKnowledge(cleanQ),
         fetchNews(cleanQ),
         fetchDiscussions(cleanQ),
         fetchVideos(cleanQ),
         fetchSuggestions(cleanQ),
         fetchImages(cleanQ, 10)
     ]);
+
+    // If sports intelligence matched an authentic club, enrich knowledge thumbnail if missing
+    if (sports && sports.team && knowledge && !knowledge.thumbnail) {
+        knowledge.thumbnail = sports.team.logo;
+    }
 
     // Intelligent Query-Intent Reranker
     const queryTerms = extractTokens(cleanQ);

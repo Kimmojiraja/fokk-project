@@ -1176,94 +1176,100 @@ function extractYoutubeId(url) {
 
 async function fetchVideos(query) {
     const results = [];
+    const seenIds = new Set();
     const cleanQ = encodeURIComponent(query);
 
-    // 1. Direct YouTube Results via ytInitialData
-    try {
-        const ytRes = await httpsRequest(`https://www.youtube.com/results?search_query=${cleanQ}`, {
-            headers: { 'Accept': 'text/html' }
-        }, 5000);
+    // 1. Direct YouTube Results via ytInitialData (Fast 2500ms timeout)
+    const fetchDirectYT = async () => {
+        try {
+            const ytRes = await httpsRequest(`https://www.youtube.com/results?search_query=${cleanQ}`, {
+                headers: { 'Accept': 'text/html' }
+            }, 2500);
 
-        if (ytRes.status === 200 && ytRes.body) {
-            const m = ytRes.body.match(/var ytInitialData = ({[\s\S]*?});<\/script>/);
-            if (m) {
-                const j = JSON.parse(m[1]);
-                const contents = j?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
-                const items = contents?.[0]?.itemSectionRenderer?.contents || [];
-                for (const it of items) {
-                    if (it.videoRenderer) {
-                        const vr = it.videoRenderer;
-                        const vId = vr.videoId;
-                        if (!vId) continue;
-                        results.push({
-                            title: cleanHtmlText(vr.title?.runs?.[0]?.text || query),
-                            videoId: vId,
-                            url: `https://www.youtube.com/watch?v=${vId}`,
-                            thumbnail: `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`,
-                            duration: vr.lengthText ? vr.lengthText.simpleText : '',
-                            channel: vr.ownerText ? vr.ownerText.runs?.[0]?.text : 'YouTube',
-                            views: vr.viewCountText ? (vr.viewCountText.simpleText || '') : '',
-                            snippet: vr.detailedMetadataSnippets?.[0]?.snippetText?.runs?.[0]?.text || '',
-                            platform: 'YouTube',
-                            domain: 'youtube.com',
-                            source: 'Videos'
-                        });
-                        if (results.length >= 24) break;
+            if (ytRes.status === 200 && ytRes.body) {
+                const m = ytRes.body.match(/var ytInitialData = ({[\s\S]*?});<\/script>/);
+                if (m) {
+                    const j = JSON.parse(m[1]);
+                    const contents = j?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
+                    const items = contents?.[0]?.itemSectionRenderer?.contents || [];
+                    for (const it of items) {
+                        if (it.videoRenderer) {
+                            const vr = it.videoRenderer;
+                            const vId = vr.videoId;
+                            if (!vId || seenIds.has(vId)) continue;
+                            seenIds.add(vId);
+                            results.push({
+                                title: cleanHtmlText(vr.title?.runs?.[0]?.text || query),
+                                videoId: vId,
+                                url: `https://www.youtube.com/watch?v=${vId}`,
+                                thumbnail: `https://i.ytimg.com/vi/${vId}/mqdefault.jpg`,
+                                duration: vr.lengthText ? vr.lengthText.simpleText : '',
+                                channel: vr.ownerText ? vr.ownerText.runs?.[0]?.text : 'YouTube',
+                                views: vr.viewCountText ? (vr.viewCountText.simpleText || '') : '',
+                                snippet: vr.detailedMetadataSnippets?.[0]?.snippetText?.runs?.[0]?.text || '',
+                                platform: 'YouTube',
+                                domain: 'youtube.com',
+                                source: 'Videos'
+                            });
+                            if (results.length >= 24) break;
+                        }
                     }
                 }
             }
-        }
-    } catch (_) {}
+        } catch (_) {}
+    };
 
-    // 2. Fallback to DDG if YouTube directly returned zero
-    if (results.length === 0) {
-        const postBody = `q=site:youtube.com+${cleanQ}`;
-        const res = await httpsRequest('https://html.duckduckgo.com/html/', {
-            method: 'POST',
-            body: postBody,
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Content-Length': Buffer.byteLength(postBody),
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Origin': 'https://html.duckduckgo.com',
-                'Referer': 'https://html.duckduckgo.com/'
+    // 2. Parallel DuckDuckGo Video Search Fallback (Fast 2500ms timeout)
+    const fetchDDGYT = async () => {
+        try {
+            const postBody = `q=site:youtube.com+${cleanQ}`;
+            const res = await httpsRequest('https://html.duckduckgo.com/html/', {
+                method: 'POST',
+                body: postBody,
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Origin': 'https://html.duckduckgo.com',
+                    'Referer': 'https://html.duckduckgo.com/'
+                }
+            }, 2500);
+
+            if (res.status === 200 && res.body) {
+                const blocks = res.body.split(/<div class="result results_links results_links_deep web-result/i);
+                for (let i = 1; i < blocks.length; i++) {
+                    const block = blocks[i];
+                    const titleMatch = block.match(/<h2 class="result__title">[\s\S]*?<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i);
+                    if (!titleMatch) continue;
+
+                    const targetUrl = cleanUrl(titleMatch[1]);
+                    const ytId = extractYoutubeId(targetUrl);
+                    if (!ytId || seenIds.has(ytId)) continue;
+                    seenIds.add(ytId);
+
+                    const title = cleanHtmlText(titleMatch[2]).replace(/\s*-\s*YouTube$/i, '');
+                    const snipMatch = block.match(/<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i);
+                    const snippet = cleanHtmlText(snipMatch ? snipMatch[1] : '');
+
+                    results.push({
+                        title,
+                        url: targetUrl,
+                        videoId: ytId,
+                        thumbnail: `https://i.ytimg.com/vi/${ytId}/mqdefault.jpg`,
+                        duration: '',
+                        channel: 'YouTube',
+                        views: '',
+                        snippet,
+                        platform: 'YouTube',
+                        domain: 'youtube.com',
+                        source: 'Videos'
+                    });
+                    if (results.length >= 24) break;
+                }
             }
-        }, 5000);
+        } catch (_) {}
+    };
 
-        if (res.status === 200 && res.body) {
-            const blocks = res.body.split(/<div class="result results_links results_links_deep web-result/i);
-            for (let i = 1; i < blocks.length; i++) {
-                const block = blocks[i];
-                const titleMatch = block.match(/<h2 class="result__title">[\s\S]*?<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i);
-                if (!titleMatch) continue;
-
-                const targetUrl = cleanUrl(titleMatch[1]);
-                const ytId = extractYoutubeId(targetUrl);
-                if (!ytId) continue;
-
-                const title = cleanHtmlText(titleMatch[2]).replace(/\s*-\s*YouTube$/i, '');
-                const snipMatch = block.match(/<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i);
-                const snippet = cleanHtmlText(snipMatch ? snipMatch[1] : '');
-
-                results.push({
-                    title,
-                    url: targetUrl,
-                    videoId: ytId,
-                    thumbnail: `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`,
-                    duration: '',
-                    channel: 'YouTube',
-                    views: '',
-                    snippet,
-                    platform: 'YouTube',
-                    domain: 'youtube.com',
-                    source: 'Videos'
-                });
-                if (results.length >= 15) break;
-            }
-        }
-    }
-
+    await Promise.all([fetchDirectYT(), fetchDDGYT()]);
     return results;
 }
 
@@ -1280,12 +1286,11 @@ async function fetchDiscussions(query) {
                 body: postBody,
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'Content-Length': Buffer.byteLength(postBody),
                     'Accept': 'text/html',
                     'Origin': 'https://html.duckduckgo.com',
                     'Referer': 'https://html.duckduckgo.com/'
                 }
-            }, 4500);
+            }, 3000);
 
             if (res.status === 200 && res.body) {
                 const blocks = res.body.split(/<div class="result results_links results_links_deep web-result/i);
@@ -1447,19 +1452,22 @@ async function aggregateSearch(query, category = 'all') {
         };
     }
 
-    // Default Universal 'All' View
-    const sportsPromise = fetchSportsData(cleanQ);
-    const sports = await sportsPromise;
-
-    const [webResults, knowledge, topNews, topDiscussions, topVideos, suggestions, topImages] = await Promise.all([
+    // Default Universal 'All' View (Fully Parallelized Pipeline)
+    const [sports, webResults, knowledge, topNews, topDiscussions, topVideos, suggestions, topImages] = await Promise.all([
+        fetchSportsData(cleanQ),
         fetchWebResults(cleanQ),
-        fetchKnowledge(cleanQ, sports),
+        fetchKnowledge(cleanQ),
         fetchNews(cleanQ),
         fetchDiscussions(cleanQ),
         fetchVideos(cleanQ),
         fetchSuggestions(cleanQ),
         fetchImages(cleanQ, 10)
     ]);
+
+    // If sports intelligence matched an authentic club, enrich knowledge thumbnail if missing
+    if (sports && sports.team && knowledge && !knowledge.thumbnail) {
+        knowledge.thumbnail = sports.team.logo;
+    }
 
     // Intelligent Query-Intent Reranker
     const queryTerms = extractTokens(cleanQ);
@@ -1664,6 +1672,9 @@ const ClientAggregator = {
         }
     }
 
+    // High-Speed In-Memory Cache for Instant Tab Switching (0ms latency)
+    const searchCache = new Map();
+
     // 3. Perform Search
     async function executeSearch(query, category = 'all', pushHistory = true) {
         if (!query.trim()) {
@@ -1698,6 +1709,13 @@ const ClientAggregator = {
         setView(true);
         document.title = `${currentQuery} - Fokk Search`;
 
+        // Instant Cache Hit (0ms Tab Switching)
+        const cacheKey = `${currentQuery.toLowerCase()}|${currentCategory}`;
+        if (searchCache.has(cacheKey)) {
+            renderResults(searchCache.get(cacheKey));
+            return;
+        }
+
         // Loading State
         resultsMainCol.innerHTML = `
             <div class="state-box">
@@ -1722,6 +1740,7 @@ const ClientAggregator = {
                 data = await ClientAggregator.aggregateSearch(currentQuery, currentCategory);
             }
             if (data) {
+                searchCache.set(cacheKey, data);
                 renderResults(data);
             } else {
                 throw new Error('Search index unavailable');
@@ -2315,7 +2334,7 @@ const ClientAggregator = {
                 <div class="images-preview-row">
                     ${data.topImages.map((img, i) => `
                         <div class="preview-img-card" data-idx="${i}">
-                            <img src="${escapeHtml(img.thumbnail || img.image)}" class="preview-img-thumb" alt="${escapeHtml(img.title)}" loading="lazy">
+                            <img src="${escapeHtml(img.thumbnail || img.image)}" class="preview-img-thumb" alt="${escapeHtml(img.title)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.preview-img-card').style.display='none'">
                         </div>
                     `).join('')}
                 </div>
@@ -2352,7 +2371,7 @@ const ClientAggregator = {
                     ${data.topVideos.map(v => `
                         <a href="${escapeHtml(v.url)}" target="_blank" rel="noopener noreferrer" class="video-card">
                             <div class="video-thumb-wrap">
-                                <img src="${escapeHtml(v.thumbnail)}" class="video-thumb" alt="${escapeHtml(v.title)}" loading="lazy">
+                                <img src="${escapeHtml(v.thumbnail)}" class="video-thumb" alt="${escapeHtml(v.title)}" loading="lazy" referrerpolicy="no-referrer" onerror="if(this.src && !this.src.includes('mqdefault')) { this.src=this.src.replace('hqdefault','mqdefault'); }">
                                 <div class="video-play-badge">
                                     <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                                     <span>Watch</span>
@@ -2457,7 +2476,7 @@ const ClientAggregator = {
 
             const imgHtml = item.image ? `
                 <div class="news-mag-thumb-wrap">
-                    <img src="${escapeHtml(item.image)}" class="news-mag-thumb" alt="${escapeHtml(item.title)}" loading="lazy">
+                    <img src="${escapeHtml(item.image)}" class="news-mag-thumb" alt="${escapeHtml(item.title)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.news-mag-thumb-wrap').style.display='none'">
                 </div>
             ` : '';
 
@@ -2479,7 +2498,7 @@ const ClientAggregator = {
         resultsMainCol.appendChild(grid);
     }
 
-    // 7. Render Dedicated Images Tab (Deep 60+ Images Masonry Grid)
+    // 7. Render Dedicated Images Tab (Responsive 2-Column Mobile Masonry)
     function renderImagesTab(results) {
         resultsLayout.classList.add('images-container');
         resultsSideCol.style.display = 'none';
@@ -2494,7 +2513,7 @@ const ClientAggregator = {
 
             card.innerHTML = `
                 <div class="image-thumb-wrap">
-                    <img src="${escapeHtml(item.thumbnail || item.image)}" class="image-thumb" alt="${escapeHtml(item.title)}" loading="lazy" onerror="this.closest('.image-card').style.display='none'">
+                    <img src="${escapeHtml(item.thumbnail || item.image)}" class="image-thumb" alt="${escapeHtml(item.title)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.image-card').remove()">
                 </div>
                 <div class="image-info">
                     <div class="image-title">${escapeHtml(item.title)}</div>
@@ -2516,7 +2535,6 @@ const ClientAggregator = {
 
         const grid = document.createElement('div');
         grid.className = 'videos-grid';
-        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
 
         results.forEach(item => {
             const card = document.createElement('a');
@@ -2526,16 +2544,16 @@ const ClientAggregator = {
             card.rel = 'noopener noreferrer';
 
             card.innerHTML = `
-                <div class="video-thumb-wrap" style="height: 160px;">
-                    <img src="${escapeHtml(item.thumbnail)}" class="video-thumb" alt="${escapeHtml(item.title)}" loading="lazy">
+                <div class="video-thumb-wrap">
+                    <img src="${escapeHtml(item.thumbnail)}" class="video-thumb" alt="${escapeHtml(item.title)}" loading="lazy" referrerpolicy="no-referrer" onerror="if(this.src && !this.src.includes('mqdefault')) { this.src=this.src.replace('hqdefault','mqdefault'); }">
                     <div class="video-play-badge">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                        <span>Watch on YouTube</span>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        <span>${escapeHtml(item.duration || item.platform || 'Watch')}</span>
                     </div>
                 </div>
                 <div class="video-info" style="padding: 12px 14px;">
                     <h3 class="video-title" style="font-size: 0.95rem; -webkit-line-clamp: 2;">${escapeHtml(item.title)}</h3>
-                    <span class="video-source">${escapeHtml(item.platform || 'YouTube')}</span>
+                    <span class="video-source">${escapeHtml(item.platform || 'YouTube')}${item.channel ? ' • ' + escapeHtml(item.channel) : ''}${item.views ? ' • ' + escapeHtml(item.views) : ''}</span>
                     ${item.snippet ? `<p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${escapeHtml(item.snippet)}</p>` : ''}
                 </div>
             `;
