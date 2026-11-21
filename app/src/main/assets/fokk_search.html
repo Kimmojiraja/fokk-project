@@ -748,11 +748,11 @@ body[data-theme="light"].results-view .app-header,
 
 /* Discussions Module & Tab */
 .discussions-section {
-    margin-bottom: 30px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: 14px;
-    padding: 18px;
+    margin-bottom: 28px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
 }
 
 .discussions-list {
@@ -766,7 +766,7 @@ body[data-theme="light"].results-view .app-header,
     align-items: center;
     justify-content: space-between;
     gap: 14px;
-    background: var(--bg-surface-elevated);
+    background: var(--bg-surface);
     border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 12px 16px;
@@ -836,11 +836,11 @@ body[data-theme="light"].results-view .app-header,
 
 /* Videos Carousel & Tab */
 .videos-section {
-    margin-bottom: 30px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: 14px;
-    padding: 18px;
+    margin-bottom: 28px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
 }
 
 .videos-grid {
@@ -852,7 +852,7 @@ body[data-theme="light"].results-view .app-header,
 .video-card {
     display: flex;
     flex-direction: column;
-    background: var(--bg-surface-elevated);
+    background: var(--bg-surface);
     border: 1px solid var(--border-color);
     border-radius: 10px;
     overflow: hidden;
@@ -1717,31 +1717,33 @@ body[data-theme="light"].results-view .app-header,
    Fokk AI Quick Overview (Next-Gen Generative Direct Answer)
    ========================================================================== */
 .ai-overview-card {
-    background: linear-gradient(135deg, rgba(16, 24, 38, 0.75) 0%, rgba(10, 15, 25, 0.9) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
-    padding: 20px 24px;
-    margin-bottom: 24px;
-    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(16px);
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0;
+    padding: 0 0 22px 0;
+    margin-bottom: 28px;
+    box-shadow: none;
+    backdrop-filter: none;
+    transition: none;
     position: relative;
 }
 
 .ai-overview-card:hover {
-    border-color: rgba(0, 210, 180, 0.28);
-    box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 210, 180, 0.05);
+    border-color: var(--border-color);
+    box-shadow: none;
 }
 
 [data-theme="light"] .ai-overview-card {
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 0 6px 20px -2px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: none;
 }
 
 [data-theme="light"] .ai-overview-card:hover {
-    border-color: rgba(2, 132, 199, 0.3);
-    box-shadow: 0 10px 28px -2px rgba(0, 0, 0, 0.08);
+    border-color: var(--border-color);
+    box-shadow: none;
 }
 
 .ai-overview-header {
@@ -2371,7 +2373,7 @@ body[data-theme="light"].results-view .app-header,
     color: var(--link-color);
 }
 
-</style>
+    </style>
 </head>
 <body class="home-view" data-theme="dark">
 
@@ -2561,6 +2563,217 @@ async function httpsRequest(urlStr, options = {}, timeoutMs = 6500) {
     }
 }
 
+const WIKI_USER_AGENT = 'FokkSearch/1.0 (https://fokk.org; team@fokk.org) AppleWebKit/537.36';
+
+const BLOCKED_DOMAINS = new Set([
+    'wn.com', 'article.wn.com', 'powerpopradio.com', 'whopostedwhat.com',
+    'pressreader.com', 'pinterest.com', 'brainly.com', 'brainly.in',
+    'chegg.com', 'scribd.com', 'slideshare.net'
+]);
+
+const HIGH_AUTH_DOMAINS = new Set([
+    'wikipedia.org', 'github.com', 'stackoverflow.com', 'reuters.com',
+    'apnews.com', 'bbc.com', 'theguardian.com', 'nature.com', 'science.org',
+    'mozilla.org', 'developer.mozilla.org', 'w3schools.com', 'arxiv.org',
+    'gov', 'edu', 'ac.uk', 'gov.uk'
+]);
+
+const MUSIC_DOMAINS = new Set([
+    'jiosaavn.com', 'spotify.com', 'music.youtube.com', 'apple.com',
+    'gaana.com', 'wynk.in', 'genius.com', 'azlyrics.com', 'youtube.com',
+    'tamil2lyrics.com', 'lyricsmint.com', 'saavn.com', 'hungama.com'
+]);
+
+const STOP_WORDS = new Set([
+    'a', 'an', 'the', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'about',
+    'to', 'from', 'is', 'it', 'and', 'or', 'as', 'what', 'who', 'how', 'when', 'where'
+]);
+
+const INTENT_MUSIC = new Set([
+    'song', 'songs', 'lyrics', 'track', 'tracks', 'music', 'video', 'videos',
+    'audio', 'mp3', 'album', 'singer', 'cast', 'download', 'watch', 'stream'
+]);
+
+const ENTITY_CLASSIFIER_WORDS = new Set([
+    'city', 'state', 'town', 'country', 'county', 'district', 'province',
+    'island', 'islands', 'river', 'lake', 'mountain', 'bay', 'sea', 'ocean',
+    'university', 'college', 'school', 'institute', 'organization', 'company',
+    'corp', 'corporation', 'inc', 'ltd', 'fc', 'club', 'band', 'group'
+]);
+
+const SPORTS_INTENT_TERMS = new Set([
+    'fc', 'cf', 'sc', 'club', 'team', 'vs', 'versus', 'score', 'scores', 'match',
+    'game', 'games', 'fixture', 'fixtures', 'schedule', 'standings', 'table',
+    'roster', 'squad', 'coach', 'league', 'championship', 'tournament', 'cup'
+]);
+
+function extractTokens(str) {
+    return (str || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 1 && !STOP_WORDS.has(w));
+}
+
+function shouldTriggerSports(query, teamEntry) {
+    if (!query || !teamEntry) return false;
+    const qLower = query.toLowerCase().trim().replace(/[?!.]+$/, '');
+    const qTokens = qLower.split(/\s+/).filter(w => w.length > 1);
+
+    const teamNameLower = (teamEntry.displayName || '').toLowerCase();
+    const teamAbbrevLower = (teamEntry.abbreviation || '').toLowerCase();
+    const teamShortLower = (teamEntry.shortDisplayName || '').toLowerCase();
+    const teamTokens = teamNameLower.split(/\s+/).filter(w => w.length > 1);
+
+    const hasSportsIntent = qTokens.some(t => SPORTS_INTENT_TERMS.has(t));
+
+    // Exact match on full name, short name, or standard abbreviation
+    if (qLower === teamNameLower || (teamShortLower && qLower === teamShortLower) || (teamAbbrevLower && qLower === teamAbbrevLower)) {
+        return true;
+    }
+
+    const matchedTokens = teamTokens.filter(t => qTokens.includes(t));
+    const extraTeamTokens = teamTokens.filter(t => !qTokens.includes(t));
+
+    // If the team name has extra distinctive words (e.g. "Giants", "Yankees", "Knicks")
+    // and query did NOT mention them, and has no sports intent keywords, reject! (e.g. "new york" is a city, not Giants)
+    if (extraTeamTokens.length > 0 && !hasSportsIntent) {
+        const matchRatio = matchedTokens.length / teamTokens.length;
+        if (matchRatio < 0.8) {
+            return false;
+        }
+    }
+
+    if (hasSportsIntent && matchedTokens.length > 0) {
+        return true;
+    }
+
+    if (teamTokens.length > 1) {
+        const mascot = teamTokens[teamTokens.length - 1];
+        if (qTokens.includes(mascot) && matchedTokens.length >= 1) {
+            return true;
+        }
+    }
+
+    return matchedTokens.length === teamTokens.length;
+}
+
+function scoreWikiHit(candidateTitle, query) {
+    const qTokens = extractTokens(query);
+    const qEntityTokens = qTokens.filter(t => !INTENT_MUSIC.has(t));
+    const isSongQuery = qTokens.some(t => INTENT_MUSIC.has(t));
+
+    // Strip parenthetical disambiguation: e.g. "Param Sundari (film)" -> base "Param Sundari", qual "film"
+    const m = candidateTitle.match(/^([^(]+)(?:\(([^)]+)\))?/);
+    const baseTitle = m ? m[1].trim() : candidateTitle;
+    const qualifier = m && m[2] ? m[2].toLowerCase() : '';
+
+    const baseTokens = extractTokens(baseTitle);
+
+    // Check if baseTitle contains extra significant tokens not in the query (excluding natural entity classifiers)
+    const extraTokens = baseTokens.filter(t => !qTokens.includes(t) && !ENTITY_CLASSIFIER_WORDS.has(t));
+    
+    // Check if query entity tokens are all matched in baseTitle
+    const matchedEntityTokens = qEntityTokens.filter(t => baseTokens.includes(t));
+
+    // If query has entity tokens, but candidate matched zero of them, reject
+    if (qEntityTokens.length > 0 && matchedEntityTokens.length === 0) {
+        return 0;
+    }
+
+    // If candidate introduces significant extra tokens that were NOT in the query, reject entity divergence!
+    if (extraTokens.length > 0) {
+        return 0;
+    }
+
+    // Intent check: if user asked for a song/music, and qualifier is film/movie/series, reject
+    if (isSongQuery && (qualifier.includes('film') || qualifier.includes('series') || qualifier.includes('novel') || qualifier.includes('tv'))) {
+        return 0;
+    }
+
+    let score = 10;
+    if (isSongQuery && (qualifier.includes('song') || qualifier.includes('track') || qualifier.includes('album') || qualifier.includes('soundtrack'))) {
+        score += 15;
+    }
+
+    // Exact query token match bonus
+    const nonClassifierTokens = baseTokens.filter(t => !ENTITY_CLASSIFIER_WORDS.has(t));
+    if (nonClassifierTokens.length === qTokens.length && extraTokens.length === 0) {
+        score += 15;
+    }
+
+    // Parenthetical penalty if query itself did not have parentheses
+    if (candidateTitle.includes('(') && !query.includes('(')) {
+        score -= 5;
+    }
+
+    score += matchedEntityTokens.length * 5;
+    return score;
+}
+
+function cleanHtmlText(raw) {
+    if (!raw) return '';
+    return String(raw)
+        .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+        .replace(/<[^>]+?>/g, ' ')
+        .replace(/&quot;/g, '"')
+        .replace(/&amp;/g, '&')
+        .replace(/&#39;|&apos;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function cleanUrl(rawUrl) {
+    if (!rawUrl) return '';
+    try {
+        let u = String(rawUrl).replace(/&amp;/g, '&');
+        if (u.includes('/ck/a?!')) {
+            const m = u.match(/[?&]u=a1([a-zA-Z0-9_\-\+=]+)/);
+            if (m && m[1]) {
+                let b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+                while (b64.length % 4) b64 += '=';
+                try {
+                    if (typeof atob === 'function') {
+                        u = decodeURIComponent(escape(atob(b64)));
+                    } else if (typeof Buffer !== 'undefined') {
+                        u = Buffer.from(b64, 'base64').toString('utf8');
+                    }
+                } catch (_) {}
+            }
+        }
+        if (u.includes('uddg=')) {
+            const parsed = new URL(u.startsWith('http') ? u : 'https:' + u);
+            u = decodeURIComponent(parsed.searchParams.get('uddg') || u);
+        }
+        const obj = new URL(u.startsWith('http') ? u : 'https:' + u);
+        const trackingParams = [
+            'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+            'fbclid', 'gclid', 'msclkid', 'mc_cid', 'mc_eid', '_ga', '_gl', 'ref', 'source'
+        ];
+        trackingParams.forEach(p => obj.searchParams.delete(p));
+        return obj.toString();
+    } catch (_) {
+        return rawUrl;
+    }
+}
+
+function getDomain(urlStr) {
+    try {
+        const u = new URL(urlStr);
+        return u.hostname.replace(/^www\./, '').toLowerCase();
+    } catch (_) {
+        return '';
+    }
+}
+
+function isBlocked(domain) {
+    if (!domain) return true;
+    if (BLOCKED_DOMAINS.has(domain)) return true;
+    for (const b of BLOCKED_DOMAINS) {
+        if (domain.endsWith('.' + b)) return true;
+    }
+    return false;
+}
+
 // 1. Multi-Engine Web Results (Bing Web + DuckDuckGo Parallel Meta Aggregator)
 async function fetchBingWeb(query) {
     const results = [];
@@ -2611,7 +2824,7 @@ async function fetchDuckDuckGoWeb(query) {
         body: postBody,
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Content-Length': Buffer.byteLength(postBody),
+            'Content-Length': String(typeof Buffer !== 'undefined' ? Buffer.byteLength(postBody) : new TextEncoder().encode(postBody).length),
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Encoding': 'gzip, deflate, br',
             'Origin': 'https://html.duckduckgo.com',
@@ -2679,7 +2892,7 @@ async function fetchSportsData(query) {
         try { sData = JSON.parse(searchRes.body); } catch (_) {}
         const teamCat = sData?.results?.find(x => x.type === 'team');
         const teamEntry = teamCat?.contents?.[0];
-        if (!teamEntry) return null;
+        if (!teamEntry || !shouldTriggerSports(cleanQ, teamEntry)) return null;
 
         const sport = teamEntry.sport || 'soccer';
         const league = teamEntry.defaultLeagueSlug || 'eng.1';
@@ -2839,18 +3052,16 @@ async function fetchSportsData(query) {
 
 // 3. Knowledge Graph: Wikipedia REST API with Dynamic Disambiguation & Strict Entity Alignment
 async function fetchKnowledge(query, sportsData = null) {
-    let cleanQ = query.trim().replace(/[?!.]+$/, '');
-
-    // If dynamic sports intelligence matched a sports club/team, target the sport entity
-    if (sportsData && sportsData.team) {
-        cleanQ = `${sportsData.team.name} ${sportsData.sport === 'soccer' ? 'F.C.' : sportsData.team.league || ''}`.trim();
-    }
+    const cleanQ = query.trim().replace(/[?!.]+$/, '');
+    const searchTarget = (sportsData && sportsData.team)
+        ? `${sportsData.team.name} ${sportsData.sport === 'soccer' ? 'F.C.' : sportsData.team.league || ''}`.trim()
+        : cleanQ;
 
     const tasks = [
         (async () => {
-            let targetPage = null;
+            const candidatePages = [];
             try {
-                const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(cleanQ)}&format=json&origin=*`;
+                const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchTarget)}&format=json&origin=*`;
                 const searchRes = await httpsRequest(searchUrl, { userAgent: WIKI_USER_AGENT }, 3500);
                 if (searchRes.status === 200 && searchRes.body) {
                     const parsed = JSON.parse(searchRes.body);
@@ -2859,46 +3070,48 @@ async function fetchKnowledge(query, sportsData = null) {
                         if (sportsData && sportsData.team) {
                             const teamLower = sportsData.team.name.toLowerCase();
                             const clubHit = hits.find(h => h.title.toLowerCase().includes(teamLower) && /club|team|association|football|basketball/i.test(h.title + ' ' + h.snippet));
-                            targetPage = clubHit ? clubHit.title : hits[0].title;
+                            candidatePages.push(clubHit ? clubHit.title : hits[0].title);
                         } else {
                             // Strictly score hits against query entity tokens to prevent hallucinations
-                            let bestHit = null;
-                            let maxScore = 0;
-                            for (const h of hits.slice(0, 8)) {
+                            const scoredHits = [];
+                            for (let i = 0; i < Math.min(hits.length, 8); i++) {
+                                const h = hits[i];
                                 if (h.title.toLowerCase().includes('(disambiguation)')) continue;
                                 const sc = scoreWikiHit(h.title, cleanQ);
-                                if (sc > maxScore) {
-                                    maxScore = sc;
-                                    bestHit = h;
+                                if (sc > 0) {
+                                    scoredHits.push({ title: h.title, score: sc + (8 - i) });
                                 }
                             }
-                            if (bestHit && maxScore > 0) {
-                                targetPage = bestHit.title;
+                            scoredHits.sort((a, b) => b.score - a.score);
+                            for (const s of scoredHits.slice(0, 4)) {
+                                candidatePages.push(s.title);
                             }
                         }
                     }
                 }
             } catch (_) {}
 
-            if (!targetPage) return null;
+            if (candidatePages.length === 0) return null;
 
-            const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(targetPage.replace(/\s+/g, '_'))}`;
-            const res = await httpsRequest(wikiUrl, { userAgent: WIKI_USER_AGENT }, 4000);
-            if (res.status === 200 && res.body) {
-                try {
-                    const data = JSON.parse(res.body);
-                    if (data.type === 'standard' && data.extract) {
-                        return {
-                            type: 'knowledge',
-                            title: data.title || targetPage,
-                            description: data.description || 'Encyclopedia Entry',
-                            extract: data.extract,
-                            thumbnail: (sportsData && sportsData.team && sportsData.team.logo) ? sportsData.team.logo : (data.thumbnail ? data.thumbnail.source : null),
-                            url: data.content_urls && data.content_urls.desktop ? data.content_urls.desktop.page : `https://en.wikipedia.org/wiki/${encodeURIComponent(data.title)}`,
-                            source: 'Wikipedia'
-                        };
-                    }
-                } catch (_) {}
+            for (const candTitle of candidatePages) {
+                const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(candTitle.replace(/\s+/g, '_'))}`;
+                const res = await httpsRequest(wikiUrl, { userAgent: WIKI_USER_AGENT }, 3500);
+                if (res.status === 200 && res.body) {
+                    try {
+                        const data = JSON.parse(res.body);
+                        if (data.type === 'standard' && data.extract) {
+                            return {
+                                type: 'knowledge',
+                                title: data.title || candTitle,
+                                description: data.description || 'Encyclopedia Entry',
+                                extract: data.extract,
+                                thumbnail: (sportsData && sportsData.team && sportsData.team.logo) ? sportsData.team.logo : (data.thumbnail ? data.thumbnail.source : null),
+                                url: data.content_urls && data.content_urls.desktop ? data.content_urls.desktop.page : `https://en.wikipedia.org/wiki/${encodeURIComponent(data.title)}`,
+                                source: 'Wikipedia'
+                            };
+                        }
+                    } catch (_) {}
+                }
             }
             return null;
         })(),
@@ -4126,9 +4339,6 @@ const ClientAggregator = {
                 <div class="ai-overview-header">
                     <div class="ai-badge-group">
                         <div class="ai-badge">
-                            <svg class="ai-sparkle-icon" width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z"/>
-                            </svg>
                             <span>Fokk AI Overview</span>
                         </div>
                         <span class="ai-tag">Quick Synthesis</span>
@@ -4512,7 +4722,6 @@ const ClientAggregator = {
             socialSection.innerHTML = `
                 <div class="section-label-header">
                     <div class="section-title">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>
                         <span>Live Social Pulse</span>
                         <span class="pulse-live-badge">Live Updates</span>
                     </div>
@@ -5094,6 +5303,6 @@ const ClientAggregator = {
 })();
 
 
-</script>
+    </script>
 </body>
 </html>

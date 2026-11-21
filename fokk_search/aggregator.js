@@ -35,8 +35,64 @@ const INTENT_MUSIC = new Set([
     'audio', 'mp3', 'album', 'singer', 'cast', 'download', 'watch', 'stream'
 ]);
 
+const ENTITY_CLASSIFIER_WORDS = new Set([
+    'city', 'state', 'town', 'country', 'county', 'district', 'province',
+    'island', 'islands', 'river', 'lake', 'mountain', 'bay', 'sea', 'ocean',
+    'university', 'college', 'school', 'institute', 'organization', 'company',
+    'corp', 'corporation', 'inc', 'ltd', 'fc', 'club', 'band', 'group'
+]);
+
+const SPORTS_INTENT_TERMS = new Set([
+    'fc', 'cf', 'sc', 'club', 'team', 'vs', 'versus', 'score', 'scores', 'match',
+    'game', 'games', 'fixture', 'fixtures', 'schedule', 'standings', 'table',
+    'roster', 'squad', 'coach', 'league', 'championship', 'tournament', 'cup'
+]);
+
 function extractTokens(str) {
     return (str || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 1 && !STOP_WORDS.has(w));
+}
+
+function shouldTriggerSports(query, teamEntry) {
+    if (!query || !teamEntry) return false;
+    const qLower = query.toLowerCase().trim().replace(/[?!.]+$/, '');
+    const qTokens = qLower.split(/\s+/).filter(w => w.length > 1);
+
+    const teamNameLower = (teamEntry.displayName || '').toLowerCase();
+    const teamAbbrevLower = (teamEntry.abbreviation || '').toLowerCase();
+    const teamShortLower = (teamEntry.shortDisplayName || '').toLowerCase();
+    const teamTokens = teamNameLower.split(/\s+/).filter(w => w.length > 1);
+
+    const hasSportsIntent = qTokens.some(t => SPORTS_INTENT_TERMS.has(t));
+
+    // Exact match on full name, short name, or standard abbreviation
+    if (qLower === teamNameLower || (teamShortLower && qLower === teamShortLower) || (teamAbbrevLower && qLower === teamAbbrevLower)) {
+        return true;
+    }
+
+    const matchedTokens = teamTokens.filter(t => qTokens.includes(t));
+    const extraTeamTokens = teamTokens.filter(t => !qTokens.includes(t));
+
+    // If the team name has extra distinctive words (e.g. "Giants", "Yankees", "Knicks")
+    // and query did NOT mention them, and has no sports intent keywords, reject! (e.g. "new york" is a city, not Giants)
+    if (extraTeamTokens.length > 0 && !hasSportsIntent) {
+        const matchRatio = matchedTokens.length / teamTokens.length;
+        if (matchRatio < 0.8) {
+            return false;
+        }
+    }
+
+    if (hasSportsIntent && matchedTokens.length > 0) {
+        return true;
+    }
+
+    if (teamTokens.length > 1) {
+        const mascot = teamTokens[teamTokens.length - 1];
+        if (qTokens.includes(mascot) && matchedTokens.length >= 1) {
+            return true;
+        }
+    }
+
+    return matchedTokens.length === teamTokens.length;
 }
 
 function scoreWikiHit(candidateTitle, query) {
@@ -51,8 +107,8 @@ function scoreWikiHit(candidateTitle, query) {
 
     const baseTokens = extractTokens(baseTitle);
 
-    // Check if baseTitle contains extra significant tokens not in the query
-    const extraTokens = baseTokens.filter(t => !qTokens.includes(t));
+    // Check if baseTitle contains extra significant tokens not in the query (excluding natural entity classifiers)
+    const extraTokens = baseTokens.filter(t => !qTokens.includes(t) && !ENTITY_CLASSIFIER_WORDS.has(t));
     
     // Check if query entity tokens are all matched in baseTitle
     const matchedEntityTokens = qEntityTokens.filter(t => baseTokens.includes(t));
@@ -76,6 +132,17 @@ function scoreWikiHit(candidateTitle, query) {
     let score = 10;
     if (isSongQuery && (qualifier.includes('song') || qualifier.includes('track') || qualifier.includes('album') || qualifier.includes('soundtrack'))) {
         score += 15;
+    }
+
+    // Exact query token match bonus
+    const nonClassifierTokens = baseTokens.filter(t => !ENTITY_CLASSIFIER_WORDS.has(t));
+    if (nonClassifierTokens.length === qTokens.length && extraTokens.length === 0) {
+        score += 15;
+    }
+
+    // Parenthetical penalty if query itself did not have parentheses
+    if (candidateTitle.includes('(') && !query.includes('(')) {
+        score -= 5;
     }
 
     score += matchedEntityTokens.length * 5;
@@ -322,7 +389,7 @@ async function fetchSportsData(query) {
         try { sData = JSON.parse(searchRes.body); } catch (_) {}
         const teamCat = sData?.results?.find(x => x.type === 'team');
         const teamEntry = teamCat?.contents?.[0];
-        if (!teamEntry) return null;
+        if (!teamEntry || !shouldTriggerSports(cleanQ, teamEntry)) return null;
 
         const sport = teamEntry.sport || 'soccer';
         const league = teamEntry.defaultLeagueSlug || 'eng.1';
@@ -482,18 +549,16 @@ async function fetchSportsData(query) {
 
 // 3. Knowledge Graph: Wikipedia REST API with Dynamic Disambiguation & Strict Entity Alignment
 async function fetchKnowledge(query, sportsData = null) {
-    let cleanQ = query.trim().replace(/[?!.]+$/, '');
-
-    // If dynamic sports intelligence matched a sports club/team, target the sport entity
-    if (sportsData && sportsData.team) {
-        cleanQ = `${sportsData.team.name} ${sportsData.sport === 'soccer' ? 'F.C.' : sportsData.team.league || ''}`.trim();
-    }
+    const cleanQ = query.trim().replace(/[?!.]+$/, '');
+    const searchTarget = (sportsData && sportsData.team)
+        ? `${sportsData.team.name} ${sportsData.sport === 'soccer' ? 'F.C.' : sportsData.team.league || ''}`.trim()
+        : cleanQ;
 
     const tasks = [
         (async () => {
-            let targetPage = null;
+            const candidatePages = [];
             try {
-                const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(cleanQ)}&format=json&origin=*`;
+                const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchTarget)}&format=json&origin=*`;
                 const searchRes = await httpsRequest(searchUrl, { userAgent: WIKI_USER_AGENT }, 3500);
                 if (searchRes.status === 200 && searchRes.body) {
                     const parsed = JSON.parse(searchRes.body);
@@ -502,46 +567,48 @@ async function fetchKnowledge(query, sportsData = null) {
                         if (sportsData && sportsData.team) {
                             const teamLower = sportsData.team.name.toLowerCase();
                             const clubHit = hits.find(h => h.title.toLowerCase().includes(teamLower) && /club|team|association|football|basketball/i.test(h.title + ' ' + h.snippet));
-                            targetPage = clubHit ? clubHit.title : hits[0].title;
+                            candidatePages.push(clubHit ? clubHit.title : hits[0].title);
                         } else {
                             // Strictly score hits against query entity tokens to prevent hallucinations
-                            let bestHit = null;
-                            let maxScore = 0;
-                            for (const h of hits.slice(0, 8)) {
+                            const scoredHits = [];
+                            for (let i = 0; i < Math.min(hits.length, 8); i++) {
+                                const h = hits[i];
                                 if (h.title.toLowerCase().includes('(disambiguation)')) continue;
                                 const sc = scoreWikiHit(h.title, cleanQ);
-                                if (sc > maxScore) {
-                                    maxScore = sc;
-                                    bestHit = h;
+                                if (sc > 0) {
+                                    scoredHits.push({ title: h.title, score: sc + (8 - i) });
                                 }
                             }
-                            if (bestHit && maxScore > 0) {
-                                targetPage = bestHit.title;
+                            scoredHits.sort((a, b) => b.score - a.score);
+                            for (const s of scoredHits.slice(0, 4)) {
+                                candidatePages.push(s.title);
                             }
                         }
                     }
                 }
             } catch (_) {}
 
-            if (!targetPage) return null;
+            if (candidatePages.length === 0) return null;
 
-            const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(targetPage.replace(/\s+/g, '_'))}`;
-            const res = await httpsRequest(wikiUrl, { userAgent: WIKI_USER_AGENT }, 4000);
-            if (res.status === 200 && res.body) {
-                try {
-                    const data = JSON.parse(res.body);
-                    if (data.type === 'standard' && data.extract) {
-                        return {
-                            type: 'knowledge',
-                            title: data.title || targetPage,
-                            description: data.description || 'Encyclopedia Entry',
-                            extract: data.extract,
-                            thumbnail: (sportsData && sportsData.team && sportsData.team.logo) ? sportsData.team.logo : (data.thumbnail ? data.thumbnail.source : null),
-                            url: data.content_urls && data.content_urls.desktop ? data.content_urls.desktop.page : `https://en.wikipedia.org/wiki/${encodeURIComponent(data.title)}`,
-                            source: 'Wikipedia'
-                        };
-                    }
-                } catch (_) {}
+            for (const candTitle of candidatePages) {
+                const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(candTitle.replace(/\s+/g, '_'))}`;
+                const res = await httpsRequest(wikiUrl, { userAgent: WIKI_USER_AGENT }, 3500);
+                if (res.status === 200 && res.body) {
+                    try {
+                        const data = JSON.parse(res.body);
+                        if (data.type === 'standard' && data.extract) {
+                            return {
+                                type: 'knowledge',
+                                title: data.title || candTitle,
+                                description: data.description || 'Encyclopedia Entry',
+                                extract: data.extract,
+                                thumbnail: (sportsData && sportsData.team && sportsData.team.logo) ? sportsData.team.logo : (data.thumbnail ? data.thumbnail.source : null),
+                                url: data.content_urls && data.content_urls.desktop ? data.content_urls.desktop.page : `https://en.wikipedia.org/wiki/${encodeURIComponent(data.title)}`,
+                                source: 'Wikipedia'
+                            };
+                        }
+                    } catch (_) {}
+                }
             }
             return null;
         })(),
