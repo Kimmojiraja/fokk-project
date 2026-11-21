@@ -4973,11 +4973,6 @@
 
         // SEARCH ENGINE DEFINITIONS WITH AUTHENTIC VECTOR SVGS
         const searchEngines = {
-            fokk: {
-                name: 'Fokk Search',
-                url: 'file:///android_asset/fokk_search.html?q=',
-                icon: brandSvgs.fokk
-            },
             bing: {
                 name: 'Microsoft Bing',
                 url: 'https://www.bing.com/search?q=',
@@ -5005,9 +5000,10 @@
             }
         };
 
-        let currentActiveEngine = localStorage.getItem('fokk_search_engine') || 'fokk';
+        let currentActiveEngine = localStorage.getItem('fokk_search_engine') || 'bing';
+        if (currentActiveEngine === 'fokk') currentActiveEngine = 'bing';
 
-        const quickEngines = ['fokk', 'bing', 'google', 'duckduckgo', 'yahoo', 'ecosia'];
+        const quickEngines = ['bing', 'google', 'duckduckgo', 'yahoo', 'ecosia'];
 
         function renderEngineDropdown() {
             const popover = document.getElementById('engineDropdownPopover');
@@ -5159,7 +5155,7 @@
         }
 
         function selectSearchEngine(engKey) {
-            if (!searchEngines[engKey]) engKey = 'fokk';
+            if (!searchEngines[engKey]) engKey = 'bing';
             currentActiveEngine = engKey;
             localStorage.setItem('fokk_search_engine', engKey);
             const slot = document.getElementById('engineLogoSlot');

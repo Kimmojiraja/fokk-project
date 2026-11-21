@@ -15,7 +15,6 @@ on:
       - 'gradle/**'
       - 'version.json'
       - '.github/workflows/build.yml'
-      - 'fokk_search/**'
       - 'desktop/**'
   workflow_dispatch:
 

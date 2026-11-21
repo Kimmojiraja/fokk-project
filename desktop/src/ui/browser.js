@@ -152,20 +152,15 @@ const INCOGNITO_FAVICON_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent('<
 
 // Search Engine Registry (Exact Vector SVGs matching mobile design reference)
 const OMNIBOX_ENGINES = {
-    fokk: {
-        name: 'Fokk Search',
-        searchUrl: 'http://localhost:4040/?q=',
-        iconSvg: '<svg width="18" height="18" viewBox="0 0 48 48" fill="none"><path d="M24 4L7 11V22C7 32.5 14.3 42.2 24 44.5C33.7 42.2 41 32.5 41 22V11L24 4Z" fill="#008373" stroke="#00E5FF" stroke-width="2.5"/><circle cx="22" cy="21" r="7" stroke="#FFFFFF" stroke-width="3" fill="none"/><line x1="27" y1="26" x2="34" y2="33" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round"/></svg>'
+    bing: {
+        name: 'Bing',
+        searchUrl: 'https://www.bing.com/search?q=',
+        iconSvg: '<svg width="18" height="18" viewBox="0 0 32 32"><defs><linearGradient id="bingLg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00BCF2"/><stop offset="100%" stop-color="#0078D4"/></linearGradient></defs><path fill="url(#bingLg)" d="M8 3v21.5c0 1.2 1 2.2 2.2 2.3 3.5.3 8.5.5 12.5-3.2 3.6-3.4 3.7-8.8 1-12.8L16.5 6v9.5c0 .8-.7 1.5-1.5 1.5-.7 0-1.3-.5-1.5-1.2l-.5-1.6V3c0-.8-.7-1.5-1.5-1.5S8 2.2 8 3z"/></svg>'
     },
     google: {
         name: 'Google',
         searchUrl: 'https://www.google.com/search?q=',
         iconSvg: '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.04h3.88c2.27-2.09 3.66-5.17 3.66-9.14z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.04c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.27 21.43 7.35 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.28c-.24-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28V6.59H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.41l4.03-3.13z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.27 2.57 1.25 6.59l4.03 3.13c.95-2.83 3.6-4.97 6.72-4.97z"/></svg>'
-    },
-    bing: {
-        name: 'Bing',
-        searchUrl: 'https://www.bing.com/search?q=',
-        iconSvg: '<svg width="18" height="18" viewBox="0 0 32 32"><defs><linearGradient id="bingLg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00BCF2"/><stop offset="100%" stop-color="#0078D4"/></linearGradient></defs><path fill="url(#bingLg)" d="M8 3v21.5c0 1.2 1 2.2 2.2 2.3 3.5.3 8.5.5 12.5-3.2 3.6-3.4 3.7-8.8 1-12.8L16.5 6v9.5c0 .8-.7 1.5-1.5 1.5-.7 0-1.3-.5-1.5-1.2l-.5-1.6V3c0-.8-.7-1.5-1.5-1.5S8 2.2 8 3z"/></svg>'
     },
     yahoo: {
         name: 'Yahoo',
@@ -184,11 +179,13 @@ const OMNIBOX_ENGINES = {
     }
 };
 
-let currentEngine = 'fokk';
+let currentEngine = 'bing';
 try {
-    currentEngine = ipcRenderer.sendSync('fokk-get-search-engine') || localStorage.getItem('fokk_search_engine') || 'fokk';
+    currentEngine = ipcRenderer.sendSync('fokk-get-search-engine') || localStorage.getItem('fokk_search_engine') || 'bing';
+    if (currentEngine === 'fokk') currentEngine = 'bing';
 } catch (_) {
-    currentEngine = localStorage.getItem('fokk_search_engine') || 'fokk';
+    currentEngine = localStorage.getItem('fokk_search_engine') || 'bing';
+    if (currentEngine === 'fokk') currentEngine = 'bing';
 }
 
 // Clean Professional Toast Notifications (Zero Emojis)

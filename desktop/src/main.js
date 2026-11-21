@@ -730,7 +730,7 @@ ipcMain.on('fokk-get-theme', (event) => {
 });
 
 // 2c. Global Search Engine Synchronization & Persistence
-let activeSearchEngine = 'fokk';
+let activeSearchEngine = 'bing';
 function getEngineConfigFile() {
     try {
         return path.join(app.getPath('userData'), 'fokk_engine.json');
@@ -745,7 +745,8 @@ function loadSavedSearchEngine() {
         if (file && fs.existsSync(file)) {
             const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
             if (saved && saved.engine && typeof saved.engine === 'string') {
-                activeSearchEngine = saved.engine.toLowerCase();
+                const eng = saved.engine.toLowerCase();
+                activeSearchEngine = (eng === 'fokk') ? 'bing' : eng;
             }
         }
     } catch (_) {}
@@ -1445,33 +1446,9 @@ ipcMain.handle('fokk-install-update', async (event, { filePath }) => {
     return { success: false };
 });
 
-// Fokk Search Local Meta Engine Background Service
-let fokkSearchProcess = null;
-function startFokkSearchServer() {
-    try {
-        const searchScript = path.resolve(__dirname, '..', '..', 'fokk_search', 'server.js');
-        if (fs.existsSync(searchScript)) {
-            const { fork } = require('child_process');
-            fokkSearchProcess = fork(searchScript, [], {
-                env: { ...process.env, PORT: '4040' },
-                stdio: 'ignore'
-            });
-            fokkSearchProcess.on('error', () => {});
-        }
-    } catch (_) {}
-}
-
-function stopFokkSearchServer() {
-    if (fokkSearchProcess) {
-        try { fokkSearchProcess.kill(); } catch (_) {}
-        fokkSearchProcess = null;
-    }
-}
-
 // Application Lifecycle
 app.whenReady().then(() => {
     app.userAgentFallback = CHROME_USER_AGENT;
-    startFokkSearchServer();
     createWindow();
 
     // Configure high-speed DoH with automatic fallback so CDN geo-routing (Cloudflare/Akamai/Spotify) functions with 0ms stall
@@ -1495,7 +1472,6 @@ app.whenReady().then(() => {
 });
 
 app.on('before-quit', async () => {
-    stopFokkSearchServer();
     try {
         const persistSess = session.fromPartition('persist:fokk_default_session');
         if (persistSess && persistSess.cookies) {
@@ -1505,7 +1481,6 @@ app.on('before-quit', async () => {
 });
 
 app.on('window-all-closed', () => {
-    stopFokkSearchServer();
     if (process.platform !== 'darwin') {
         app.quit();
     }
