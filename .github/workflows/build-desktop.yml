@@ -51,7 +51,7 @@ jobs:
           retention-days: 14
 
       - name: Publish Linux to Desktop Release
-        if: success()
+        if: startsWith(github.ref, 'refs/tags/desktop-v')
         continue-on-error: true
         working-directory: desktop
         env:
@@ -104,7 +104,7 @@ jobs:
           retention-days: 14
 
       - name: Publish Windows to Desktop Release
-        if: success()
+        if: startsWith(github.ref, 'refs/tags/desktop-v')
         continue-on-error: true
         working-directory: desktop
         env:
@@ -151,7 +151,7 @@ jobs:
           retention-days: 14
 
       - name: Publish macOS to Desktop Release
-        if: success()
+        if: startsWith(github.ref, 'refs/tags/desktop-v')
         continue-on-error: true
         working-directory: desktop
         env:

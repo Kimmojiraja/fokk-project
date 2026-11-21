@@ -488,6 +488,11 @@
 
     // Search Engine Definitions (Matching Image 3 Reference)
     const SEARCH_ENGINES = {
+        fokk: {
+            name: 'Fokk Search',
+            url: 'http://localhost:4040/?q=',
+            iconSvg: '<svg width="22" height="22" viewBox="0 0 48 48" fill="none"><path d="M24 4L7 11V22C7 32.5 14.3 42.2 24 44.5C33.7 42.2 41 32.5 41 22V11L24 4Z" fill="#008373" stroke="#00E5FF" stroke-width="2.5"/><circle cx="22" cy="21" r="7" stroke="#FFFFFF" stroke-width="3" fill="none"/><line x1="27" y1="26" x2="34" y2="33" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round"/></svg>'
+        },
         google: {
             name: 'Google',
             url: 'https://www.google.com/search?q=',
@@ -516,7 +521,7 @@
     };
 
     function getActiveEngine() {
-        let id = 'bing';
+        let id = 'fokk';
         try {
             if (window.FokkShieldBridge && typeof window.FokkShieldBridge.getSearchEngine === 'function') {
                 id = window.FokkShieldBridge.getSearchEngine() || id;
@@ -524,10 +529,10 @@
                 id = localStorage.getItem('fokk_search_engine') || id;
             }
         } catch (_) {
-            id = localStorage.getItem('fokk_search_engine') || 'bing';
+            id = localStorage.getItem('fokk_search_engine') || 'fokk';
         }
-        id = (id || 'bing').toLowerCase();
-        return SEARCH_ENGINES[id] || SEARCH_ENGINES.bing;
+        id = (id || 'fokk').toLowerCase();
+        return SEARCH_ENGINES[id] || SEARCH_ENGINES.fokk;
     }
 
     function updateSearchEngineUI(engineId) {

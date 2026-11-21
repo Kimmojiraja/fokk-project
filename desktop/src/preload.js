@@ -40,13 +40,13 @@ if (isInternalPage) {
     // Search Engine & Omnibox Sync
     getSearchEngine: () => {
         try {
-            return ipcRenderer.sendSync('fokk-get-search-engine') || localStorage.getItem('fokk_search_engine') || 'bing';
+            return ipcRenderer.sendSync('fokk-get-search-engine') || localStorage.getItem('fokk_search_engine') || 'fokk';
         } catch (_) {
-            return localStorage.getItem('fokk_search_engine') || 'bing';
+            return localStorage.getItem('fokk_search_engine') || 'fokk';
         }
     },
     setSearchEngine: (engKey) => {
-        const val = (engKey || 'bing').toLowerCase();
+        const val = (engKey || 'fokk').toLowerCase();
         try { localStorage.setItem('fokk_search_engine', val); } catch (_) {}
         ipcRenderer.send('fokk-set-search-engine', val);
     },
