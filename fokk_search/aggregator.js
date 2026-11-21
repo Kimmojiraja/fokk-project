@@ -805,9 +805,9 @@ async function fetchNews(query) {
     return results;
 }
 
-// 4. Multi-Source Verified Image Search (Openverse Global Library + Wikimedia Commons + Wikipedia Lead Media)
+// 4. Multi-Source Verified Image Search (Wikipedia Multi-Page & Media + YouTube Video Stills + Wikimedia Commons + Openverse)
 async function fetchImages(query, limit = 60) {
-    const cleanQ = (query || '').trim();
+    const cleanQ = (query || '').trim().replace(/^["']|["']$/g, '');
     if (!cleanQ) return [];
 
     const results = [];
@@ -815,7 +815,6 @@ async function fetchImages(query, limit = 60) {
 
     const addImg = (title, image, thumb, pageUrl, domain, w, h, src) => {
         if (!image || seen.has(image)) return;
-        // Skip common placeholder or non-photo files
         if (image.includes('.svg') && !src.includes('Wikipedia')) return;
         seen.add(image);
         results.push({
@@ -830,25 +829,79 @@ async function fetchImages(query, limit = 60) {
         });
     };
 
-    // 1. Openverse Search API (Creative Commons & Public Archives: Flickr, Smithsonian, libraries)
-    const fetchOpenverse = async () => {
+    // 1. Wikipedia Multi-Page & Media Search (Queries Wikipedia pages matching query, gets lead images & article gallery files)
+    const fetchWikiImages = async () => {
         try {
-            const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(cleanQ)}&page_size=40`;
-            const res = await httpsRequest(url, { headers: { 'Accept': 'application/json' } }, 4500);
+            const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(cleanQ)}&gsrlimit=8&prop=pageimages|images&pithumbsize=1000&format=json`;
+            const res = await httpsRequest(wikiUrl, { headers: { 'User-Agent': WIKI_USER_AGENT } }, 4500);
             if (res.status === 200 && res.body) {
                 const j = JSON.parse(res.body);
-                (j.results || []).forEach(it => {
-                    const domain = it.source || it.creator || 'Openverse';
-                    addImg(it.title, it.url, it.thumbnail, it.foreign_landing_url, domain, it.width, it.height, 'Openverse');
-                });
+                const pages = Object.values(j?.query?.pages || {});
+                const fileTitles = [];
+
+                for (const p of pages) {
+                    if (p.thumbnail?.source) {
+                        addImg(p.title, p.thumbnail.source, p.thumbnail.source, `https://en.wikipedia.org/wiki/${encodeURIComponent(p.title)}`, 'en.wikipedia.org', p.thumbnail.width, p.thumbnail.height, 'Wikipedia');
+                    }
+                    if (p.images) {
+                        for (const img of p.images) {
+                            if (img.title && !img.title.includes('.svg') && !img.title.includes('Commons-logo') && !img.title.includes('disambig')) {
+                                fileTitles.push(img.title);
+                            }
+                        }
+                    }
+                }
+
+                // Resolve file URLs for article media (e.g. posters, stills, infobox portraits)
+                if (fileTitles.length > 0) {
+                    const batch = fileTitles.slice(0, 15).map(encodeURIComponent).join('|');
+                    const fileUrl = `https://en.wikipedia.org/w/api.php?action=query&titles=${batch}&prop=imageinfo&iiprop=url|size|mime&format=json`;
+                    const fRes = await httpsRequest(fileUrl, { headers: { 'User-Agent': WIKI_USER_AGENT } }, 3500);
+                    if (fRes.status === 200 && fRes.body) {
+                        const fj = JSON.parse(fRes.body);
+                        const filePages = Object.values(fj?.query?.pages || {});
+                        for (const fp of filePages) {
+                            const info = fp.imageinfo?.[0];
+                            if (info?.url) {
+                                const title = fp.title.replace(/^File:/i, '').replace(/\.[a-zA-Z0-9]+$/, '').replace(/[_+]/g, ' ');
+                                addImg(title, info.url, info.url, info.descriptionurl || info.url, 'en.wikipedia.org', info.width, info.height, 'Wikipedia Gallery');
+                            }
+                        }
+                    }
+                }
             }
         } catch (_) {}
     };
 
-    // 2. Wikimedia Commons API (High-res authenticated photos, stadiums, badges, team history)
+    // 2. YouTube Video Stills / Visual Media (Authentic 1080p / 720p stills, trailers, promos, scenes)
+    const fetchYouTubeStills = async () => {
+        try {
+            const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(cleanQ)}`;
+            const ytRes = await httpsRequest(ytUrl, { headers: { 'Accept': 'text/html' } }, 4500);
+            if (ytRes.status === 200 && ytRes.body) {
+                const m = ytRes.body.match(/var ytInitialData = ({[\s\S]*?});<\/script>/);
+                if (m) {
+                    const j = JSON.parse(m[1]);
+                    const contents = j?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
+                    const items = contents?.[0]?.itemSectionRenderer?.contents || [];
+                    for (const it of items) {
+                        const vr = it.videoRenderer;
+                        if (vr && vr.videoId) {
+                            const title = vr.title?.runs?.[0]?.text || cleanQ;
+                            const vId = vr.videoId;
+                            const thumb = `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`;
+                            addImg(title, thumb, thumb, `https://www.youtube.com/watch?v=${vId}`, 'youtube.com', null, null, 'Visual Media');
+                        }
+                    }
+                }
+            }
+        } catch (_) {}
+    };
+
+    // 3. Wikimedia Commons API (High-res authenticated photos, stadiums, landmarks, flags, nature)
     const fetchWikimedia = async () => {
         try {
-            const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(cleanQ)}&gsrnamespace=6&gsrlimit=40&prop=imageinfo&iiprop=url|size|mime&format=json`;
+            const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(cleanQ)}&gsrnamespace=6&gsrlimit=30&prop=imageinfo&iiprop=url|size|mime&format=json`;
             const res = await httpsRequest(url, { headers: { 'User-Agent': WIKI_USER_AGENT } }, 4500);
             if (res.status === 200 && res.body) {
                 const j = JSON.parse(res.body);
@@ -864,27 +917,26 @@ async function fetchImages(query, limit = 60) {
         } catch (_) {}
     };
 
-    // 3. Wikipedia Article Lead Media (Key subject portraits & official photos)
-    const fetchWikipediaImages = async () => {
+    // 4. Openverse Search API (Creative Commons & Public Archives: Flickr, Smithsonian, libraries)
+    const fetchOpenverse = async () => {
         try {
-            const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(cleanQ)}&prop=pageimages|images&pithumbsize=1000&format=json`;
-            const res = await httpsRequest(url, { headers: { 'User-Agent': WIKI_USER_AGENT } }, 3500);
+            const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(cleanQ)}&page_size=30`;
+            const res = await httpsRequest(url, { headers: { 'Accept': 'application/json' } }, 4000);
             if (res.status === 200 && res.body) {
                 const j = JSON.parse(res.body);
-                const pages = Object.values(j?.query?.pages || {});
-                pages.forEach(p => {
-                    if (p.thumbnail?.source) {
-                        addImg(p.title, p.thumbnail.source, p.thumbnail.source, `https://en.wikipedia.org/wiki/${encodeURIComponent(p.title)}`, 'en.wikipedia.org', p.thumbnail.width, p.thumbnail.height, 'Wikipedia');
-                    }
+                (j.results || []).forEach(it => {
+                    const domain = it.source || it.creator || 'Openverse';
+                    addImg(it.title, it.url, it.thumbnail, it.foreign_landing_url, domain, it.width, it.height, 'Openverse');
                 });
             }
         } catch (_) {}
     };
 
     await Promise.all([
-        fetchOpenverse(),
+        fetchWikiImages(),
+        fetchYouTubeStills(),
         fetchWikimedia(),
-        fetchWikipediaImages()
+        fetchOpenverse()
     ]);
 
     return results.slice(0, limit);
@@ -989,12 +1041,70 @@ async function fetchVideos(query) {
     return results;
 }
 
-// 6. Discussions Search (Hacker News Algolia + StackOverflow API)
+// 6. Discussions Search (Reddit Community Threads + Hacker News Algolia + StackOverflow API)
 async function fetchDiscussions(query) {
-    const discussions = [];
+    const cleanQ = (query || '').trim().replace(/^["']|["']$/g, '');
+    if (!cleanQ) return [];
+
+    const fetchReddit = async () => {
+        try {
+            const postBody = `q=${encodeURIComponent(cleanQ + ' (site:reddit.com OR discussion OR review)')}`;
+            const res = await httpsRequest('https://html.duckduckgo.com/html/', {
+                method: 'POST',
+                body: postBody,
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Length': Buffer.byteLength(postBody),
+                    'Accept': 'text/html',
+                    'Origin': 'https://html.duckduckgo.com',
+                    'Referer': 'https://html.duckduckgo.com/'
+                }
+            }, 4500);
+
+            if (res.status === 200 && res.body) {
+                const blocks = res.body.split(/<div class="result results_links results_links_deep web-result/i);
+                const items = [];
+                for (let i = 1; i < blocks.length; i++) {
+                    const b = blocks[i];
+                    const titleMatch = b.match(/<h2 class="result__title">[\s\S]*?<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i);
+                    if (!titleMatch) continue;
+
+                    const url = cleanUrl(titleMatch[1]);
+                    const title = cleanHtmlText(titleMatch[2]);
+                    const snipMatch = b.match(/<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i);
+                    const snippet = cleanHtmlText(snipMatch ? snipMatch[1] : '');
+                    const domain = getDomain(url);
+
+                    let platform = 'Discussion';
+                    let author = 'Community';
+                    if (domain.includes('reddit')) {
+                        platform = 'Reddit';
+                        const rm = url.match(/reddit\.com\/r\/([^\/\?]+)/i);
+                        author = rm ? `r/${rm[1]}` : 'Reddit';
+                    }
+
+                    items.push({
+                        title,
+                        url,
+                        discussionUrl: url,
+                        score: 1,
+                        commentsCount: 0,
+                        author,
+                        timeAgo: 'Live',
+                        platform,
+                        domain,
+                        snippet
+                    });
+                    if (items.length >= 10) break;
+                }
+                return items;
+            }
+        } catch (_) {}
+        return [];
+    };
 
     const fetchHN = async () => {
-        const url = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=12`;
+        const url = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(cleanQ)}&tags=story&hitsPerPage=10`;
         const res = await httpsRequest(url, {}, 4000);
         if (res.status === 200 && res.body) {
             try {
@@ -1016,7 +1126,7 @@ async function fetchDiscussions(query) {
     };
 
     const fetchStackOverflow = async () => {
-        const url = `https://api.stackexchange.com/2.3/search?order=desc&sort=relevance&intitle=${encodeURIComponent(query)}&site=stackoverflow&pagesize=8`;
+        const url = `https://api.stackexchange.com/2.3/search?order=desc&sort=relevance&intitle=${encodeURIComponent(cleanQ)}&site=stackoverflow&pagesize=8`;
         const res = await httpsRequest(url, {}, 4000);
         if (res.status === 200 && res.body) {
             try {
@@ -1037,8 +1147,8 @@ async function fetchDiscussions(query) {
         return [];
     };
 
-    const [hnItems, soItems] = await Promise.all([fetchHN(), fetchStackOverflow()]);
-    return [...hnItems, ...soItems].sort((a, b) => (b.score || 0) - (a.score || 0));
+    const [redditItems, hnItems, soItems] = await Promise.all([fetchReddit(), fetchHN(), fetchStackOverflow()]);
+    return [...redditItems, ...hnItems, ...soItems];
 }
 
 // 7. Autocomplete Suggestions (OpenSearch)
