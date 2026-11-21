@@ -19,6 +19,69 @@ const HIGH_AUTH_DOMAINS = new Set([
     'gov', 'edu', 'ac.uk', 'gov.uk'
 ]);
 
+const MUSIC_DOMAINS = new Set([
+    'jiosaavn.com', 'spotify.com', 'music.youtube.com', 'apple.com',
+    'gaana.com', 'wynk.in', 'genius.com', 'azlyrics.com', 'youtube.com',
+    'tamil2lyrics.com', 'lyricsmint.com', 'saavn.com', 'hungama.com'
+]);
+
+const STOP_WORDS = new Set([
+    'a', 'an', 'the', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'about',
+    'to', 'from', 'is', 'it', 'and', 'or', 'as', 'what', 'who', 'how', 'when', 'where'
+]);
+
+const INTENT_MUSIC = new Set([
+    'song', 'songs', 'lyrics', 'track', 'tracks', 'music', 'video', 'videos',
+    'audio', 'mp3', 'album', 'singer', 'cast', 'download', 'watch', 'stream'
+]);
+
+function extractTokens(str) {
+    return (str || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 1 && !STOP_WORDS.has(w));
+}
+
+function scoreWikiHit(candidateTitle, query) {
+    const qTokens = extractTokens(query);
+    const qEntityTokens = qTokens.filter(t => !INTENT_MUSIC.has(t));
+    const isSongQuery = qTokens.some(t => INTENT_MUSIC.has(t));
+
+    // Strip parenthetical disambiguation: e.g. "Param Sundari (film)" -> base "Param Sundari", qual "film"
+    const m = candidateTitle.match(/^([^(]+)(?:\(([^)]+)\))?/);
+    const baseTitle = m ? m[1].trim() : candidateTitle;
+    const qualifier = m && m[2] ? m[2].toLowerCase() : '';
+
+    const baseTokens = extractTokens(baseTitle);
+
+    // Check if baseTitle contains extra significant tokens not in the query
+    const extraTokens = baseTokens.filter(t => !qTokens.includes(t));
+    
+    // Check if query entity tokens are all matched in baseTitle
+    const matchedEntityTokens = qEntityTokens.filter(t => baseTokens.includes(t));
+
+    // If query has entity tokens, but candidate matched zero of them, reject
+    if (qEntityTokens.length > 0 && matchedEntityTokens.length === 0) {
+        return 0;
+    }
+
+    // If candidate introduces significant extra tokens that were NOT in the query, reject entity divergence!
+    // E.g. "Param" when user searched "sundari song"
+    if (extraTokens.length > 0) {
+        return 0;
+    }
+
+    // Intent check: if user asked for a song/music, and qualifier is film/movie/series, reject
+    if (isSongQuery && (qualifier.includes('film') || qualifier.includes('series') || qualifier.includes('novel') || qualifier.includes('tv'))) {
+        return 0;
+    }
+
+    let score = 10;
+    if (isSongQuery && (qualifier.includes('song') || qualifier.includes('track') || qualifier.includes('album') || qualifier.includes('soundtrack'))) {
+        score += 15;
+    }
+
+    score += matchedEntityTokens.length * 5;
+    return score;
+}
+
 function cleanHtmlText(raw) {
     if (!raw) return '';
     return String(raw)
@@ -417,7 +480,7 @@ async function fetchSportsData(query) {
     }
 }
 
-// 3. Knowledge Graph: Wikipedia REST API with Dynamic Disambiguation
+// 3. Knowledge Graph: Wikipedia REST API with Dynamic Disambiguation & Strict Entity Alignment
 async function fetchKnowledge(query, sportsData = null) {
     let cleanQ = query.trim().replace(/[?!.]+$/, '');
 
@@ -428,7 +491,7 @@ async function fetchKnowledge(query, sportsData = null) {
 
     const tasks = [
         (async () => {
-            let targetPage = cleanQ;
+            let targetPage = null;
             try {
                 const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(cleanQ)}&format=json&origin=*`;
                 const searchRes = await httpsRequest(searchUrl, { userAgent: WIKI_USER_AGENT }, 3500);
@@ -436,20 +499,31 @@ async function fetchKnowledge(query, sportsData = null) {
                     const parsed = JSON.parse(searchRes.body);
                     const hits = parsed?.query?.search || [];
                     if (hits.length > 0) {
-                        const top = hits[0];
-                        if (top.title.toLowerCase().includes('(disambiguation)')) {
-                            targetPage = hits[1]?.title || top.title;
-                        } else if (sportsData && sportsData.team) {
+                        if (sportsData && sportsData.team) {
                             const teamLower = sportsData.team.name.toLowerCase();
                             const clubHit = hits.find(h => h.title.toLowerCase().includes(teamLower) && /club|team|association|football|basketball/i.test(h.title + ' ' + h.snippet));
-                            if (clubHit) targetPage = clubHit.title;
-                            else targetPage = top.title;
+                            targetPage = clubHit ? clubHit.title : hits[0].title;
                         } else {
-                            targetPage = top.title;
+                            // Strictly score hits against query entity tokens to prevent hallucinations
+                            let bestHit = null;
+                            let maxScore = 0;
+                            for (const h of hits.slice(0, 8)) {
+                                if (h.title.toLowerCase().includes('(disambiguation)')) continue;
+                                const sc = scoreWikiHit(h.title, cleanQ);
+                                if (sc > maxScore) {
+                                    maxScore = sc;
+                                    bestHit = h;
+                                }
+                            }
+                            if (bestHit && maxScore > 0) {
+                                targetPage = bestHit.title;
+                            }
                         }
                     }
                 }
             } catch (_) {}
+
+            if (!targetPage) return null;
 
             const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(targetPage.replace(/\s+/g, '_'))}`;
             const res = await httpsRequest(wikiUrl, { userAgent: WIKI_USER_AGENT }, 4000);
@@ -478,15 +552,19 @@ async function fetchKnowledge(query, sportsData = null) {
                 try {
                     const data = JSON.parse(res.body);
                     if (data.AbstractText) {
-                        return {
-                            type: 'knowledge',
-                            title: data.Heading || cleanQ,
-                            description: data.AbstractSource || 'Instant Overview',
-                            extract: data.AbstractText,
-                            thumbnail: (sportsData && sportsData.team && sportsData.team.logo) ? sportsData.team.logo : (data.Image ? (data.Image.startsWith('http') ? data.Image : `https://duckduckgo.com${data.Image}`) : null),
-                            url: data.AbstractURL || null,
-                            source: data.AbstractSource || 'DuckDuckGo'
-                        };
+                        const hTitle = data.Heading || cleanQ;
+                        const sc = scoreWikiHit(hTitle, cleanQ);
+                        if (sc > 0 || (sportsData && sportsData.team)) {
+                            return {
+                                type: 'knowledge',
+                                title: hTitle,
+                                description: data.AbstractSource || 'Instant Overview',
+                                extract: data.AbstractText,
+                                thumbnail: (sportsData && sportsData.team && sportsData.team.logo) ? sportsData.team.logo : (data.Image ? (data.Image.startsWith('http') ? data.Image : `https://duckduckgo.com${data.Image}`) : null),
+                                url: data.AbstractURL || null,
+                                source: data.AbstractSource || 'DuckDuckGo'
+                            };
+                        }
                     }
                 } catch (_) {}
             }
@@ -502,9 +580,11 @@ async function fetchKnowledge(query, sportsData = null) {
 }
 
 // 4. AI Quick Overview Generator (Synthesized Direct Answer & Key Highlights)
-function generateAIOverview(query, knowledge, webResults, topNews, sports) {
+function generateAIOverview(query, knowledge, webResults, topNews, sports, topVideos = []) {
     if (!query) return null;
     const q = query.trim();
+    const qTokens = extractTokens(q);
+    const isSongQuery = qTokens.some(t => INTENT_MUSIC.has(t));
 
     if (sports && sports.team) {
         const t = sports.team;
@@ -534,6 +614,49 @@ function generateAIOverview(query, knowledge, webResults, topNews, sports) {
 
         return {
             title: `AI Overview for ${t.name}`,
+            summary,
+            highlights,
+            sources
+        };
+    }
+
+    // Music Intent Synthesis: Synthesize genuine song and music tracks from search results
+    if (isSongQuery) {
+        const tracks = [];
+        const seenTitles = new Set();
+        (topVideos || []).forEach(v => {
+            let t = v.title.replace(/[\(\[\{].*?[\)\]\}]/g, '').trim();
+            const parts = t.split(/[-|•–]/).map(p => p.trim()).filter(Boolean);
+            const main = parts[0] || v.title;
+            const sub = parts[1] || v.channel || '';
+            const key = main.toLowerCase();
+            if (!seenTitles.has(key) && tracks.length < 4) {
+                seenTitles.add(key);
+                tracks.push({
+                    name: main,
+                    detail: sub ? `${sub} (${v.channel || 'Official'})` : (v.channel || 'Video')
+                });
+            }
+        });
+
+        const summary = `Multiple prominent songs and tracks correspond to "${q}", across film soundtracks and independent music releases:`;
+        const highlights = tracks.map(tr => `<strong>${tr.name}</strong>: ${tr.detail}.`);
+        if (highlights.length === 0) {
+            highlights.push(`<strong>Music Streaming</strong>: Stream and explore verified tracks, official audio, and lyric videos.`);
+        }
+
+        const sources = (webResults || []).filter(r => /jiosaavn|spotify|music\.youtube|apple\.com|lyrics/i.test(r.domain + r.url)).slice(0, 3).map(r => ({
+            title: r.title,
+            url: r.url,
+            domain: r.domain
+        }));
+
+        if (sources.length === 0 && topVideos && topVideos[0]) {
+            sources.push({ title: topVideos[0].title, url: topVideos[0].url, domain: 'youtube.com' });
+        }
+
+        return {
+            title: `Music Overview: ${q}`,
             summary,
             highlights,
             sources
@@ -576,23 +699,23 @@ function generateAIOverview(query, knowledge, webResults, topNews, sports) {
         };
     }
 
-    if (webResults && webResults.length > 1) {
+    if (webResults && webResults.length > 0) {
         const top1 = webResults[0];
-        const top2 = webResults[1];
-        const summary = `${top1.snippet} ${top2.snippet}`.slice(0, 300) + '...';
-        const highlights = [
-            `<strong>Key Resource</strong>: ${top1.title}`,
-            `<strong>Context</strong>: ${top2.title}`
-        ];
-        const sources = [
-            { title: top1.title, url: top1.url, domain: top1.domain },
-            { title: top2.title, url: top2.url, domain: top2.domain }
-        ];
+        const top2 = webResults[1] || webResults[0];
+        const summary = `${top1.snippet} ${top2.snippet !== top1.snippet ? top2.snippet : ''}`.slice(0, 300).trim();
+        const highlights = [];
+        for (let i = 0; i < Math.min(3, webResults.length); i++) {
+            const snip = webResults[i].snippet;
+            if (snip && snip.length > 18) {
+                const label = webResults[i].title.split(/[-|:–]/)[0].trim();
+                highlights.push(`<strong>${label}</strong>: ${snip.slice(0, 110).trim()}...`);
+            }
+        }
         return {
             title: `AI Overview: ${q}`,
             summary,
-            highlights,
-            sources
+            highlights: highlights.slice(0, 3),
+            sources: webResults.slice(0, 3).map(r => ({ title: r.title, url: r.url, domain: r.domain }))
         };
     }
 
@@ -805,13 +928,14 @@ async function fetchNews(query) {
     return results;
 }
 
-// 4. Multi-Source Verified Image Search (Wikipedia Multi-Page & Media + YouTube Video Stills + Wikimedia Commons + Openverse)
+// 4. Multi-Source Verified Image Search (Bing Web HD Images + Wikipedia Multi-Page & Media + YouTube Video Stills + Wikimedia Commons + Openverse)
 async function fetchImages(query, limit = 60) {
     const cleanQ = (query || '').trim().replace(/^["']|["']$/g, '');
     if (!cleanQ) return [];
 
     const results = [];
     const seen = new Set();
+    const qTokens = extractTokens(cleanQ);
 
     const addImg = (title, image, thumb, pageUrl, domain, w, h, src) => {
         if (!image || seen.has(image)) return;
@@ -829,7 +953,42 @@ async function fetchImages(query, limit = 60) {
         });
     };
 
-    // 1. Wikipedia Multi-Page & Media Search (Queries Wikipedia pages matching query, gets lead images & article gallery files)
+    // 1. Bing HD Web Image Search with Strict Query Token Relevance
+    const fetchBingImages = async () => {
+        try {
+            const url = `https://www.bing.com/images/search?q=${encodeURIComponent(cleanQ)}&form=HDRSC2`;
+            const res = await httpsRequest(url, {
+                headers: {
+                    'User-Agent': USER_AGENT,
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9'
+                }
+            }, 4500);
+
+            if (res.status === 200 && res.body) {
+                const blocks = res.body.split('class="iusc"');
+                for (let i = 1; i < blocks.length; i++) {
+                    const b = blocks[i].slice(0, 1500);
+                    const murl = (b.match(/&quot;murl&quot;:&quot;(https?:[^&]+)&quot;/) || [])[1];
+                    const turl = (b.match(/&quot;turl&quot;:&quot;(https?:[^&]+)&quot;/) || [])[1];
+                    const purl = (b.match(/&quot;purl&quot;:&quot;(https?:[^&]+)&quot;/) || [])[1];
+                    const desc = (b.match(/&quot;desc&quot;:&quot;([^&]+)&quot;/) || [])[1];
+                    if (murl) {
+                        const titleText = desc ? decodeURIComponent(desc).replace(/\+/g, ' ') : cleanQ;
+                        const titleLower = titleText.toLowerCase();
+                        // Verify query relevance: at least one significant query token must be in titleText or purl
+                        const hasToken = qTokens.length === 0 || qTokens.some(t => titleLower.includes(t) || (purl && purl.toLowerCase().includes(t)));
+                        if (hasToken) {
+                            const dom = getDomain(purl ? purl.replace(/&amp;/g, '&') : murl);
+                            addImg(titleText, murl.replace(/&amp;/g, '&'), (turl || murl).replace(/&amp;/g, '&'), purl ? purl.replace(/&amp;/g, '&') : murl, dom, null, null, 'Web');
+                        }
+                    }
+                }
+            }
+        } catch (_) {}
+    };
+
+    // 2. Wikipedia Multi-Page & Media Search (Queries Wikipedia pages matching query, gets lead images & article gallery files)
     const fetchWikiImages = async () => {
         try {
             const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(cleanQ)}&gsrlimit=8&prop=pageimages|images&pithumbsize=1000&format=json`;
@@ -873,7 +1032,7 @@ async function fetchImages(query, limit = 60) {
         } catch (_) {}
     };
 
-    // 2. YouTube Video Stills / Visual Media (Authentic 1080p / 720p stills, trailers, promos, scenes)
+    // 3. YouTube Video Stills / Visual Media (Authentic 1080p / 720p stills, trailers, promos, scenes)
     const fetchYouTubeStills = async () => {
         try {
             const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(cleanQ)}`;
@@ -898,7 +1057,7 @@ async function fetchImages(query, limit = 60) {
         } catch (_) {}
     };
 
-    // 3. Wikimedia Commons API (High-res authenticated photos, stadiums, landmarks, flags, nature)
+    // 4. Wikimedia Commons API (High-res authenticated photos, stadiums, landmarks, flags)
     const fetchWikimedia = async () => {
         try {
             const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(cleanQ)}&gsrnamespace=6&gsrlimit=30&prop=imageinfo&iiprop=url|size|mime&format=json`;
@@ -910,14 +1069,18 @@ async function fetchImages(query, limit = 60) {
                     const info = p.imageinfo?.[0];
                     if (info?.url) {
                         const cleanTitle = (p.title || '').replace(/^File:/i, '').replace(/\.[a-zA-Z0-9]+$/, '').replace(/[_+]/g, ' ');
-                        addImg(cleanTitle, info.url, info.url, info.descriptionurl || info.url, 'commons.wikimedia.org', info.width, info.height, 'Wikimedia Commons');
+                        const titleLower = cleanTitle.toLowerCase();
+                        // Reject irrelevant documents/scans that don't match query tokens
+                        if (qTokens.length === 0 || qTokens.some(t => titleLower.includes(t))) {
+                            addImg(cleanTitle, info.url, info.url, info.descriptionurl || info.url, 'commons.wikimedia.org', info.width, info.height, 'Wikimedia Commons');
+                        }
                     }
                 });
             }
         } catch (_) {}
     };
 
-    // 4. Openverse Search API (Creative Commons & Public Archives: Flickr, Smithsonian, libraries)
+    // 5. Openverse Search API (Creative Commons & Public Archives: Flickr, Smithsonian, libraries)
     const fetchOpenverse = async () => {
         try {
             const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(cleanQ)}&page_size=30`;
@@ -926,13 +1089,17 @@ async function fetchImages(query, limit = 60) {
                 const j = JSON.parse(res.body);
                 (j.results || []).forEach(it => {
                     const domain = it.source || it.creator || 'Openverse';
-                    addImg(it.title, it.url, it.thumbnail, it.foreign_landing_url, domain, it.width, it.height, 'Openverse');
+                    const titleLower = (it.title || '').toLowerCase();
+                    if (qTokens.length === 0 || qTokens.some(t => titleLower.includes(t))) {
+                        addImg(it.title, it.url, it.thumbnail, it.foreign_landing_url, domain, it.width, it.height, 'Openverse');
+                    }
                 });
             }
         } catch (_) {}
     };
 
     await Promise.all([
+        fetchBingImages(),
         fetchWikiImages(),
         fetchYouTubeStills(),
         fetchWikimedia(),
@@ -1235,21 +1402,49 @@ async function aggregateSearch(query, category = 'all') {
         fetchImages(cleanQ, 10)
     ]);
 
-    // Rerank web results and boost authoritative sources
-    const queryTerms = cleanQ.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-    webResults.forEach(r => {
-        const titleLower = r.title.toLowerCase();
-        let termMatches = 0;
-        for (const t of queryTerms) {
-            if (titleLower.includes(t)) termMatches++;
-        }
-        r.score += termMatches * 0.3;
+    // Intelligent Query-Intent Reranker
+    const queryTerms = extractTokens(cleanQ);
+    const hasMusicIntent = queryTerms.some(t => INTENT_MUSIC.has(t));
 
-        for (const highAuth of HIGH_AUTH_DOMAINS) {
-            if (r.domain === highAuth || r.domain.endsWith('.' + highAuth)) {
-                r.score += 0.8;
-                r.verified = true;
-                break;
+    webResults.forEach(r => {
+        r.score = r.score || 1.0;
+        const titleLower = (r.title || '').toLowerCase();
+        const snipLower = (r.snippet || '').toLowerCase();
+
+        let titleMatches = 0;
+        let snipMatches = 0;
+        for (const t of queryTerms) {
+            if (titleLower.includes(t)) titleMatches++;
+            if (snipLower.includes(t)) snipMatches++;
+        }
+
+        r.score += titleMatches * 0.8;
+        r.score += snipMatches * 0.2;
+
+        // Exact all-term match bonus in title
+        if (queryTerms.length > 0 && titleMatches === queryTerms.length) {
+            r.score += 1.5;
+        }
+
+        // Music Intent Boosting & Penalties
+        if (hasMusicIntent) {
+            const isMusicDomain = [...MUSIC_DOMAINS].some(d => r.domain === d || r.domain.endsWith('.' + d));
+            if (isMusicDomain) {
+                r.score += 1.3;
+            }
+            if (/tv series|film\)|movie\)|novel\)/i.test(titleLower)) {
+                r.score -= 1.2;
+            }
+        }
+
+        // Authoritative domain boost only if relevant
+        if (titleMatches > 0) {
+            for (const highAuth of HIGH_AUTH_DOMAINS) {
+                if (r.domain === highAuth || r.domain.endsWith('.' + highAuth)) {
+                    r.score += 0.5;
+                    r.verified = true;
+                    break;
+                }
             }
         }
     });
@@ -1257,7 +1452,7 @@ async function aggregateSearch(query, category = 'all') {
     webResults.sort((a, b) => (b.score || 0) - (a.score || 0));
 
     // Dynamic AI Overview & Social Pulse
-    const aiOverview = generateAIOverview(cleanQ, knowledge, webResults, topNews, sports);
+    const aiOverview = generateAIOverview(cleanQ, knowledge, webResults, topNews, sports, topVideos);
     const socialPulse = extractSocialPulse(webResults, cleanQ, topVideos, topNews);
 
     return {

@@ -199,7 +199,7 @@ open class MediaHubActivity : AppCompatActivity() {
     protected open val privateProfileConfigurationReady: Boolean = true
 
     enum class SearchEngine(val displayName: String, val searchUrl: String, val iconRes: Int) {
-        FOKK("Fokk Search", "https://fokk.org/search?q=", R.drawable.ic_engine_fokk),
+        FOKK("Fokk Search", "file:///android_asset/fokk_search.html?q=", R.drawable.ic_engine_fokk),
         GOOGLE("Google", "https://www.google.com/search?q=", R.drawable.ic_engine_google),
         DUCKDUCKGO("DuckDuckGo", "https://duckduckgo.com/?q=", R.drawable.ic_engine_duckduckgo),
         YAHOO("Yahoo", "https://search.yahoo.com/search?p=", R.drawable.ic_engine_yahoo),
@@ -1923,6 +1923,52 @@ open class MediaHubActivity : AppCompatActivity() {
                     }
                 }
             } catch (_: Exception) {}
+        }
+
+        @JavascriptInterface
+        fun nativeHttp(urlStr: String, method: String?, postBody: String?, headersJson: String?): String {
+            try {
+                val uri = java.net.URI(urlStr)
+                val scheme = uri.scheme?.lowercase(Locale.ROOT)
+                if (scheme != "http" && scheme != "https") return ""
+                val host = uri.host?.lowercase(Locale.ROOT) ?: return ""
+                if (host == "localhost" || host.endsWith(".internal") || host.endsWith(".local") || host == "127.0.0.1") return ""
+
+                val conn = URL(urlStr).openConnection() as HttpURLConnection
+                conn.connectTimeout = 6500
+                conn.readTimeout = 6500
+                conn.instanceFollowRedirects = true
+                val m = (method ?: "GET").uppercase(Locale.ROOT)
+                conn.requestMethod = m
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+                conn.setRequestProperty("Accept-Encoding", "gzip, deflate")
+
+                if (!headersJson.isNullOrBlank()) {
+                    try {
+                        val hj = org.json.JSONObject(headersJson)
+                        val keys = hj.keys()
+                        while (keys.hasNext()) {
+                            val k = keys.next()
+                            conn.setRequestProperty(k, hj.getString(k))
+                        }
+                    } catch (_: Exception) {}
+                }
+
+                if (m == "POST" && !postBody.isNullOrBlank()) {
+                    conn.doOutput = true
+                    val bytes = postBody.toByteArray(java.nio.charset.StandardCharsets.UTF_8)
+                    conn.outputStream.use { os -> os.write(bytes) }
+                }
+
+                val code = conn.responseCode
+                val stream = if (code in 200..399) conn.inputStream else conn.errorStream ?: return ""
+                val enc = conn.contentEncoding?.lowercase(Locale.ROOT).orEmpty()
+                val decodedStream = if (enc == "gzip") java.util.zip.GZIPInputStream(stream) else stream
+
+                return decodedStream.bufferedReader(java.nio.charset.StandardCharsets.UTF_8).use { it.readText() }
+            } catch (e: Exception) {
+                return ""
+            }
         }
 
         @JavascriptInterface
