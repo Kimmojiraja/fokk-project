@@ -152,6 +152,11 @@ const INCOGNITO_FAVICON_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent('<
 
 // Search Engine Registry (Exact Vector SVGs matching mobile design reference)
 const OMNIBOX_ENGINES = {
+    fokk: {
+        name: 'Fokk Search',
+        searchUrl: 'http://localhost:4040/?q=',
+        iconSvg: '<svg width="18" height="18" viewBox="0 0 48 48" fill="none"><path d="M24 4L7 11V22C7 32.5 14.3 42.2 24 44.5C33.7 42.2 41 32.5 41 22V11L24 4Z" fill="#008373" stroke="#00E5FF" stroke-width="2.5"/><circle cx="22" cy="21" r="7" stroke="#FFFFFF" stroke-width="3" fill="none"/><line x1="27" y1="26" x2="34" y2="33" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round"/></svg>'
+    },
     google: {
         name: 'Google',
         searchUrl: 'https://www.google.com/search?q=',
@@ -179,11 +184,11 @@ const OMNIBOX_ENGINES = {
     }
 };
 
-let currentEngine = 'bing';
+let currentEngine = 'fokk';
 try {
-    currentEngine = ipcRenderer.sendSync('fokk-get-search-engine') || localStorage.getItem('fokk_search_engine') || 'bing';
+    currentEngine = ipcRenderer.sendSync('fokk-get-search-engine') || localStorage.getItem('fokk_search_engine') || 'fokk';
 } catch (_) {
-    currentEngine = localStorage.getItem('fokk_search_engine') || 'bing';
+    currentEngine = localStorage.getItem('fokk_search_engine') || 'fokk';
 }
 
 // Clean Professional Toast Notifications (Zero Emojis)
@@ -600,7 +605,7 @@ function updateOmnibox(rawUrl) {
 
     if (isStart) {
         urlInput.value = '';
-        const engine = OMNIBOX_ENGINES[currentEngine] || OMNIBOX_ENGINES.bing;
+        const engine = OMNIBOX_ENGINES[currentEngine] || OMNIBOX_ENGINES.fokk;
         urlInput.placeholder = `Search with ${engine.name} or enter address`;
         if (btnBookmarkOmni) btnBookmarkOmni.classList.remove('active');
         if (btnAiDefuser) {
@@ -750,7 +755,7 @@ urlInput.addEventListener('keydown', (e) => {
         } else if (query.includes('.') && !query.includes(' ') && !query.endsWith('.')) {
             targetUrl = 'https://' + query;
         } else {
-            const engine = OMNIBOX_ENGINES[currentEngine] || OMNIBOX_ENGINES.bing;
+            const engine = OMNIBOX_ENGINES[currentEngine] || OMNIBOX_ENGINES.fokk;
             targetUrl = engine.searchUrl + encodeURIComponent(query);
         }
 
