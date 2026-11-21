@@ -199,6 +199,7 @@ open class MediaHubActivity : AppCompatActivity() {
     protected open val privateProfileConfigurationReady: Boolean = true
 
     enum class SearchEngine(val displayName: String, val searchUrl: String, val iconRes: Int) {
+        FOKK("Fokk Search", "https://fokk.org/search?q=", R.drawable.ic_engine_fokk),
         GOOGLE("Google", "https://www.google.com/search?q=", R.drawable.ic_engine_google),
         DUCKDUCKGO("DuckDuckGo", "https://duckduckgo.com/?q=", R.drawable.ic_engine_duckduckgo),
         YAHOO("Yahoo", "https://search.yahoo.com/search?p=", R.drawable.ic_engine_yahoo),
@@ -806,7 +807,7 @@ open class MediaHubActivity : AppCompatActivity() {
         }
     }
 
-    private var currentSearchEngine: SearchEngine = SearchEngine.BING
+    private var currentSearchEngine: SearchEngine = SearchEngine.FOKK
 
     private var cachedTrendingTopicsJson: String = """
         [
@@ -1380,12 +1381,12 @@ open class MediaHubActivity : AppCompatActivity() {
         binding = ActivityMediaHubBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val savedEngineName = prefs.getString(PREF_SEARCH_ENGINE, SearchEngine.BING.name)
+        val savedEngineName = prefs.getString(PREF_SEARCH_ENGINE, SearchEngine.FOKK.name)
         currentSearchEngine = try {
-            val name = savedEngineName ?: SearchEngine.BING.name
+            val name = savedEngineName ?: SearchEngine.FOKK.name
             if (name == "BRAVE" || name == "STARTPAGE") SearchEngine.YAHOO else SearchEngine.valueOf(name)
         } catch (e: Exception) {
-            SearchEngine.BING
+            SearchEngine.FOKK
         }
         applySearchEngine(currentSearchEngine)
         val toolbarPos = prefs.getString(PREF_TOOLBAR_POSITION, "bottom") ?: "bottom"
@@ -5821,6 +5822,7 @@ open class MediaHubActivity : AppCompatActivity() {
                 imgLogo.setImageResource(engine.iconRes)
                 textName.text = engine.displayName
                 textDesc.text = when (engine) {
+                    SearchEngine.FOKK -> "Privacy-First AI & Web Intelligence • Zero Profiling"
                     SearchEngine.ECOSIA -> "Trees & Climate Action • 100% Green"
                     SearchEngine.DUCKDUCKGO -> "Private Search • Zero Tracker Profiling"
                     SearchEngine.YAHOO -> "Yahoo Search • News, Finance & Web Results"
@@ -7828,6 +7830,7 @@ open class MediaHubActivity : AppCompatActivity() {
         }
 
         fun updateEngineRadios(selected: SearchEngine) {
+            b.radioEngineFokk.isChecked = selected == SearchEngine.FOKK
             b.radioEngineBing.isChecked = selected == SearchEngine.BING
             b.radioEngineEcosia.isChecked = selected == SearchEngine.ECOSIA
             b.radioEngineDdg.isChecked = selected == SearchEngine.DUCKDUCKGO
@@ -7844,6 +7847,7 @@ open class MediaHubActivity : AppCompatActivity() {
             Toast.makeText(this, "Search engine set to ${engine.displayName}", Toast.LENGTH_SHORT).show()
         }
 
+        b.rowEngineFokk.setOnClickListener { selectEngine(SearchEngine.FOKK) }
         b.rowEngineBing.setOnClickListener { selectEngine(SearchEngine.BING) }
         b.rowEngineEcosia.setOnClickListener { selectEngine(SearchEngine.ECOSIA) }
         b.rowEngineDdg.setOnClickListener { selectEngine(SearchEngine.DUCKDUCKGO) }

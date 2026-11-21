@@ -1709,22 +1709,31 @@ body[data-theme="light"].results-view .app-header,
    Fokk AI Quick Overview (Next-Gen Generative Direct Answer)
    ========================================================================== */
 .ai-overview-card {
-    background: linear-gradient(135deg, rgba(15, 20, 31, 0.92) 0%, rgba(12, 16, 24, 0.98) 100%);
-    border: 1px solid rgba(0, 210, 180, 0.28);
-    border-left: 3.5px solid var(--accent);
-    border-radius: 14px;
-    padding: 18px 22px;
+    background: linear-gradient(135deg, rgba(16, 24, 38, 0.75) 0%, rgba(10, 15, 25, 0.9) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 20px 24px;
     margin-bottom: 24px;
-    box-shadow: 0 6px 24px -2px rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(14px);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(16px);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+}
+
+.ai-overview-card:hover {
+    border-color: rgba(0, 210, 180, 0.28);
+    box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 210, 180, 0.05);
 }
 
 [data-theme="light"] .ai-overview-card {
     background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-    border: 1px solid #e2e8f0;
-    border-left: 3.5px solid #0284c7;
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 6px 20px -2px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="light"] .ai-overview-card:hover {
+    border-color: rgba(2, 132, 199, 0.3);
+    box-shadow: 0 10px 28px -2px rgba(0, 0, 0, 0.08);
 }
 
 .ai-overview-header {
@@ -2193,22 +2202,51 @@ body[data-theme="light"].results-view .app-header,
     display: flex;
     align-items: center;
     gap: 6px;
+    flex-wrap: wrap;
 }
 
-.social-indicator-tag {
+.social-filter-tab {
+    cursor: pointer;
+    user-select: none;
     font-size: 0.72rem;
     font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 12px;
+    padding: 3px 10px;
+    border-radius: 14px;
     background: var(--bg-surface);
     border: 1px solid var(--border-color);
     color: var(--text-muted);
+    transition: all 0.15s ease;
+    outline: none;
+    font-family: inherit;
 }
 
-[data-theme="light"] .social-indicator-tag {
+.social-filter-tab:hover {
+    color: var(--text-primary);
+    border-color: rgba(0, 210, 180, 0.4);
+}
+
+.social-filter-tab.active {
+    background: linear-gradient(135deg, rgba(0, 210, 180, 0.18), rgba(0, 229, 255, 0.12));
+    border-color: var(--accent);
+    color: var(--accent-cyan);
+    font-weight: 700;
+}
+
+[data-theme="light"] .social-filter-tab {
     background: #ffffff;
     border-color: #cbd5e1;
     color: #475569;
+}
+
+[data-theme="light"] .social-filter-tab:hover {
+    color: #0f172a;
+    border-color: #0284c7;
+}
+
+[data-theme="light"] .social-filter-tab.active {
+    background: linear-gradient(135deg, rgba(2, 132, 199, 0.15), rgba(0, 131, 115, 0.1));
+    border-color: #0284c7;
+    color: #0284c7;
 }
 
 .social-pulse-grid {

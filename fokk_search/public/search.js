@@ -619,7 +619,7 @@
             }
         }
 
-        // 5e. Live Social Media Pulse (X, Instagram, Reddit, YouTube Live Posts)
+        // 5e. Live Social Media Pulse (Interactive Platform Filters: All, X, Instagram, Reddit, YouTube)
         if (data.socialPulse && data.socialPulse.length > 0) {
             const socialSection = document.createElement('section');
             socialSection.className = 'social-pulse-section';
@@ -630,19 +630,20 @@
                         <span>Live Social Pulse</span>
                         <span class="pulse-live-badge">Live Updates</span>
                     </div>
-                    <div class="social-tags-list">
-                        <span class="social-indicator-tag x-tag">X</span>
-                        <span class="social-indicator-tag ig-tag">Instagram</span>
-                        <span class="social-indicator-tag rd-tag">Reddit</span>
-                        <span class="social-indicator-tag yt-tag">YouTube</span>
+                    <div class="social-tags-list" id="socialFilterTabs">
+                        <button type="button" class="social-filter-tab active" data-filter="all">All</button>
+                        <button type="button" class="social-filter-tab" data-filter="x">X</button>
+                        <button type="button" class="social-filter-tab" data-filter="instagram">Instagram</button>
+                        <button type="button" class="social-filter-tab" data-filter="reddit">Reddit</button>
+                        <button type="button" class="social-filter-tab" data-filter="youtube">YouTube</button>
                     </div>
                 </div>
-                <div class="social-pulse-grid">
+                <div class="social-pulse-grid" id="socialPulseGrid">
                     ${data.socialPulse.map(item => `
-                        <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" class="social-post-card">
+                        <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" class="social-post-card" data-platform="${escapeHtml((item.platform || '').toLowerCase())}">
                             <div class="social-card-top">
                                 <div class="social-identity">
-                                    <img src="${escapeHtml(item.icon || 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(item.platform.toLowerCase() + '.com') + '&sz=64')}" class="social-platform-ico" alt="" onerror="this.style.opacity='0'">
+                                    <img src="${escapeHtml(item.icon || 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent((item.platform || 'x').toLowerCase() + '.com') + '&sz=64')}" class="social-platform-ico" alt="" onerror="this.style.opacity='0'">
                                     <div class="social-identity-meta">
                                         <div class="social-handle-row">
                                             <span class="social-handle">${escapeHtml(item.handle || item.platform)}</span>
@@ -666,6 +667,26 @@
                 </div>
             `;
             resultsMainCol.appendChild(socialSection);
+
+            // Wire up interactive filtering by platform
+            const filterTabs = socialSection.querySelectorAll('#socialFilterTabs .social-filter-tab');
+            filterTabs.forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    filterTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    const selected = (tab.dataset.filter || 'all').toLowerCase();
+                    const cards = socialSection.querySelectorAll('.social-post-card');
+                    cards.forEach(card => {
+                        const plat = (card.dataset.platform || '').toLowerCase();
+                        if (selected === 'all' || plat === selected) {
+                            card.style.display = 'flex';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            });
         }
 
         // 5f. Primary Web Results
@@ -889,7 +910,7 @@
 
             card.innerHTML = `
                 <div class="image-thumb-wrap">
-                    <img src="${escapeHtml(item.thumbnail || item.image)}" class="image-thumb" alt="${escapeHtml(item.title)}" loading="lazy">
+                    <img src="${escapeHtml(item.thumbnail || item.image)}" class="image-thumb" alt="${escapeHtml(item.title)}" loading="lazy" onerror="this.closest('.image-card').style.display='none'">
                 </div>
                 <div class="image-info">
                     <div class="image-title">${escapeHtml(item.title)}</div>
